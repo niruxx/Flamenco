@@ -105,7 +105,26 @@ Variants {
                             title: "Power"
                             subtitle: Power.profileName
                             active: Power.profileName !== "Balanced"
+                            hasDetails: true
                             onClicked: Power.cycleProfile()
+                            onDetailsClicked: Panels.controlDetail = "power"
+                        }
+                        FTile {
+                            Layout.fillWidth: true
+                            icon: Network.vpnActive ? "vpn_lock" : "vpn_key"
+                            title: "VPN"
+                            subtitle: Network.vpnActive ? Network.activeVpns.map(v => v.name).join(", ") : Network.vpns.length ? "Off" : "Not set up"
+                            active: Network.vpnActive
+                            hasDetails: true
+                            onClicked: {
+                                if (Network.vpnActive)
+                                    Network.activeVpns.forEach(v => Network.setVpn(v.name, false));
+                                else if (Network.vpns.length === 1)
+                                    Network.setVpn(Network.vpns[0].name, true);
+                                else
+                                    Panels.controlDetail = "vpn";
+                            }
+                            onDetailsClicked: Panels.controlDetail = "vpn"
                         }
                         FTile {
                             Layout.fillWidth: true
@@ -137,7 +156,7 @@ Variants {
                     opacity: pager.slide
                     visible: opacity > 0
                     active: panel.detail !== "" || opacity > 0
-                    sourceComponent: panel.detail === "wifi" ? wifiC : panel.detail === "bluetooth" ? btC : panel.detail === "audio" ? audioC : panel.detail === "mic" ? micC : null
+                    sourceComponent: panel.detail === "wifi" ? wifiC : panel.detail === "bluetooth" ? btC : panel.detail === "audio" ? audioC : panel.detail === "mic" ? micC : panel.detail === "vpn" ? vpnC : panel.detail === "power" ? powerC : null
                 }
             }
         }
@@ -145,6 +164,8 @@ Variants {
         Component { id: wifiC; WifiPage { onBack: Panels.controlDetail = "" } }
         Component { id: btC; BluetoothPage { onBack: Panels.controlDetail = "" } }
         Component { id: audioC; AudioDevicesPage { onBack: Panels.controlDetail = ""; input: false } }
+        Component { id: vpnC; VpnPage { onBack: Panels.controlDetail = "" } }
+        Component { id: powerC; PowerPage { onBack: Panels.controlDetail = "" } }
         Component { id: micC; AudioDevicesPage { onBack: Panels.controlDetail = ""; input: true } }
     }
 }

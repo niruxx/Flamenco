@@ -70,7 +70,7 @@ Singleton {
         c[e.id] = (c[e.id] || 0) + 1;
         usageAdapter.counts = c;
         if (e.runInTerminal)
-            Quickshell.execDetached([Settings.data.general.terminal, "-e", ...e.command]);
+            Quickshell.execDetached(Paths.term(e.command));
         else
             e.execute();
     }

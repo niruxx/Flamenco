@@ -127,6 +127,20 @@ Singleton {
                 property bool enabled: true
                 property string city: ""
                 property bool fahrenheit: false
+                property int forecastDays: 5          // 1–7
+                property bool showFeelsLike: true
+                property bool showWind: true
+                property bool showHumidity: true
+                property bool showSunTimes: true
+                property bool showHourly: true        // next 12 hours in the Weather tab
+                property bool showInOverview: true    // weather card on the dashboard's Overview tab
+            }
+
+            // Dashboard: the clock/calendar popout
+            property JsonObject dashboard: JsonObject {
+                property string defaultTab: "overview" // overview | media | wallpapers | weather
+                property bool showUser: true
+                property bool showMedia: true
             }
 
             property JsonObject night: JsonObject {

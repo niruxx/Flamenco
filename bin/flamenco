@@ -13,23 +13,26 @@
   flamenco theme PALETTE | dark | light | toggle | list
   flamenco ipc TARGET FUNCTION [ARGS...]
   flamenco apps-theme [--json SPEC | --restore]
+  flamenco printers [--json] | default NAME | test NAME | cancel ID|all | service ACTION | add
   flamenco display list | apply --json SPEC | save --json SPEC
   flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
   flamenco doctor [--json]
-  flamenco niri-config
+  flamenco niri-config [--print | --snippet]   write a complete ~/.config/niri/config.kdl (backs up the old one)
+  flamenco logs [-f]           show the shell's log (~/.cache/flamenco/shell.log)
 """
 
 from __future__ import annotations
 
 import configparser
 import json
+import re
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -94,16 +97,34 @@ def ipc(target: str, fn: str, *args: str) -> int:
     return 0
 
 
+LOG_FILE = XDG_CACHE / "flamenco/shell.log"
+
+
 def cmd_run(args: list[str]) -> int:
     for d in (CONFIG_DIR, STATE_DIR, XDG_CACHE / "flamenco"):
         d.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, FLAMENCO_BIN=self_path())
     cmd = [qs_bin(), "-p", str(shell_dir()), "--no-duplicate"]
-    if "--fg" not in args:
-        cmd.append("--daemonize")
     if "--fg" in args:
         os.execvpe(cmd[0], cmd, env)
-    return subprocess.run(cmd, env=env).returncode
+    # Background: detach, but keep the output. When niri starts the shell at
+    # login there's no terminal, so this log is the only place errors show up.
+    log = open(LOG_FILE, "w")
+    log.write(f"flamenco {VERSION}: starting {' '.join(cmd)}\n"
+              f"WAYLAND_DISPLAY={env.get('WAYLAND_DISPLAY', '')} NIRI_SOCKET={env.get('NIRI_SOCKET', '')} "
+              f"QT_QPA_PLATFORMTHEME={env.get('QT_QPA_PLATFORMTHEME', '')}\n")
+    log.flush()
+    subprocess.Popen(cmd, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    return 0
+
+
+def cmd_logs(args: list[str]) -> int:
+    if not LOG_FILE.exists():
+        die(f"no log yet at {LOG_FILE} (the shell writes it when started with `flamenco run`)")
+    if "-f" in args or "--follow" in args:
+        os.execvp("tail", ["tail", "-n", "100", "-f", str(LOG_FILE)])
+    print(LOG_FILE.read_text(errors="replace"), end="")
+    return 0
 
 
 def is_running() -> bool:
@@ -778,6 +799,37 @@ def kdl_block(text: str, name: str, arg: str | None = None):
     return None
 
 
+def kdl_blocks(text: str, name: str) -> list[tuple[int, int]]:
+    """(start, end) spans of every top-level `name … { … }` node, end exclusive."""
+    import re
+    masked = kdl_mask(text)
+    spans, depth, i = [], 0, 0
+    starts = {m.start(): m for m in re.finditer(r"(?m)^[ \t]*" + re.escape(name) + r"(?=[\s{])[^{\n]*\{", masked)}
+    while i < len(masked):
+        if i in starts and depth == 0:
+            open_i = starts[i].end() - 1
+            d = 0
+            for j in range(open_i, len(masked)):
+                if masked[j] == "{":
+                    d += 1
+                elif masked[j] == "}":
+                    d -= 1
+                    if d == 0:
+                        spans.append((i, j + 1))
+                        i = j + 1
+                        break
+            else:
+                break
+            continue
+        ch = masked[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        i += 1
+    return spans
+
+
 def kdl_quote(v: str) -> str:
     return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -1060,6 +1112,209 @@ def cmd_display(args: list[str]) -> int:
     die("usage: flamenco display list | apply --json SPEC | save --json SPEC")
 
 
+# ─────────────────────────────── niri config ─────────────────────────────────
+
+TERMINALS = ["kitty", "foot", "alacritty", "ghostty", "wezterm", "konsole", "gnome-terminal", "xfce4-terminal", "xterm"]
+
+DEFAULT_INPUT = """input {
+    keyboard {
+        xkb {
+            // layout "us"
+        }
+        numlock
+    }
+    touchpad {
+        tap
+        natural-scroll
+    }
+}"""
+
+
+def niri_template() -> Path:
+    here = Path(__file__).resolve().parent
+    for c in (here.parent / "data/niri/config.kdl",
+              shell_dir().parent / "niri/config.kdl",
+              Path("/usr/share/flamenco-shell/niri/config.kdl")):
+        if c.is_file():
+            return c
+    die("niri config template not found")
+
+
+def pick_terminal() -> str:
+    try:
+        configured = json.loads((CONFIG_DIR / "settings.json").read_text()).get("general", {}).get("terminal", "")
+    except Exception:
+        configured = ""
+    for t in [configured] + TERMINALS:
+        if t and shutil.which(t.split()[0]):
+            return t
+    return "kitty"
+
+
+def build_niri_config(old: str) -> str:
+    """Template + the machine-specific blocks of the previous config."""
+    def carried(name):
+        return [old[a:b] for a, b in kdl_blocks(old, name)]
+
+    inputs = carried("input")
+    outputs = carried("output")
+    cursors = carried("cursor")
+    term = pick_terminal().split()
+    text = niri_template().read_text()
+    text = text.replace("@@INPUT@@", ("// carried over\n" + inputs[0]) if inputs else DEFAULT_INPUT)
+    text = text.replace("@@OUTPUTS@@", ("// carried over\n" + "\n\n".join(outputs)) if outputs else
+                        "// Displays: configure in Settings → Displays (writes output blocks here)")
+    text = text.replace("@@CURSOR@@", ("// carried over\n" + cursors[0]) if cursors else
+                        "cursor {\n    xcursor-theme \"Adwaita\"\n    xcursor-size 24\n}")
+    text = text.replace("@@TERMINAL@@", " ".join(kdl_quote(t) for t in term))
+    return text
+
+
+def cmd_niri_config(args: list[str]) -> int:
+    old = NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() else ""
+    new = build_niri_config(old)
+    if "--print" in args:
+        print(new, end="")
+        return 0
+    if "--snippet" in args:
+        print(NIRI_SNIPPET)
+        return 0
+
+    NIRI_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    tmp = NIRI_CONFIG.with_suffix(".kdl.flamenco-tmp")
+    tmp.write_text(new)
+    if not niri_validate(tmp):
+        r = subprocess.run(["niri", "validate", "-c", str(tmp)], capture_output=True, text=True)
+        print(r.stderr or r.stdout, file=sys.stderr)
+        tmp.unlink()
+        die("niri rejected the generated config; your config.kdl was not changed")
+    backup = None
+    if old:
+        import time
+        backup = NIRI_CONFIG.with_name(f"config.kdl.bak-{time.strftime('%Y%m%d-%H%M%S')}")
+        backup.write_text(old)
+    tmp.replace(NIRI_CONFIG)
+    print(f"wrote {NIRI_CONFIG}")
+    if backup:
+        print(f"previous config saved as {backup}")
+    print(f"terminal: {pick_terminal()}  (Mod+T / Mod+Return)")
+    if not shutil.which("niri"):
+        print("note: `niri` isn't on PATH here, so the config wasn't validated")
+    print("niri reloads the config automatically; log out and back in for environment changes.")
+    return 0
+
+
+# ─────────────────────────────── printers (CUPS) ─────────────────────────────
+
+def run_out(cmd: list[str]) -> str:
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        return r.stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def parse_lpstat(printers_txt: str, default_txt: str, devices_txt: str, jobs_txt: str) -> dict:
+    default = ""
+    m = re.search(r"system default destination:\s*(\S+)", default_txt)
+    if m:
+        default = m.group(1)
+    uris = {}
+    for line in devices_txt.splitlines():
+        m = re.match(r"device for (\S+):\s*(.+)", line.strip())
+        if m:
+            uris[m.group(1)] = m.group(2)
+    printers = []
+    for line in printers_txt.splitlines():
+        m = re.match(r"printer (\S+) (.*)", line.strip())
+        if not m:
+            continue
+        name, rest = m.groups()
+        state = "disabled" if "disabled" in rest else "printing" if "now printing" in rest else "idle"
+        printers.append({"name": name, "state": state, "default": name == default, "uri": uris.get(name, "")})
+    jobs = []
+    for line in jobs_txt.splitlines():
+        f = line.split()
+        if len(f) >= 3:
+            jobs.append({"id": f[0], "printer": f[0].rsplit("-", 1)[0], "user": f[1], "size": int(f[2]) if f[2].isdigit() else 0,
+                         "when": " ".join(f[3:])})
+    return {"default": default, "printers": printers, "jobs": jobs}
+
+
+def systemctl_state(unit: str) -> dict:
+    active = run_out(["systemctl", "is-active", unit]).strip()
+    enabled = run_out(["systemctl", "is-enabled", unit]).strip()
+    return {"active": active == "active", "enabled": enabled in ("enabled", "enabled-runtime", "static"), "raw": f"{active}/{enabled}"}
+
+
+def printers_state() -> dict:
+    installed = bool(shutil.which("lpstat")) and (Path("/usr/lib/systemd/system/cups.service").exists() or bool(shutil.which("cupsd")))
+    state = {"installed": installed, "service": {"active": False, "enabled": False}, "socket": {"active": False, "enabled": False},
+             "default": "", "printers": [], "jobs": [],
+             "configTool": next((t for t in ("system-config-printer", "print-manager") if shutil.which(t)), "")}
+    if not installed:
+        return state
+    state["service"] = systemctl_state("cups.service")
+    state["socket"] = systemctl_state("cups.socket")
+    if state["service"]["active"] or state["socket"]["active"]:
+        state.update(parse_lpstat(run_out(["lpstat", "-p"]), run_out(["lpstat", "-d"]),
+                                  run_out(["lpstat", "-v"]), run_out(["lpstat", "-o"])))
+    return state
+
+
+def privileged(cmd: list[str]) -> int:
+    """Run as root: sudo in a terminal, pkexec (polkit) otherwise."""
+    if os.geteuid() == 0:
+        return subprocess.run(cmd).returncode
+    if sys.stdin.isatty() and shutil.which("sudo"):
+        return subprocess.run(["sudo", *cmd]).returncode
+    if shutil.which("pkexec"):
+        return subprocess.run(["pkexec", *cmd]).returncode
+    die("need root: run this from a terminal (sudo) or install a polkit agent")
+
+
+def cmd_printers(args: list[str]) -> int:
+    sub = args[0] if args else "list"
+    if sub in ("list", "--json"):
+        st = printers_state()
+        if "--json" in args:
+            print(json.dumps(st))
+            return 0
+        if not st["installed"]:
+            print("CUPS is not installed (sudo pacman -S cups)")
+            return 1
+        print(f"cups.service: {st['service'].get('raw', '')}   cups.socket: {st['socket'].get('raw', '')}")
+        for pr in st["printers"]:
+            print(f"  {'*' if pr['default'] else ' '} {pr['name']:<24} {pr['state']:<9} {pr['uri']}")
+        for j in st["jobs"]:
+            print(f"    job {j['id']} by {j['user']} ({j['size']} bytes)")
+        return 0
+    if sub == "default" and len(args) > 1:
+        return subprocess.run(["lpoptions", "-d", args[1]], capture_output=True).returncode
+    if sub == "test" and len(args) > 1:
+        page = next((p for p in ("/usr/share/cups/data/testprint", "/usr/share/cups/data/default-testpage.pdf") if Path(p).exists()), None)
+        if page:
+            return subprocess.run(["lp", "-d", args[1], page]).returncode
+        return subprocess.run(["lp", "-d", args[1]], input="Flamenco test page\n", text=True).returncode
+    if sub == "cancel" and len(args) > 1:
+        return subprocess.run(["cancel", "-a"] if args[1] == "all" else ["cancel", args[1]]).returncode
+    if sub == "service" and len(args) > 1:
+        action = args[1]
+        if action not in ("start", "stop", "restart", "enable", "disable"):
+            die("usage: flamenco printers service start|stop|restart|enable|disable")
+        if action in ("enable", "disable"):
+            return privileged(["systemctl", action, "--now", "cups.service", "cups.socket"])
+        return privileged(["systemctl", action, "cups.service"])
+    if sub == "add":
+        st = printers_state()
+        if st["configTool"]:
+            subprocess.Popen([st["configTool"]], start_new_session=True)
+        else:
+            subprocess.Popen(["xdg-open", "http://localhost:631/admin"], start_new_session=True)
+        return 0
+    die("usage: flamenco printers [list|--json] | default NAME | test NAME | cancel ID|all | service ACTION | add")
+
+
 # ─────────────────────────────── apps-theme ──────────────────────────────────
 
 def cmd_apps_theme(args: list[str]) -> int:
@@ -1257,37 +1512,136 @@ def font_installed(name: str) -> bool:
     return name.lower() in r.stdout.lower()
 
 
-def cmd_doctor(args: list[str]) -> int:
-    def b(name, purpose, required=False, alt=()):
-        ok = any(shutil.which(n) for n in (name, *alt))
-        return {"name": name, "purpose": purpose, "required": required, "ok": ok}
+def doctor_checks() -> list[dict]:
+    """Everything Flamenco uses, grouped, with the Arch package that provides it."""
+    checks = []
 
-    checks = [
-        b("qs", "Quickshell runtime (>= 0.2)", True, ("quickshell",)),
-        b("niri", "Compositor", True),
-        {"name": "Material Symbols Rounded", "purpose": "Icon font (bundled with the shell)", "required": True,
-         "ok": (shell_dir() / "assets/fonts/MaterialSymbolsRounded.ttf").is_file() or font_installed("Material Symbols Rounded")},
-        b("nmcli", "Wi-Fi / network (NetworkManager)"),
-        b("brightnessctl", "Screen brightness"),
-        b("matugen", "Colors from wallpaper"),
-        b("cliphist", "Clipboard history in launcher"),
-        b("wl-copy", "Clipboard (wl-clipboard)"),
-        b("gammastep", "Night light"),
-        b("qt6ct", "Qt 6 theming"),
-        b("qt5ct", "Qt 5 theming"),
-        b("gsettings", "GTK / portal dark-mode preference"),
-    ]
+    def add(category, name, purpose, ok, package="", required=False, aur=False, hint=""):
+        checks.append({"category": category, "name": name, "purpose": purpose, "ok": bool(ok),
+                       "package": package, "required": required, "aur": aur, "hint": hint})
+
+    have = lambda *bins: any(shutil.which(b) for b in bins)
+    exists = lambda *paths: any(Path(p).exists() for p in paths)
+
+    # ── core ──
+    add("Core", "Quickshell", "Runs the shell", have("qs", "quickshell"), "quickshell", True)
+    add("Core", "niri", "Compositor", have("niri"), "niri", True)
+    add("Core", "Icon font", "Material Symbols (bundled)",
+        (shell_dir() / "assets/fonts/MaterialSymbolsRounded.ttf").is_file() or font_installed("Material Symbols Rounded"), "", True)
+    add("Core", "Terminal", "Mod+T, terminal apps, > commands in the launcher", have(*TERMINALS), "kitty", True)
+
+    # ── session ──
+    cfg = NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() else ""
+    if have("niri") and cfg:
+        r = subprocess.run(["niri", "validate", "-c", str(NIRI_CONFIG)], capture_output=True, text=True)
+        add("Session", "niri config", "~/.config/niri/config.kdl is valid", r.returncode == 0, "", True,
+            hint="" if r.returncode == 0 else (r.stderr or r.stdout).strip().splitlines()[-1:][0] if (r.stderr or r.stdout).strip() else "run `niri validate`")
+    starts = [cfg[a:b] for a, b in kdl_spawn_lines(cfg)]
+    add("Session", "Starts with niri", "spawn-at-startup \"flamenco\" \"run\" in the niri config",
+        any("flamenco" in l for l in starts), "", True, hint="run `flamenco niri-config`")
+    others = [x for x in ("dms", "waybar", "swaybg", "swww", "hyprpanel", "noctalia", "ags", "eww", "mako", "dunst", "swaync")
+              if any(re.search(r'\b' + x + r'\b', l) for l in starts)]
+    add("Session", "No other shell", "nothing else drawing a bar, wallpaper or notifications",
+        not others, "", True, hint=("also started: " + ", ".join(others)) if others else "")
+    add("Session", "Screen sharing portal", "xdg-desktop-portal-gnome (what niri uses for screencasts)",
+        exists("/usr/lib/xdg-desktop-portal-gnome", "/usr/libexec/xdg-desktop-portal-gnome"), "xdg-desktop-portal-gnome")
+    add("Session", "XWayland", "X11 apps (Steam, older apps)", have("xwayland-satellite"), "xwayland-satellite")
+    drm = Path("/sys/class/drm")
+    cards = sorted(drm.glob("card[0-9]")) + sorted(drm.glob("card[0-9][0-9]")) if drm.is_dir() else []
+    vendors = []
+    for card in cards:
+        try:
+            vendors.append((card / "device/vendor").read_text().strip())
+        except OSError:
+            pass
+    add("Session", "GPU render node", "niri needs /dev/dri/renderD* to draw anything",
+        any(Path("/dev/dri").glob("renderD*")) if Path("/dev/dri").is_dir() else False, "mesa", True)
+    if "0x1af4" in vendors:   # Red Hat / virtio: a virtual machine GPU
+        # virtio-gpu feature bit 0 is VIRTIO_GPU_F_VIRGL (3D); the sysfs file is one char per bit
+        virgl = False
+        for card in cards:
+            for f in card.glob("device/virtio*/features"):
+                try:
+                    virgl = virgl or f.read_text().strip()[:1] == "1"
+                except OSError:
+                    pass
+        add("Session", "VM 3D acceleration", "virtio GPU: niri needs 3D acceleration (virgl) to draw from the login screen",
+            virgl, "", True,
+            hint="enable 3D acceleration for the VM (QEMU/virt-manager: Video VirtIO + 'OpenGL' on the SPICE/egl-headless display; "
+                 "VirtualBox: VMSVGA + 3D). Without it niri shows a black screen when started from the login manager.")
+
+    # ── features ──
+    add("Features", "NetworkManager", "Wi-Fi, Ethernet and VPN", have("nmcli"), "networkmanager")
+    add("Features", "OpenVPN plugin", "import and connect .ovpn VPNs",
+        exists("/usr/lib/NetworkManager/VPN/nm-openvpn-service.name"), "networkmanager-openvpn")
+    add("Features", "WireGuard tools", "WireGuard VPNs", have("wg"), "wireguard-tools")
+    add("Features", "PipeWire volume", "volume keys without the shell", have("wpctl"), "wireplumber")
+    add("Features", "brightnessctl", "screen brightness", have("brightnessctl"), "brightnessctl")
+    add("Features", "playerctl", "media keys without the shell", have("playerctl"), "playerctl")
+    add("Features", "Power profiles", "Power saver / Balanced / Performance", have("powerprofilesctl"), "power-profiles-daemon")
+    add("Features", "UPower", "battery status", have("upower"), "upower")
+    add("Features", "Bluetooth", "Bluetooth devices", have("bluetoothctl"), "bluez-utils")
+    add("Features", "CUPS", "printing", have("lpstat"), "cups")
+    add("Features", "Clipboard history", "; mode in the launcher", have("cliphist"), "cliphist")
+    add("Features", "wl-clipboard", "copying from the launcher", have("wl-copy"), "wl-clipboard")
+    add("Features", "Night light", "gammastep", have("gammastep"), "gammastep")
+    add("Features", "Screenshots", "README screenshots script", have("grim"), "grim")
+    add("Features", "Notifications CLI", "notify-send", have("notify-send"), "libnotify")
+    add("Features", "btop", "Open btop from the performance popout", have("btop"), "btop")
+
+    # ── theming ──
+    add("Theming", "qt6ct", "theme Qt 6 apps", have("qt6ct"), "qt6ct")
+    add("Theming", "qt5ct", "theme Qt 5 apps", have("qt5ct"), "qt5ct")
     qpa = os.environ.get("QT_QPA_PLATFORMTHEME", "")
-    checks.append({"name": "QT_QPA_PLATFORMTHEME", "purpose": f"currently '{qpa or 'unset'}'; set to qt6ct so Qt apps pick up the theme",
-                   "required": False, "ok": qpa in ("qt5ct", "qt6ct", "qt6ct-kde")})
+    add("Theming", "QT_QPA_PLATFORMTHEME", f"currently '{qpa or 'unset'}'; Qt apps need qt6ct", qpa in ("qt5ct", "qt6ct", "qt6ct-kde"),
+        hint="set by the niri config's environment block; log in again after `flamenco niri-config`")
+    add("Theming", "gsettings", "GTK dark/light preference", have("gsettings"), "glib2")
+    add("Theming", "adw-gtk3", "GTK 3 apps that match libadwaita", exists("/usr/share/themes/adw-gtk3", str(XDG_DATA / "themes/adw-gtk3")), "adw-gtk-theme")
+    add("Theming", "WebP wallpapers", "qt6-imageformats", exists("/usr/lib/qt6/plugins/imageformats/libqwebp.so"), "qt6-imageformats")
+    add("Theming", "matugen", "colors from your wallpaper", have("matugen"), "matugen-bin", aur=True)
+    return checks
 
+
+def kdl_spawn_lines(text: str) -> list[tuple[int, int]]:
+    """Spans of top-level spawn-at-startup / spawn-sh-at-startup lines (comments ignored)."""
+    masked = kdl_mask(text)
+    return [(m.start(), m.end()) for m in re.finditer(r"(?m)^[ \t]*spawn(?:-sh)?-at-startup\b[^\n]*", masked)]
+
+
+def install_command(checks: list[dict]) -> str:
+    missing = [c for c in checks if not c["ok"] and c["package"]]
+    repo = sorted({c["package"] for c in missing if not c["aur"]})
+    aur = sorted({c["package"] for c in missing if c["aur"]})
+    parts = []
+    if repo:
+        parts.append("sudo pacman -S --needed " + " ".join(repo))
+    if aur:
+        parts.append("paru -S --needed " + " ".join(aur))
+    return " && ".join(parts)
+
+
+def cmd_doctor(args: list[str]) -> int:
+    checks = doctor_checks()
     if "--json" in args:
-        print(json.dumps(checks))
+        print(json.dumps({"checks": checks, "install": install_command(checks)}))
         return 0
+    if "--install-command" in args:
+        print(install_command(checks))
+        return 0
+    category = None
     for c in checks:
+        if c["category"] != category:
+            category = c["category"]
+            print(f"\n {category}")
         mark = "\033[32m✓\033[0m" if c["ok"] else ("\033[31m✗\033[0m" if c["required"] else "\033[33m-\033[0m")
-        print(f" {mark} {c['name']:<26} {c['purpose']}")
-    print(f"\n shell dir: {shell_dir()}\n config:    {CONFIG_DIR}")
+        pkg = f"  [{c['package']}{' (AUR)' if c['aur'] else ''}]" if not c["ok"] and c["package"] else ""
+        print(f"  {mark} {c['name']:<24} {c['purpose']}{pkg}")
+        if not c["ok"] and c["hint"]:
+            print(f"      → {c['hint']}")
+    cmd = install_command(checks)
+    if cmd:
+        print(f"\n Install what's missing:\n   {cmd}")
+    print(f"\n shell dir: {shell_dir()}\n config:    {CONFIG_DIR}\n log:       {LOG_FILE}")
     return 0 if all(c["ok"] for c in checks if c["required"]) else 1
 
 
@@ -1394,6 +1748,8 @@ def main(argv: list[str]) -> int:
         return ipc("theme", "palette", a)
     if cmd == "apps-theme":
         return cmd_apps_theme(rest)
+    if cmd == "printers":
+        return cmd_printers(rest)
     if cmd == "display":
         return cmd_display(rest)
     if cmd == "list-themes":
@@ -1401,8 +1757,9 @@ def main(argv: list[str]) -> int:
     if cmd == "doctor":
         return cmd_doctor(rest)
     if cmd == "niri-config":
-        print(NIRI_SNIPPET)
-        return 0
+        return cmd_niri_config(rest)
+    if cmd == "logs":
+        return cmd_logs(rest)
     die(f"unknown command '{cmd}' (see `flamenco --help`)")
 
 

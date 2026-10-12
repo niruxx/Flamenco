@@ -74,7 +74,7 @@ Variants {
         Component { id: clockC; Clock { screenName: win.modelData.name } }
         Component { id: mediaC; MediaMini { screenName: win.modelData.name } }
         Component { id: trayC; Tray { window: win } }
-        Component { id: statsC; SysStats {} }
+        Component { id: statsC; SysStats { screenName: win.modelData.name } }
         Component { id: keyboardC; KeyboardLayout {} }
         Component { id: networkC; StatusIcon { screenName: win.modelData.name; icon: Network.icon; tip: Network.label; detail: "wifi" } }
         Component { id: bluetoothC; StatusIcon { screenName: win.modelData.name; icon: BluetoothState.icon; barVisible: BluetoothState.available; detail: "bluetooth" } }

@@ -5,160 +5,152 @@ import qs.Commons
 import qs.Services
 import qs.Widgets
 
+// The dashboard, opened from the bar clock: Overview · Media · Wallpapers · Weather · Settings.
+// (Panel name stays "calendar" so `flamenco calendar` and existing binds keep working.)
 Variants {
     model: Quickshell.screens
 
     OverlayPanel {
         id: panel
         name: "calendar"
-        cardWidth: 400
+        cardWidth: 560
 
-        property int monthOffset: 0
-        property int slideDir: 0
-        readonly property date shown: {
-            const n = Time.now;
-            return new Date(n.getFullYear(), n.getMonth() + monthOffset, 1);
+        readonly property var tabs: [
+            { value: "overview", label: "Overview", icon: "dashboard" },
+            { value: "media", label: "Media", icon: "music_note" },
+            { value: "wallpapers", label: "Wallpapers", icon: "wallpaper" },
+            { value: "weather", label: "Weather", icon: "partly_cloudy_day" },
+            { value: "settings", label: "Settings", icon: "settings" }
+        ]
+        property string tab: Settings.data.dashboard.defaultTab
+        readonly property int tabIndex: Math.max(0, tabs.findIndex(t => t.value === tab))
+        property int lastIndex: 0
+
+        onOpened: tab = Settings.data.dashboard.defaultTab || "overview"
+
+        function select(t) {
+            if (t === "settings") {
+                Panels.openSettings("clock");
+                return;
+            }
+            lastIndex = tabIndex;
+            tab = t;
         }
-        onOpened: monthOffset = 0
 
-        function go(d) {
-            slideDir = d;
-            monthOffset += d;
-            gridAnim.restart();
+        function openSettings(page) {
+            Panels.openSettings(page);
         }
 
         ColumnLayout {
             width: parent.width
             spacing: Theme.sp4
 
-            // big clock
-            ColumnLayout {
+            // ── tab bar ──
+            Rectangle {
+                id: tabBar
                 Layout.fillWidth: true
-                spacing: 0
-                RowLayout {
-                    spacing: 0
-                    FText { text: Time.hours; font.pixelSize: 56; font.weight: Font.Bold }
-                    FText {
-                        text: ":"
-                        font.pixelSize: 56
-                        font.weight: Font.Bold
-                        color: Theme.accent
-                        SequentialAnimation on opacity {
-                            loops: Animation.Infinite
-                            running: panel.shouldShow
-                            NumberAnimation { to: 0.25; duration: 500; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1; duration: 500; easing.type: Easing.InOutSine }
-                        }
-                    }
-                    FText { text: Time.minutes; font.pixelSize: 56; font.weight: Font.Bold }
+                implicitHeight: 46
+                radius: height / 2
+                color: Theme.surfaceHigh
+
+                readonly property real seg: (width - 8) / panel.tabs.length
+
+                Rectangle {
+                    y: 4
+                    x: 4 + panel.tabIndex * parent.seg
+                    width: parent.seg
+                    height: parent.height - 8
+                    radius: height / 2
+                    color: Theme.accent
+                    Behavior on x { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
                 }
-                FText { text: Time.date; dim: true; font.pixelSize: Theme.fsLg }
-            }
 
-            // weather
-            FCard {
-                Layout.fillWidth: true
-                visible: Weather.ready
-                implicitHeight: wcol.implicitHeight + Theme.sp4 * 2
+                Row {
+                    x: 4
+                    y: 4
+                    Repeater {
+                        model: panel.tabs
+                        Item {
+                            required property var modelData
+                            required property int index
+                            readonly property bool sel: index === panel.tabIndex
+                            width: tabBar.seg
+                            height: tabBar.height - 8
 
-                ColumnLayout {
-                    id: wcol
-                    anchors.fill: parent
-                    anchors.margins: Theme.sp4
-                    spacing: Theme.sp3
-
-                    RowLayout {
-                        spacing: Theme.sp3
-                        FIcon { icon: Weather.icon; size: 44; fill: 1; color: Theme.accent2 }
-                        ColumnLayout {
-                            spacing: 0
-                            FText { text: Math.round(Weather.temp) + Weather.unit + "  " + Weather.description; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
-                            FText { text: Weather.place + " · 💧" + Weather.humidity + "% · " + Math.round(Weather.wind) + (Settings.data.weather.fahrenheit ? " mph" : " km/h"); dim: true; font.pixelSize: Theme.fsSm }
-                        }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Repeater {
-                            model: Weather.daily
-                            ColumnLayout {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                spacing: 2
-                                FText { Layout.alignment: Qt.AlignHCenter; text: Qt.formatDate(new Date(modelData.date + "T12:00"), "ddd"); dim: true; font.pixelSize: Theme.fsXs }
-                                FIcon { Layout.alignment: Qt.AlignHCenter; icon: Weather.iconFor(modelData.code, true); size: 22 }
-                                FText { Layout.alignment: Qt.AlignHCenter; text: Math.round(modelData.max) + "° " + Math.round(modelData.min) + "°"; font.pixelSize: Theme.fsXs }
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 6
+                                FIcon {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    icon: modelData.icon
+                                    size: 18
+                                    fill: sel ? 1 : 0
+                                    color: sel ? Theme.onAccent : Theme.text
+                                }
+                                FText {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: modelData.label
+                                    font.pixelSize: Theme.fsSm
+                                    font.weight: sel ? Font.Bold : Font.Medium
+                                    color: sel ? Theme.onAccent : Theme.text
+                                }
+                            }
+                            StateLayer {
+                                radius: height / 2
+                                tint: sel ? Theme.onAccent : Theme.text
+                                onClicked: panel.select(modelData.value)
                             }
                         }
                     }
                 }
             }
 
-            // month header
-            RowLayout {
+            // ── pages ──
+            Item {
+                id: pages
                 Layout.fillWidth: true
-                FText {
-                    Layout.fillWidth: true
-                    text: Qt.formatDate(panel.shown, "MMMM yyyy")
-                    font.pixelSize: Theme.fsLg
-                    font.weight: Font.Bold
-                }
-                FIconButton { icon: "today"; visible: panel.monthOffset !== 0; onClicked: panel.go(-panel.monthOffset) }
-                FIconButton { icon: "chevron_left"; onClicked: panel.go(-1) }
-                FIconButton { icon: "chevron_right"; onClicked: panel.go(1) }
-            }
+                implicitHeight: current ? current.implicitHeight : 0
+                clip: true
 
-            GridLayout {
-                id: grid
-                Layout.fillWidth: true
-                columns: 7
-                rowSpacing: 4
-                columnSpacing: 4
+                readonly property Item current: [overview, media, walls, weather][Math.min(3, panel.tabIndex)] ?? null
 
-                ParallelAnimation {
-                    id: gridAnim
-                    NumberAnimation { target: grid; property: "opacity"; from: 0; to: 1; duration: Theme.durMed }
-                    NumberAnimation { target: gridShift; property: "x"; from: panel.slideDir * 40; to: 0; duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
-                }
-                transform: Translate { id: gridShift }
+                Behavior on implicitHeight { Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
-                Repeater {
-                    model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-                    FText {
-                        required property string modelData
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                        text: modelData
-                        dim: true
-                        font.pixelSize: Theme.fsXs
-                        font.weight: Font.Bold
+                DashboardPage {
+                    width: pages.width
+                    currentIndex: panel.tabIndex
+                    id: overview
+                    index: 0
+                    OverviewTab {
+                        width: pages.width
+                        onOpenTab: t => panel.select(t)
                     }
                 }
-
-                Repeater {
-                    model: 42
-                    Rectangle {
-                        id: cell
-                        required property int index
-                        readonly property int lead: (panel.shown.getDay() + 6) % 7
-                        readonly property date day: new Date(panel.shown.getFullYear(), panel.shown.getMonth(), index - lead + 1)
-                        readonly property bool inMonth: day.getMonth() === panel.shown.getMonth()
-                        readonly property bool today: day.toDateString() === Time.now.toDateString()
-
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 38
-                        radius: today ? Theme.rMd : height / 2
-                        color: today ? Theme.accent : hover.hovered ? Theme.surfaceHigh : "transparent"
-
-                        Behavior on color { CAnim { duration: Theme.durShort } }
-
-                        FText {
-                            anchors.centerIn: parent
-                            text: cell.day.getDate()
-                            color: cell.today ? Theme.onAccent : cell.inMonth ? Theme.text : Theme.textDim
-                            opacity: cell.inMonth ? 1 : 0.45
-                            font.weight: cell.today ? Font.Bold : Font.Normal
-                        }
-                        HoverHandler { id: hover }
+                DashboardPage {
+                    width: pages.width
+                    currentIndex: panel.tabIndex
+                    id: media
+                    index: 1
+                    MediaTab { width: pages.width }
+                }
+                DashboardPage {
+                    width: pages.width
+                    currentIndex: panel.tabIndex
+                    id: walls
+                    index: 2
+                    WallpapersTab {
+                        width: pages.width
+                        onOpenSettings: p => panel.openSettings(p)
+                    }
+                }
+                DashboardPage {
+                    width: pages.width
+                    currentIndex: panel.tabIndex
+                    id: weather
+                    index: 3
+                    WeatherTab {
+                        width: pages.width
+                        onOpenSettings: p => panel.openSettings(p)
                     }
                 }
             }

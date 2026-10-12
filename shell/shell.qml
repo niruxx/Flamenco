@@ -21,6 +21,7 @@ import qs.Modules.Session
 import qs.Modules.Lock
 import qs.Modules.Settings
 import qs.Modules.Displays
+import qs.Modules.Performance
 
 ShellRoot {
     id: shell
@@ -43,6 +44,7 @@ ShellRoot {
     NotificationCenter {}
     Launcher {}
     CalendarPanel {}
+    PerformancePanel {}
     WallpaperPicker {}
     PowerMenu {}
     SettingsWindow {}
@@ -63,6 +65,7 @@ ShellRoot {
     PanelIpc { target: "control"; panel: "control" }
     PanelIpc { target: "notifications"; panel: "notifications" }
     PanelIpc { target: "calendar"; panel: "calendar" }
+    PanelIpc { target: "performance"; panel: "performance" }
     PanelIpc { target: "wallpapers"; panel: "wallpaper" }
     PanelIpc { target: "power"; panel: "power" }
 

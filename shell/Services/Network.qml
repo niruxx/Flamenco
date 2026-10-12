@@ -16,6 +16,10 @@ Singleton {
     property bool scanning: false
     property string connecting: ""
     property string lastError: ""
+    property var vpns: []               // [{ name, type, active }]  type: wireguard | vpn (OpenVPN, etc.)
+    property string vpnBusy: ""
+    readonly property var activeVpns: vpns.filter(v => v.active)
+    readonly property bool vpnActive: activeVpns.length > 0
 
     readonly property bool connected: ethernet || ssid !== ""
     readonly property string icon: ethernet ? "lan" : !wifiEnabled ? "wifi_off" : ssid === "" ? "signal_wifi_statusbar_not_connected" : signal > 75 ? "signal_wifi_4_bar" : signal > 50 ? "network_wifi_3_bar" : signal > 25 ? "network_wifi_2_bar" : "network_wifi_1_bar"
@@ -41,6 +45,8 @@ Singleton {
     }
 
     function refresh() {
+        if (!vpnList.running)
+            vpnList.running = true;
         if (!status.running)
             status.running = true;
         if (!radio.running)
@@ -63,6 +69,28 @@ Singleton {
         lastError = "";
         connector.command = password ? ["nmcli", "device", "wifi", "connect", ssid, "password", password] : ["nmcli", "device", "wifi", "connect", ssid];
         connector.running = true;
+    }
+
+    function setVpn(name, on) {
+        vpnBusy = name;
+        lastError = "";
+        vpnProc.command = ["nmcli", "connection", on ? "up" : "down", "id", name];
+        vpnProc.running = true;
+    }
+
+    function deleteVpn(name) {
+        lastError = "";
+        vpnProc.command = ["nmcli", "connection", "delete", "id", name];
+        vpnProc.running = true;
+    }
+
+    // Import a WireGuard (.conf) or OpenVPN (.ovpn) file into NetworkManager.
+    function importVpn(path) {
+        const p = String(path).replace(/^~(?=\/)/, Quickshell.env("HOME"));
+        const type = p.toLowerCase().endsWith(".ovpn") ? "openvpn" : "wireguard";
+        lastError = "";
+        vpnProc.command = ["nmcli", "connection", "import", "type", type, "file", p];
+        vpnProc.running = true;
     }
 
     function disconnect() {
@@ -134,6 +162,35 @@ Singleton {
         }
         onExited: code => {
             root.connecting = "";
+            root.refresh();
+        }
+    }
+
+    Process {
+        id: vpnList
+        command: ["nmcli", "-t", "-f", "NAME,TYPE,ACTIVE", "connection", "show"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const out = [];
+                for (const line of text.trim().split("\n")) {
+                    if (!line)
+                        continue;
+                    const [name, type, active] = root.splitTerse(line);
+                    if (type === "vpn" || type === "wireguard")
+                        out.push({ name, type, active: active === "yes" });
+                }
+                root.vpns = out.sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name));
+            }
+        }
+    }
+
+    Process {
+        id: vpnProc
+        stderr: StdioCollector {
+            onStreamFinished: if (text.trim()) root.lastError = text.trim().split("\n").pop()
+        }
+        onExited: {
+            root.vpnBusy = "";
             root.refresh();
         }
     }

@@ -16,7 +16,12 @@ Singleton {
     property bool isDay: true
     property real wind: 0
     property int humidity: 0
-    property var daily: []      // [{ date, code, max, min }]
+    property var daily: []      // [{ date, code, max, min, rain }]
+    property var hourly: []     // next 12 hours: [{ time, temp, code, day, rain }]
+    property real feelsLike: 0
+    property string sunrise: ""  // ISO local time
+    property string sunset: ""
+    property date updated
     property real lat: NaN
     property real lon: NaN
 
@@ -30,6 +35,7 @@ Singleton {
         function onCityChanged() { root.lat = NaN; root.refresh(); }
         function onFahrenheitChanged() { root.refresh(); }
         function onEnabledChanged() { root.refresh(); }
+        function onForecastDaysChanged() { root.refresh(); }
     }
     Component.onCompleted: refresh()
 
@@ -67,9 +73,16 @@ Singleton {
     }
 
     function fetch() {
-        const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current=temperature_2m,weather_code,is_day,wind_speed_10m,relative_humidity_2m" + "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5" + (cfg.fahrenheit ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : "");
+        const days = Math.max(1, Math.min(7, cfg.forecastDays || 5));
+        const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon
+            + "&current=temperature_2m,apparent_temperature,weather_code,is_day,wind_speed_10m,relative_humidity_2m"
+            + "&hourly=temperature_2m,weather_code,is_day,precipitation_probability&forecast_hours=12"
+            + "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max"
+            + "&timezone=auto&forecast_days=" + days
+            + (cfg.fahrenheit ? "&temperature_unit=fahrenheit&wind_speed_unit=mph" : "");
         get(url, d => {
             root.temp = d.current.temperature_2m;
+            root.feelsLike = d.current.apparent_temperature;
             root.code = d.current.weather_code;
             root.isDay = d.current.is_day === 1;
             root.wind = d.current.wind_speed_10m;
@@ -78,8 +91,19 @@ Singleton {
                         date: t,
                         code: d.daily.weather_code[i],
                         max: d.daily.temperature_2m_max[i],
-                        min: d.daily.temperature_2m_min[i]
+                        min: d.daily.temperature_2m_min[i],
+                        rain: d.daily.precipitation_probability_max?.[i] ?? 0
                     }));
+            root.sunrise = d.daily.sunrise?.[0] ?? "";
+            root.sunset = d.daily.sunset?.[0] ?? "";
+            root.hourly = (d.hourly?.time ?? []).map((t, i) => ({
+                        time: t,
+                        temp: d.hourly.temperature_2m[i],
+                        code: d.hourly.weather_code[i],
+                        day: d.hourly.is_day[i] === 1,
+                        rain: d.hourly.precipitation_probability?.[i] ?? 0
+                    }));
+            root.updated = new Date();
             root.ready = true;
         });
     }

@@ -59,7 +59,7 @@ Variants {
             else if (item.kind === "run")
                 Quickshell.execDetached(["sh", "-c", item.title]);
             else if (item.kind === "runterm")
-                Quickshell.execDetached([Settings.data.general.terminal, "-e", "sh", "-c", item.title]);
+                Quickshell.execDetached(Paths.termHold(item.title));
             else if (item.kind === "clip")
                 Quickshell.execDetached(["sh", "-c", 'printf "%s" "$1" | cliphist decode | wl-copy', "sh", item.line]);
             Panels.close();

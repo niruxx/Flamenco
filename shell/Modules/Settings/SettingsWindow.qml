@@ -27,11 +27,15 @@ LazyLoader {
             { id: "bar", icon: "toolbar", label: "Bar", comp: barC },
             { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
             { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
+            { id: "network", icon: "wifi", label: "Network", comp: networkC },
+            { id: "power", icon: "battery_charging_full", label: "Power", comp: powerC },
+            { id: "printers", icon: "print", label: "Printers", comp: printersC },
             { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
             { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
             { id: "launcher", icon: "apps", label: "Launcher", comp: launcherC },
             { id: "lock", icon: "lock", label: "Lock & Idle", comp: lockC },
             { id: "clock", icon: "schedule", label: "Clock & Weather", comp: clockC },
+            { id: "system", icon: "health_and_safety", label: "System check", comp: systemC },
             { id: "about", icon: "info", label: "About", comp: aboutC }
         ]
         readonly property int index: Math.max(0, pages.findIndex(p => p.id === Panels.settingsPage))
@@ -41,6 +45,10 @@ LazyLoader {
         Component { id: barC; BarPage {} }
         Component { id: dockC; DockPage {} }
         Component { id: displaysC; DisplaysPage {} }
+        Component { id: networkC; NetworkPage {} }
+        Component { id: powerC; PowerSettingsPage {} }
+        Component { id: printersC; PrintersPage {} }
+        Component { id: systemC; SystemCheckPage {} }
         Component { id: wallpaperC; WallpaperPage {} }
         Component { id: notifC; NotificationsPage {} }
         Component { id: launcherC; LauncherPage {} }

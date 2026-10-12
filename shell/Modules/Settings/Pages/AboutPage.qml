@@ -1,28 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import qs.Commons
+import qs.Services
 import qs.Widgets
 
 Page {
     id: page
     title: "About"
-    property var checks: []
-
-    Component.onCompleted: doctor.running = true
-
-    Process {
-        id: doctor
-        command: [Paths.bin, "doctor", "--json"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    page.checks = JSON.parse(text);
-                } catch (e) {}
-            }
-        }
-    }
 
     RowLayout {
         spacing: Theme.sp4
@@ -42,25 +27,16 @@ Page {
     }
 
     Group {
-        title: "Dependencies"
-        Repeater {
-            model: page.checks
-            SettingRow {
-                required property var modelData
-                title: modelData.name
-                subtitle: modelData.purpose
-                icon: modelData.ok ? "check_circle" : modelData.required ? "error" : "radio_button_unchecked"
-                FText {
-                    text: modelData.ok ? "found" : modelData.required ? "missing" : "optional"
-                    color: modelData.ok ? Theme.success : modelData.required ? Theme.error : Theme.textDim
-                    font.weight: Font.DemiBold
-                }
-            }
-        }
+        title: "Health"
         SettingRow {
-            visible: page.checks.length === 0
-            title: "Running `flamenco doctor`…"
-            icon: "hourglass_empty"
+            title: "System check"
+            subtitle: "See which dependencies are installed and get the command for the rest"
+            icon: "health_and_safety"
+            FButton {
+                text: "Open"
+                variant: "tonal"
+                onClicked: Panels.settingsPage = "system"
+            }
         }
     }
 }

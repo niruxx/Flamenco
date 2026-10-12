@@ -5,7 +5,10 @@ import qs.Services
 import qs.Widgets
 
 BarChip {
-    onClicked: Quickshell.execDetached([Settings.data.general.terminal, "-e", "btop"])
+    property string screenName
+    highlighted: Panels.current === "performance"
+    onClicked: Panels.toggle("performance", screenName)
+    onMiddleClicked: Quickshell.execDetached(Paths.term(["btop"]))
 
     component Stat: BarFlow {
         property string icon

@@ -6,6 +6,8 @@ A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor, built
 - [Features](#features)
 - [Getting started](#getting-started)
 - [Using the shell](#using-the-shell)
+- [Network, printers and power](#network-printers-and-power)
+- [System check](#system-check)
 - [Displays](#displays)
 - [Wallpapers](#wallpapers)
 - [Themes](#themes)
@@ -53,7 +55,12 @@ To regenerate these, run `tools/screenshots.sh` inside a niri session with the s
 | **Lock screen** | PAM auth, blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
 | **Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; destructive actions need a second press |
 | **Wallpaper** | Fade, zoom, circle-reveal and wipe transitions, picker grid, auto-cycle, colors from wallpaper (matugen) |
-| **Calendar** | Month view with slide transitions, 5-day weather (Open-Meteo, no API key) |
+| **Dashboard** | Opens from the bar clock. Tabs: Overview (clock, calendar, user, weather and media cards), Media (full player), Wallpapers (picker and folder), Weather (configurable forecast), and a shortcut to Settings |
+| **Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
+| **Network & VPN** | Wi-Fi, plus NetworkManager VPNs (WireGuard, OpenVPN): connect from the control center, import `.conf`/`.ovpn` files in Settings |
+| **Printers** | CUPS: start and enable the service, set the default printer, print test pages, manage the queue |
+| **Power** | Power-saver / Balanced / Performance profiles in the control center and Settings |
+| **System check** | Runs `flamenco doctor` in Settings, shows what's missing and gives the exact `pacman` command |
 | **Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
 | **Displays** | Per-display resolution, refresh rate, scale, orientation (rotate and flip) and VRR; drag-to-arrange layout; live apply with 15-second auto-revert; saved to niri's config |
 | **Settings app** | Its own window (`flamenco settings`) with a page for every module. Every change applies live |
@@ -112,30 +119,40 @@ flamenco doctor
 
 ### 3. Configure niri
 
-Run `flamenco niri-config` to print the snippet, which is also saved in [examples/niri-flamenco.kdl](examples/niri-flamenco.kdl). It has two parts:
+```sh
+flamenco niri-config [--print]  write a complete ~/.config/niri/config.kdl (old one backed up)
+flamenco logs [-f]              background log of the shell
+flamenco printers [--json] | default NAME | test NAME | cancel ID|all | service ACTION | add
+flamenco doctor --install-command
+```
 
-1. **Top level** of `~/.config/niri/config.kdl`:
-   - start the shell with `spawn-at-startup "flamenco" "run"`
-   - set `QT_QPA_PLATFORMTHEME=qt6ct`
-   - show the wallpaper behind niri's overview
-   - make the settings window float
-2. **Key bindings.** Paste these lines *inside your existing* `binds { }` block. niri allows only one `binds` block, so don't add a second one. Leave out any key you already use.
+This **replaces `~/.config/niri/config.kdl` with a complete config for Flamenco**:
+- **Kept from your old config:** your `input` block (keyboard layout, touchpad), your display (`output`) blocks and your cursor.
+- **Added:** everything else. That's Flamenco starting with niri, the full set of standard niri keybindings plus the Flamenco ones, the Qt theming environment, rounded windows, and the wallpaper behind the overview.
+- **Backup:** your previous config is saved next to it as `config.kdl.bak-<date>`.
+- **Validation:** the new config is checked with `niri validate` first. If niri rejects it, nothing is changed.
 
-**Run only one shell.** If your config starts another shell or wallpaper program (`dms run`, `waybar`, `swaybg`, `swww`, …), remove or comment out that line. Two shells fight over notifications, the bar area and the wallpaper.
+The new config never starts another shell. If you had `dms`, `waybar`, `swaybg` or similar starting before, they're gone; two shells would fight over notifications, the bar area and the wallpaper. Use `flamenco niri-config --print` to see the config without writing it.
 
-Check the config with `niri validate`, then log out and back in, or start the shell by hand:
+The config keeps working even if the shell fails to start:
+- `Mod+T` opens a terminal
+- the volume, brightness and media keys fall back to `wpctl`, `brightnessctl` and `playerctl`
+- `Mod+Shift+E` or `Ctrl+Alt+Delete` quits niri
+
+Log out and choose **niri** at the login screen. To start or restart the shell by hand:
 
 ```sh
 flamenco run --fg       # foreground, prints errors; Ctrl+C to stop
-flamenco run            # background
+flamenco run            # background, logs to ~/.cache/flamenco/shell.log
 flamenco restart        # after an upgrade
+flamenco logs           # show the background log (-f to follow)
 ```
 
 ## Using the shell
 
 ### Keybindings
 
-These come from the niri snippet; change them in your niri config.
+These come from `flamenco niri-config`; change them in `~/.config/niri/config.kdl`. `Mod+Shift+/` shows every binding.
 
 | Key | Action |
 |---|---|
@@ -146,6 +163,10 @@ These come from the niri snippet; change them in your niri config.
 | `Mod+Comma` | Settings |
 | `Mod+Escape` | Power menu |
 | `Super+Alt+L` | Lock screen |
+| `Mod+T` / `Mod+Return` | Terminal |
+| `Mod+O` | niri overview |
+| `Mod+Q` | Close window |
+| `Mod+Shift+E` | Quit niri |
 
 Every panel closes with `Esc` or a click outside it.
 
@@ -157,10 +178,10 @@ Every panel closes with `Esc` or a click outside it.
 |---|---|---|
 | Launcher (apps icon) | open launcher | |
 | Workspaces | go to that workspace | scroll to switch workspaces |
-| Clock | calendar and weather | |
+| Clock | dashboard (Overview, Media, Wallpapers, Weather) | |
 | Media | control center | middle-click play/pause, right-click next track |
 | System tray | activate the app | right-click app menu, middle-click secondary action, scroll is passed to the app, hover for tooltip |
-| CPU / RAM | opens `btop` in your terminal | |
+| CPU / RAM | performance popout | middle-click opens `btop` |
 | Keyboard layout | next layout | only shown with more than one layout |
 | Network | control center, Wi-Fi page | |
 | Bluetooth | control center, devices page | |
@@ -191,8 +212,40 @@ Move with `↑`/`↓` (or `Ctrl+N`/`Ctrl+P`), launch with `Enter`, close with `E
 
 - **Sliders:** volume, microphone, brightness. Click a slider's icon to mute; click `›` to choose the output or input device.
 - **Tiles:** click to toggle. Wi-Fi and Bluetooth have a `›` arrow that opens a list of networks or devices. Click a secured network to enter its password.
+- **VPN tile:** connects your VPN, or disconnects it if it's already on. Its `›` arrow lists all your VPNs with on/off switches.
+- **Power tile:** click to cycle power profiles. Its `›` arrow opens a page with Power saver, Balanced and Performance, plus battery details.
 - **Header:** settings, lock and power buttons.
 - **Media card:** appears while something is playing. Click the progress bar to seek; use the swap button to switch between players.
+
+### Dashboard
+
+Click the clock in the bar to open the dashboard. It opens on the tab chosen in **Settings → Clock & Weather**, Overview by default:
+
+| Tab | Shows |
+|---|---|
+| **Overview** | Big clock, month calendar, your user card, and summary cards for the weather and the current track (click them for the full tab) |
+| **Media** | The current track with large cover art, a seek bar, previous/play/next, and shuffle/repeat where the player supports them. With several players, chips let you switch between them. Shows "No media playing" otherwise |
+| **Wallpapers** | The wallpaper folder (edit it right there), the picker grid, shuffle and rescan |
+| **Weather** | Now (temperature, feels like, wind, humidity, sunrise and sunset), the next 12 hours, and a 1–7 day forecast with rain chance and temperature range |
+| **Settings** | Opens the Settings app |
+
+What the Overview and Weather tabs show is set in **Settings → Clock & Weather**:
+- the weather location and units
+- forecast length
+- which weather details appear
+- whether the user, media and weather cards show on Overview
+
+### Performance
+
+Click the CPU/RAM widget for the performance popout:
+- **CPU:** usage with a one-minute history graph, load average, cores and frequency
+- **Temperatures:** every hardware sensor, colored by how hot it is
+- **Memory:** RAM and swap
+- **Disks:** usage for each mounted disk
+- **Network:** download and upload speed with a graph
+- **Processes:** the busiest few
+
+The **btop** button opens a full monitor in your terminal. Sensors, disks and processes are only read while the popout is open.
 
 ### Notifications
 
@@ -243,6 +296,41 @@ Pinned apps that aren't installed are hidden. A dock with auto-hide off reserves
 | Right | pin or unpin |
 
 With auto-hide on, move the pointer to the bottom edge to reveal the dock.
+
+## Network, printers and power
+
+**Settings → Network**
+- **Wi-Fi:** on/off.
+- **VPNs:** your NetworkManager VPNs, with connect switches and delete buttons.
+- **Import:** a WireGuard `.conf` or OpenVPN `.ovpn` file. OpenVPN needs `networkmanager-openvpn`.
+- **Connection editor:** a button that opens `nm-connection-editor` for everything else.
+
+**Settings → Printers** manages CUPS:
+- **Not installed:** an **Install** button sets up `cups`, `cups-pdf` and `system-config-printer`, and enables the service.
+- **Service:** start or stop CUPS, and enable or disable it at boot. These need your password, so they open in a terminal.
+- **Printers:** the list, with a star to make one the default, and a **Test page** button. **Add printer** opens `system-config-printer`, or the CUPS web page if that isn't installed.
+- **Queue:** waiting jobs, with cancel buttons.
+
+The same actions are available as `flamenco printers …`.
+
+**Settings → Power** switches between Power saver, Balanced and Performance. Performance appears only if your hardware offers it. The page also shows battery status. The control center's Power tile does the same.
+
+## System check
+
+**Settings → System check** (also reachable from About) runs `flamenco doctor` and lists, by category, everything Flamenco uses:
+- **Core:** Quickshell, niri, the icon font, a terminal.
+- **Session:** the niri config is valid, Flamenco starts with niri, no other shell is started, the screen-sharing portal, XWayland, and the GPU. In a virtual machine, it also checks for 3D acceleration.
+- **Features:** NetworkManager and VPN plugins, PipeWire, brightness, power profiles, Bluetooth, CUPS, clipboard, and so on.
+- **Theming:** qt5ct/qt6ct, the Qt environment variable, adw-gtk3, WebP support, matugen.
+
+Anything missing shows the package that provides it. The page builds one command for all of it, which you can **Install in terminal** or **Copy**. From a terminal:
+
+```sh
+flamenco doctor                    # grouped report
+flamenco doctor --install-command  # just the pacman/paru command
+```
+
+The page also has buttons to view the shell log and to write the niri config.
 
 ## Displays
 
@@ -388,6 +476,7 @@ Files written:
 | Display change left a blank screen | Wait 15 seconds; it reverts on its own. If you already kept it, restore `~/.local/state/flamenco/backup/niri-config.before-displays.kdl` |
 | Locked in by an SDDM theme | Press **Ctrl+Alt+Shift+L** on the lock screen to switch to the built-in lock |
 | Tray menu misplaced or not opening | Turn on **Settings → Bar → Native Qt menus** |
+| **Black screen after logging in to niri** | Switch to a text console (`Ctrl+Alt+F3`), log in, and run `flamenco doctor`.<br>**In a virtual machine** this is almost always missing 3D acceleration: niri has no software renderer, so without it nothing is drawn. Turn on 3D in the VM settings (virt-manager: Video *VirtIO* with *3D acceleration*, and *OpenGL* on the Spice display; VirtualBox: *VMSVGA* with *3D acceleration*). The check *VM 3D acceleration* shows whether it's on.<br>**Otherwise:** if niri runs (`Mod+T` opens a terminal) but there's no bar or wallpaper, the shell didn't start. Check `flamenco logs` or run `flamenco run --fg` |
 | The shell crashes on start | Run `flamenco run --fg` and read the error. The crash report is under `~/.cache/quickshell/crashes/` |
 
 ## Reference
