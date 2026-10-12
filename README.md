@@ -132,7 +132,7 @@ flamenco doctor
 
 ```sh
 flamenco niri-config [--print]  write a complete ~/.config/niri/config.kdl (old one backed up)
-flamenco hyprland-config [--print]   same for Hyprland (~/.config/hypr/hyprland.conf)
+flamenco hyprland-config [--lua|--conf] [--print]   same for Hyprland (hyprland.lua or hyprland.conf)
 flamenco setup                  open the first-run setup
 flamenco logs [-f]              background log of the shell
 flamenco printers [--json] | default NAME | test NAME | cancel ID|all | service ACTION | add
@@ -179,31 +179,44 @@ Each step is the real Settings page, so changes apply immediately. Move between 
 
 ### Using Hyprland instead of niri
 
-Flamenco also runs on Hyprland:
+Flamenco also runs on Hyprland, with either config format:
 
 ```sh
-flamenco hyprland-config        # writes ~/.config/hypr/hyprland.conf (old one backed up)
-flamenco hyprland-config --print
+flamenco hyprland-config            # picks the format you use (see below); old config backed up
+flamenco hyprland-config --lua      # force hyprland.lua (newer Hyprland, `hl.*` API)
+flamenco hyprland-config --conf     # force hyprland.conf (classic hyprlang)
+flamenco hyprland-config --print    # show it without writing
 ```
 
-**What it writes:**
-- a complete `hyprland.conf`: Flamenco starts with Hyprland, Qt theming is set up, plus decoration and animations, window and workspace keys, and media keys with fallbacks
-- the files it sources, which Flamenco Settings manages: `flamenco-monitors.conf`, `flamenco-input.conf`, `flamenco-cursor.conf` and `flamenco-binds.conf`
+**Which format:** it writes **`hyprland.lua`** when you already have one, or when there's no Hyprland config yet, since that's what newer Hyprland uses. It writes `hyprland.conf` only if that's your only config.
 
-The config is checked with `Hyprland --verify-config` when that's available.
+**Both formats include:**
+- Flamenco starting with Hyprland, and Qt theming
+- decoration and animations
+- window and workspace keys, and media keys with fallbacks
+- floating rules for the Flamenco windows
 
-**On Hyprland:**
+The parts Flamenco Settings manages live in separate files:
+
+| | Lua config | Classic config |
+|---|---|---|
+| Shortcuts | `hypr/flamenco/binds.lua` | `hypr/flamenco-binds.conf` |
+| Keyboard | `hypr/flamenco/input.lua` | `hypr/flamenco-input.conf` |
+| Cursor | `hypr/flamenco/cursor.lua` | `hypr/flamenco-cursor.conf` |
+| Displays | `hypr/flamenco/monitors.lua` | `hypr/flamenco-monitors.conf` |
+
+**In the Lua config:**
+- **Safe includes:** Flamenco's files are loaded with `pcall`, so an error in one is logged and the rest of your config still loads.
+- **Taking over keys:** the default bindings go through a helper that skips any key a Flamenco shortcut has claimed. That's how Ctrl+Q-instead-of-Super+Q and *Disable key* work without an `unbind`.
+- **Runtime actions** (workspace clicks, log out, screen off) use `flamenco hypr-dispatch`. It tries the Lua dispatchers (`hl.dsp.*`) first, then the classic ones.
+- **Unverified Lua forms:** a few are best guesses: focusing a specific window, turning screens off, and monitor rotation/disable. If one is wrong, it's logged and nothing else breaks.
+
+**What works on Hyprland:**
 - **The bar:** workspaces, the window title and the keyboard layout come from Hyprland's event socket and `hyprctl`.
-- **Settings → Keyboard** writes `flamenco-binds.conf` and `flamenco-input.conf`.
-  - Flamenco functions, apps and commands bind directly.
-  - niri actions are translated where Hyprland has an equivalent (close window → `killactive`, focus workspace → `workspace`, …); the rest are skipped with a comment.
-  - *Disable key* becomes `unbind`.
-- **Settings → Displays** writes `monitor =` lines to `flamenco-monitors.conf`.
-- **The cursor theme** is applied with `hyprctl setcursor`.
-- **Screen sharing** uses `hyprland-portals.conf`, and the Hyprland portal is marked as working.
-- **Log out and screen off** go through Hyprland's dispatchers.
-
-`flamenco doctor` shows Hyprland-specific checks when it runs under Hyprland.
+- **Settings → Keyboard:** Flamenco functions, apps and commands bind directly. niri actions with a Hyprland equivalent are translated (close window, focus/move to workspace, floating, focus direction, quit, screenshots, layout switching); the rest are skipped with a comment.
+- **Settings → Displays and the cursor theme** write their files and reload Hyprland.
+- **Screen sharing** uses `hyprland-portals.conf`.
+- **`flamenco doctor`** shows Hyprland checks.
 
 ## Using the shell
 

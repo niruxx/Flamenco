@@ -10,6 +10,7 @@ install:
 	cp -r shell $(SHARE)/
 	install -Dm644 data/niri/config.kdl $(SHARE)/niri/config.kdl
 	install -Dm644 data/hypr/hyprland.conf $(SHARE)/hypr/hyprland.conf
+	install -Dm644 data/hypr/hyprland.lua $(SHARE)/hypr/hyprland.lua
 	install -m 755 bin/flamenco $(SHARE)/flamenco
 	ln -sf $(SHARE)/flamenco $(BIN)/flamenco
 	install -Dm644 data/flamenco-settings.desktop $(PREFIX)/share/applications/flamenco-settings.desktop

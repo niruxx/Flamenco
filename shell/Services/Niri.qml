@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // Live compositor state. On niri: `niri msg --json event-stream`. On Hyprland:
 // its event socket + `hyprctl -j`, mapped onto the same model so the rest of
@@ -37,22 +38,9 @@ Singleton {
             Quickshell.execDetached(["niri", "msg", "action", ...args]);
             return;
         }
-        // niri action names → Hyprland dispatchers
-        const a = args[0], rest = args.slice(1);
-        const id = rest.includes("--id") ? rest[rest.indexOf("--id") + 1] : "";
-        const d = {
-            "focus-workspace": ["workspace", rest[0]],
-            "focus-workspace-up": ["workspace", "e-1"],
-            "focus-workspace-down": ["workspace", "e+1"],
-            "focus-window": ["focuswindow", "address:" + id],
-            "close-window": id ? ["closewindow", "address:" + id] : ["killactive"],
-            "power-off-monitors": ["dpms", "off"],
-            "quit": ["exit"]
-        }[a];
-        if (a === "switch-layout")
-            Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", rest[0] === "prev" ? "prev" : "next"]);
-        else if (d)
-            Quickshell.execDetached(["hyprctl", "dispatch", d[0], ...(d[1] ? [d[1]] : [])]);
+        // Hyprland: the CLI translates niri action names, in whichever syntax
+        // this Hyprland accepts (Lua `hl.dsp.*` or the classic dispatchers)
+        Quickshell.execDetached([Paths.bin, "hypr-dispatch", ...args.map(String)]);
     }
 
     function focusWorkspace(ws) {

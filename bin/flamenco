@@ -27,7 +27,8 @@
   flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
   flamenco doctor [--json]
   flamenco niri-config [--print | --snippet]   write a complete ~/.config/niri/config.kdl (backs up the old one)
-  flamenco hyprland-config [--print]   write a complete ~/.config/hypr/hyprland.conf (old one backed up)
+  flamenco hyprland-config [--lua|--conf] [--print]   write a complete Hyprland config (hyprland.lua or .conf; old one backed up)
+  flamenco hypr-dispatch ACTION [ARGS]   run a niri-style action on Hyprland (used by the shell)
   flamenco logs [-f]           show the shell's log (~/.cache/flamenco/shell.log)
 """
 
@@ -42,7 +43,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.11.0"
+VERSION = "0.11.1"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -912,7 +913,7 @@ def apply_cursor(s: "Spec", m: dict) -> list[str]:
     size = int(s.o.get("cursorSize", 24))
     done = []
     if compositor() == "hyprland":
-        hypr_apply_cursor(theme, size)
+        (lua_apply_cursor if hypr_lua() else hypr_apply_cursor)(theme, size)
         done.append("hypr-cursor")
 
     # 1) niri's own cursor
@@ -1125,6 +1126,8 @@ def cmd_display(args: list[str]) -> int:
     if "--json" not in args or args.index("--json") + 1 >= len(args):
         die(f"usage: flamenco display {sub} --json SPEC")
     spec = json.loads(args[args.index("--json") + 1])
+    if hypr and hypr_lua() and sub in ("apply", "save"):
+        return lua_display_write(spec)   # reload applies it; revert rewrites the previous layout
     if sub == "apply":
         return hypr_display_apply(spec) if hypr else display_apply(spec)
     if sub == "save":
@@ -1697,8 +1700,12 @@ def cmd_keyboard(args: list[str]) -> int:
         if sub == "get":
             kb = {"layout": "", "variant": "", "options": "", "model": "", "repeatDelay": 600, "repeatRate": 25,
                   "numlock": True, "trackLayout": "global"}
-            kb.update(hypr_read_json(HYPR_INPUT).get("input", {}))
-            kb["shortcuts"] = hypr_read_json(HYPR_BINDS).get("shortcuts")
+            if hypr_lua():
+                kb.update(lua_read_json("input").get("input", {}))
+                kb["shortcuts"] = lua_read_json("binds").get("shortcuts")
+            else:
+                kb.update(hypr_read_json(HYPR_INPUT).get("input", {}))
+                kb["shortcuts"] = hypr_read_json(HYPR_BINDS).get("shortcuts")
             kb["others"], kb["replaced"] = [], []
             print(json.dumps(kb))
             return 0
@@ -1707,9 +1714,9 @@ def cmd_keyboard(args: list[str]) -> int:
         spec = json.loads(args[args.index("--json") + 1])
         try:
             if spec.get("input") is not None:
-                hypr_apply_input(spec["input"])
+                (lua_apply_input if hypr_lua() else hypr_apply_input)(spec["input"])
             if spec.get("shortcuts") is not None:
-                hypr_apply_shortcuts(spec["shortcuts"])
+                (lua_apply_shortcuts if hypr_lua() else hypr_apply_shortcuts)(spec["shortcuts"])
         except ValueError as e:
             die(str(e))
         hypr_reload()
@@ -2637,6 +2644,9 @@ def hypr_validate(path: Path) -> bool:
 
 
 def cmd_hyprland_config(args: list[str]) -> int:
+    use_lua = "--lua" in args or ("--conf" not in args and hypr_lua())
+    if use_lua:
+        return cmd_hyprland_lua_config(args)
     here = Path(__file__).resolve().parent
     tpl = next((c for c in (here.parent / "data/hypr/hyprland.conf", shell_dir().parent / "hypr/hyprland.conf",
                             Path("/usr/share/flamenco-shell/hypr/hyprland.conf")) if c.is_file()), None)
@@ -2674,6 +2684,227 @@ def cmd_hyprland_config(args: list[str]) -> int:
     print(f"terminal: {pick_terminal()}  (Super+T / Super+Return)")
     hypr_reload()
     return 0
+
+
+# ─────────────────────────────── Hyprland (Lua config) ───────────────────────
+# Newer Hyprland reads ~/.config/hypr/hyprland.lua (an `hl.*` API). Flamenco's
+# parts live in ~/.config/hypr/flamenco/*.lua and are required with pcall.
+
+HYPR_LUA = HYPR_DIR / "hyprland.lua"
+HYPR_LUA_DIR = HYPR_DIR / "flamenco"
+
+
+def hypr_lua() -> bool:
+    """Lua config in use: hyprland.lua exists, or neither config exists yet (new Hyprland)."""
+    return HYPR_LUA.exists() or not HYPR_CONFIG.exists()
+
+
+def lua_str(v) -> str:
+    return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+
+
+def lua_keys(key: str) -> str:
+    mods, k = hypr_combo(key)
+    return " + ".join([*mods.split(), k]) if mods else k
+
+
+def lua_norm(key: str) -> str:
+    """Same normalisation as norm() in the generated hyprland.lua."""
+    mods, k = hypr_combo(key)
+    return "+".join(sorted(m.upper() for m in mods.split()) + [k.upper()])
+
+
+def lua_niri_action(action: str) -> str | None:
+    """niri action → hl.dsp call (only forms shown in Hyprland's own example config)."""
+    a = action.split()
+    name, args = a[0], a[1:]
+    if name in ("focus-workspace", "move-column-to-workspace") and args:
+        w = args[0].strip('"')
+        w = w if w.isdigit() else lua_str(w)
+        return f"hl.dsp.focus({{ workspace = {w} }})" if name == "focus-workspace" else f"hl.dsp.window.move({{ workspace = {w} }})"
+    return {
+        "close-window": "hl.dsp.window.close()",
+        "toggle-window-floating": 'hl.dsp.window.float({ action = "toggle" })',
+        "focus-column-left": 'hl.dsp.focus({ direction = "left" })',
+        "focus-column-right": 'hl.dsp.focus({ direction = "right" })',
+        "focus-window-up": 'hl.dsp.focus({ direction = "up" })',
+        "focus-window-down": 'hl.dsp.focus({ direction = "down" })',
+        "focus-workspace-down": 'hl.dsp.focus({ workspace = "e+1" })',
+        "focus-workspace-up": 'hl.dsp.focus({ workspace = "e-1" })',
+        "quit": "hl.dsp.exit()",
+        "screenshot": "hl.dsp.exec_cmd(" + lua_str('grim -g "$(slurp)" - | wl-copy') + ")",
+        "screenshot-screen": "hl.dsp.exec_cmd(" + lua_str("grim - | wl-copy") + ")",
+        "switch-layout": "hl.dsp.exec_cmd(" + lua_str("hyprctl switchxkblayout all next") + ")",
+    }.get(name)
+
+
+def lua_write(name: str, lines: list[str], data: dict | None = None):
+    head = [f"-- {MARKER}: managed by Flamenco Settings, regenerated on change"]
+    if data is not None:
+        head.append("-- flamenco-json: " + json.dumps(data))
+    HYPR_LUA_DIR.mkdir(parents=True, exist_ok=True)
+    (HYPR_LUA_DIR / f"{name}.lua").write_text("\n".join(head + lines) + "\n")
+
+
+def lua_read_json(name: str) -> dict:
+    try:
+        m = re.search(r"^-- flamenco-json: (.*)$", (HYPR_LUA_DIR / f"{name}.lua").read_text(), re.M)
+        return json.loads(m.group(1)) if m else {}
+    except Exception:
+        return {}
+
+
+def lua_apply_shortcuts(shortcuts: list[dict]):
+    keys = [norm_key(sc["key"]) for sc in shortcuts]
+    dup = {k for k in keys if keys.count(k) > 1}
+    if dup:
+        raise ValueError("the same key is used twice: " + ", ".join(sorted(dup)))
+    lines = ["flamenco_taken = flamenco_taken or {}", ""]
+    for sc in shortcuts:
+        t, v = sc.get("type"), str(sc.get("value", "")).strip()
+        title = f"  -- {sc['title']}" if sc.get("title") else ""
+        opts = ", { locked = true }" if sc.get("locked") and t != "niri" else ""
+        if t == "none":
+            action = None
+        elif t == "flamenco":
+            if v not in SHELL_FUNCTIONS:
+                raise ValueError(f"unknown Flamenco function: {v!r}")
+            action = "hl.dsp.exec_cmd(" + lua_str("flamenco " + " ".join(SHELL_FUNCTIONS[v][1])) + ")"
+        elif t == "app":
+            action = "hl.dsp.exec_cmd(" + lua_str("flamenco launch " + v) + ")"
+        elif t == "command":
+            action = "hl.dsp.exec_cmd(" + lua_str(v) + ")"
+        elif t == "niri":
+            action = lua_niri_action(v)
+            if action is None:
+                lines.append(f"-- {sc['key']}: no Hyprland equivalent for niri action '{v}'")
+                continue
+        else:
+            raise ValueError(f"{sc['key']}: unknown shortcut type {t!r}")
+        # claim the key so the defaults in hyprland.lua step aside
+        lines.append(f"flamenco_taken[{lua_str(lua_norm(sc['key']))}] = true{title}")
+        if action:
+            lines.append(f"hl.bind({lua_str(lua_keys(sc['key']))}, {action}{opts})")
+    lua_write("binds", lines, {"shortcuts": shortcuts})
+
+
+def lua_apply_input(kb: dict):
+    fields = []
+    for k, hk in (("layout", "kb_layout"), ("variant", "kb_variant"), ("options", "kb_options"), ("model", "kb_model")):
+        if str(kb.get(k, "")).strip():
+            fields.append(f"        {hk} = {lua_str(kb[k])},")
+    fields += [f"        repeat_delay = {int(kb.get('repeatDelay', 600))},",
+               f"        repeat_rate = {int(kb.get('repeatRate', 25))},",
+               f"        numlock_by_default = {'true' if kb.get('numlock') else 'false'},"]
+    lua_write("input", ["hl.config({", "    input = {", *fields, "    },", "})"], {"input": kb})
+
+
+def lua_apply_cursor(theme: str, size: int):
+    lua_write("cursor", [f'hl.env("XCURSOR_THEME", {lua_str(theme)})', f'hl.env("XCURSOR_SIZE", {lua_str(size)})',
+                         f'hl.env("HYPRCURSOR_THEME", {lua_str(theme)})', f'hl.env("HYPRCURSOR_SIZE", {lua_str(size)})',
+                         'hl.on("hyprland.start", function()',
+                         f'    hl.exec_cmd({lua_str(f"hyprctl setcursor {theme} {size}")})',
+                         "end)"])
+    if shutil.which("hyprctl"):
+        subprocess.run(["hyprctl", "setcursor", theme, str(size)], capture_output=True)
+
+
+def lua_monitor(o: dict) -> str:
+    if not o.get("enabled", True):
+        # best guess for the Lua form of hyprlang's "disable"; loaded via pcall
+        return f'hl.monitor({{ output = {lua_str(o["name"])}, mode = "disable" }})'
+    m = o.get("mode") or {}
+    mode = f"{m['w']}x{m['h']}@{int(m['r']) / 1000:.3f}" if m else "preferred"
+    parts = [f"output = {lua_str(o['name'])}", f"mode = {lua_str(mode)}",
+             f"position = {lua_str(str(int(o.get('x', 0))) + 'x' + str(int(o.get('y', 0))))}",
+             f"scale = {fmt_scale(o.get('scale', 1))}"]
+    tf = HYPR_TRANSFORMS.get(norm_transform(o.get("transform")), 0)
+    if tf:
+        parts.append(f"transform = {tf}")   # same name as hyprlang's monitor option
+    if o.get("vrrSupported") and "vrr" in o:
+        parts.append(f"vrr = {1 if o['vrr'] else 0}")
+    return "hl.monitor({ " + ", ".join(parts) + " })"
+
+
+def lua_display_write(spec: list[dict]) -> int:
+    lua_write("monitors", [lua_monitor(o) for o in spec])
+    hypr_reload()
+    return 0
+
+
+def cmd_hyprland_lua_config(args: list[str]) -> int:
+    here = Path(__file__).resolve().parent
+    tpl = next((c for c in (here.parent / "data/hypr/hyprland.lua", shell_dir().parent / "hypr/hyprland.lua",
+                            Path("/usr/share/flamenco-shell/hypr/hyprland.lua")) if c.is_file()), None)
+    if tpl is None:
+        die("Hyprland Lua config template not found")
+    text = tpl.read_text().replace("@@TERMINAL@@", pick_terminal())
+    if "--print" in args:
+        print(text, end="")
+        return 0
+    try:
+        saved = json.loads((CONFIG_DIR / "settings.json").read_text())
+    except Exception:
+        saved = {}
+    if not (HYPR_LUA_DIR / "binds.lua").exists():
+        lua_apply_shortcuts(saved.get("keyboard", {}).get("shortcuts") or DEFAULT_SHORTCUTS)
+    if not (HYPR_LUA_DIR / "input.lua").exists():
+        lua_apply_input(saved.get("keyboard", {}) or {})
+    for name in ("cursor", "monitors"):
+        if not (HYPR_LUA_DIR / f"{name}.lua").exists():
+            lua_write(name, [])
+    if HYPR_LUA.exists():
+        import time
+        backup = HYPR_LUA.with_name(f"hyprland.lua.bak-{time.strftime('%Y%m%d-%H%M%S')}")
+        backup.write_text(HYPR_LUA.read_text())
+        print(f"previous config saved as {backup}")
+    HYPR_LUA.write_text(text)
+    print(f"wrote {HYPR_LUA} (+ flamenco/*.lua)")
+    print(f"terminal: {pick_terminal()}  (Super+T / Super+Return)")
+    if HYPR_CONFIG.exists():
+        print(f"note: {HYPR_CONFIG} is still there; Hyprland uses hyprland.lua when both exist")
+    hypr_reload()
+    return 0
+
+
+LUA_DISPATCH = {
+    # niri action → (Lua expression, legacy dispatcher) for `hyprctl dispatch`
+    "focus-workspace-up": ('hl.dsp.focus({ workspace = "e-1" })', ["workspace", "e-1"]),
+    "focus-workspace-down": ('hl.dsp.focus({ workspace = "e+1" })', ["workspace", "e+1"]),
+    "quit": ("hl.dsp.exit()", ["exit"]),
+}
+
+
+def cmd_hypr_dispatch(args: list[str]) -> int:
+    """Run a niri-style action on Hyprland, in whichever syntax this Hyprland accepts."""
+    if not args:
+        die("usage: flamenco hypr-dispatch ACTION [ARGS]")
+    a, rest = args[0], args[1:]
+    win = rest[rest.index("--id") + 1] if "--id" in rest else ""
+    if a == "switch-layout":
+        return subprocess.run(["hyprctl", "switchxkblayout", "all", "prev" if rest[:1] == ["prev"] else "next"]).returncode
+    if a == "focus-workspace" and rest:
+        w = rest[0] if rest[0].isdigit() else lua_str(rest[0])
+        lua, legacy = f"hl.dsp.focus({{ workspace = {w} }})", ["workspace", rest[0]]
+    elif a == "focus-window" and win:
+        lua, legacy = f'hl.dsp.focus({{ window = "address:{win}" }})', ["focuswindow", f"address:{win}"]   # Lua form: best guess
+    elif a == "close-window":
+        lua, legacy = (f'hl.dsp.window.close({{ window = "address:{win}" }})', ["closewindow", f"address:{win}"]) if win \
+            else ("hl.dsp.window.close()", ["killactive"])
+    elif a == "power-off-monitors":
+        lua, legacy = 'hl.dsp.dpms({ action = "off" })', ["dpms", "off"]                                      # Lua form: best guess
+    elif a in LUA_DISPATCH:
+        lua, legacy = LUA_DISPATCH[a]
+    else:
+        die(f"no Hyprland equivalent for {a!r}")
+    attempts = [[lua], legacy] if hypr_lua() else [legacy, [lua]]
+    for cmd in attempts:
+        r = subprocess.run(["hyprctl", "dispatch", *cmd], capture_output=True, text=True)
+        out = (r.stdout + r.stderr).strip().lower()
+        if r.returncode == 0 and not any(w in out for w in ("error", "invalid", "unknown", "not found")):
+            return 0
+    print(f"flamenco: Hyprland rejected {a}", file=sys.stderr)
+    return 1
 
 
 # ─────────────────────────────── apps-theme ──────────────────────────────────
@@ -2894,12 +3125,13 @@ def doctor_checks() -> list[dict]:
 
     # ── session ──
     if compositor() == "hyprland":
-        hcfg = HYPR_CONFIG.read_text() if HYPR_CONFIG.is_file() else ""
+        hcfg = (HYPR_LUA if hypr_lua() else HYPR_CONFIG).read_text() if (HYPR_LUA if hypr_lua() else HYPR_CONFIG).is_file() else ""
         add("Session", "Compositor", "Hyprland", True, "hyprland", True)
         add("Session", "Starts with Hyprland", "exec-once = flamenco run in hyprland.conf",
-            bool(re.search(r"^\s*exec-once\s*=\s*flamenco run", hcfg, re.M)), "", True, hint="run `flamenco hyprland-config`")
+            bool(re.search(r"^\s*exec-once\s*=\s*flamenco run", hcfg, re.M)) or 'hl.exec_cmd("flamenco run")' in hcfg,
+            "", True, hint="run `flamenco hyprland-config`")
         add("Session", "Flamenco settings files", "hyprland.conf sources the flamenco-*.conf files",
-            "flamenco-binds.conf" in hcfg, "", False, hint="run `flamenco hyprland-config`")
+            "flamenco-binds.conf" in hcfg or 'flamenco("binds")' in hcfg, "", False, hint="run `flamenco hyprland-config`")
     cfg = NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() and compositor() == "niri" else ""
     if compositor() == "niri" and have("niri") and cfg:
         r = subprocess.run(["niri", "validate", "-c", str(NIRI_CONFIG)], capture_output=True, text=True)
@@ -3130,6 +3362,8 @@ def main(argv: list[str]) -> int:
         return ipc("theme", "palette", a)
     if cmd == "apps-theme":
         return cmd_apps_theme(rest)
+    if cmd == "hypr-dispatch":
+        return cmd_hypr_dispatch(rest)
     if cmd == "hyprland-config":
         return cmd_hyprland_config(rest)
     if cmd == "keyring":
