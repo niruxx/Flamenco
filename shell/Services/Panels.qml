@@ -11,6 +11,10 @@ Singleton {
     property string screen: ""
     property bool settingsOpen: false
     property string settingsPage: "appearance"
+    // dashboard (clock popout): tab requested by the next open, and the tab showing now
+    property string dashboardTab: ""
+    property string dashboardShown: ""
+
     // control-center sub page: "" (main) | wifi | bluetooth | audio | mic
     property string controlDetail: ""
 
@@ -36,6 +40,17 @@ Singleton {
                 controlDetail = "";
             open(name, sc);
         }
+    }
+
+    // Open the dashboard on a tab; toggles shut if that tab is already showing.
+    function openDashboard(tab, s) {
+        const sc = targetScreen(s);
+        if (current === "calendar" && screen === sc && dashboardShown === tab) {
+            close();
+            return;
+        }
+        dashboardTab = tab;
+        open("calendar", sc);
     }
 
     // Open the control center straight on a sub page (or toggle it shut if

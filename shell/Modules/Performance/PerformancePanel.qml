@@ -17,7 +17,13 @@ Variants {
         cardWidth: 440
 
         // sensors / disks / processes are only polled while this is open
-        onShouldShowChanged: SystemStats.detailed = shouldShow
+        // separate Connections so OverlayPanel's own shouldShow handler keeps running
+        Connections {
+            target: panel
+            function onShouldShowChanged() {
+                SystemStats.detailed = panel.shouldShow;
+            }
+        }
 
         ColumnLayout {
             width: parent.width

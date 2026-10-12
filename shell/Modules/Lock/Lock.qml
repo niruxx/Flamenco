@@ -141,6 +141,39 @@ Scope {
         onIsIdleChanged: if (isIdle) Niri.action("power-off-monitors")
     }
 
+    // suspend after being idle (separate timers on battery / plugged in)
+    IdleMonitor {
+        readonly property int minutes: Power.onBattery ? Settings.data.power.idleSuspendBattery : Settings.data.power.idleSuspendAC
+        enabled: minutes > 0 && Settings.data.power.allowSleep && !Toggles.caffeine
+        timeout: Math.max(1, minutes) * 60
+        respectInhibitors: true
+        onIsIdleChanged: if (isIdle) {
+            if (Settings.data.power.lockOnSleep)
+                root.lock();
+            Power.suspend();
+        }
+    }
+
+    // logind: PrepareForSleep(true) right before any suspend (lid, idle, menu, systemctl)
+    // and Session.Lock for `loginctl lock-session` / HandleLidSwitch=lock
+    readonly property string sessionPath: {
+        const id = Quickshell.env("XDG_SESSION_ID") || "";
+        // D-Bus object paths escape a leading digit as _3X
+        return id ? "/org/freedesktop/login1/session/" + (/^[0-9]/.test(id) ? "_3" + id[0] + id.slice(1) : id) : "";
+    }
+    Process {
+        running: true
+        command: ["gdbus", "monitor", "--system", "--dest", "org.freedesktop.login1"]
+        stdout: SplitParser {
+            onRead: line => {
+                if (line.includes("PrepareForSleep (true") && Settings.data.power.lockOnSleep)
+                    root.lock();
+                else if (line.includes(".Session.Lock ") && (!root.sessionPath || line.startsWith(root.sessionPath + ":")))
+                    root.lock();
+            }
+        }
+    }
+
     IpcHandler {
         target: "lock"
         function lock(): void {

@@ -5,7 +5,9 @@ import qs.Widgets
 
 // Horizontal: "14:05 • Sat 11 Oct". Vertical: hours over minutes.
 BarChip {
+    id: root
     property string screenName
+    property int barLevel: 0
     highlighted: Panels.current === "calendar"
     onClicked: Panels.toggle("calendar", screenName)
 
@@ -17,11 +19,12 @@ BarChip {
             font.weight: Font.Bold
         }
         Rectangle {
-            visible: !Theme.barVertical
+            visible: !Theme.barVertical && root.barLevel < 1
             width: 4; height: 4; radius: 2
             color: Theme.accent
         }
         FText {
+            visible: Theme.barVertical || root.barLevel < 1
             text: Theme.barVertical ? Time.minutes : Time.shortDate
             dim: !Theme.barVertical
             color: Theme.barVertical ? Theme.accent : Theme.textDim

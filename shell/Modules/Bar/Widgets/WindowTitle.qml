@@ -7,7 +7,8 @@ import qs.Widgets
 BarFlow {
     id: root
     readonly property var win: Niri.focusedWindow
-    property bool barVisible: win !== null
+    property int barLevel: 0
+    property bool barVisible: win !== null && barLevel < 2
     spacing: 8
 
     AppIcon {
@@ -16,7 +17,7 @@ BarFlow {
     }
 
     FText {
-        visible: !Theme.barVertical
+        visible: !Theme.barVertical && root.barLevel < 1
         width: Math.min(implicitWidth, 280)
         text: root.win?.title ?? ""
         elide: Text.ElideRight

@@ -99,6 +99,7 @@ Singleton {
             root.unread++;
 
             if (Settings.data.notifications.popups && (!root.dnd || e.urgency === 2)) {
+                Sounds.notification(e.urgency === 2);
                 popupModel.insert(0, e);
                 while (popupModel.count > 5)
                     popupModel.remove(popupModel.count - 1);

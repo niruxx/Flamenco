@@ -7,7 +7,11 @@ A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor, built
 - [Getting started](#getting-started)
 - [Using the shell](#using-the-shell)
 - [Network, printers and power](#network-printers-and-power)
+- [Sound](#sound)
+- [Firewall](#firewall)
+- [Screen sharing](#screen-sharing)
 - [System check](#system-check)
+- [Keyboard & shortcuts](#keyboard--shortcuts)
 - [Displays](#displays)
 - [Wallpapers](#wallpapers)
 - [Themes](#themes)
@@ -53,15 +57,19 @@ To regenerate these, run `tools/screenshots.sh` inside a niri session with the s
 | **Notifications** | Built-in daemon: popups with timeout bar, swipe to dismiss, actions, DND. History persists across restarts |
 | **OSD** | Volume, brightness and mic popups |
 | **Lock screen** | PAM auth, blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
-| **Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; destructive actions need a second press |
-| **Wallpaper** | Fade, zoom, circle-reveal and wipe transitions, picker grid, auto-cycle, colors from wallpaper (matugen) |
+| **Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; log out, restart and shut down run a 5-second cancellable countdown |
+| **Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **Dashboard** | Opens from the bar clock. Tabs: Overview (clock, calendar, user, weather and media cards), Media (full player), Wallpapers (picker and folder), Weather (configurable forecast), and a shortcut to Settings |
 | **Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
 | **Network & VPN** | Wi-Fi, plus NetworkManager VPNs (WireGuard, OpenVPN): connect from the control center, import `.conf`/`.ovpn` files in Settings |
+| **Sound** | Pick an installed sound theme (shared with GTK, GNOME and KDE apps), notification and volume sounds, output/input devices |
+| **Firewall** | Detects ufw or firewalld: turn it on/off, default policies or zones, add/remove ports, services and rules (applied with one sudo prompt) |
+| **Screen sharing** | Choose the xdg-desktop-portal backend for screen sharing, screenshots and file pickers. The lightweight wlr setup avoids GNOME; also a screen picker and frame-rate limit |
 | **Printers** | CUPS: start and enable the service, set the default printer, print test pages, manage the queue |
-| **Power** | Power-saver / Balanced / Performance profiles in the control center and Settings |
+| **Power** | Power profiles, sleep on/off, idle suspend (battery / plugged in), lock before sleep, lid actions (battery / plugged in / docked) and the power button |
 | **System check** | Runs `flamenco doctor` in Settings, shows what's missing and gives the exact `pacman` command |
 | **Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
+| **Keyboard** | Layouts, variants, layout switching, Caps Lock / Compose, key repeat, and shortcuts that open apps, run commands, call Flamenco functions or niri actions. Keys are recorded or typed, and per-shortcut or full resets to the defaults are available. Written to niri's config |
 | **Displays** | Per-display resolution, refresh rate, scale, orientation (rotate and flip) and VRR; drag-to-arrange layout; live apply with 15-second auto-revert; saved to niri's config |
 | **Settings app** | Its own window (`flamenco settings`) with a page for every module. Every change applies live |
 | **App theming** | Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
@@ -152,7 +160,7 @@ flamenco logs           # show the background log (-f to follow)
 
 ### Keybindings
 
-These come from `flamenco niri-config`; change them in `~/.config/niri/config.kdl`. `Mod+Shift+/` shows every binding.
+Change the Flamenco shortcuts in **Settings → Keyboard** (see [Keyboard & shortcuts](#keyboard--shortcuts)); niri's own bindings live in `~/.config/niri/config.kdl`. `Mod+Shift+/` shows every binding.
 
 | Key | Action |
 |---|---|
@@ -170,7 +178,7 @@ These come from `flamenco niri-config`; change them in `~/.config/niri/config.kd
 
 Every panel closes with `Esc` or a click outside it.
 
-**Flamenco Settings** is also a regular app. Find it in the launcher, or any other app launcher, under that name. It starts the shell first if it isn't running.
+**Flamenco Settings** is also a regular app. Move its window by dragging the title bar, or with Super+drag anywhere. Scroll pages with the wheel, or grab the scrollbar on the right and drag it; clicking the track jumps there. Find it in the launcher, or any other app launcher, under that name. It starts the shell first if it isn't running.
 
 ### Bar
 
@@ -179,7 +187,7 @@ Every panel closes with `Esc` or a click outside it.
 | Launcher (apps icon) | open launcher | |
 | Workspaces | go to that workspace | scroll to switch workspaces |
 | Clock | dashboard (Overview, Media, Wallpapers, Weather) | |
-| Media | control center | middle-click play/pause, right-click next track |
+| Media | dashboard, Media tab (click again to close) | middle-click play/pause, right-click next track |
 | System tray | activate the app | right-click app menu, middle-click secondary action, scroll is passed to the app, hover for tooltip |
 | CPU / RAM | performance popout | middle-click opens `btop` |
 | Keyboard layout | next layout | only shown with more than one layout |
@@ -192,6 +200,13 @@ Every panel closes with `Esc` or a click outside it.
 | Weather | calendar and weather | |
 | Quick settings (menu icon) | control center | |
 | Power | power menu | |
+
+**Fits any screen.** Each screen's bar measures itself. On narrow or heavily scaled screens, a rotated monitor for example, it compacts step by step until everything fits:
+1. Text labels go: the window title and media become icons, the clock drops its date, the stats show CPU only, and the tray shows up to 3 icons.
+2. Low-priority widgets hide: window title, stats and weather. Workspaces become dots, and the tray shows 1 icon.
+3. Minimal: media and Bluetooth hide, and the tray collapses to its overflow arrow.
+
+The center section stays centered when there's room and otherwise slides so it never overlaps its neighbours. The bar recomputes whenever the screen, scale or widget layout changes. Popouts never grow taller than the screen; their content scrolls instead.
 
 Rearrange, add or remove widgets in **Settings → Bar**. The same page sets the bar's position, style and thickness, the workspace indicator style, and the tray options. Widgets with nothing to show, like battery on a desktop, hide themselves and leave no gap.
 
@@ -214,8 +229,8 @@ Move with `↑`/`↓` (or `Ctrl+N`/`Ctrl+P`), launch with `Enter`, close with `E
 - **Tiles:** click to toggle. Wi-Fi and Bluetooth have a `›` arrow that opens a list of networks or devices. Click a secured network to enter its password.
 - **VPN tile:** connects your VPN, or disconnects it if it's already on. Its `›` arrow lists all your VPNs with on/off switches.
 - **Power tile:** click to cycle power profiles. Its `›` arrow opens a page with Power saver, Balanced and Performance, plus battery details.
-- **Header:** settings, lock and power buttons.
-- **Media card:** appears while something is playing. Click the progress bar to seek; use the swap button to switch between players.
+- **Header:** your name and uptime on the left; settings, lock and power buttons in the top-right corner.
+- **Media card:** appears while something is playing. Drag the seek bar to move through the track (a bubble shows where you'll land), or click it to jump. Use the swap button to switch between players.
 
 ### Dashboard
 
@@ -224,7 +239,7 @@ Click the clock in the bar to open the dashboard. It opens on the tab chosen in 
 | Tab | Shows |
 |---|---|
 | **Overview** | Big clock, month calendar, your user card, and summary cards for the weather and the current track (click them for the full tab) |
-| **Media** | The current track with large cover art, a seek bar, previous/play/next, and shuffle/repeat where the player supports them. With several players, chips let you switch between them. Shows "No media playing" otherwise |
+| **Media** | The current track with large cover art, a seek bar you can drag or click, previous/play/next, and shuffle/repeat where the player supports them. With several players, chips let you switch between them. Shows "No media playing" otherwise |
 | **Wallpapers** | The wallpaper folder (edit it right there), the picker grid, shuffle and rescan |
 | **Weather** | Now (temperature, feels like, wind, humidity, sunrise and sunset), the next 12 hours, and a 1–7 day forecast with rain chance and temperature range |
 | **Settings** | Opens the Settings app |
@@ -259,7 +274,9 @@ Past notifications stay in the notification center (`Mod+N`). It also has button
 ### Lock screen and power menu
 
 - **Lock** (`Super+Alt+L`, or automatically after the idle time in **Settings → Lock & Idle**): type your password and press `Enter`. `Esc` clears what you typed. See [Lock screen options](#lock-screen-options) to use an SDDM theme or another locker instead.
-- **Power menu** (`Mod+Escape`): choose with the arrow keys or `h`/`l` and press `Enter`. Log out, restart and shut down need a second press to confirm. Suspend locks the screen first.
+- **Power menu** (`Mod+Escape`): choose with the arrow keys or `h`/`l` and press `Enter`.
+  - **Lock and Suspend** act immediately. Suspend locks the screen first.
+  - **Log out, Restart and Shut down** start a **5-second countdown**: the button fills up and shows the seconds left, and the action runs when it's full. Click the button again, press `Esc` or click outside to cancel.
 
 ### Lock screen options
 
@@ -297,6 +314,32 @@ Pinned apps that aren't installed are hidden. A dock with auto-hide off reserves
 
 With auto-hide on, move the pointer to the bottom edge to reveal the dock.
 
+## Sound
+
+**Settings → Sound**
+- **Sound theme:** any installed freedesktop sound theme (`/usr/share/sounds`, `~/.local/share/sounds`), with **Preview** buttons for common events. The theme also goes to apps: gsettings for GNOME/GTK, `settings.ini`, and `kdeglobals` for KDE.
+- **Event sounds:** a sound when a notification pops up (silent in Do Not Disturb), a click after you change the volume, and whether apps play event sounds.
+- **Devices:** output and input device and volume.
+
+Sounds are looked up in the chosen theme, then the themes it inherits from, then `freedesktop`, and played with `pw-play`. From a terminal: `flamenco sound themes`, `flamenco sound play message-new-instant`.
+
+## Firewall
+
+**Settings → Firewall** finds **ufw** or **firewalld**: whichever is running, else whichever is installed. If both are running it warns you, because their rules clash. If neither is installed, it offers to install one.
+
+| | ufw | firewalld |
+|---|---|---|
+| On / off | ✓ (and at boot) | ✓ (and at boot) |
+| Defaults | incoming / outgoing policy, logging level | default zone, which zone each network interface is in |
+| Rules | list with delete; add port or range, TCP/UDP/both, allow/deny/reject/limit, optional source address and comment | per zone: open ports and services, add or remove them |
+
+**Applying changes:**
+- Changes queue up in a **pending changes** bar at the top, and **Apply** runs them all in a terminal with a single `sudo` prompt. Inputs are validated first, so a bad port or address never reaches the firewall.
+- firewalld changes are made permanent and then reloaded.
+- ufw only shows its rules to root, so the page reads them via **Load rules** (one `sudo`) and keeps a copy that refreshes after each change.
+
+From a terminal: `flamenco firewall status`, `flamenco firewall apply --json '{"backend":"ufw","ops":[{"op":"add","port":"8080/tcp"}]}'`.
+
 ## Network, printers and power
 
 **Settings → Network**
@@ -313,7 +356,41 @@ With auto-hide on, move the pointer to the bottom edge to reveal the dock.
 
 The same actions are available as `flamenco printers …`.
 
-**Settings → Power** switches between Power saver, Balanced and Performance. Performance appears only if your hardware offers it. The page also shows battery status. The control center's Power tile does the same.
+**Settings → Power**
+- **Power profile:** Power saver, Balanced, or Performance (if your hardware offers it), plus battery status. The control center's Power tile does the same.
+- **Sleep** (applies immediately):
+  - **Allow the computer to sleep:** turning this off holds a systemd sleep inhibitor, so nothing can suspend the machine while Flamenco runs: not the lid, idle, the power menu or a sleep key.
+  - **Lock before sleeping:** Flamenco watches logind's sleep signal, so closing the lid or a `systemctl suspend` from anywhere locks the screen first. `loginctl lock-session` locks it too.
+  - **Suspend when idle:** separate timers for on battery and plugged in (0 = never). Caffeine pauses them.
+- **Laptop lid:** what closing the lid does on battery, when plugged in, and with an external monitor: suspend, hibernate, suspend-then-hibernate, lock only, nothing, or power off.
+- **Power button:** show Flamenco's power menu, suspend, hibernate, power off, or nothing.
+
+Lid and power-button settings belong to systemd-logind. **Apply** writes `/etc/systemd/logind.conf.d/90-flamenco.conf` with `sudo` in a terminal, then has logind reload it without ending your session. **Back to system defaults** removes that file. *Show the power menu* tells logind to ignore the button and adds an `XF86PowerOff` shortcut instead.
+
+## Screen sharing
+
+Apps share your screen, take portal screenshots and open file pickers through **xdg-desktop-portal**, which hands each feature to a *backend*. On niri, screen capture works through two backends:
+
+| Backend | On niri | |
+|---|---|---|
+| `xdg-desktop-portal-wlr` | ✓ whole screens | Small; no GNOME dependencies. Can't share a single window |
+| `xdg-desktop-portal-gnome` | ✓ screens and single windows | Pulls in GNOME libraries |
+| `xdg-desktop-portal-kde` | ✗ for capture | Its screen capture only works with KWin. Its **file chooser** is fine on niri |
+| `xdg-desktop-portal-cosmic` | ✗ | Built for COSMIC's compositor |
+| `xdg-desktop-portal-gtk` | n/a | File chooser, dark-mode preference and other basics |
+
+**File picker:** choose the open/save dialog: **GTK**, **Qt (KDE)**, **COSMIC** or **GNOME**. Each row shows whether that portal is installed, with **Install** or **Use** buttons. Only the picker is taken from KDE or COSMIC, so their screen capture never comes into play.
+- **Which apps follow it:** apps that use the portal do: Flatpaks, Firefox, Chromium and Electron apps.
+- **All GTK apps:** turn on **Use it in every GTK app** to route regular GTK apps through it too. This sets `GTK_USE_PORTAL` and `GDK_DEBUG=portals` in niri's environment, and takes effect at your next login.
+- **Qt apps** keep their own dialog, so qt6ct theming keeps working.
+
+**Settings → Screen sharing & files** sets this up:
+- **Lightweight** installs and uses wlr + gtk.
+- **Full** uses gnome.
+- **Per-feature dropdowns** cover screen sharing, screenshots, file chooser and everything else, listing only installed backends and marking which work on niri.
+- **With wlr:** choose **Ask each time** (click the screen to share; needs `slurp`) or always share a specific screen, and optionally cap the frame rate.
+
+**Apply** writes `~/.config/xdg-desktop-portal/niri-portals.conf`, plus `~/.config/xdg-desktop-portal-wlr/config` when wlr is used. It keeps a one-time copy of your previous files in `~/.local/state/flamenco/backup/portals/`, and restarts the portal service. Apps that were already open may need a restart. From a terminal: `flamenco portals get` / `flamenco portals apply --json '{"ScreenCast":"wlr","Screenshot":"wlr","FileChooser":"gtk"}'`.
 
 ## System check
 
@@ -331,6 +408,57 @@ flamenco doctor --install-command  # just the pacman/paru command
 ```
 
 The page also has buttons to view the shell log and to write the niri config.
+
+## Keyboard & shortcuts
+
+**Settings → Keyboard** edits your keyboard setup and shortcuts. Everything is written into `~/.config/niri/config.kdl` and niri applies it immediately.
+
+### Layout
+
+| Setting | |
+|---|---|
+| Layouts | Add from the full XKB list, give each a variant, reorder or remove them. The first is the default. With none set, niri follows the system keymap (`localectl`) |
+| Switch layouts with | Alt+Shift, Ctrl+Shift, Caps Lock, both Shifts… (shown with two or more layouts). The keyboard widget in the bar switches too |
+| Caps Lock | Caps Lock, Escape, Ctrl, swap with Escape or Ctrl, Backspace, or off |
+| Compose key | Right Alt, Right Ctrl, Menu, Caps Lock, Right Super |
+| Other XKB options | Anything else, comma-separated |
+| Repeat delay / rate | With a box to try them in |
+| Num Lock | On at startup or not |
+| Remember layout | Everywhere, or per window |
+
+### Shortcuts
+
+Each shortcut is a key combination and one of:
+
+| Kind | Example | Becomes in niri |
+|---|---|---|
+| **Shell function** | launcher, settings, control center, dashboard, performance, lock, power menu, volume, brightness, media, random wallpaper, dark/light, Do Not Disturb, caffeine, night light, restart the shell | `spawn "flamenco" …` |
+| **Open app** | any installed app | `spawn "flamenco" "launch" "<app id>"` |
+| **Run command** | `grim -g "$(slurp)" - \| wl-copy` | `spawn-sh "…"` |
+| **niri action** | `toggle-overview`, `focus-workspace 3`, `screenshot` | `{ toggle-overview; }` |
+
+- **Close windows with:** Super+Q (niri's default), Ctrl+Q, Alt+F4 or Super+Shift+Q. Any choice other than Super+Q *replaces* it, using a **Disable key** entry that comments out niri's `Mod+Q` line. Ctrl+Q is how many apps quit, and they won't receive it while it closes windows.
+- **Disable key:** any shortcut can be of type **Disable key**, which switches off a niri binding you don't want (the original line is commented out, and comes back if you delete the entry).
+- **Launcher key:** the **Open the launcher with** row switches between Super+Space, Ctrl+Space, Alt+Space and Super+D in one click. niri can't tell left Ctrl from right Ctrl, so Ctrl+Space works with either, and apps no longer receive Ctrl+Space.
+- **Choosing keys:** click **Click to record** and press the combination, or type it (`Mod+Shift+S`, `Ctrl+Alt+T`, `XF86AudioPlay`). `Mod` is the Super key. niri catches combinations it already uses before they reach the settings window, so type those instead.
+- **Options:** give a shortcut a name for niri's hotkey overlay, and let shell functions, apps and commands work on the lock screen.
+- **Conflicts:** duplicates within Flamenco's shortcuts are blocked. If a shortcut takes a key one of your own niri bindings uses, the row says what it replaces.
+- **Defaults:** **Reset all to defaults** (click twice) restores the default set. The ↺ button on a row restores just that key's default action.
+
+**What happens in the config:**
+- Flamenco keeps its shortcuts in a marked section at the top of the `binds { }` block. Only that section is rewritten; everything else in `binds` is yours.
+- When a Flamenco shortcut takes a key you'd bound yourself, your line is commented out with `// flamenco: replaced by a Flamenco shortcut:`, not deleted. Remove the Flamenco shortcut and your binding comes back.
+- Every change is checked with `niri validate` first; if niri rejects it, the config isn't touched and the page shows the error.
+- A copy of your config from before the first keyboard change is kept at `~/.local/state/flamenco/backup/niri-config.before-keyboard.kdl`.
+
+From a terminal:
+
+```sh
+flamenco keyboard get              # current layout settings + shortcuts (JSON)
+flamenco keyboard defaults         # the default shortcuts
+flamenco keyboard apply --json '{"shortcuts":[{"key":"Mod+B","type":"app","value":"firefox"}]}'
+flamenco launch firefox            # what app shortcuts run
+```
 
 ## Displays
 
@@ -374,7 +502,13 @@ Flamenco draws the wallpaper itself, so **you don't need `swaybg`, `swww` or any
 - **Picker:** `Mod+W` (or `flamenco wallpapers`). Click a thumbnail; the shuffle button picks a random one.
 - **Settings → Wallpaper:**
   - change the folder
-  - choose the transition (*Fade*, *Zoom*, *Circle*, *Wipe*, or *Mix* for a random one) and its duration
+  - choose the transition and its duration, and preview it with **Try it**:
+    - *Mosaic*: tiles bloom out from the center
+    - *Ripple*: a circle led by rings
+    - *Sweep*: a diagonal band with a glowing edge
+    - *Blinds*: staggered slats
+    - *Circle*, *Wipe*, *Focus* (sharpens out of a blur), *Fade*
+    - *Mix*: a random one each time
   - set the fill mode (*Crop*, *Fit*, *Stretch*)
   - turn on cycling every N minutes
 - **Command line:**
@@ -386,7 +520,7 @@ Flamenco draws the wallpaper itself, so **you don't need `swaybg`, `swww` or any
   ```
 - **Settings file:** `wallpaper.current` in `~/.config/flamenco/settings.json`.
 
-The same wallpaper is used on every screen. It also appears blurred on the lock screen, and behind niri's overview thanks to the snippet's `layer-rule`.
+The same wallpaper is used on every screen. Flamenco draws it twice: once on your workspaces, and once blurred and dimmed in niri's *backdrop*, which you see behind the workspaces in the overview and between them while switching. The niri config's `layer-rule` puts that second copy in the backdrop. It also appears blurred on the lock screen.
 
 **Colors from your wallpaper:** pick *From wallpaper* in **Settings → Appearance → Palette**. This needs `matugen`. The palette is regenerated whenever the wallpaper changes, and it flows through to your Qt and GTK apps too.
 
@@ -402,7 +536,7 @@ In **Settings → Appearance**:
 - **Palette:** Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, or *From wallpaper*.
 - **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels.
 - **Motion:** animation speed; 0% turns animations off.
-- **Typography:** interface font, monospace font, UI scale.
+- **Typography:** interface and monospace fonts, picked from dropdowns of installed fonts (system and `~/.local/share/fonts`) and shown in their own typeface, plus UI scale and a live preview.
 
 From the command line, or bound to keys in niri:
 
@@ -468,12 +602,16 @@ Files written:
 |---|---|
 | Icons show as words ("apps", "settings") | The icon font didn't load. Make sure `shell/assets/fonts/MaterialSymbolsRounded.ttf` exists in the installed shell (`flamenco doctor` checks for it) and restart the shell |
 | Plain colored background, no wallpaper | `~/Pictures/Wallpapers` is missing or empty. Add images, or point **Settings → Wallpaper → Folder** at another folder |
+| Dark background on workspaces, wallpaper only visible while switching | A `layer-rule` with `place-within-backdrop` matches the desktop wallpaper. Only `flamenco-wallpaper` (the blurred backdrop copy) should be in the backdrop; don't add a rule for `flamenco-desktop` |
 | Wallpaper hidden or flickering | Another wallpaper program or shell is running (`swaybg`, `swww`, DMS). Remove it from your niri config |
 | niri says `duplicate node binds` | Move the Flamenco key lines into your existing `binds { }` block |
 | Qt apps ignore the theme | `QT_QPA_PLATFORMTHEME` isn't `qt6ct`. Set it (the niri snippet does), log in again, and restart the app |
 | Cursor theme doesn't change | Press **Apply now** in **Settings → App Theming** and check `~/.config/niri/config.kdl` for the `cursor { }` block. Restart apps that were already open |
+| Bar widgets overlap or disappear on one screen | That screen's bar is compacting to fit. Remove widgets you don't need in **Settings → Bar**, lower **Thickness**/**Scale**, or move the bar to a longer edge |
 | Dock never appears | Check **Show dock** in **Settings → Dock**. With auto-hide on, push the pointer against the bottom edge, or raise **Reveal edge**; on some VM displays the pointer can't reach the last few pixels |
 | Display change left a blank screen | Wait 15 seconds; it reverts on its own. If you already kept it, restore `~/.local/state/flamenco/backup/niri-config.before-displays.kdl` |
+| Screen sharing shows nothing to pick, or fails | Open **Settings → Screen sharing**: screen sharing must use **wlr** or **gnome** (kde and cosmic can't capture on niri). With wlr and **Ask each time**, install `slurp`. Restart the app afterwards |
+| A shortcut does nothing | Check it in **Settings → Keyboard** and look at the status line for niri's error. `Mod+Shift+/` in niri shows what each key does. App shortcuts need the app's desktop file; try `flamenco launch <id>` in a terminal |
 | Locked in by an SDDM theme | Press **Ctrl+Alt+Shift+L** on the lock screen to switch to the built-in lock |
 | Tray menu misplaced or not opening | Turn on **Settings → Bar → Native Qt menus** |
 | **Black screen after logging in to niri** | Switch to a text console (`Ctrl+Alt+F3`), log in, and run `flamenco doctor`.<br>**In a virtual machine** this is almost always missing 3D acceleration: niri has no software renderer, so without it nothing is drawn. Turn on 3D in the VM settings (virt-manager: Video *VirtIO* with *3D acceleration*, and *OpenGL* on the Spice display; VirtualBox: *VMSVGA* with *3D acceleration*). The check *VM 3D acceleration* shows whether it's on.<br>**Otherwise:** if niri runs (`Mod+T` opens a terminal) but there's no bar or wallpaper, the shell didn't start. Check `flamenco logs` or run `flamenco run --fg` |
@@ -495,6 +633,13 @@ flamenco media toggle|next|previous
 flamenco wallpaper [set PATH | random | next]
 flamenco theme PALETTE | dark | light | toggle | list | apply-apps
 flamenco apps-theme --json SPEC | --restore
+flamenco portals get | apply --json SPEC
+flamenco fonts [--json]
+flamenco sound themes | play EVENT | find EVENT
+flamenco firewall status [--json] | apply --json SPEC | load
+flamenco power logind get | apply --json SPEC | reset
+flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
+flamenco launch APP_ID
 flamenco display list | apply --json SPEC | save --json SPEC
 flamenco list-themes [--json]   installed icon / cursor / GTK / Qt-style / Kvantum / SDDM themes
 flamenco ipc TARGET FUNCTION [ARGS...]

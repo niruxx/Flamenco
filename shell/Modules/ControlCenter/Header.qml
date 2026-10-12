@@ -48,23 +48,29 @@ RowLayout {
         }
     }
 
-    FIconButton {
-        icon: "settings"
-        flat: false
-        onClicked: Panels.openSettings("")
-    }
-    FIconButton {
-        icon: "lock"
-        flat: false
-        onClicked: {
-            Panels.close();
-            Quickshell.execDetached([Paths.bin, "lock"]);
+    // settings · lock · power, pinned to the top-right corner
+    Row {
+        Layout.alignment: Qt.AlignRight | Qt.AlignTop
+        spacing: 6
+
+        FIconButton {
+            icon: "settings"
+            flat: false
+            onClicked: Panels.openSettings("")
         }
-    }
-    FIconButton {
-        icon: "power_settings_new"
-        flat: false
-        iconColor: Theme.error
-        onClicked: Panels.open("power", Panels.screen)
+        FIconButton {
+            icon: "lock"
+            flat: false
+            onClicked: {
+                Panels.close();
+                Quickshell.execDetached([Paths.bin, "lock"]);
+            }
+        }
+        FIconButton {
+            icon: "power_settings_new"
+            flat: false
+            iconColor: Theme.error
+            onClicked: Panels.open("power", Panels.screen)
+        }
     }
 }

@@ -3,6 +3,8 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Services.UPower
+import qs.Commons
+import Quickshell.Io
 
 // Battery + power profiles + session actions.
 Singleton {
@@ -26,6 +28,14 @@ Singleton {
             return "";
         const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
         return (h > 0 ? h + "h " : "") + m + "m" + (charging ? " until full" : " left");
+    }
+
+    readonly property bool onBattery: hasBattery && device?.state === UPowerDeviceState.Discharging
+
+    // "Allow sleep" off: block every kind of sleep (lid, idle, menu, suspend key) while the shell runs
+    Process {
+        running: !Settings.data.power.allowSleep
+        command: ["systemd-inhibit", "--what=sleep:idle:handle-lid-switch:handle-suspend-key:handle-hibernate-key", "--who=Flamenco", "--why=Sleep is turned off in Flamenco Settings", "--mode=block", "sleep", "infinity"]
     }
 
     readonly property int profile: PowerProfiles.profile

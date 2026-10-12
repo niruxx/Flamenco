@@ -22,6 +22,31 @@ Variants {
         screen: modelData
         color: "transparent"
         readonly property bool vertical: Theme.barVertical
+        readonly property int sectionGap: 12
+
+        // compaction level for this screen; recomputed from 0 whenever the space or layout changes
+        property int level: 0
+        function refit() {
+            level = 0;
+            refitTimer.restart();
+        }
+        Timer {
+            id: refitTimer
+            interval: 80
+            onTriggered: fitTimer.restart()
+        }
+        Connections {
+            target: Settings.data.bar
+            function onLeftChanged() { win.refit(); }
+            function onCenterChanged() { win.refit(); }
+            function onRightChanged() { win.refit(); }
+            function onHeightChanged() { win.refit(); }
+            function onPositionChanged() { win.refit(); }
+        }
+        Connections {
+            target: Settings.data.appearance
+            function onUiScaleChanged() { win.refit(); }
+        }
         readonly property string pos: Theme.barPos
         readonly property int thickness: Theme.barHeight + Theme.barMargin
 
@@ -77,7 +102,7 @@ Variants {
         Component { id: statsC; SysStats { screenName: win.modelData.name } }
         Component { id: keyboardC; KeyboardLayout {} }
         Component { id: networkC; StatusIcon { screenName: win.modelData.name; icon: Network.icon; tip: Network.label; detail: "wifi" } }
-        Component { id: bluetoothC; StatusIcon { screenName: win.modelData.name; icon: BluetoothState.icon; barVisible: BluetoothState.available; detail: "bluetooth" } }
+        Component { id: bluetoothC; StatusIcon { screenName: win.modelData.name; icon: BluetoothState.icon; barVisible: BluetoothState.available && barLevel < 3; detail: "bluetooth" } }
         Component { id: audioC; AudioIcon { screenName: win.modelData.name } }
         Component { id: brightnessC; BrightnessIcon { screenName: win.modelData.name } }
         Component { id: batteryC; Battery { screenName: win.modelData.name } }
@@ -119,30 +144,62 @@ Variants {
                 }
             }
 
+            // ── fit to the space available ──
+            // Sections that don't fit step the bar through compaction levels
+            // (0 full · 1 no text labels · 2 low-priority widgets hidden · 3 minimal).
+            readonly property real avail: win.vertical ? height : width
+            readonly property real used: (startSec.visible ? startSec.size : 0) + (centerSec.visible ? centerSec.size : 0) + (endSec.visible ? endSec.size : 0) + 2 * win.sectionGap + 12
+            onUsedChanged: fitTimer.restart()
+            onAvailChanged: win.refit()
+
+            Timer {
+                id: fitTimer
+                interval: 80
+                onTriggered: {
+                    if (content.used > content.avail && win.level < 3) {
+                        win.level++;
+                        restart();
+                    }
+                }
+            }
+
             // start (left / top)
             BarSection {
+                id: startSec
                 registry: win.registry
                 islands: win.islands
                 vertical: win.vertical
+                level: win.level
                 ids: win.cfg.left
                 x: win.vertical ? (parent.width - width) / 2 : (win.islands ? 0 : 6)
                 y: win.vertical ? (win.islands ? 0 : 6) : (parent.height - height) / 2
             }
 
-            // center
+            // center: centered when there's room, otherwise kept between its neighbours
             BarSection {
+                id: centerSec
                 registry: win.registry
                 islands: win.islands
                 vertical: win.vertical
+                level: win.level
                 ids: win.cfg.center
-                anchors.centerIn: parent
+
+                readonly property real lo: startSec.visible ? (win.vertical ? startSec.y + startSec.height : startSec.x + startSec.width) + win.sectionGap : 0
+                readonly property real hi: (endSec.visible ? (win.vertical ? endSec.y : endSec.x) - win.sectionGap : (win.vertical ? parent.height : parent.width)) - size
+                readonly property real ideal: ((win.vertical ? parent.height : parent.width) - size) / 2
+                readonly property real pos: Math.max(lo, Math.min(hi, ideal))
+
+                x: win.vertical ? (parent.width - width) / 2 : pos
+                y: win.vertical ? pos : (parent.height - height) / 2
             }
 
             // end (right / bottom)
             BarSection {
+                id: endSec
                 registry: win.registry
                 islands: win.islands
                 vertical: win.vertical
+                level: win.level
                 ids: win.cfg.right
                 x: win.vertical ? (parent.width - width) / 2 : parent.width - width - (win.islands ? 0 : 6)
                 y: win.vertical ? parent.height - height - (win.islands ? 0 : 6) : (parent.height - height) / 2

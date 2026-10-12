@@ -5,7 +5,10 @@ import qs.Services
 import qs.Widgets
 
 BarChip {
+    id: root
     property string screenName
+    property int barLevel: 0
+    property bool barVisible: barLevel < 2
     highlighted: Panels.current === "performance"
     onClicked: Panels.toggle("performance", screenName)
     onMiddleClicked: Quickshell.execDetached(Paths.term(["btop"]))
@@ -29,6 +32,6 @@ BarChip {
     BarFlow {
         spacing: Theme.barVertical ? 6 : 10
         Stat { icon: "memory"; value: SystemStats.cpu }
-        Stat { icon: "developer_board"; value: SystemStats.mem }
+        Stat { icon: "developer_board"; value: SystemStats.mem; visible: root.barLevel < 1 }
     }
 }

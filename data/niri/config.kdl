@@ -76,7 +76,9 @@ window-rule {
     open-floating true
 }
 
-// Show the wallpaper behind the overview.
+// Flamenco draws the wallpaper twice: on the desktop ("flamenco-desktop") and a
+// blurred copy for niri's backdrop, seen in the overview and between workspaces.
+// This rule moves only that backdrop copy.
 layer-rule {
     match namespace="^flamenco-wallpaper$"
     place-within-backdrop true
@@ -85,15 +87,8 @@ layer-rule {
 binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
-    // ── Flamenco ──
-    Mod+Space   hotkey-overlay-title="Launcher"        { spawn "flamenco" "launcher"; }
-    Mod+D       hotkey-overlay-title="Launcher"        { spawn "flamenco" "launcher"; }
-    Mod+A       hotkey-overlay-title="Control center"  { spawn "flamenco" "control"; }
-    Mod+N       hotkey-overlay-title="Notifications"   { spawn "flamenco" "notifications"; }
-    Mod+Comma   hotkey-overlay-title="Settings"        { spawn "flamenco" "settings"; }
-    Mod+W       hotkey-overlay-title="Wallpapers"      { spawn "flamenco" "wallpapers"; }
-    Mod+Escape  hotkey-overlay-title="Power menu"      { spawn "flamenco" "power"; }
-    Super+Alt+L hotkey-overlay-title="Lock the screen" { spawn "flamenco" "lock"; }
+    // Flamenco shortcuts are inserted at the top of this block and managed
+    // from Flamenco Settings → Keyboard.
 
     // ── Apps ──
     Mod+T      hotkey-overlay-title="Terminal" { spawn @@TERMINAL@@; }

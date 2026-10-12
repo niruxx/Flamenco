@@ -27,6 +27,8 @@ Singleton {
                 iconTheme: cfg.iconTheme,
                 cursorTheme: cfg.cursorTheme,
                 gtkTheme: cfg.gtkTheme,
+                soundTheme: Settings.data.sound.theme,
+                eventSounds: Settings.data.sound.eventSounds,
                 kvantumTheme: cfg.kvantumTheme,
                 cursorSize: cfg.cursorSize,
                 scrollbars: cfg.scrollbars,

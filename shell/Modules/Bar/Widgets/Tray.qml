@@ -14,7 +14,9 @@ BarFlow {
     required property var window
     readonly property var cfg: Settings.data.bar
     readonly property var items: SystemTray.items.values.filter(i => !(cfg.trayHidePassive && i.status === Status.Passive))
-    readonly property int maxVisible: Math.max(1, cfg.trayMaxVisible)
+    property int barLevel: 0
+    // tight bars show fewer icons before the overflow arrow
+    readonly property int maxVisible: barLevel >= 3 ? 0 : barLevel === 2 ? 1 : barLevel === 1 ? Math.min(3, Math.max(1, cfg.trayMaxVisible)) : Math.max(1, cfg.trayMaxVisible)
     readonly property bool overflowing: items.length > maxVisible
     property bool expanded: false
     readonly property var shown: overflowing && !expanded ? items.slice(0, maxVisible) : items

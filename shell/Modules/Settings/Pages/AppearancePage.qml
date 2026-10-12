@@ -10,6 +10,8 @@ Page {
     subtitle: "Colors, shape and motion for the shell. The palette is also pushed to Qt and GTK apps (see App Theming)."
     readonly property var a: Settings.data.appearance
 
+    Component.onCompleted: Sounds.load()
+
     Group {
         title: "Mode"
         ChoiceRow {
@@ -130,8 +132,62 @@ Page {
 
     Group {
         title: "Typography"
-        TextRow { title: "Interface font"; icon: "font_download"; target: page.a; key: "fontFamily"; placeholder: "Inter" }
-        TextRow { title: "Monospace font"; icon: "code"; target: page.a; key: "monoFamily"; placeholder: "JetBrains Mono" }
+
+        SettingRow {
+            title: "Interface font"
+            subtitle: Sounds.fonts.length ? Sounds.fonts.length + " fonts installed (system and ~/.local/share/fonts)" : "Loading installed fonts…"
+            icon: "font_download"
+            FDropdown {
+                implicitWidth: 300
+                fontPreview: true
+                options: Sounds.fonts
+                current: page.a.fontFamily
+                placeholder: "Choose a font…"
+                onSelected: v => page.a.fontFamily = v
+            }
+        }
+        SettingRow {
+            title: "Monospace font"
+            subtitle: "Used for numbers, code and terminal-style text"
+            icon: "code"
+            FDropdown {
+                implicitWidth: 300
+                fontPreview: true
+                options: Sounds.monoFonts.length ? Sounds.monoFonts : Sounds.fonts
+                current: page.a.monoFamily
+                placeholder: "Choose a font…"
+                onSelected: v => page.a.monoFamily = v
+            }
+        }
         SliderRow { title: "Scale"; icon: "format_size"; target: page.a; key: "uiScale"; from: 0.8; to: 1.4; stepSize: 0.05; factor: 100; suffix: "%" }
+
+        // live preview
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.margins: 12
+            implicitHeight: preview.implicitHeight + 28
+            radius: Theme.rMd
+            color: Theme.bg
+            ColumnLayout {
+                id: preview
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.margins: 14
+                spacing: 4
+                FText { text: "The quick brown fox jumps over the lazy dog"; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
+                FText { text: "Flamenco Shell · interface text at " + Theme.fsMd + " px"; dim: true }
+                FText { text: "0123456789  {} => monospace"; mono: true }
+            }
+        }
+        FText {
+            Layout.fillWidth: true
+            Layout.leftMargin: 12
+            Layout.bottomMargin: 8
+            text: "Qt and GTK apps get the same fonts when \"Sync fonts\" is on in App Theming."
+            dim: true
+            wrapMode: Text.Wrap
+            font.pixelSize: Theme.fsSm
+        }
     }
 }

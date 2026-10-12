@@ -7,9 +7,11 @@ import qs.Widgets
 BarChip {
     id: root
     property string screenName
-    property bool barVisible: Media.active
+    property int barLevel: 0
+    property bool barVisible: Media.active && barLevel < 3
     padding: 6
-    onClicked: Panels.toggle("control", screenName)
+    highlighted: Panels.current === "calendar" && Panels.dashboardShown === "media"
+    onClicked: Panels.openDashboard("media", screenName)
     onMiddleClicked: Media.toggle()
     onRightClicked: Media.next()
 
@@ -44,7 +46,7 @@ BarChip {
         }
 
         FText {
-            visible: !Theme.barVertical
+            visible: !Theme.barVertical && root.barLevel < 1
             width: Math.min(implicitWidth, 220)
             text: Media.title + (Media.artist ? "  ·  " + Media.artist : "")
             elide: Text.ElideRight

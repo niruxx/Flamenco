@@ -5,7 +5,8 @@ import qs.Widgets
 
 BarChip {
     property string screenName
-    property bool barVisible: Weather.ready
+    property int barLevel: 0
+    property bool barVisible: Weather.ready && barLevel < 2
     onClicked: Panels.toggle("calendar", screenName)
 
     BarFlow {

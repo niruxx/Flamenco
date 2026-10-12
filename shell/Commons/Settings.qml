@@ -105,8 +105,8 @@ Singleton {
             property JsonObject wallpaper: JsonObject {
                 property string dir: "~/Pictures/Wallpapers"
                 property string current: ""
-                property string transition: "circle"  // fade | zoom | circle | wipe | random
-                property int duration: 900
+                property string transition: "mosaic"  // fade | focus | circle | ripple | wipe | sweep | blinds | mosaic | random
+                property int duration: 1200
                 property string fillMode: "crop"      // crop | fit | stretch
                 property bool cycle: false
                 property int cycleMinutes: 30
@@ -134,6 +134,36 @@ Singleton {
                 property bool showSunTimes: true
                 property bool showHourly: true        // next 12 hours in the Weather tab
                 property bool showInOverview: true    // weather card on the dashboard's Overview tab
+            }
+
+            // Keyboard layout + shortcuts, written into niri's config by `flamenco keyboard apply`
+            property JsonObject keyboard: JsonObject {
+                property bool imported: false         // true once read from the niri config
+                property string layout: ""            // "us,es"
+                property string variant: ""           // ",intl"
+                property string options: ""           // "grp:alt_shift_toggle,caps:escape"
+                property string model: ""
+                property int repeatDelay: 600
+                property int repeatRate: 25
+                property bool numlock: true
+                property string trackLayout: "global" // global | window
+                property var shortcuts: []            // [{ key, type: flamenco|app|command|niri, value, title, locked }]
+            }
+
+            // Sleep: what the shell does itself (lid / power button live in logind, see Settings → Power)
+            property JsonObject power: JsonObject {
+                property bool allowSleep: true        // false: hold a systemd sleep inhibitor (lid, idle, menu)
+                property bool lockOnSleep: true       // lock before any suspend/hibernate
+                property int idleSuspendBattery: 15   // minutes idle before suspending on battery (0 = never)
+                property int idleSuspendAC: 0         // … when plugged in
+            }
+
+            // Sounds: theme for apps (gsettings / GTK / KDE) and the shell's own event sounds
+            property JsonObject sound: JsonObject {
+                property string theme: "freedesktop"
+                property bool eventSounds: true       // let apps play event sounds
+                property bool notifications: true     // shell: sound when a notification pops up
+                property bool volumeFeedback: true    // shell: click when you change the volume
             }
 
             // Dashboard: the clock/calendar popout

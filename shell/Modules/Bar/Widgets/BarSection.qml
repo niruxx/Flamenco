@@ -12,6 +12,8 @@ Rectangle {
     property var registry: ({})
     property bool islands: false
     property bool vertical: false
+    property int level: 0                      // bar compaction level, passed to widgets
+    readonly property real size: vertical ? height : width
 
     readonly property int cross: Theme.barHeight
 
@@ -39,6 +41,8 @@ Rectangle {
                 required property string modelData
                 Layout.alignment: Qt.AlignCenter
                 sourceComponent: sec.registry[modelData] ?? null
+                // widgets that adapt to tight bars declare `barLevel`
+                onLoaded: if (item && item.barLevel !== undefined) item.barLevel = Qt.binding(() => sec.level)
                 // widgets set `barVisible` (not `visible`) so a hidden one frees its slot
                 visible: item !== null && (item.barVisible ?? true)
             }

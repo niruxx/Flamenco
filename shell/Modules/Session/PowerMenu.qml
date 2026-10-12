@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Widgets
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -17,31 +18,68 @@ Variants {
         readonly property bool shouldShow: Panels.current === "power" && Panels.screen === modelData.name
         readonly property real p: pAnim.v
         property int sel: 0
-        property string confirm: ""
+        // destructive actions arm a 5 s countdown instead of running at once
+        property string pending: ""
+        property real charge: 0          // 0 → 1 over the countdown
+        readonly property int remaining: Math.max(1, Math.ceil(5 * (1 - charge)))
+        readonly property var pendingAction: actions.find(a => a.id === pending) ?? null
 
         readonly property var actions: [
             { id: "lock", icon: "lock", label: "Lock", run: () => Quickshell.execDetached([Paths.bin, "lock"]) },
             { id: "suspend", icon: "bedtime", label: "Suspend", run: () => { Quickshell.execDetached([Paths.bin, "lock"]); suspendDelay.start(); } },
-            { id: "logout", icon: "logout", label: "Log out", run: () => Power.logout() },
-            { id: "reboot", icon: "restart_alt", label: "Restart", run: () => Power.reboot() },
-            { id: "shutdown", icon: "power_settings_new", label: "Shut down", run: () => Power.shutdown() }
+            { id: "logout", icon: "logout", label: "Log out", verb: "Logging out", run: () => Power.logout() },
+            { id: "reboot", icon: "restart_alt", label: "Restart", verb: "Restarting", run: () => Power.reboot() },
+            { id: "shutdown", icon: "power_settings_new", label: "Shut down", verb: "Shutting down", run: () => Power.shutdown() }
         ]
+
+        function cancel() {
+            countdown.stop();
+            pending = "";
+            charge = 0;
+        }
 
         function trigger(i) {
             const a = actions[i];
-            // destructive actions need a second press
-            if (["logout", "reboot", "shutdown"].includes(a.id) && confirm !== a.id) {
-                confirm = a.id;
+            if (a.verb) {
+                // clicking the counting-down button again cancels it
+                if (pending === a.id) {
+                    cancel();
+                    return;
+                }
+                pending = a.id;
+                charge = 0;
+                countdown.restart();
                 return;
             }
+            cancel();
             Panels.close();
             a.run();
         }
-        onShouldShowChanged: if (shouldShow) {
-            sel = 0;
-            confirm = "";
-            stagger.restart();
-            focusItem.forceActiveFocus();
+
+        // real 5 s regardless of the animation speed setting
+        NumberAnimation {
+            id: countdown
+            target: win
+            property: "charge"
+            from: 0
+            to: 1
+            duration: 5000
+            easing.type: Easing.Linear
+            onFinished: {
+                const a = win.pendingAction;
+                win.pending = "";
+                Panels.close();
+                if (a)
+                    a.run();
+            }
+        }
+        onShouldShowChanged: {
+            cancel();
+            if (shouldShow) {
+                sel = 0;
+                stagger.restart();
+                focusItem.forceActiveFocus();
+            }
         }
 
         Timer { id: suspendDelay; interval: 600; onTriggered: Power.suspend() }
@@ -66,7 +104,7 @@ Variants {
             anchors.fill: parent
             color: Theme.alpha(Theme.bg, 0.72)
             opacity: win.p
-            MouseArea { anchors.fill: parent; onClicked: Panels.close() }
+            MouseArea { anchors.fill: parent; onClicked: win.pending ? win.cancel() : Panels.close() }
         }
 
         Item {
@@ -74,7 +112,7 @@ Variants {
             focus: true
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_Escape)
-                    Panels.close();
+                    win.pending ? win.cancel() : Panels.close();
                 else if (event.key === Qt.Key_Left || event.key === Qt.Key_H)
                     win.sel = (win.sel + win.actions.length - 1) % win.actions.length;
                 else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab)
@@ -91,9 +129,18 @@ Variants {
 
             FText {
                 Layout.alignment: Qt.AlignHCenter
-                text: win.confirm ? "Press again to " + win.actions.find(a => a.id === win.confirm).label.toLowerCase() : "Goodbye, " + Paths.user
+                text: win.pendingAction ? win.pendingAction.verb + " in " + win.remaining + "…" : "Goodbye, " + Paths.user
                 font.pixelSize: Theme.fsXxl
                 font.weight: Font.Bold
+            }
+
+            FText {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: -Theme.sp5
+                text: "Click it again or press Esc to cancel"
+                dim: true
+                opacity: win.pending ? 1 : 0
+                Behavior on opacity { Anim {} }
             }
 
             Row {
@@ -109,13 +156,13 @@ Variants {
                         required property var modelData
                         required property int index
                         readonly property bool selected: win.sel === index
-                        readonly property bool danger: win.confirm === modelData.id
+                        readonly property bool danger: win.pending === modelData.id
                         property real enter: 0
 
                         width: 128
                         height: 140
                         radius: selected ? Theme.rXl * 1.4 : Theme.rXl
-                        color: danger ? Theme.error : selected ? Theme.accent : Theme.panelBg
+                        color: danger ? Theme.alpha(Theme.error, 0.25) : selected ? Theme.accent : Theme.panelBg
                         border.width: 1
                         border.color: Theme.alpha(Theme.border, 0.6)
                         opacity: enter
@@ -124,6 +171,34 @@ Variants {
 
                         Behavior on color { CAnim {} }
                         Behavior on radius { Anim { easing.bezierCurve: Theme.curves.spring } }
+
+                        // countdown: fills from the bottom, with a pulsing edge
+                        ClippingRectangle {
+                            anchors.fill: parent
+                            radius: btn.radius
+                            color: "transparent"
+                            visible: btn.danger
+
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                width: parent.width
+                                height: parent.height * win.charge
+                                color: Theme.error
+
+                                Rectangle {
+                                    anchors.top: parent.top
+                                    width: parent.width
+                                    height: 3
+                                    color: Theme.onAccent
+                                    SequentialAnimation on opacity {
+                                        running: btn.danger
+                                        loops: Animation.Infinite
+                                        NumberAnimation { to: 0.2; duration: 400 }
+                                        NumberAnimation { to: 0.8; duration: 400 }
+                                    }
+                                }
+                            }
+                        }
 
                         ColumnLayout {
                             anchors.centerIn: parent
@@ -137,7 +212,7 @@ Variants {
                             }
                             FText {
                                 Layout.alignment: Qt.AlignHCenter
-                                text: btn.modelData.label
+                                text: btn.danger ? "Cancel · " + win.remaining + "s" : btn.modelData.label
                                 font.weight: Font.DemiBold
                                 color: btn.selected || btn.danger ? Theme.onAccent : Theme.text
                             }

@@ -20,15 +20,15 @@ ColumnLayout {
         Layout.bottomMargin: Theme.sp6
         spacing: Theme.sp2
         FIcon { Layout.alignment: Qt.AlignHCenter; icon: "music_off"; size: 56; color: Theme.textDim }
-        FText { Layout.alignment: Qt.AlignHCenter; text: "No media playing"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
-        FText { Layout.alignment: Qt.AlignHCenter; text: "Start something in any MPRIS-capable player"; dim: true }
+        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: "No media playing"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: "Start something in any MPRIS-capable player"; dim: true }
     }
 
-    // player
+    // player: centered art + track info over a blurred backdrop
     ClippingRectangle {
         visible: Media.active
         Layout.fillWidth: true
-        implicitHeight: 220
+        implicitHeight: hero.implicitHeight + Theme.sp5 * 2
         radius: Theme.rXl
         color: Theme.surfaceHigh
 
@@ -56,14 +56,19 @@ ColumnLayout {
             color: Theme.alpha(Theme.surfaceHigh, 0.55)
         }
 
-        RowLayout {
-            anchors.fill: parent
-            anchors.margins: Theme.sp4
-            spacing: Theme.sp4
+        ColumnLayout {
+            id: hero
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.margins: Theme.sp5
+            spacing: 4
 
             ClippingRectangle {
-                Layout.preferredWidth: 180
-                Layout.preferredHeight: 180
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: 200
+                Layout.preferredHeight: 200
+                Layout.bottomMargin: Theme.sp3
                 radius: Theme.rLg
                 color: Theme.surfaceHighest
                 scale: Media.playing ? 1 : 0.94
@@ -72,21 +77,42 @@ ColumnLayout {
                     anchors.fill: parent
                     source: Media.art
                     fillMode: Image.PreserveAspectCrop
-                    sourceSize: Qt.size(360, 360)
+                    sourceSize: Qt.size(400, 400)
                     asynchronous: true
                 }
-                FIcon { anchors.centerIn: parent; visible: !Media.art; icon: "album"; size: 72; color: Theme.textDim }
+                FIcon { anchors.centerIn: parent; visible: !Media.art; icon: "album"; size: 80; color: Theme.textDim }
             }
-
-            ColumnLayout {
+            FText {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: 2
-                FText { Layout.fillWidth: true; text: Media.title; font.pixelSize: Theme.fsXl; font.weight: Font.Bold; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight }
-                FText { Layout.fillWidth: true; text: Media.artist; elide: Text.ElideRight }
-                FText { Layout.fillWidth: true; visible: text !== ""; text: root.p?.trackAlbum ?? ""; dim: true; font.pixelSize: Theme.fsSm; elide: Text.ElideRight }
-                FText { text: root.p?.identity ?? ""; dim: true; font.pixelSize: Theme.fsXs }
-                Item { Layout.fillHeight: true }
+                horizontalAlignment: Text.AlignHCenter
+                text: Media.title
+                font.pixelSize: Theme.fsXl
+                font.weight: Font.Bold
+                wrapMode: Text.Wrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
+            }
+            FText {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                text: Media.artist
+                elide: Text.ElideRight
+            }
+            FText {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                visible: text !== ""
+                text: root.p?.trackAlbum ?? ""
+                dim: true
+                font.pixelSize: Theme.fsSm
+                elide: Text.ElideRight
+            }
+            FText {
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                text: root.p?.identity ?? ""
+                dim: true
+                font.pixelSize: Theme.fsXs
             }
         }
     }
@@ -96,11 +122,12 @@ ColumnLayout {
         visible: Media.active && Media.length > 0
         Layout.fillWidth: true
         spacing: 4
-        FSlider {
+        FSeekBar {
             Layout.fillWidth: true
-            implicitHeight: 10
-            value: Media.length > 0 ? Media.position / Media.length : 0
-            onMoved: v => Media.seek(v)
+            position: Media.position
+            length: Media.length
+            seekable: root.p?.canSeek ?? false
+            onSeek: f => Media.seek(f)
         }
         RowLayout {
             Layout.fillWidth: true
@@ -114,6 +141,7 @@ ColumnLayout {
     RowLayout {
         visible: Media.active
         Layout.alignment: Qt.AlignHCenter
+        Layout.topMargin: Theme.sp2
         spacing: Theme.sp3
         FIconButton {
             visible: root.p?.shuffleSupported ?? false
@@ -135,7 +163,8 @@ ColumnLayout {
     // player picker
     Flow {
         visible: Media.players.length > 1
-        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignHCenter
+        Layout.maximumWidth: parent.width
         spacing: 6
         Repeater {
             model: Media.players

@@ -11,7 +11,8 @@ Rectangle {
     property string screenName
     readonly property var list: Niri.workspacesOn(screenName)
     readonly property int activeIndex: list.findIndex(w => w.is_active)
-    readonly property string style: Settings.data.bar.workspaceStyle
+    property int barLevel: 0
+    readonly property string style: barLevel >= 2 ? "dots" : Settings.data.bar.workspaceStyle
     readonly property bool numbers: style === "numbers"
 
     // geometry, all derived from the bar height

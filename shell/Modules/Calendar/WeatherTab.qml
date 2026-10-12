@@ -22,7 +22,7 @@ ColumnLayout {
         Layout.bottomMargin: Theme.sp5
         spacing: Theme.sp2
         FIcon { Layout.alignment: Qt.AlignHCenter; icon: "location_off"; size: 48; color: Theme.textDim }
-        FText { Layout.alignment: Qt.AlignHCenter; text: root.w.enabled ? "No location set" : "Weather is turned off"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.w.enabled ? "No location set" : "Weather is turned off"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
         FButton { Layout.alignment: Qt.AlignHCenter; text: "Weather settings"; icon: "settings"; variant: "tonal"; onClicked: root.openSettings("clock") }
     }
 
@@ -31,38 +31,61 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Theme.sp3
 
-        // now
+        // now: centered hero
         FCard {
             Layout.fillWidth: true
-            implicitHeight: nowRow.implicitHeight + Theme.sp4 * 2
-            RowLayout {
-                id: nowRow
-                anchors.fill: parent
+            implicitHeight: nowCol.implicitHeight + Theme.sp5 * 2
+            ColumnLayout {
+                id: nowCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
                 anchors.margins: Theme.sp4
-                spacing: Theme.sp4
-                FIcon { icon: Weather.icon; size: 64; fill: 1; color: Theme.accent2 }
-                ColumnLayout {
+                spacing: 2
+
+                FIcon { Layout.alignment: Qt.AlignHCenter; icon: Weather.icon; size: 72; fill: 1; color: Theme.accent2 }
+                FText {
                     Layout.fillWidth: true
-                    spacing: 0
-                    FText { text: Weather.ready ? Math.round(Weather.temp) + Weather.unit : "Loading…"; font.pixelSize: Theme.fsXxl; font.weight: Font.Bold }
-                    FText { text: Weather.description + (Weather.place ? " · " + Weather.place : ""); dim: true }
-                    FText {
-                        visible: root.w.showFeelsLike && Weather.ready
-                        text: "Feels like " + Math.round(Weather.feelsLike) + Weather.unit
-                        dim: true
-                        font.pixelSize: Theme.fsSm
-                    }
+                    horizontalAlignment: Text.AlignHCenter
+                    text: Weather.ready ? Math.round(Weather.temp) + Weather.unit : "Loading…"
+                    font.pixelSize: 44
+                    font.weight: Font.Bold
                 }
-                GridLayout {
-                    columns: 2
-                    rowSpacing: 4
-                    columnSpacing: 8
-                    FIcon { visible: root.w.showWind; icon: "air"; size: 16; color: Theme.textDim }
-                    FText { visible: root.w.showWind; text: Math.round(Weather.wind) + (root.w.fahrenheit ? " mph" : " km/h"); font.pixelSize: Theme.fsSm }
-                    FIcon { visible: root.w.showHumidity; icon: "humidity_percentage"; size: 16; color: Theme.textDim }
-                    FText { visible: root.w.showHumidity; text: Weather.humidity + "%"; font.pixelSize: Theme.fsSm }
-                    FIcon { visible: root.w.showSunTimes; icon: "wb_twilight"; size: 16; color: Theme.textDim }
-                    FText { visible: root.w.showSunTimes; text: root.hm(Weather.sunrise) + " – " + root.hm(Weather.sunset); font.pixelSize: Theme.fsSm }
+                FText {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    text: Weather.description + (Weather.place ? " · " + Weather.place : "")
+                    font.pixelSize: Theme.fsLg
+                }
+                FText {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    visible: root.w.showFeelsLike && Weather.ready
+                    text: "Feels like " + Math.round(Weather.feelsLike) + Weather.unit
+                    dim: true
+                }
+                Row {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: Theme.sp3
+                    spacing: Theme.sp5
+                    Row {
+                        visible: root.w.showWind
+                        spacing: 6
+                        FIcon { icon: "air"; size: 18; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
+                        FText { text: Math.round(Weather.wind) + (root.w.fahrenheit ? " mph" : " km/h"); anchors.verticalCenter: parent.verticalCenter }
+                    }
+                    Row {
+                        visible: root.w.showHumidity
+                        spacing: 6
+                        FIcon { icon: "humidity_percentage"; size: 18; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
+                        FText { text: Weather.humidity + "%"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                    Row {
+                        visible: root.w.showSunTimes
+                        spacing: 6
+                        FIcon { icon: "wb_twilight"; size: 18; color: Theme.textDim; anchors.verticalCenter: parent.verticalCenter }
+                        FText { text: root.hm(Weather.sunrise) + " – " + root.hm(Weather.sunset); anchors.verticalCenter: parent.verticalCenter }
+                    }
                 }
             }
         }

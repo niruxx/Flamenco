@@ -26,7 +26,29 @@ Variants {
         readonly property int tabIndex: Math.max(0, tabs.findIndex(t => t.value === tab))
         property int lastIndex: 0
 
-        onOpened: tab = Settings.data.dashboard.defaultTab || "overview"
+        onOpened: {
+            tab = Panels.dashboardTab || Settings.data.dashboard.defaultTab || "overview";
+            Panels.dashboardTab = "";
+        }
+        onTabChanged: if (shouldShow) Panels.dashboardShown = tab
+        // separate Connections so OverlayPanel's own shouldShow handler keeps running
+        Connections {
+            target: panel
+            function onShouldShowChanged() {
+                Panels.dashboardShown = panel.shouldShow ? panel.tab : "";
+            }
+        }
+
+        // switching tabs while already open (e.g. clicking the bar's media chip)
+        Connections {
+            target: Panels
+            function onDashboardTabChanged() {
+                if (panel.shouldShow && Panels.dashboardTab) {
+                    panel.select(Panels.dashboardTab);
+                    Panels.dashboardTab = "";
+                }
+            }
+        }
 
         function select(t) {
             if (t === "settings") {

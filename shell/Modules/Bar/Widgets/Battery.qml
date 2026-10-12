@@ -4,7 +4,9 @@ import qs.Services
 import qs.Widgets
 
 BarChip {
+    id: root
     property string screenName
+    property int barLevel: 0
     property bool barVisible: Power.hasBattery
     onClicked: Panels.toggle("control", screenName)
 
@@ -26,6 +28,7 @@ BarChip {
             }
         }
         FText {
+            visible: root.barLevel < 2
             text: Power.percent + (Theme.barVertical ? "" : "%")
             font.pixelSize: Theme.barVertical ? Theme.fsXs : Theme.fsSm
             font.weight: Font.DemiBold

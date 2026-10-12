@@ -21,7 +21,7 @@ Variants {
             width: parent.width
             spacing: Theme.sp4
 
-            Header {}
+            Header { Layout.fillWidth: true }
 
             // ── pager: main page ⇄ detail page ──
             Item {

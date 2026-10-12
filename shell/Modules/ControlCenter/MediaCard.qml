@@ -9,7 +9,7 @@ import qs.Widgets
 // Album-art backed media card with a blurred art backdrop.
 ClippingRectangle {
     id: root
-    implicitHeight: 150
+    implicitHeight: Math.max(170, info.implicitHeight + Theme.sp3 * 2)
     radius: Theme.rLg
     color: Theme.surfaceHigh
 
@@ -71,9 +71,10 @@ ClippingRectangle {
         }
 
         ColumnLayout {
+            id: info
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 2
+            spacing: 4
 
             FText {
                 Layout.fillWidth: true
@@ -88,32 +89,29 @@ ClippingRectangle {
                 dim: true
                 elide: Text.ElideRight
             }
-            Item { Layout.fillHeight: true }
+            Item { Layout.fillHeight: true; Layout.minimumHeight: Theme.sp2 }
 
-            // progress
-            Rectangle {
+            // progress: drag or click to seek
+            FSeekBar {
                 Layout.fillWidth: true
-                height: 4
-                radius: 2
-                color: Theme.alpha(Theme.text, 0.15)
                 visible: Media.length > 0
-                Rectangle {
-                    height: parent.height
-                    radius: 2
-                    width: parent.width * Math.min(1, Media.position / Math.max(1, Media.length))
-                    color: Theme.accent
-                    Behavior on width { Anim { duration: 1000; easing.type: Easing.Linear } }
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    anchors.margins: -6
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: mouse => Media.seek(mouse.x / width)
-                }
+                position: Media.position
+                length: Media.length
+                seekable: Media.player?.canSeek ?? false
+                onSeek: f => Media.seek(f)
             }
             RowLayout {
                 Layout.fillWidth: true
+                visible: Media.length > 0
                 FText { text: Media.fmt(Media.position); dim: true; font.pixelSize: Theme.fsXs; mono: true }
+                Item { Layout.fillWidth: true }
+                FText { text: Media.fmt(Media.length); dim: true; font.pixelSize: Theme.fsXs; mono: true }
+            }
+
+            // controls, with breathing room below the seek bar
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: Theme.sp2
                 Item { Layout.fillWidth: true }
                 FIconButton { icon: "skip_previous"; size: 32; onClicked: Media.previous() }
                 FIconButton {

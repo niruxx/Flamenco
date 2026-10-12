@@ -80,7 +80,8 @@ PanelWindow {
         readonly property string hPos: root.place === "bar" ? (edge === "left" || edge === "right" ? edge : root.hAlign) : root.place.endsWith("left") ? "left" : root.place.endsWith("right") ? "right" : "center"
 
         width: Math.min(root.cardWidth, parent.width - Theme.gap * 2)
-        height: inner.implicitHeight + root.cardPadding * 2
+        // never taller than the screen (minus a gap); the content scrolls instead
+        height: Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.gap * 2)
         x: hPos === "left" ? Theme.gap : hPos === "right" ? parent.width - width - Theme.gap : (parent.width - width) / 2
         y: root.place === "center" ? (parent.height - height) / 2.6 : edge === "bottom" ? parent.height - height - Theme.gap : Theme.gap
 
@@ -112,11 +113,20 @@ PanelWindow {
         // swallow clicks so they don't reach the close catcher
         MouseArea { anchors.fill: parent }
 
-        Item {
-            id: inner
+        FScroll {
+            id: scroller
             anchors.fill: parent
             anchors.margins: root.cardPadding
-            implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
+            contentHeight: inner.implicitHeight
+            // only grab drags when there's something to scroll, so sliders and swipes inside work normally
+            interactive: contentHeight > height + 1
+
+            Item {
+                id: inner
+                width: scroller.width
+                height: implicitHeight
+                implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
+            }
         }
     }
 }

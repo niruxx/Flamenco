@@ -12,6 +12,7 @@ Rectangle {
     property var current
     property string placeholder: "Select…"
     property bool searchable: options.length > 8
+    property bool fontPreview: false      // draw each option in its own font (font pickers)
 
     signal selected(var value)
 
@@ -37,6 +38,7 @@ Rectangle {
 
         FText {
             Layout.fillWidth: true
+            font.family: root.fontPreview && root.current ? String(root.current) : Theme.fontFamily
             text: root.currentItem ? root.currentItem.label : (root.current ? String(root.current) : root.placeholder)
             dim: !root.currentItem && !root.current
             elide: Text.ElideRight
@@ -131,6 +133,7 @@ Rectangle {
                         spacing: 8
                         FText {
                             Layout.fillWidth: true
+                            font.family: root.fontPreview ? String(opt.modelData.value) : Theme.fontFamily
                             text: opt.modelData.label
                             color: opt.sel ? Theme.accent : Theme.text
                             font.weight: opt.sel ? Font.DemiBold : Font.Normal

@@ -13,6 +13,13 @@
   flamenco theme PALETTE | dark | light | toggle | list
   flamenco ipc TARGET FUNCTION [ARGS...]
   flamenco apps-theme [--json SPEC | --restore]
+  flamenco power logind get | apply --json SPEC | reset   lid / power-button handling
+  flamenco firewall status [--json] | apply --json SPEC | load
+  flamenco fonts [--json]      installed font families (and monospace ones)
+  flamenco sound themes | play EVENT | find EVENT
+  flamenco portals get | apply --json SPEC   screen sharing / file chooser backends
+  flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
+  flamenco launch APP_ID       start a desktop app (used by app shortcuts)
   flamenco printers [--json] | default NAME | test NAME | cancel ID|all | service ACTION | add
   flamenco display list | apply --json SPEC | save --json SPEC
   flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
@@ -32,7 +39,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.5.0"
+VERSION = "0.9.2"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -847,8 +854,17 @@ def block_line_values(text: str, block, keys) -> dict:
     return vals
 
 
+def block_indent(text: str, block) -> str:
+    """Indentation for children of `block` (its own indentation + 4 spaces)."""
+    line_start = text.rfind("\n", 0, block[0]) + 1
+    line_end = text.find("\n", line_start)
+    line = text[line_start:line_end if line_end >= 0 else len(text)]
+    return line[:len(line) - len(line.lstrip())] + "    "
+
+
 def set_block_lines(text: str, block, wanted: dict) -> str:
     """wanted: key -> new line text, or None to delete that line."""
+    pad = block_indent(text, block)
     vals = block_line_values(text, block, wanted.keys())
     edits = []
     for key, line in wanted.items():
@@ -860,10 +876,10 @@ def set_block_lines(text: str, block, wanted: dict) -> str:
                 b = b + 1 if b < len(text) and text[b] == "\n" else b
                 edits.append((a, b, ""))
             else:
-                edits.append((a, b, "    " + line))
+                edits.append((a, b, pad + line))
         elif line is not None:
             o = block[1]
-            edits.append((o + 1, o + 1, "\n    " + line))
+            edits.append((o + 1, o + 1, "\n" + pad + line))
     # edit from the end so offsets stay valid
     for a, b, rep in sorted(edits, reverse=True):
         text = text[:a] + rep + text[b:]
@@ -1167,6 +1183,15 @@ def build_niri_config(old: str) -> str:
     text = text.replace("@@CURSOR@@", ("// carried over\n" + cursors[0]) if cursors else
                         "cursor {\n    xcursor-theme \"Adwaita\"\n    xcursor-size 24\n}")
     text = text.replace("@@TERMINAL@@", " ".join(kdl_quote(t) for t in term))
+    # Flamenco's managed shortcuts: the ones saved in Settings, else the defaults
+    try:
+        saved = json.loads((CONFIG_DIR / "settings.json").read_text()).get("keyboard", {}).get("shortcuts") or None
+    except Exception:
+        saved = None
+    try:
+        text = apply_shortcuts(text, saved or DEFAULT_SHORTCUTS)
+    except ValueError:
+        text = apply_shortcuts(text, DEFAULT_SHORTCUTS)
     return text
 
 
@@ -1315,6 +1340,943 @@ def cmd_printers(args: list[str]) -> int:
     die("usage: flamenco printers [list|--json] | default NAME | test NAME | cancel ID|all | service ACTION | add")
 
 
+# ─────────────────────────────── keyboard & shortcuts ────────────────────────
+# Settings → Keyboard writes niri's `input { keyboard { … } }` and a managed
+# section at the top of `binds { … }`.
+
+BINDS_BEGIN = "// ── flamenco: shortcuts (edit in Flamenco Settings → Keyboard) ──"
+BINDS_END = "// ── end of flamenco shortcuts ──"
+REPLACED = "// flamenco: replaced by a Flamenco shortcut: "
+
+# id -> (label, flamenco CLI args)
+SHELL_FUNCTIONS = {
+    "launcher": ("App launcher", ["launcher"]),
+    "control": ("Control center", ["control"]),
+    "notifications": ("Notification center", ["notifications"]),
+    "dashboard": ("Dashboard (clock)", ["calendar"]),
+    "performance": ("Performance", ["performance"]),
+    "wallpapers": ("Wallpaper picker", ["wallpapers"]),
+    "settings": ("Settings", ["settings"]),
+    "power": ("Power menu", ["power"]),
+    "lock": ("Lock the screen", ["lock"]),
+    "volume-up": ("Volume up", ["volume", "up"]),
+    "volume-down": ("Volume down", ["volume", "down"]),
+    "volume-mute": ("Mute", ["volume", "mute"]),
+    "mic-mute": ("Mute microphone", ["volume", "mic-mute"]),
+    "brightness-up": ("Brightness up", ["brightness", "up"]),
+    "brightness-down": ("Brightness down", ["brightness", "down"]),
+    "media-toggle": ("Play / pause", ["media", "toggle"]),
+    "media-next": ("Next track", ["media", "next"]),
+    "media-previous": ("Previous track", ["media", "previous"]),
+    "wallpaper-random": ("Random wallpaper", ["wallpaper", "random"]),
+    "wallpaper-next": ("Next wallpaper", ["wallpaper", "next"]),
+    "theme-toggle": ("Toggle dark / light", ["theme", "toggle"]),
+    "dnd": ("Toggle Do Not Disturb", ["ipc", "notifs", "toggleDnd"]),
+    "caffeine": ("Toggle caffeine", ["ipc", "toggles", "caffeine"]),
+    "night-light": ("Toggle night light", ["ipc", "toggles", "nightLight"]),
+    "restart-shell": ("Restart the shell", ["restart"]),
+}
+
+DEFAULT_SHORTCUTS = [
+    {"key": "Mod+Space", "type": "flamenco", "value": "launcher", "title": "Launcher"},
+    {"key": "Mod+D", "type": "flamenco", "value": "launcher", "title": "Launcher"},
+    {"key": "Mod+A", "type": "flamenco", "value": "control", "title": "Control center"},
+    {"key": "Mod+N", "type": "flamenco", "value": "notifications", "title": "Notifications"},
+    {"key": "Mod+Comma", "type": "flamenco", "value": "settings", "title": "Settings"},
+    {"key": "Mod+W", "type": "flamenco", "value": "wallpapers", "title": "Wallpapers"},
+    {"key": "Mod+Escape", "type": "flamenco", "value": "power", "title": "Power menu"},
+    {"key": "Super+Alt+L", "type": "flamenco", "value": "lock", "title": "Lock the screen"},
+]
+
+
+DISABLED = "// disabled: "
+
+
+def bind_line(sc: dict) -> str:
+    key = sc["key"].strip()
+    if not re.fullmatch(r"[A-Za-z0-9_+]+", key):
+        raise ValueError(f"invalid key combination: {key!r}")
+    t, v = sc.get("type"), str(sc.get("value", "")).strip()
+    if t == "none":
+        # claims the key (so a user binding on it is commented out) but binds nothing
+        return DISABLED + key
+    if t == "flamenco":
+        if v not in SHELL_FUNCTIONS:
+            raise ValueError(f"unknown Flamenco function: {v!r}")
+        action = "spawn " + " ".join(kdl_quote(a) for a in ["flamenco", *SHELL_FUNCTIONS[v][1]])
+    elif t == "app":
+        if not v:
+            raise ValueError(f"{key}: no app chosen")
+        action = "spawn " + " ".join(kdl_quote(a) for a in ["flamenco", "launch", v])
+    elif t == "command":
+        if not v:
+            raise ValueError(f"{key}: empty command")
+        action = "spawn-sh " + kdl_quote(v)
+    elif t == "niri":
+        if not re.fullmatch(r"[a-z][a-z0-9-]*(\s+.*)?", v):
+            raise ValueError(f"{key}: not a niri action: {v!r}")
+        action = v
+    else:
+        raise ValueError(f"{key}: unknown shortcut type {t!r}")
+    props = ""
+    if sc.get("locked") and t != "niri":
+        props += " allow-when-locked=true"
+    if sc.get("title"):
+        props += " hotkey-overlay-title=" + kdl_quote(sc["title"])
+    return f"{key}{props} {{ {action}; }}"
+
+
+def norm_key(k: str) -> str:
+    """Key combos compare case-insensitively with modifiers in any order."""
+    parts = k.strip().split("+")
+    mods = sorted(p.lower() for p in parts[:-1])
+    return "+".join(mods + [parts[-1].lower()])
+
+
+def binds_region(text: str, block):
+    """(start, end) of the managed region inside the binds block, or None."""
+    _, o, c = block
+    a = text.find(BINDS_BEGIN, o, c)
+    if a < 0:
+        return None
+    b = text.find(BINDS_END, a, c)
+    if b < 0:
+        return None
+    a = text.rfind("\n", 0, a) + 1                 # start of the marker line
+    b = text.find("\n", b)
+    return a, (b + 1 if b >= 0 else c)
+
+
+def other_bind_keys(text: str) -> list[dict]:
+    """Bindings in the binds block that Flamenco doesn't manage."""
+    block = kdl_block(text, "binds")
+    if not block:
+        return []
+    _, o, c = block
+    region = binds_region(text, block)
+    masked = kdl_mask(text)
+    out = []
+    for m in re.finditer(r"(?m)^[ \t]*([A-Za-z0-9_+]+)(?=[\s{])[^\n]*", masked[o + 1:c]):
+        pos = o + 1 + m.start()
+        if region and region[0] <= pos < region[1]:
+            continue
+        line = text[pos:o + 1 + m.end()].strip()
+        out.append({"key": m.group(1), "line": line})
+    return out
+
+
+def kdl_unquote(v: str) -> str:
+    return re.sub(r"\\(.)", lambda m: {"n": "\n", "t": "\t"}.get(m.group(1), m.group(1)), v)
+
+
+def managed_shortcuts(text: str) -> list[dict] | None:
+    """Parse our own region back into shortcut dicts (best effort)."""
+    block = kdl_block(text, "binds")
+    if not block:
+        return None
+    region = binds_region(text, block)
+    if not region:
+        return None
+    fn_by_args = {tuple(v[1]): k for k, v in SHELL_FUNCTIONS.items()}
+    out = []
+    for line in text[region[0]:region[1]].splitlines():
+        if line.strip().startswith(DISABLED):
+            out.append({"key": line.strip()[len(DISABLED):].strip(), "type": "none", "value": "", "title": "", "locked": False})
+            continue
+        m = re.match(r'\s*([A-Za-z0-9_+]+)(.*?)\{\s*(.*?);?\s*\}\s*$', line)
+        if not m:
+            continue
+        key, props, action = m.groups()
+        title = re.search(r'hotkey-overlay-title="((?:[^"\\]|\\.)*)"', props)
+        sc = {"key": key, "title": kdl_unquote(title.group(1)) if title else "", "locked": "allow-when-locked=true" in props}
+        args = [kdl_unquote(a) for a in re.findall(r'"((?:[^"\\]|\\.)*)"', action)]
+        if action.startswith("spawn-sh "):
+            sc.update(type="command", value=args[0] if args else "")
+        elif action.startswith("spawn ") and args[:2] == ["flamenco", "launch"]:
+            sc.update(type="app", value=args[2] if len(args) > 2 else "")
+        elif action.startswith("spawn ") and args[:1] == ["flamenco"] and tuple(args[1:]) in fn_by_args:
+            sc.update(type="flamenco", value=fn_by_args[tuple(args[1:])])
+        elif action.startswith("spawn "):
+            sc.update(type="command", value=" ".join(args))
+        else:
+            sc.update(type="niri", value=action)
+        out.append(sc)
+    return out
+
+
+def apply_shortcuts(text: str, shortcuts: list[dict]) -> str:
+    lines = [bind_line(sc) for sc in shortcuts]
+    keys = [norm_key(sc["key"]) for sc in shortcuts]
+    dup = {k for k in keys if keys.count(k) > 1}
+    if dup:
+        raise ValueError("the same key is used twice: " + ", ".join(sorted(dup)))
+
+    block = kdl_block(text, "binds")
+    if block is None:
+        text = text.rstrip("\n") + "\n\nbinds {\n}\n"
+        block = kdl_block(text, "binds")
+    pad = block_indent(text, block)
+
+    # 1) restore lines we commented out earlier
+    _, o, c = block
+    inner = text[o + 1:c].replace(REPLACED, "")
+    text = text[:o + 1] + inner + text[c:]
+    block = kdl_block(text, "binds")
+
+    # 2) drop the old managed region
+    region = binds_region(text, block)
+    if region:
+        text = text[:region[0]] + text[region[1]:]
+        block = kdl_block(text, "binds")
+
+    # 3) comment out user bindings that collide with ours
+    _, o, c = block
+    masked = kdl_mask(text)
+    edits = []
+    for m in re.finditer(r"(?m)^([ \t]*)([A-Za-z0-9_+]+)(?=[\s{])", masked[o + 1:c]):
+        if norm_key(m.group(2)) in keys:
+            at = o + 1 + m.start() + len(m.group(1))
+            edits.append(at)
+    for at in sorted(edits, reverse=True):
+        text = text[:at] + REPLACED + text[at:]
+    block = kdl_block(text, "binds")
+
+    # 4) write the region right after `binds {`
+    _, o, _ = block
+    body = "\n".join(pad + l for l in [BINDS_BEGIN, *lines, BINDS_END])
+    return text[:o + 1] + "\n" + body + "\n" + text[o + 1:].lstrip("\n")
+
+
+def kdl_child_block(text: str, parent, name: str):
+    """A direct child block `name { … }` of `parent`, with absolute offsets."""
+    _, o, c = parent
+    rel = kdl_block(text[o + 1:c], name)
+    if rel is None:
+        return None
+    return rel[0] + o + 1, rel[1] + o + 1, rel[2] + o + 1
+
+
+def keyboard_settings(text: str) -> dict:
+    out = {"layout": "", "variant": "", "options": "", "model": "", "repeatDelay": 600, "repeatRate": 25,
+           "numlock": False, "trackLayout": "global"}
+    inp = kdl_block(text, "input")
+    kb = kdl_child_block(text, inp, "keyboard") if inp else None
+    if not kb:
+        return out
+    vals = block_line_values(text, kb, ("repeat-delay", "repeat-rate", "numlock", "track-layout"))
+    num = lambda k, d: int(re.search(r"\d+", vals[k][2]).group()) if k in vals and re.search(r"\d+", vals[k][2]) else d
+    out["repeatDelay"] = num("repeat-delay", 600)
+    out["repeatRate"] = num("repeat-rate", 25)
+    out["numlock"] = "numlock" in vals
+    if "track-layout" in vals:
+        q = re.search(r'"([^"]*)"', vals["track-layout"][2])
+        out["trackLayout"] = q.group(1) if q else "global"
+    xkb = kdl_child_block(text, kb, "xkb")
+    if xkb:
+        xv = block_line_values(text, xkb, ("layout", "variant", "options", "model"))
+        for k in ("layout", "variant", "options", "model"):
+            if k in xv:
+                q = re.search(r'"([^"]*)"', xv[k][2])
+                out[k] = q.group(1) if q else ""
+    return out
+
+
+def apply_keyboard_input(text: str, kb: dict) -> str:
+    if kdl_block(text, "input") is None:
+        text = text.rstrip("\n") + "\n\ninput {\n}\n"
+    inp = kdl_block(text, "input")
+    if kdl_child_block(text, inp, "keyboard") is None:
+        pad = block_indent(text, inp)
+        text = text[:inp[1] + 1] + f"\n{pad}keyboard {{\n{pad}}}" + text[inp[1] + 1:]
+    keyb = kdl_child_block(text, kdl_block(text, "input"), "keyboard")
+    if kdl_child_block(text, keyb, "xkb") is None:
+        pad = block_indent(text, keyb)
+        text = text[:keyb[1] + 1] + f"\n{pad}xkb {{\n{pad}}}" + text[keyb[1] + 1:]
+    keyb = kdl_child_block(text, kdl_block(text, "input"), "keyboard")
+    xkb = kdl_child_block(text, keyb, "xkb")
+    q = lambda k: f"{k} {kdl_quote(str(kb[k]))}" if str(kb.get(k, "")).strip() else None
+    text = set_block_lines(text, xkb, {"layout": q("layout"), "variant": q("variant"), "options": q("options"), "model": q("model")})
+    keyb = kdl_child_block(text, kdl_block(text, "input"), "keyboard")
+    text = set_block_lines(text, keyb, {
+        "repeat-delay": f"repeat-delay {int(kb.get('repeatDelay', 600))}",
+        "repeat-rate": f"repeat-rate {int(kb.get('repeatRate', 25))}",
+        "numlock": "numlock" if kb.get("numlock") else None,
+        "track-layout": f"track-layout {kdl_quote(kb.get('trackLayout', 'global'))}" if kb.get("trackLayout", "global") != "global" else None,
+    })
+    return text
+
+
+def xkb_catalog() -> dict:
+    """Layouts, variants and options from the XKB rules database."""
+    lst = next((p for p in (Path("/usr/share/X11/xkb/rules/evdev.lst"), Path("/usr/share/X11/xkb/rules/base.lst")) if p.exists()), None)
+    out = {"layouts": [], "variants": {}, "options": []}
+    if not lst:
+        return out
+    section = ""
+    for line in lst.read_text(errors="replace").splitlines():
+        if line.startswith("! "):
+            section = line[2:].strip()
+            continue
+        m = re.match(r"\s+(\S+)\s+(.*)", line)
+        if not m:
+            continue
+        code, desc = m.groups()
+        if section == "layout":
+            out["layouts"].append({"value": code, "label": f"{desc} ({code})"})
+        elif section == "variant":
+            lay, _, d = desc.partition(":")
+            out["variants"].setdefault(lay.strip(), []).append({"value": code, "label": d.strip() or code})
+        elif section == "option" and ":" in code:
+            out["options"].append({"value": code, "label": desc})
+    out["layouts"].sort(key=lambda x: x["label"].lower())
+    return out
+
+
+def find_desktop_entry(app_id: str) -> Path | None:
+    name = app_id if app_id.endswith(".desktop") else app_id + ".desktop"
+    for d in data_dirs():
+        apps = d / "applications"
+        for cand in (apps / name, *apps.glob("**/" + name)):
+            if cand.is_file():
+                return cand
+    return None
+
+
+def cmd_launch(args: list[str]) -> int:
+    """Start a desktop app by id (what app shortcuts call)."""
+    import shlex
+    if not args:
+        die("usage: flamenco launch APP_ID")
+    entry = find_desktop_entry(args[0])
+    if entry is None:
+        die(f"no desktop entry for {args[0]!r}")
+    cp = configparser.RawConfigParser(strict=False, interpolation=None)
+    cp.optionxform = str
+    cp.read(entry, encoding="utf-8")
+    exe = cp.get("Desktop Entry", "Exec", fallback="")
+    if not exe:
+        die(f"{entry} has no Exec line")
+    argv = [a for a in shlex.split(exe) if not re.fullmatch(r"%[fFuUdDnNickvm]", a)]
+    argv = [a.replace("%%", "%") for a in argv]
+    if cp.get("Desktop Entry", "Terminal", fallback="false").lower() == "true":
+        t = pick_terminal().split()
+        name = Path(t[0]).name
+        argv = t + (argv if name in ("kitty", "foot") else ["start", "--", *argv] if name == "wezterm" else ["--", *argv] if name in ("gnome-terminal", "kgx") else ["-e", *argv])
+    subprocess.Popen(argv, start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return 0
+
+
+def write_niri_config(new: str, old: str) -> None:
+    if new == old:
+        return
+    tmp = NIRI_CONFIG.with_suffix(".kdl.flamenco-tmp")
+    tmp.write_text(new)
+    if not niri_validate(tmp):
+        r = subprocess.run(["niri", "validate", "-c", str(tmp)], capture_output=True, text=True)
+        tmp.unlink()
+        msg = (r.stderr or r.stdout).strip().splitlines()
+        die("niri rejected the change: " + (msg[-1] if msg else "invalid config") + " (config.kdl left untouched)")
+    backup = BACKUP_DIR / "niri-config.before-keyboard.kdl"
+    if not backup.exists():
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        backup.write_text(old)
+    tmp.replace(NIRI_CONFIG)
+
+
+def cmd_keyboard(args: list[str]) -> int:
+    sub = args[0] if args else "get"
+    text = NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() else ""
+    if sub == "get":
+        out = keyboard_settings(text)
+        out["shortcuts"] = managed_shortcuts(text)
+        out["others"] = other_bind_keys(text)
+        # user bindings we've commented out because a Flamenco shortcut took the key
+        out["replaced"] = [{"key": m.group(1), "line": m.group(0).strip()}
+                           for m in re.finditer(r"(?m)" + re.escape(REPLACED) + r"([A-Za-z0-9_+]+)[^\n]*", text)]
+        print(json.dumps(out))
+        return 0
+    if sub == "defaults":
+        print(json.dumps(DEFAULT_SHORTCUTS))
+        return 0
+    if sub == "functions":
+        print(json.dumps([{"value": k, "label": v[0]} for k, v in SHELL_FUNCTIONS.items()]))
+        return 0
+    if sub == "layouts":
+        print(json.dumps(xkb_catalog()))
+        return 0
+    if sub == "apply":
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco keyboard apply --json SPEC")
+        spec = json.loads(args[args.index("--json") + 1])
+        if not NIRI_CONFIG.is_file():
+            die(f"{NIRI_CONFIG} not found (run `flamenco niri-config` first)")
+        new = text
+        try:
+            if spec.get("input") is not None:
+                new = apply_keyboard_input(new, spec["input"])
+            if spec.get("shortcuts") is not None:
+                new = apply_shortcuts(new, spec["shortcuts"])
+        except ValueError as e:
+            die(str(e))
+        write_niri_config(new, text)
+        print("keyboard: niri config updated" if new != text else "keyboard: already up to date")
+        return 0
+    die("usage: flamenco keyboard get | defaults | functions | layouts | apply --json SPEC")
+
+
+# ─────────────────────────────── portals (screen sharing) ────────────────────
+# Which xdg-desktop-portal backend handles each feature is set per desktop in
+# ~/.config/xdg-desktop-portal/niri-portals.conf.
+
+PORTAL_CONF = XDG_CONFIG / "xdg-desktop-portal/niri-portals.conf"
+XDPW_CONF = XDG_CONFIG / "xdg-desktop-portal-wlr/config"
+PORTAL_IFACES = {
+    "ScreenCast": "org.freedesktop.impl.portal.ScreenCast",
+    "Screenshot": "org.freedesktop.impl.portal.Screenshot",
+    "FileChooser": "org.freedesktop.impl.portal.FileChooser",
+}
+# How well each backend's screen capture works on niri.
+PORTAL_NIRI = {
+    "gnome": ("works", "screens and single windows (needs GNOME libraries)"),
+    "wlr": ("works", "whole screens only, very lightweight"),
+    "kde": ("no", "screen capture only works under KWin; its file chooser is fine"),
+    "cosmic": ("no", "relies on COSMIC compositor protocols niri doesn't implement"),
+    "hyprland": ("no", "Hyprland only"),
+    "gtk": ("n/a", "file chooser, settings and other basics; no screen capture"),
+}
+PORTAL_PACKAGES = {"gnome": "xdg-desktop-portal-gnome", "wlr": "xdg-desktop-portal-wlr", "kde": "xdg-desktop-portal-kde",
+                   "gtk": "xdg-desktop-portal-gtk", "cosmic": "xdg-desktop-portal-cosmic"}
+
+
+def installed_portals() -> list[dict]:
+    found = {}
+    for d in data_dirs():
+        pdir = d / "xdg-desktop-portal/portals"
+        if not pdir.is_dir():
+            continue
+        for f in sorted(pdir.glob("*.portal")):
+            if f.stem in found:
+                continue
+            cp = read_index(f)
+            sec = "portal"
+            ifaces = [i.strip() for i in cp.get(sec, "Interfaces", fallback="").split(";") if i.strip()]
+            found[f.stem] = {"name": f.stem, "interfaces": [i.rsplit(".", 1)[-1] for i in ifaces],
+                             "niri": PORTAL_NIRI.get(f.stem, ("unknown", ""))[0],
+                             "note": PORTAL_NIRI.get(f.stem, ("unknown", ""))[1]}
+    return sorted(found.values(), key=lambda p: p["name"])
+
+
+def read_portal_conf(path: Path) -> dict:
+    cp = read_index(path) if path.is_file() else configparser.RawConfigParser()
+    if not cp.has_section("preferred"):
+        return {}
+    out = {}
+    for k, v in cp.items("preferred"):
+        out["default" if k == "default" else k.rsplit(".", 1)[-1]] = v.split(";")[0].strip()
+    return out
+
+
+def effective_portals() -> dict:
+    """User config if present, else the one niri ships."""
+    if PORTAL_CONF.is_file():
+        return {"source": str(PORTAL_CONF), **read_portal_conf(PORTAL_CONF)}
+    for d in data_dirs():
+        f = d / "xdg-desktop-portal/niri-portals.conf"
+        if f.is_file():
+            return {"source": str(f), **read_portal_conf(f)}
+    return {"source": ""}
+
+
+def cmd_portals(args: list[str]) -> int:
+    sub = args[0] if args else "get"
+    if sub == "get":
+        cur = effective_portals()
+        xdpw = read_index(XDPW_CONF) if XDPW_CONF.is_file() else configparser.RawConfigParser()
+        env = kdl_block(NIRI_CONFIG.read_text(), "environment") if NIRI_CONFIG.is_file() else None
+        gtk_portal = bool(env) and "GTK_USE_PORTAL" in block_line_values(NIRI_CONFIG.read_text(), env, ("GTK_USE_PORTAL",))
+        print(json.dumps({
+            "gtkUsePortal": gtk_portal,
+            "installed": installed_portals(),
+            "current": cur,
+            "packages": PORTAL_PACKAGES,
+            "wlr": {k: v for k, v in (xdpw.items("screencast") if xdpw.has_section("screencast") else [])},
+        }))
+        return 0
+    if sub == "apply":
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco portals apply --json SPEC")
+        spec = json.loads(args[args.index("--json") + 1])
+        installed = {p["name"] for p in installed_portals()}
+
+        def put(path: Path, content: str):
+            # separate from the app-theming manifest; keep a one-time copy of the user's file
+            if path.is_file() and MARKER not in path.read_text(errors="ignore")[:200]:
+                bak = BACKUP_DIR / "portals" / path.name
+                if not bak.exists():
+                    bak.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(path, bak)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+
+        lines = [f"# {MARKER}: written by Flamenco Settings → Screen sharing", "[preferred]"]
+        dflt = spec.get("default") or "gtk"
+        lines.append("default=" + (dflt if dflt == "gtk" else dflt + ";gtk"))
+        previous = read_portal_conf(PORTAL_CONF)
+        for key, iface in PORTAL_IFACES.items():
+            # keys not mentioned keep their current setting
+            v = (spec[key] if key in spec else previous.get(key, "")) or ""
+            if v:
+                if installed and v not in installed:
+                    die(f"the {v} portal isn't installed ({PORTAL_PACKAGES.get(v, 'xdg-desktop-portal-' + v)})")
+                lines.append(f"{iface}={v}")
+        put(PORTAL_CONF, "\n".join(lines) + "\n")
+
+        if "wlr" in (spec.get("ScreenCast"), spec.get("Screenshot")):
+            pick = spec.get("wlrOutput") or ""
+            fps = int(spec.get("maxFps") or 0)
+            sc = ["[screencast]"]
+            if pick:
+                sc += [f"output_name={pick}", "chooser_type=none"]
+            else:
+                # click the screen to share (falls back to the first screen without slurp)
+                sc += ["chooser_type=simple", "chooser_cmd=slurp -f %o -or"]
+            if fps > 0:
+                sc.append(f"max_fps={fps}")
+            put(XDPW_CONF, f"# {MARKER}\n" + "\n".join(sc) + "\n")
+
+        # optional: route every GTK app's file dialogs through the portal (niri environment)
+        if "gtkUsePortal" in spec and NIRI_CONFIG.is_file():
+            text = NIRI_CONFIG.read_text()
+            if kdl_block(text, "environment") is None:
+                text = text.rstrip("\n") + "\n\nenvironment {\n}\n"
+            on = bool(spec["gtkUsePortal"])
+            new = set_block_lines(text, kdl_block(text, "environment"), {
+                "GTK_USE_PORTAL": 'GTK_USE_PORTAL "1"' if on else None,
+                "GDK_DEBUG": 'GDK_DEBUG "portals"' if on else None})
+            write_niri_config(new, NIRI_CONFIG.read_text())
+
+        if shutil.which("systemctl"):
+            for unit in ("xdg-desktop-portal.service", "xdg-desktop-portal-wlr.service", "xdg-desktop-portal-gnome.service"):
+                subprocess.run(["systemctl", "--user", "try-restart", unit], capture_output=True)
+        print(f"portals: wrote {PORTAL_CONF}; restarted xdg-desktop-portal (apps opened before may need a restart)")
+        return 0
+    die("usage: flamenco portals get | apply --json SPEC")
+
+
+# ─────────────────────────────── fonts & sounds ──────────────────────────────
+
+def font_families(mono: bool = False) -> list[str]:
+    if not shutil.which("fc-list"):
+        return []
+    args = ["fc-list", ":spacing=mono" if mono else ":", "family"]
+    names = set()
+    for line in run_out(args).splitlines():
+        first = line.split(",")[0].strip()      # fc-list joins localized names with commas
+        if first and not first.startswith("."):
+            names.add(first)
+    return sorted(names, key=str.lower)
+
+
+def cmd_fonts(args: list[str]) -> int:
+    out = {"families": font_families(), "mono": font_families(mono=True)}
+    if "--json" in args:
+        print(json.dumps(out))
+    else:
+        print(f"{len(out['families'])} families, {len(out['mono'])} monospace")
+    return 0
+
+
+def sound_theme_dirs() -> dict[str, Path]:
+    found = {}
+    for d in [XDG_DATA] + data_dirs():
+        root = d / "sounds"
+        if root.is_dir():
+            for t in sorted(root.iterdir()):
+                if t.name not in found and (t / "index.theme").is_file():
+                    found[t.name] = t
+    return found
+
+
+def sound_themes() -> list[dict]:
+    out = []
+    for name, path in sound_theme_dirs().items():
+        cp = read_index(path / "index.theme")
+        label = cp.get("Sound Theme", "Name", fallback=name) if cp.has_section("Sound Theme") else name
+        out.append({"value": name, "label": label})
+    return sorted(out, key=lambda t: t["label"].lower())
+
+
+def find_sound(event: str, theme: str) -> Path | None:
+    """freedesktop sound-theme lookup: theme dirs, then Inherits, then 'freedesktop'."""
+    themes = sound_theme_dirs()
+    seen, queue = set(), [theme, "freedesktop"]
+    while queue:
+        t = queue.pop(0)
+        if t in seen or t not in themes:
+            continue
+        seen.add(t)
+        base = themes[t]
+        cp = read_index(base / "index.theme")
+        dirs = [d.strip() for d in cp.get("Sound Theme", "Directories", fallback="stereo").split(",") if d.strip()] or ["stereo"]
+        for sub in dirs + ["stereo", "."]:
+            for ext in ("oga", "ogg", "wav"):
+                f = base / sub / f"{event}.{ext}"
+                if f.is_file():
+                    return f
+        queue[:0] = [i.strip() for i in cp.get("Sound Theme", "Inherits", fallback="").split(",") if i.strip()]
+    return None
+
+
+def configured_sound_theme() -> str:
+    try:
+        return json.loads((CONFIG_DIR / "settings.json").read_text()).get("sound", {}).get("theme") or "freedesktop"
+    except Exception:
+        return "freedesktop"
+
+
+def cmd_sound(args: list[str]) -> int:
+    sub = args[0] if args else "themes"
+    if sub == "themes":
+        print(json.dumps(sound_themes()))
+        return 0
+    if sub in ("play", "find"):
+        if len(args) < 2:
+            die(f"usage: flamenco sound {sub} EVENT [--theme NAME]")
+        theme = args[args.index("--theme") + 1] if "--theme" in args else configured_sound_theme()
+        f = find_sound(args[1], theme)
+        if sub == "find":
+            print(f or "")
+            return 0 if f else 1
+        if f is None:
+            return 1   # quietly: themes don't have every event
+        for player in (["pw-play"], ["paplay"], ["aplay", "-q"]):
+            if shutil.which(player[0]) and (player[0] != "aplay" or f.suffix == ".wav"):
+                subprocess.Popen([*player, str(f)], start_new_session=True,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return 0
+        die("no audio player found (pw-play, paplay or aplay)")
+    die("usage: flamenco sound themes | play EVENT | find EVENT")
+
+
+def apply_sound(s: "Spec", m: dict) -> list[str]:
+    """Tell GTK, GNOME and KDE apps which sound theme to use."""
+    theme = s.o.get("soundTheme") or ""
+    if not theme:
+        return []
+    events = bool(s.o.get("eventSounds", True))
+    for v in ("gtk-3.0", "gtk-4.0"):
+        ini_update(XDG_CONFIG / v / "settings.ini", {"Settings": {
+            "gtk-sound-theme-name": theme,
+            "gtk-enable-event-sounds": "true" if events else "false"}}, m)
+    global _GS_MANIFEST
+    _GS_MANIFEST = m
+    gsettings("org.gnome.desktop.sound", "theme-name", theme)
+    gsettings("org.gnome.desktop.sound", "event-sounds", "true" if events else "false")
+    ini_update(XDG_CONFIG / "kdeglobals", {"Sounds": {"Theme": theme, "Enable": "true" if events else "false"}}, m)
+    return ["sound"]
+
+
+# ─────────────────────────────── firewall (ufw / firewalld) ──────────────────
+# Reads what it can without root; changes run through `sudo` in one batch.
+
+FW_CACHE = XDG_CACHE / "flamenco/firewall-ufw.json"
+PORT_RE = re.compile(r"^\d{1,5}(:\d{1,5})?(/(tcp|udp))?$")
+NAME_RE = re.compile(r"^[A-Za-z0-9_.:-]+$")
+
+
+def unit_state(unit: str) -> dict:
+    return {"active": run_out(["systemctl", "is-active", unit]).strip() == "active",
+            "enabled": run_out(["systemctl", "is-enabled", unit]).strip() == "enabled"}
+
+
+def parse_ufw_numbered(text: str) -> list[dict]:
+    rules = []
+    for line in text.splitlines():
+        m = re.match(r"\[\s*(\d+)\]\s+(.+?)\s{2,}(ALLOW|DENY|REJECT|LIMIT)(?:\s+(IN|OUT|FWD))?\s+(.+?)\s*(?:#\s*(.*))?$", line)
+        if m:
+            num, to, action, direction, frm, comment = m.groups()
+            rules.append({"num": int(num), "to": to.strip(), "action": action, "direction": direction or "IN",
+                          "from": frm.strip(), "v6": "(v6)" in to, "comment": (comment or "").strip()})
+    return rules
+
+
+def parse_ufw_verbose(text: str) -> dict:
+    out = {}
+    m = re.search(r"^Status:\s*(\w+)", text, re.M)
+    if m:
+        out["active"] = m.group(1) == "active"
+    m = re.search(r"^Logging:\s*(\w+)(?:\s*\((\w+)\))?", text, re.M)
+    if m:
+        out["logging"] = m.group(2) if m.group(1) == "on" and m.group(2) else m.group(1)
+    m = re.search(r"^Default:\s*(\w+) \(incoming\),\s*(\w+) \(outgoing\)", text, re.M)
+    if m:
+        out["incoming"], out["outgoing"] = m.group(1), m.group(2)
+    return out
+
+
+def ufw_state() -> dict:
+    st = {"installed": True, "service": unit_state("ufw.service"), "rules": None, "rulesTime": 0}
+    raw = Path("/etc/ufw/ufw.conf").read_text(errors="ignore") if Path("/etc/ufw/ufw.conf").exists() else ""
+    st["enabled"] = bool(re.search(r"^ENABLED=yes", raw, re.M))
+    lvl = re.search(r"^LOGLEVEL=(\w+)", raw, re.M)
+    st["logging"] = lvl.group(1) if lvl else "low"
+    pol = Path("/etc/default/ufw").read_text(errors="ignore") if Path("/etc/default/ufw").exists() else ""
+    words = {"DROP": "deny", "REJECT": "reject", "ACCEPT": "allow"}
+    for key, name in (("DEFAULT_INPUT_POLICY", "incoming"), ("DEFAULT_OUTPUT_POLICY", "outgoing")):
+        m = re.search(rf'^{key}="?(\w+)"?', pol, re.M)
+        st[name] = words.get(m.group(1), m.group(1).lower()) if m else ""
+    # rules need root: try directly (works when run as root), else the last saved copy
+    r = subprocess.run(["ufw", "status", "numbered"], capture_output=True, text=True)
+    if r.returncode == 0:
+        st["rules"] = parse_ufw_numbered(r.stdout)
+        st["rulesTime"] = int(__import__("time").time())
+    elif FW_CACHE.is_file():
+        try:
+            cached = json.loads(FW_CACHE.read_text())
+            st["rules"] = cached.get("rules")
+            st["rulesTime"] = cached.get("time", 0)
+            st.update({k: v for k, v in cached.get("verbose", {}).items() if k in ("incoming", "outgoing", "logging")})
+        except Exception:
+            pass
+    return st
+
+
+def firewalld_state() -> dict:
+    fc = lambda *a: subprocess.run(["firewall-cmd", *a], capture_output=True, text=True)
+    st = {"installed": True, "service": unit_state("firewalld.service"), "readable": False,
+          "defaultZone": "", "zones": [], "activeZones": {}, "services": [], "zoneInfo": {}}
+    if not st["service"]["active"]:
+        return st
+    r = fc("--get-default-zone")
+    if r.returncode != 0:
+        return st          # D-Bus/polkit refused; the page offers to load with sudo
+    st["readable"] = True
+    st["defaultZone"] = r.stdout.strip()
+    st["zones"] = fc("--get-zones").stdout.split()
+    st["services"] = fc("--get-services").stdout.split()
+    current = None
+    for line in fc("--get-active-zones").stdout.splitlines():
+        if line and not line.startswith((" ", "\t")):
+            current = line.split()[0]
+            st["activeZones"][current] = []
+        elif current and "interfaces:" in line:
+            st["activeZones"][current] = line.split(":", 1)[1].split()
+    for z in st["zones"]:
+        if z:
+            st["zoneInfo"][z] = {"ports": fc("--zone=" + z, "--list-ports").stdout.split(),
+                                 "services": fc("--zone=" + z, "--list-services").stdout.split(),
+                                 "target": fc("--zone=" + z, "--get-target", "--permanent").stdout.strip()}
+    return st
+
+
+def firewall_state() -> dict:
+    has_ufw, has_fwd = bool(shutil.which("ufw")), bool(shutil.which("firewall-cmd"))
+    st = {"ufw": ufw_state() if has_ufw else {"installed": False},
+          "firewalld": firewalld_state() if has_fwd else {"installed": False}}
+    active = [n for n in ("firewalld", "ufw") if st[n].get("installed") and st[n].get("service", {}).get("active")]
+    st["backend"] = active[0] if active else ("firewalld" if has_fwd else "ufw" if has_ufw else "")
+    st["conflict"] = len(active) > 1
+    return st
+
+
+def firewall_commands(backend: str, op: dict) -> list[list[str]]:
+    """Validated root commands for one queued change."""
+    kind = op.get("op")
+    port, zone, name = str(op.get("port", "")), str(op.get("zone", "")), str(op.get("name", ""))
+    for v, label in ((zone, "zone"), (name, "name")):
+        if v and not NAME_RE.match(v):
+            raise ValueError(f"invalid {label}: {v!r}")
+    if port and not PORT_RE.match(port):
+        raise ValueError(f"invalid port: {port!r} (use 8080, 8080/tcp or 6000:6010/udp)")
+    if backend == "ufw":
+        if kind == "enable":
+            return [["systemctl", "enable", "--now", "ufw.service"], ["ufw", "--force", "enable"]]
+        if kind == "disable":
+            return [["ufw", "disable"]]
+        if kind == "default":
+            pol, direction = op.get("policy"), op.get("direction")
+            if pol not in ("allow", "deny", "reject") or direction not in ("incoming", "outgoing"):
+                raise ValueError("bad default policy")
+            return [["ufw", "default", pol, direction]]
+        if kind == "logging":
+            if op.get("level") not in ("off", "low", "medium", "high", "full"):
+                raise ValueError("bad logging level")
+            return [["ufw", "logging", op["level"]]]
+        if kind == "add":
+            action = op.get("action", "allow")
+            if action not in ("allow", "deny", "reject", "limit"):
+                raise ValueError("bad rule action")
+            src = str(op.get("from", "") or "")
+            if src and not re.fullmatch(r"[0-9a-fA-F.:/]+", src):
+                raise ValueError(f"invalid source address: {src!r}")
+            target = port if port else name
+            if ":" in port and "/" not in port:
+                raise ValueError("ufw needs a protocol for port ranges, e.g. 6000:6010/tcp")
+            if not target:
+                raise ValueError("a rule needs a port or a service name")
+            cmd = ["ufw", action]
+            if src:
+                p, _, proto = port.partition("/")
+                cmd = ["ufw", action, "from", src, "to", "any", "port", p] + (["proto", proto] if proto else [])
+            else:
+                cmd.append(target)
+            if op.get("comment"):
+                cmd += ["comment", str(op["comment"])[:60]]
+            return [cmd]
+        if kind == "delete":
+            return [["ufw", "--force", "delete", str(int(op["num"]))]]
+    if backend == "firewalld":
+        if kind == "enable":
+            return [["systemctl", "enable", "--now", "firewalld.service"]]
+        if kind == "disable":
+            return [["systemctl", "disable", "--now", "firewalld.service"]]
+        z = ["--zone=" + zone] if zone else []
+        if kind == "set-default-zone":
+            return [["firewall-cmd", "--set-default-zone=" + zone]]
+        if kind == "zone-interface":
+            iface = str(op.get("interface", ""))
+            if not NAME_RE.match(iface):
+                raise ValueError("bad interface")
+            return [["firewall-cmd", *z, "--change-interface=" + iface, "--permanent"]]
+        flag = {"add-port": "--add-port=", "remove-port": "--remove-port=",
+                "add-service": "--add-service=", "remove-service": "--remove-service="}.get(kind)
+        if flag:
+            val = port if "port" in kind else name
+            if not val:
+                raise ValueError(f"{kind} needs a value")
+            if "port" in kind and "/" not in val:
+                val += "/tcp"
+            return [["firewall-cmd", *z, flag + val, "--permanent"]]
+    raise ValueError(f"unknown change {kind!r} for {backend}")
+
+
+def save_ufw_cache():
+    """As the user, with sudo's cached credentials: keep a readable copy of ufw's status."""
+    numbered = subprocess.run(["sudo", "-n", "ufw", "status", "numbered"], capture_output=True, text=True)
+    verbose = subprocess.run(["sudo", "-n", "ufw", "status", "verbose"], capture_output=True, text=True)
+    if numbered.returncode == 0:
+        FW_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        FW_CACHE.write_text(json.dumps({"time": int(__import__("time").time()), "rules": parse_ufw_numbered(numbered.stdout),
+                                        "verbose": parse_ufw_verbose(verbose.stdout)}))
+
+
+def cmd_firewall(args: list[str]) -> int:
+    sub = args[0] if args else "status"
+    if sub == "status":
+        st = firewall_state()
+        if "--json" in args:
+            print(json.dumps(st))
+        else:
+            print(f"backend: {st['backend'] or 'none installed'}" + ("  (both ufw and firewalld are running!)" if st["conflict"] else ""))
+            b = st.get(st["backend"], {}) if st["backend"] else {}
+            if b:
+                print(f"service: {'active' if b['service']['active'] else 'inactive'}, {'enabled' if b['service']['enabled'] else 'disabled'} at boot")
+        return 0
+    if sub == "apply":
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco firewall apply --json '{\"backend\": \"ufw\", \"ops\": [...]}'")
+        spec = json.loads(args[args.index("--json") + 1])
+        backend = spec.get("backend")
+        if backend not in ("ufw", "firewalld"):
+            die("backend must be ufw or firewalld")
+        try:
+            cmds = [c for op in spec.get("ops", []) for c in firewall_commands(backend, op)]
+        except ValueError as e:
+            die(str(e))
+        # ufw rule numbers shift as rules are deleted: delete from the highest number down
+        dels = sorted([c for c in cmds if c[:3] == ["ufw", "--force", "delete"]], key=lambda c: -int(c[3]))
+        cmds = [c for c in cmds if c[:3] != ["ufw", "--force", "delete"]] + dels
+        if backend == "firewalld" and any("--permanent" in c for c in cmds):
+            cmds.append(["firewall-cmd", "--reload"])
+        failed = 0
+        for c in cmds:
+            print("→ " + " ".join(c), flush=True)
+            if privileged(c) != 0:
+                failed += 1
+        if backend == "ufw" and shutil.which("sudo"):
+            save_ufw_cache()
+        print("done" if not failed else f"{failed} step(s) failed")
+        return 1 if failed else 0
+    if sub == "load":
+        # read ufw rules with sudo once and keep a copy the settings page can read
+        if shutil.which("ufw"):
+            if privileged(["true"]) == 0:
+                save_ufw_cache()
+                print("loaded ufw rules")
+        return 0
+    die("usage: flamenco firewall status [--json] | apply --json SPEC | load")
+
+
+# ─────────────────────────────── lid & power button (logind) ─────────────────
+
+LOGIND_DROPIN = Path("/etc/systemd/logind.conf.d/90-flamenco.conf")
+LOGIND_KEYS = ("HandleLidSwitch", "HandleLidSwitchExternalPower", "HandleLidSwitchDocked", "HandlePowerKey")
+LOGIND_ACTIONS = ("suspend", "hibernate", "hybrid-sleep", "suspend-then-hibernate", "lock", "ignore", "poweroff")
+
+
+def logind_settings() -> dict:
+    """Effective logind values: defaults, then logind.conf, then drop-ins in name order."""
+    vals = {"HandleLidSwitch": "suspend", "HandleLidSwitchExternalPower": "", "HandleLidSwitchDocked": "ignore",
+            "HandlePowerKey": "poweroff"}
+    files = [Path("/etc/systemd/logind.conf")]
+    dropins = {}
+    for d in (Path("/usr/lib/systemd/logind.conf.d"), Path("/run/systemd/logind.conf.d"), Path("/etc/systemd/logind.conf.d")):
+        if d.is_dir():
+            for f in d.glob("*.conf"):
+                dropins[f.name] = f
+    files += [dropins[k] for k in sorted(dropins)]
+    for f in files:
+        try:
+            for line in f.read_text(errors="ignore").splitlines():
+                m = re.match(r"^\s*(\w+)\s*=\s*(\S*)", line)
+                if m and m.group(1) in vals:
+                    vals[m.group(1)] = m.group(2)
+        except OSError:
+            pass
+    if not vals["HandleLidSwitchExternalPower"]:
+        vals["HandleLidSwitchExternalPower"] = vals["HandleLidSwitch"]
+    return vals
+
+
+def cmd_power(args: list[str]) -> int:
+    if args[:2] == ["logind", "get"]:
+        out = logind_settings()
+        out["hasLid"] = any(Path("/proc/acpi/button/lid").glob("*")) if Path("/proc/acpi/button/lid").is_dir() else False
+        out["managed"] = LOGIND_DROPIN.is_file()
+        print(json.dumps(out))
+        return 0
+    if args[:2] == ["logind", "apply"]:
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco power logind apply --json '{\"HandleLidSwitch\": \"suspend\", …}'")
+        spec = json.loads(args[args.index("--json") + 1])
+        lines = [f"# {MARKER}: written by Flamenco Settings → Power", "[Login]"]
+        for k in LOGIND_KEYS:
+            v = spec.get(k)
+            if v is None:
+                continue
+            if v not in LOGIND_ACTIONS:
+                die(f"{k}: unsupported action {v!r}")
+            lines.append(f"{k}={v}")
+        tmp = XDG_CACHE / "flamenco/90-flamenco.conf"
+        tmp.parent.mkdir(parents=True, exist_ok=True)
+        tmp.write_text("\n".join(lines) + "\n")
+        print("→ writing " + str(LOGIND_DROPIN))
+        if privileged(["install", "-Dm644", str(tmp), str(LOGIND_DROPIN)]) != 0:
+            die("could not write the logind settings")
+        # SIGHUP makes logind re-read its config without ending your session
+        print("→ reloading systemd-logind")
+        privileged(["systemctl", "kill", "-s", "HUP", "systemd-logind.service"])
+        print("done")
+        return 0
+    if args[:2] == ["logind", "reset"]:
+        if LOGIND_DROPIN.exists():
+            privileged(["rm", "-f", str(LOGIND_DROPIN)])
+            privileged(["systemctl", "kill", "-s", "HUP", "systemd-logind.service"])
+        print("logind back to system defaults")
+        return 0
+    die("usage: flamenco power logind get | apply --json SPEC | reset")
+
+
 # ─────────────────────────────── apps-theme ──────────────────────────────────
 
 def cmd_apps_theme(args: list[str]) -> int:
@@ -1345,6 +2307,7 @@ def cmd_apps_theme(args: list[str]) -> int:
         if spec.o.get("gtk", True):
             done += apply_gtk(spec, m)
         done += apply_cursor(spec, m)
+        done += apply_sound(spec, m)
     finally:
         save_manifest(m)
     print("themed: " + (", ".join(done) or "nothing (Qt and GTK disabled)"))
@@ -1543,8 +2506,15 @@ def doctor_checks() -> list[dict]:
               if any(re.search(r'\b' + x + r'\b', l) for l in starts)]
     add("Session", "No other shell", "nothing else drawing a bar, wallpaper or notifications",
         not others, "", True, hint=("also started: " + ", ".join(others)) if others else "")
-    add("Session", "Screen sharing portal", "xdg-desktop-portal-gnome (what niri uses for screencasts)",
-        exists("/usr/lib/xdg-desktop-portal-gnome", "/usr/libexec/xdg-desktop-portal-gnome"), "xdg-desktop-portal-gnome")
+    portals = {p["name"] for p in installed_portals()}
+    sc = effective_portals().get("ScreenCast", "") or effective_portals().get("default", "")
+    capable = portals & {"gnome", "wlr"}
+    add("Session", "Screen sharing portal", "xdg-desktop-portal-wlr (light, whole screens) or -gnome (also single windows)",
+        bool(capable), "xdg-desktop-portal-wlr",
+        hint="choose the backend in Settings → Screen sharing" if capable else "")
+    if capable and sc and sc not in capable:
+        add("Session", "Screen sharing backend", f"niri-portals.conf sends screen sharing to '{sc}', which can't capture on niri",
+            False, "", False, hint="pick gnome or wlr in Settings → Screen sharing")
     add("Session", "XWayland", "X11 apps (Steam, older apps)", have("xwayland-satellite"), "xwayland-satellite")
     drm = Path("/sys/class/drm")
     cards = sorted(drm.glob("card[0-9]")) + sorted(drm.glob("card[0-9][0-9]")) if drm.is_dir() else []
@@ -1654,7 +2624,7 @@ environment {
     QT_QPA_PLATFORMTHEME "qt6ct"
 }
 
-// let the wallpaper show behind niri's overview
+// blurred wallpaper copy behind niri's overview / between workspaces
 layer-rule {
     match namespace="^flamenco-wallpaper$"
     place-within-backdrop true
@@ -1712,6 +2682,8 @@ def main(argv: list[str]) -> int:
         if len(rest) < 2:
             die("usage: flamenco ipc TARGET FUNCTION [ARGS...]")
         return ipc(*rest)
+    if cmd == "power" and rest[:1] == ["logind"]:
+        return cmd_power(rest)          # `flamenco power` alone still opens the power menu
     if cmd in PANELS:
         return ipc(PANELS[cmd], rest[0] if rest else "toggle")
     if cmd == "settings":
@@ -1748,6 +2720,18 @@ def main(argv: list[str]) -> int:
         return ipc("theme", "palette", a)
     if cmd == "apps-theme":
         return cmd_apps_theme(rest)
+    if cmd == "firewall":
+        return cmd_firewall(rest)
+    if cmd == "fonts":
+        return cmd_fonts(rest)
+    if cmd == "sound":
+        return cmd_sound(rest)
+    if cmd == "portals":
+        return cmd_portals(rest)
+    if cmd == "keyboard":
+        return cmd_keyboard(rest)
+    if cmd == "launch":
+        return cmd_launch(rest)
     if cmd == "printers":
         return cmd_printers(rest)
     if cmd == "display":

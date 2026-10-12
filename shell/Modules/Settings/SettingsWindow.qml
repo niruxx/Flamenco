@@ -16,7 +16,7 @@ LazyLoader {
 
         title: "Flamenco Settings"
         implicitWidth: 1040
-        implicitHeight: 720
+        implicitHeight: 780
         color: Theme.bg
         visible: true
         onVisibleChanged: if (!visible) Panels.settingsOpen = false
@@ -27,8 +27,12 @@ LazyLoader {
             { id: "bar", icon: "toolbar", label: "Bar", comp: barC },
             { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
             { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
+            { id: "keyboard", icon: "keyboard", label: "Keyboard", comp: keyboardC },
             { id: "network", icon: "wifi", label: "Network", comp: networkC },
+            { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
+            { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
             { id: "power", icon: "battery_charging_full", label: "Power", comp: powerC },
+            { id: "firewall", icon: "shield", label: "Firewall", comp: firewallC },
             { id: "printers", icon: "print", label: "Printers", comp: printersC },
             { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
             { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
@@ -45,7 +49,11 @@ LazyLoader {
         Component { id: barC; BarPage {} }
         Component { id: dockC; DockPage {} }
         Component { id: displaysC; DisplaysPage {} }
+        Component { id: keyboardC; KeyboardPage {} }
         Component { id: networkC; NetworkPage {} }
+        Component { id: sharingC; ScreenSharingPage {} }
+        Component { id: soundC; SoundPage {} }
+        Component { id: firewallC; FirewallPage {} }
         Component { id: powerC; PowerSettingsPage {} }
         Component { id: printersC; PrintersPage {} }
         Component { id: systemC; SystemCheckPage {} }
@@ -60,11 +68,27 @@ LazyLoader {
             anchors.fill: parent
             spacing: 0
 
-            // ── title bar ──
+            // ── title bar (drag it to move the window; Super+drag also works) ──
             Rectangle {
+                id: titleBar
                 Layout.fillWidth: true
                 Layout.preferredHeight: 52
                 color: Theme.surface
+
+                // Hand the drag to the compositor (xdg_toplevel.move). A DragHandler only
+                // activates once the pointer moves, so clicks on the buttons still work.
+                DragHandler {
+                    target: null
+                    cursorShape: Qt.ClosedHandCursor
+                    onActiveChanged: {
+                        const w = titleBar.Window.window;
+                        if (active && w && typeof w.startSystemMove === "function")
+                            w.startSystemMove();
+                    }
+                }
+                HoverHandler {
+                    cursorShape: Qt.OpenHandCursor
+                }
 
                 RowLayout {
                     anchors.fill: parent
@@ -146,15 +170,16 @@ LazyLoader {
                         anchors.margins: Theme.sp4
                         spacing: 4
 
-                        Item {
+                        FScroll {
                             Layout.fillWidth: true
-                            implicitHeight: nav.implicitHeight
+                            Layout.fillHeight: true
+                            contentHeight: nav.implicitHeight
 
                             // gliding selection
                             Rectangle {
                                 width: parent.width
-                                height: 42
-                                y: win.index * 46
+                                height: 38
+                                y: win.index * 40
                                 radius: Theme.rMd
                                 color: Theme.accent
                                 Behavior on y { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
@@ -163,7 +188,7 @@ LazyLoader {
                             Column {
                                 id: nav
                                 width: parent.width
-                                spacing: 4
+                                spacing: 2
                                 Repeater {
                                     model: win.pages
                                     Item {
@@ -171,7 +196,7 @@ LazyLoader {
                                         required property int index
                                         readonly property bool sel: win.index === index
                                         width: nav.width
-                                        height: 42
+                                        height: 38
 
                                         RowLayout {
                                             anchors.fill: parent
@@ -199,7 +224,6 @@ LazyLoader {
                             }
                         }
 
-                        Item { Layout.fillHeight: true }
 
                         FText {
                             Layout.leftMargin: 6
