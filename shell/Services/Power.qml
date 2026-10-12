@@ -73,6 +73,6 @@ Singleton {
         Quickshell.execDetached(["systemctl", "poweroff"]);
     }
     function logout() {
-        Quickshell.execDetached(["niri", "msg", "action", "quit", "--skip-confirmation"]);
+        Niri.action("quit", "--skip-confirmation");
     }
 }

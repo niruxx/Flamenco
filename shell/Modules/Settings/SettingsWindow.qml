@@ -33,6 +33,7 @@ LazyLoader {
             { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
             { id: "power", icon: "battery_charging_full", label: "Power", comp: powerC },
             { id: "firewall", icon: "shield", label: "Firewall", comp: firewallC },
+            { id: "keyring", icon: "key", label: "Keyring", comp: keyringC },
             { id: "printers", icon: "print", label: "Printers", comp: printersC },
             { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
             { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
@@ -54,6 +55,7 @@ LazyLoader {
         Component { id: sharingC; ScreenSharingPage {} }
         Component { id: soundC; SoundPage {} }
         Component { id: firewallC; FirewallPage {} }
+        Component { id: keyringC; KeyringPage {} }
         Component { id: powerC; PowerSettingsPage {} }
         Component { id: printersC; PrintersPage {} }
         Component { id: systemC; SystemCheckPage {} }

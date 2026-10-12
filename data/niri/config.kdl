@@ -64,9 +64,9 @@ window-rule {
     clip-to-geometry true
 }
 
-// Flamenco Settings floats.
+// Flamenco Settings and Setup float.
 window-rule {
-    match title="^Flamenco Settings$"
+    match title="^Flamenco (Settings|Setup)$"
     open-floating true
 }
 

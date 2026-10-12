@@ -16,6 +16,17 @@ Singleton {
 
     readonly property var sinks: Pipewire.nodes.values.filter(n => n.isSink && !n.isStream && n.audio)
     readonly property var sources: Pipewire.nodes.values.filter(n => !n.isSink && !n.isStream && n.audio)
+    // apps currently playing audio (playback streams)
+    readonly property var streams: Pipewire.nodes.values.filter(n => n.isStream && !n.isSink && n.audio)
+
+    function streamName(n) {
+        const p = n?.properties ?? {};
+        return p["application.name"] || p["media.name"] || n?.description || n?.name || "App";
+    }
+    function streamIcon(n) {
+        const p = n?.properties ?? {};
+        return p["application.icon-name"] || p["application.process.binary"] || "";
+    }
 
     readonly property string icon: muted || volume <= 0 ? "volume_off" : volume < 0.34 ? "volume_mute" : volume < 0.67 ? "volume_down" : "volume_up"
 
@@ -62,5 +73,9 @@ Singleton {
 
     PwObjectTracker {
         objects: [root.sink, root.source]
+    }
+    // bind app streams too, so their volume can be read and changed
+    PwObjectTracker {
+        objects: root.streams
     }
 }

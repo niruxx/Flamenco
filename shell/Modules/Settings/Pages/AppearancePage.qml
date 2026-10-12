@@ -131,6 +131,53 @@ Page {
     }
 
     Group {
+        title: "Login & logout"
+
+        DropdownRow {
+            title: "When you log in"
+            subtitle: "Plays when niri starts the shell (not on restarts)"
+            icon: "login"
+            target: Settings.data.session
+            key: "intro"
+            options: [
+                { value: "bloom", label: "Bloom: opens from the center" },
+                { value: "curtain", label: "Curtain: slides apart" },
+                { value: "blinds", label: "Blinds: staggered slats" },
+                { value: "zoom", label: "Zoom: flies in" },
+                { value: "fade", label: "Fade" },
+                { value: "none", label: "None" }
+            ]
+        }
+        DropdownRow {
+            title: "When you log out, restart or shut down"
+            subtitle: "Plays after the power menu's countdown, before the action"
+            icon: "logout"
+            target: Settings.data.session
+            key: "outro"
+            options: [
+                { value: "curtain", label: "Curtain: closes together" },
+                { value: "bloom", label: "Bloom: closes in on the center" },
+                { value: "blinds", label: "Blinds: staggered slats" },
+                { value: "zoom", label: "Zoom" },
+                { value: "fade", label: "Fade" },
+                { value: "none", label: "None" }
+            ]
+        }
+        SliderRow { title: "Duration"; icon: "timer"; target: Settings.data.session; key: "duration"; from: 400; to: 3000; stepSize: 100; suffix: " ms" }
+        SwitchRow { title: "Greeting"; subtitle: "\"Good evening, you\" with the date, or \"See you soon\""; icon: "waving_hand"; target: Settings.data.session; key: "greeting" }
+        SettingRow {
+            title: "Preview"
+            subtitle: "Plays the animation without logging you out"
+            icon: "play_circle"
+            Row {
+                spacing: 6
+                FButton { text: "Log in"; icon: "login"; variant: "tonal"; onClicked: SessionFx.playIntro(true) }
+                FButton { text: "Log out"; icon: "logout"; variant: "tonal"; onClicked: SessionFx.playOutro("Logging out…", null, true) }
+            }
+        }
+    }
+
+    Group {
         title: "Typography"
 
         SettingRow {

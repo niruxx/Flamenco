@@ -22,6 +22,8 @@ import qs.Modules.Lock
 import qs.Modules.Settings
 import qs.Modules.Displays
 import qs.Modules.Performance
+import qs.Modules.Volume
+import qs.Modules.Setup
 
 ShellRoot {
     id: shell
@@ -32,6 +34,14 @@ ShellRoot {
         AppTheming.cfg;
         ColorGen.available;
         Toggles.nightLight;
+        SessionFx.startup();
+    }
+
+    // first run: open setup once settings are loaded (after the login animation)
+    Timer {
+        running: Settings.ready && !Settings.data.general.setupDone
+        interval: 2600
+        onTriggered: if (!Settings.data.general.setupDone) Panels.setupOpen = true
     }
 
     Background {}
@@ -45,9 +55,12 @@ ShellRoot {
     Launcher {}
     CalendarPanel {}
     PerformancePanel {}
+    VolumePanel {}
     WallpaperPicker {}
     PowerMenu {}
+    SessionOverlay {}
     SettingsWindow {}
+    SetupWindow {}
     Identify {}
     ConfirmChanges {}
     Lock { id: lock }
@@ -84,6 +97,7 @@ ShellRoot {
         function mute(): void { Audio.toggleMute(); }
         function micMute(): void { Audio.toggleMicMute(); }
         function get(): string { return String(Math.round(Audio.volume * 100)); }
+        function panel(): void { Panels.toggle("volume", ""); }
     }
 
     IpcHandler {
@@ -116,6 +130,17 @@ ShellRoot {
         function toggleMode(): void { Settings.data.appearance.mode = Theme.dark ? "light" : "dark"; }
         function applyApps(): void { AppTheming.apply(); }
         function list(): string { return Palettes.names.concat(["wallpaper"]).join("\n"); }
+    }
+
+    IpcHandler {
+        target: "setup"
+        function open(): void { Panels.setupOpen = true; }
+    }
+
+    IpcHandler {
+        target: "session"
+        function previewIntro(): void { SessionFx.playIntro(true); }
+        function previewOutro(): void { SessionFx.playOutro("Logging out…", null, true); }
     }
 
     IpcHandler {

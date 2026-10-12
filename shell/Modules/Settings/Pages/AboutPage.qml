@@ -27,6 +27,23 @@ Page {
     }
 
     Group {
+        title: "Setup"
+        SettingRow {
+            title: "Run the setup again"
+            subtitle: "The first-run tour: displays, look, wallpaper, sound, Bluetooth, sharing and keyring"
+            icon: "assistant"
+            FButton {
+                text: "Open setup"
+                variant: "tonal"
+                onClicked: {
+                    Panels.settingsOpen = false;
+                    Panels.setupOpen = true;
+                }
+            }
+        }
+    }
+
+    Group {
         title: "Health"
         SettingRow {
             title: "System check"

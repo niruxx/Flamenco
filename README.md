@@ -1,6 +1,6 @@
 # Flamenco Shell
 
-A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor, built with [Quickshell](https://quickshell.org). It's structured like Noctalia and DMS: a QML shell plus a small `flamenco` program that launches it, talks to it over IPC, and themes your Qt and GTK applications to match.
+A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor (and [Hyprland](https://hyprland.org)), built with [Quickshell](https://quickshell.org). It's structured like Noctalia and DMS: a QML shell plus a small `flamenco` program that launches it, talks to it over IPC, and themes your Qt and GTK applications to match.
 
 - [Screenshots](#screenshots)
 - [Features](#features)
@@ -8,6 +8,7 @@ A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor, built
 - [Using the shell](#using-the-shell)
 - [Network, printers and power](#network-printers-and-power)
 - [Sound](#sound)
+- [Keyring](#keyring)
 - [Firewall](#firewall)
 - [Screen sharing](#screen-sharing)
 - [System check](#system-check)
@@ -63,6 +64,8 @@ To regenerate these, run `tools/screenshots.sh` inside a niri session with the s
 | **Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
 | **Network & VPN** | Wi-Fi, plus NetworkManager VPNs (WireGuard, OpenVPN): connect from the control center, import `.conf`/`.ovpn` files in Settings |
 | **Sound** | Pick an installed sound theme (shared with GTK, GNOME and KDE apps), notification and volume sounds, output/input devices |
+| **Keyring** | Choose which keyring stores app passwords: GNOME Keyring, KDE Wallet, KeePassXC, oo7, or none. Shows what's running and whether it unlocks at login |
+| **Login & logout animations** | Bloom, Curtain, Blinds, Zoom or Fade over your blurred wallpaper with a greeting; separate choices for login and logout, with previews |
 | **Firewall** | Detects ufw or firewalld: turn it on/off, default policies or zones, add/remove ports, services and rules (applied with one sudo prompt) |
 | **Screen sharing** | Choose the xdg-desktop-portal backend for screen sharing, screenshots and file pickers. The lightweight wlr setup avoids GNOME; also a screen picker and frame-rate limit |
 | **Printers** | CUPS: start and enable the service, set the default printer, print test pages, manage the queue |
@@ -129,6 +132,8 @@ flamenco doctor
 
 ```sh
 flamenco niri-config [--print]  write a complete ~/.config/niri/config.kdl (old one backed up)
+flamenco hyprland-config [--print]   same for Hyprland (~/.config/hypr/hyprland.conf)
+flamenco setup                  open the first-run setup
 flamenco logs [-f]              background log of the shell
 flamenco printers [--json] | default NAME | test NAME | cancel ID|all | service ACTION | add
 flamenco doctor --install-command
@@ -155,6 +160,50 @@ flamenco run            # background, logs to ~/.cache/flamenco/shell.log
 flamenco restart        # after an upgrade
 flamenco logs           # show the background log (-f to follow)
 ```
+
+### 4. First-run setup
+
+The first time the shell starts, the **Flamenco Setup** window opens just after the login animation. Its steps:
+- **Welcome**
+- **Displays**
+- **Look & colors** (palette, mode, fonts)
+- **Icons & cursors**
+- **Wallpaper**
+- **Sound**
+- **Bluetooth** (turn it on, scan, connect)
+- **Screen sharing & files**
+- **Keyring**
+- **All set:** "Welcome to Flamenco", with your shortcuts shown as keycaps, and **Start using Flamenco** plays the login animation.
+
+Each step is the real Settings page, so changes apply immediately. Move between steps with Back/Next or the step list, use **Skip for now** to leave, and drag the step list's background to move the window. To run it again: **Settings → About → Open setup**, or `flamenco setup`.
+
+### Using Hyprland instead of niri
+
+Flamenco also runs on Hyprland:
+
+```sh
+flamenco hyprland-config        # writes ~/.config/hypr/hyprland.conf (old one backed up)
+flamenco hyprland-config --print
+```
+
+**What it writes:**
+- a complete `hyprland.conf`: Flamenco starts with Hyprland, Qt theming is set up, plus decoration and animations, window and workspace keys, and media keys with fallbacks
+- the files it sources, which Flamenco Settings manages: `flamenco-monitors.conf`, `flamenco-input.conf`, `flamenco-cursor.conf` and `flamenco-binds.conf`
+
+The config is checked with `Hyprland --verify-config` when that's available.
+
+**On Hyprland:**
+- **The bar:** workspaces, the window title and the keyboard layout come from Hyprland's event socket and `hyprctl`.
+- **Settings → Keyboard** writes `flamenco-binds.conf` and `flamenco-input.conf`.
+  - Flamenco functions, apps and commands bind directly.
+  - niri actions are translated where Hyprland has an equivalent (close window → `killactive`, focus workspace → `workspace`, …); the rest are skipped with a comment.
+  - *Disable key* becomes `unbind`.
+- **Settings → Displays** writes `monitor =` lines to `flamenco-monitors.conf`.
+- **The cursor theme** is applied with `hyprctl setcursor`.
+- **Screen sharing** uses `hyprland-portals.conf`, and the Hyprland portal is marked as working.
+- **Log out and screen off** go through Hyprland's dispatchers.
+
+`flamenco doctor` shows Hyprland-specific checks when it runs under Hyprland.
 
 ## Using the shell
 
@@ -194,7 +243,7 @@ Every panel closes with `Esc` or a click outside it.
 | Network | control center, Wi-Fi page | |
 | Bluetooth | control center, devices page | |
 | Battery | control center | |
-| Volume | control center, output-device page | scroll to change volume, middle-click to mute |
+| Volume | volume popout: slider, output devices, per-app volume, microphone | scroll to change volume, middle-click to mute |
 | Brightness | control center | scroll to change brightness |
 | Notifications (bell) | notification center | right-click toggles Do Not Disturb |
 | Weather | calendar and weather | |
@@ -231,6 +280,17 @@ Move with `↑`/`↓` (or `Ctrl+N`/`Ctrl+P`), launch with `Enter`, close with `E
 - **Power tile:** click to cycle power profiles. Its `›` arrow opens a page with Power saver, Balanced and Performance, plus battery details.
 - **Header:** your name and uptime on the left; settings, lock and power buttons in the top-right corner.
 - **Media card:** appears while something is playing. Drag the seek bar to move through the track (a bubble shows where you'll land), or click it to jump. Use the swap button to switch between players.
+
+### Volume
+
+Click the volume icon in the bar for the volume popout:
+- **Volume:** the volume slider; click its icon to mute.
+- **Output:** your output devices; click one to switch to it.
+- **Apps:** a volume slider and mute button for each app that's currently playing.
+- **Microphone:** level and input device.
+- **Sound settings:** a link to that page.
+
+`flamenco ipc volume panel` opens it from a keybinding.
 
 ### Dashboard
 
@@ -278,6 +338,25 @@ Past notifications stay in the notification center (`Mod+N`). It also has button
   - **Lock and Suspend** act immediately. Suspend locks the screen first.
   - **Log out, Restart and Shut down** start a **5-second countdown**: the button fills up and shows the seconds left, and the action runs when it's full. Click the button again, press `Esc` or click outside to cancel.
 
+### Login & logout animations
+
+**Login:** when niri starts the shell at login, a short intro plays. It covers your screen with your wallpaper, blurred and dimmed, plus the flame badge and "Good evening, *you*" with the date, then opens to reveal the desktop. `flamenco restart` and live config reloads skip it.
+
+**Log out, restart, shut down:** after the power menu's countdown, an outro covers the screen ("See you soon…", "Restarting…") before the action runs.
+
+**Settings → Appearance → Login & logout** picks each one separately:
+
+| Preset | |
+|---|---|
+| Bloom | A soft circle opens from the center (or closes in on it), with an accent ring |
+| Curtain | Two panels slide apart or together, with lit edges |
+| Blinds | Staggered vertical slats |
+| Zoom | The cover zooms and fades |
+| Fade | A simple cross-fade |
+| None | Off |
+
+The same page has a duration slider, a greeting on/off switch, and **Preview** buttons that play either animation without logging you out (also `flamenco ipc session previewIntro` / `previewOutro`).
+
 ### Lock screen options
 
 **Settings → Lock & Idle → Lock screen** picks what locks your session. This applies everywhere: the idle timeout, `Super+Alt+L`, `flamenco lock`, and the power menu.
@@ -322,6 +401,24 @@ With auto-hide on, move the pointer to the bottom edge to reveal the dock.
 - **Devices:** output and input device and volume.
 
 Sounds are looked up in the chosen theme, then the themes it inherits from, then `freedesktop`, and played with `pw-play`. From a terminal: `flamenco sound themes`, `flamenco sound play message-new-instant`.
+
+## Keyring
+
+Apps (browsers, mail clients, Git, VS Code…) save passwords through the **Secret Service** (`org.freedesktop.secrets`). Whichever keyring daemon answers it is "your keyring".
+
+**Settings → Keyring** shows which one is answering right now and lets you pick:
+
+| Keyring | Package | Notes |
+|---|---|---|
+| GNOME Keyring | `gnome-keyring` (+ `seahorse`) | The common choice; COSMIC uses it too |
+| KDE Wallet | `kwallet` (+ `kwalletmanager`) | Flamenco turns on its Secret Service support (`kwalletrc`) |
+| KeePassXC | `keepassxc` | Also enable *Secret Service Integration* inside KeePassXC |
+| oo7 | `oo7` | A newer Rust implementation |
+| None | | No keyring starts |
+
+**How the choice sticks:** your choice is written to `~/.local/share/dbus-1/services/org.freedesktop.secrets.service`. That per-user D-Bus activation file overrides the system ones, so the chosen keyring is the one started when an app asks. Choosing one also stops whichever other keyring is running, and keeps GNOME Keyring's own startup out of the way when it isn't chosen. **Reset** goes back to the system default. From a terminal: `flamenco keyring get`, `flamenco keyring use kde`.
+
+**Unlock at login:** this is done by PAM in `/etc/pam.d`, not by Flamenco. The page shows whether your login manager unlocks the keyring. If it doesn't, the page gives the exact line to add. Flamenco won't edit PAM files itself, because a mistake there can lock you out.
 
 ## Firewall
 
@@ -637,6 +734,7 @@ flamenco portals get | apply --json SPEC
 flamenco fonts [--json]
 flamenco sound themes | play EVENT | find EVENT
 flamenco firewall status [--json] | apply --json SPEC | load
+flamenco keyring get | use gnome|kde|keepassxc|oo7|none|default
 flamenco power logind get | apply --json SPEC | reset
 flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
 flamenco launch APP_ID

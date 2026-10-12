@@ -44,6 +44,7 @@ Singleton {
                 property bool showSeconds: false
                 property string avatar: "~/.face"
                 property string terminal: "kitty"
+                property bool setupDone: false        // first-run setup finished (or skipped)
             }
 
             property JsonObject appearance: JsonObject {
@@ -164,6 +165,14 @@ Singleton {
                 property bool eventSounds: true       // let apps play event sounds
                 property bool notifications: true     // shell: sound when a notification pops up
                 property bool volumeFeedback: true    // shell: click when you change the volume
+            }
+
+            // Login / logout animations
+            property JsonObject session: JsonObject {
+                property string intro: "bloom"        // bloom | curtain | blinds | zoom | fade | none
+                property string outro: "curtain"
+                property int duration: 1400           // ms
+                property bool greeting: true
             }
 
             // Dashboard: the clock/calendar popout

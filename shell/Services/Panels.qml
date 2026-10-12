@@ -10,6 +10,7 @@ Singleton {
     property string current: ""
     property string screen: ""
     property bool settingsOpen: false
+    property bool setupOpen: false
     property string settingsPage: "appearance"
     // dashboard (clock popout): tab requested by the next open, and the tab showing now
     property string dashboardTab: ""

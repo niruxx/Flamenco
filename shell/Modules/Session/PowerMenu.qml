@@ -69,8 +69,9 @@ Variants {
                 const a = win.pendingAction;
                 win.pending = "";
                 Panels.close();
+                // the logout animation covers the screen first, then the action runs
                 if (a)
-                    a.run();
+                    SessionFx.playOutro(a.verb + "…", a.run, false);
             }
         }
         onShouldShowChanged: {

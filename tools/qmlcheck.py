@@ -29,7 +29,7 @@ Transition Connections Component QtObject Binding Gradient GradientStop Translat
 HoverHandler DragHandler WheelHandler TapHandler FontLoader MultiEffect RowLayout ColumnLayout GridLayout
 ShellRoot Scope Variants PanelWindow FloatingWindow PopupWindow LazyLoader Singleton SystemClock Process StdioCollector
 SplitParser FileView JsonAdapter JsonObject IpcHandler Region PwObjectTracker NotificationServer WlSessionLock
-WlSessionLockSurface PamContext IdleMonitor ClippingRectangle IconImage QsMenuOpener Shortcut ScriptModel
+WlSessionLockSurface PamContext IdleMonitor ClippingRectangle IconImage QsMenuOpener Shortcut ScriptModel PersistentProperties Socket
 """.split())
 # objects that aren't QQuickItems; a Behavior directly inside them crashes Qt 6.12
 NON_ITEM = {"Singleton", "Scope", "ShellRoot", "PanelWindow", "FloatingWindow", "PopupWindow", "Variants", "LazyLoader",

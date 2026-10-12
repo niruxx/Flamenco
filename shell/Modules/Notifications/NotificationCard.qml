@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 import qs.Commons
@@ -7,6 +6,8 @@ import qs.Services
 import qs.Widgets
 
 // One notification. Swipe sideways to dismiss; hover pauses the timeout.
+// Laid out with plain Columns and explicit widths so wrapped text always gets
+// its full height (Layouts can under-measure wrapped Text and crop it).
 Item {
     id: root
 
@@ -25,15 +26,16 @@ Item {
     readonly property var actions: JSON.parse(actionsJson || "[]")
     readonly property bool critical: urgency === 2
     readonly property int life: timeout > 0 ? timeout : Settings.data.notifications.timeout * 1000
+    readonly property int pad: 14
 
     implicitWidth: 380
-    implicitHeight: card.implicitHeight
+    implicitHeight: card.height
 
     Rectangle {
         id: card
 
         width: parent.width
-        implicitHeight: col.implicitHeight + 28
+        height: content.height + root.pad * 2
         radius: Theme.rLg
         color: root.popup ? Theme.panelBg : Theme.surfaceHigh
         border.width: root.critical ? 2 : 1
@@ -45,25 +47,32 @@ Item {
             Anim { easing.bezierCurve: Theme.curves.spring }
         }
 
-        ColumnLayout {
-            id: col
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: 14
+        Column {
+            id: content
+            x: root.pad
+            y: root.pad
+            width: card.width - root.pad * 2
             spacing: 8
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 8
+            // header: icon · app name · time · close
+            Item {
+                width: parent.width
+                height: 24
 
                 AppIcon {
+                    id: appIco
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
                     implicitSize: 16
                     name: root.appIcon || root.appName.toLowerCase()
                     fallback: "dialog-information"
                 }
                 FText {
-                    Layout.fillWidth: true
+                    anchors.left: appIco.right
+                    anchors.leftMargin: 8
+                    anchors.right: when.left
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
                     text: root.appName || "Notification"
                     dim: true
                     font.pixelSize: Theme.fsXs
@@ -71,27 +80,35 @@ Item {
                     elide: Text.ElideRight
                 }
                 FText {
+                    id: when
+                    anchors.right: closeBtn.left
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
                     text: Notifs.ago(root.time)
                     dim: true
                     font.pixelSize: Theme.fsXs
                 }
                 FIconButton {
+                    id: closeBtn
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
                     icon: "close"
-                    size: 22
+                    size: 24
                     iconSize: 14
                     onClicked: Notifs.dismiss(root.nid)
                 }
             }
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
+            // image + text
+            Item {
+                width: parent.width
+                height: Math.max(img.visible ? img.height : 0, texts.height)
 
                 ClippingRectangle {
+                    id: img
                     visible: root.image !== ""
-                    Layout.preferredWidth: 46
-                    Layout.preferredHeight: 46
-                    Layout.alignment: Qt.AlignTop
+                    width: 48
+                    height: 48
                     radius: Theme.rMd
                     color: Theme.surfaceHighest
                     Image {
@@ -102,45 +119,52 @@ Item {
                     }
                 }
 
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
+                Column {
+                    id: texts
+                    x: img.visible ? img.width + 12 : 0
+                    width: parent.width - x
+                    spacing: 3
 
                     FText {
-                        Layout.fillWidth: true
+                        width: parent.width
+                        visible: text !== ""
                         text: root.summary
                         font.weight: Font.Bold
+                        verticalAlignment: Text.AlignTop
                         wrapMode: Text.Wrap
-                        maximumLineCount: 2
+                        maximumLineCount: 3
                         elide: Text.ElideRight
                     }
                     FText {
-                        Layout.fillWidth: true
+                        width: parent.width
                         visible: text !== ""
                         text: root.body
                         textFormat: Text.StyledText
                         dim: true
                         font.pixelSize: Theme.fsSm
+                        verticalAlignment: Text.AlignTop
                         wrapMode: Text.Wrap
-                        maximumLineCount: root.popup ? 4 : 6
+                        maximumLineCount: root.popup ? 4 : 8
                         elide: Text.ElideRight
+                        lineHeight: 1.1
                         onLinkActivated: link => Qt.openUrlExternally(link)
                     }
                 }
             }
 
-            RowLayout {
-                Layout.fillWidth: true
+            // actions share the width evenly
+            Row {
                 visible: root.actions.length > 0
+                width: parent.width
                 spacing: 6
                 Repeater {
                     model: root.actions
                     FButton {
                         required property var modelData
-                        Layout.fillWidth: true
+                        width: (parent.width - parent.spacing * (root.actions.length - 1)) / Math.max(1, root.actions.length)
+                        implicitHeight: 30
                         text: modelData.text
                         variant: "tonal"
-                        implicitHeight: 30
                         onClicked: Notifs.invoke(root.nid, modelData.id)
                     }
                 }

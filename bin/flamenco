@@ -4,6 +4,7 @@
   flamenco run                 start the shell (daemonized unless --fg)
   flamenco kill | restart
   flamenco launcher|control|notifications|calendar|wallpapers|power
+  flamenco setup               the first-run setup tour
   flamenco settings [page]
   flamenco lock
   flamenco volume up|down|mute|mic-mute|set N
@@ -14,6 +15,7 @@
   flamenco ipc TARGET FUNCTION [ARGS...]
   flamenco apps-theme [--json SPEC | --restore]
   flamenco power logind get | apply --json SPEC | reset   lid / power-button handling
+  flamenco keyring get | use gnome|kde|keepassxc|oo7|none|default
   flamenco firewall status [--json] | apply --json SPEC | load
   flamenco fonts [--json]      installed font families (and monospace ones)
   flamenco sound themes | play EVENT | find EVENT
@@ -25,6 +27,7 @@
   flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
   flamenco doctor [--json]
   flamenco niri-config [--print | --snippet]   write a complete ~/.config/niri/config.kdl (backs up the old one)
+  flamenco hyprland-config [--print]   write a complete ~/.config/hypr/hyprland.conf (old one backed up)
   flamenco logs [-f]           show the shell's log (~/.cache/flamenco/shell.log)
 """
 
@@ -39,7 +42,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.9.2"
+VERSION = "0.11.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -110,7 +113,8 @@ LOG_FILE = XDG_CACHE / "flamenco/shell.log"
 def cmd_run(args: list[str]) -> int:
     for d in (CONFIG_DIR, STATE_DIR, XDG_CACHE / "flamenco"):
         d.mkdir(parents=True, exist_ok=True)
-    env = dict(os.environ, FLAMENCO_BIN=self_path())
+    # the login animation plays when niri starts the shell, not on `flamenco restart`
+    env = dict(os.environ, FLAMENCO_BIN=self_path(), FLAMENCO_INTRO="0" if "--no-intro" in args else "1")
     cmd = [qs_bin(), "-p", str(shell_dir()), "--no-duplicate"]
     if "--fg" in args:
         os.execvpe(cmd[0], cmd, env)
@@ -907,9 +911,12 @@ def apply_cursor(s: "Spec", m: dict) -> list[str]:
         return []
     size = int(s.o.get("cursorSize", 24))
     done = []
+    if compositor() == "hyprland":
+        hypr_apply_cursor(theme, size)
+        done.append("hypr-cursor")
 
     # 1) niri's own cursor
-    if NIRI_CONFIG.is_file():
+    if compositor() == "niri" and NIRI_CONFIG.is_file():
         text = NIRI_CONFIG.read_text()
         state = m.setdefault("niriCursor", None)
         block = kdl_block(text, "cursor")
@@ -1104,9 +1111,10 @@ def display_save(spec: list[dict]) -> int:
 
 def cmd_display(args: list[str]) -> int:
     sub = args[0] if args else "list"
+    hypr = compositor() == "hyprland" and "--from" not in args
     if sub == "list":
         raw = Path(args[args.index("--from") + 1]).read_text() if "--from" in args else None
-        outs = display_list(raw)
+        outs = hypr_display_list() if hypr else display_list(raw)
         if "--json" in args:
             print(json.dumps(outs))
         else:
@@ -1118,9 +1126,9 @@ def cmd_display(args: list[str]) -> int:
         die(f"usage: flamenco display {sub} --json SPEC")
     spec = json.loads(args[args.index("--json") + 1])
     if sub == "apply":
-        return display_apply(spec)
+        return hypr_display_apply(spec) if hypr else display_apply(spec)
     if sub == "save":
-        return display_save(spec)
+        return hypr_display_save(spec) if hypr else display_save(spec)
     if sub == "commands":   # dry run, for debugging
         for c in display_commands(spec):
             print(" ".join(c))
@@ -1685,6 +1693,28 @@ def write_niri_config(new: str, old: str) -> None:
 
 def cmd_keyboard(args: list[str]) -> int:
     sub = args[0] if args else "get"
+    if compositor() == "hyprland" and sub in ("get", "apply"):
+        if sub == "get":
+            kb = {"layout": "", "variant": "", "options": "", "model": "", "repeatDelay": 600, "repeatRate": 25,
+                  "numlock": True, "trackLayout": "global"}
+            kb.update(hypr_read_json(HYPR_INPUT).get("input", {}))
+            kb["shortcuts"] = hypr_read_json(HYPR_BINDS).get("shortcuts")
+            kb["others"], kb["replaced"] = [], []
+            print(json.dumps(kb))
+            return 0
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco keyboard apply --json SPEC")
+        spec = json.loads(args[args.index("--json") + 1])
+        try:
+            if spec.get("input") is not None:
+                hypr_apply_input(spec["input"])
+            if spec.get("shortcuts") is not None:
+                hypr_apply_shortcuts(spec["shortcuts"])
+        except ValueError as e:
+            die(str(e))
+        hypr_reload()
+        print("keyboard: Hyprland config updated")
+        return 0
     text = NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() else ""
     if sub == "get":
         out = keyboard_settings(text)
@@ -1728,7 +1758,7 @@ def cmd_keyboard(args: list[str]) -> int:
 # Which xdg-desktop-portal backend handles each feature is set per desktop in
 # ~/.config/xdg-desktop-portal/niri-portals.conf.
 
-PORTAL_CONF = XDG_CONFIG / "xdg-desktop-portal/niri-portals.conf"
+PORTAL_CONF = XDG_CONFIG / ("xdg-desktop-portal/" + ("hyprland" if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") else "niri") + "-portals.conf")
 XDPW_CONF = XDG_CONFIG / "xdg-desktop-portal-wlr/config"
 PORTAL_IFACES = {
     "ScreenCast": "org.freedesktop.impl.portal.ScreenCast",
@@ -1741,7 +1771,7 @@ PORTAL_NIRI = {
     "wlr": ("works", "whole screens only, very lightweight"),
     "kde": ("no", "screen capture only works under KWin; its file chooser is fine"),
     "cosmic": ("no", "relies on COSMIC compositor protocols niri doesn't implement"),
-    "hyprland": ("no", "Hyprland only"),
+    "hyprland": ("works" if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") else "no", "screens and windows on Hyprland" if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") else "Hyprland only"),
     "gtk": ("n/a", "file chooser, settings and other basics; no screen capture"),
 }
 PORTAL_PACKAGES = {"gnome": "xdg-desktop-portal-gnome", "wlr": "xdg-desktop-portal-wlr", "kde": "xdg-desktop-portal-kde",
@@ -1781,7 +1811,7 @@ def effective_portals() -> dict:
     if PORTAL_CONF.is_file():
         return {"source": str(PORTAL_CONF), **read_portal_conf(PORTAL_CONF)}
     for d in data_dirs():
-        f = d / "xdg-desktop-portal/niri-portals.conf"
+        f = d / "xdg-desktop-portal" / PORTAL_CONF.name
         if f.is_file():
             return {"source": str(f), **read_portal_conf(f)}
     return {"source": ""}
@@ -2277,6 +2307,375 @@ def cmd_power(args: list[str]) -> int:
     die("usage: flamenco power logind get | apply --json SPEC | reset")
 
 
+# ─────────────────────────────── keyring (Secret Service) ────────────────────
+# Apps store passwords through org.freedesktop.secrets; whichever daemon owns
+# that name is "the keyring". A per-user D-Bus activation file decides which
+# one starts when an app asks.
+
+SECRETS_OVERRIDE = XDG_DATA / "dbus-1/services/org.freedesktop.secrets.service"
+
+KEYRINGS = {
+    "gnome": {"label": "GNOME Keyring", "package": "gnome-keyring", "bins": ["gnome-keyring-daemon"],
+              "exec": "{bin} --start --foreground --components=secrets", "systemd": "gnome-keyring-daemon.service",
+              "manager": ["seahorse"], "managerPackage": "seahorse", "pam": "pam_gnome_keyring.so",
+              "note": "The common choice; COSMIC uses it too."},
+    "kde": {"label": "KDE Wallet", "package": "kwallet", "bins": ["kwalletd6", "kwalletd5"],
+            "exec": "{bin}", "systemd": "", "manager": ["kwalletmanager"], "managerPackage": "kwalletmanager",
+            "pam": "pam_kwallet5.so", "note": "Flamenco turns on its Secret Service support."},
+    "keepassxc": {"label": "KeePassXC", "package": "keepassxc", "bins": ["keepassxc"],
+                  "exec": "{bin}", "systemd": "", "manager": ["keepassxc"], "managerPackage": "keepassxc",
+                  "pam": "", "note": "Also turn on Settings → Secret Service Integration inside KeePassXC."},
+    "oo7": {"label": "oo7", "package": "oo7", "bins": ["oo7-daemon"],
+            "exec": "{bin}", "systemd": "", "manager": [], "managerPackage": "",
+            "pam": "pam_oo7.so", "note": "A newer Rust implementation of the Secret Service."},
+}
+
+
+def keyring_bin(kind: str) -> str:
+    for b in KEYRINGS[kind]["bins"]:
+        p = shutil.which(b) or next((str(x) for x in (Path("/usr/lib") / b, Path("/usr/libexec") / b) if x.exists()), "")
+        if p:
+            return p
+    return ""
+
+
+def secrets_owner() -> dict:
+    """Which process currently answers org.freedesktop.secrets."""
+    out = run_out(["busctl", "--user", "status", "org.freedesktop.secrets"]) if shutil.which("busctl") else ""
+    comm = re.search(r"^Comm=(\S+)", out, re.M)
+    pid = re.search(r"^PID=(\d+)", out, re.M)
+    name = comm.group(1) if comm else ""
+    kind = next((k for k, v in KEYRINGS.items() if any(name and (name in b or b.startswith(name)) for b in v["bins"])), "")
+    return {"process": name, "pid": int(pid.group(1)) if pid else 0, "kind": kind}
+
+
+def pam_unlock() -> dict:
+    """Login-time unlock: which PAM modules are configured, per service file."""
+    found = {}
+    for svc in ("login", "system-login", "sddm", "greetd", "gdm-password", "lightdm", "ly"):
+        f = Path("/etc/pam.d") / svc
+        try:
+            text = f.read_text(errors="ignore")
+        except OSError:
+            continue
+        mods = [k for k, v in KEYRINGS.items() if v["pam"] and re.search(r"^\s*[^#].*" + re.escape(v["pam"]), text, re.M)]
+        found[svc] = mods
+    return found
+
+
+def cmd_keyring(args: list[str]) -> int:
+    sub = args[0] if args else "get"
+    if sub == "get":
+        chosen = ""
+        if SECRETS_OVERRIDE.is_file():
+            m = re.search(r"^# flamenco-keyring: (\w+)", SECRETS_OVERRIDE.read_text(), re.M)
+            chosen = m.group(1) if m else "custom"
+        print(json.dumps({
+            "chosen": chosen,
+            "owner": secrets_owner(),
+            "pam": pam_unlock(),
+            "keyrings": [{"value": k, "label": v["label"], "package": v["package"], "installed": bool(keyring_bin(k)),
+                          "manager": v["manager"], "managerPackage": v["managerPackage"],
+                          "managerInstalled": bool(v["manager"]) and bool(shutil.which(v["manager"][0])),
+                          "pam": v["pam"], "note": v["note"]} for k, v in KEYRINGS.items()],
+        }))
+        return 0
+    if sub == "use":
+        if len(args) < 2 or args[1] not in (*KEYRINGS, "none", "default"):
+            die("usage: flamenco keyring use gnome|kde|keepassxc|oo7|none|default")
+        kind = args[1]
+        if kind == "default":
+            if SECRETS_OVERRIDE.is_file():
+                SECRETS_OVERRIDE.unlink()
+            for unit in ("gnome-keyring-daemon.socket", "gnome-keyring-daemon.service"):
+                subprocess.run(["systemctl", "--user", "unmask", unit], capture_output=True)
+            print("keyring: back to the system default")
+            return 0
+        SECRETS_OVERRIDE.parent.mkdir(parents=True, exist_ok=True)
+        if kind == "none":
+            # an activation entry that can't start anything: no keyring gets launched on demand
+            SECRETS_OVERRIDE.write_text("# flamenco-keyring: none\n[D-BUS Service]\nName=org.freedesktop.secrets\nExec=/bin/false\n")
+        else:
+            b = keyring_bin(kind)
+            if not b:
+                die(f"{KEYRINGS[kind]['label']} isn't installed (sudo pacman -S {KEYRINGS[kind]['package']})")
+            lines = [f"# flamenco-keyring: {kind}", "[D-BUS Service]", "Name=org.freedesktop.secrets",
+                     "Exec=" + KEYRINGS[kind]["exec"].format(bin=b)]
+            if KEYRINGS[kind]["systemd"]:
+                lines.append("SystemdService=" + KEYRINGS[kind]["systemd"])
+            SECRETS_OVERRIDE.write_text("\n".join(lines) + "\n")
+
+        # KDE Wallet only answers Secret Service requests when its API is on
+        # (not tracked in the app-theming manifest, so "Restore originals" there won't switch keyrings)
+        untracked = {"files": [], "backups": {}}
+        if kind == "kde":
+            ini_update(XDG_CONFIG / "kwalletrc", {"Wallet": {"Enabled": "true"},
+                                                   "org.freedesktop.secrets": {"apiEnabled": "true"}}, untracked)
+        elif (XDG_CONFIG / "kwalletrc").is_file():
+            ini_update(XDG_CONFIG / "kwalletrc", {"org.freedesktop.secrets": {"apiEnabled": "false"}}, untracked)
+
+        # GNOME Keyring also starts from its own systemd socket; keep it out of the way when not chosen
+        for unit in ("gnome-keyring-daemon.socket", "gnome-keyring-daemon.service"):
+            if kind == "gnome":
+                subprocess.run(["systemctl", "--user", "unmask", unit], capture_output=True)
+            else:
+                subprocess.run(["systemctl", "--user", "stop", unit], capture_output=True)
+                subprocess.run(["systemctl", "--user", "mask", unit], capture_output=True)
+
+        # hand the name over now: stop whichever other keyring holds it
+        owner = secrets_owner()
+        if owner["pid"] and owner["kind"] != kind:
+            try:
+                os.kill(owner["pid"], 15)
+            except OSError:
+                pass
+        if shutil.which("busctl"):
+            # make D-Bus re-read activation files, then (for a real keyring) start it
+            subprocess.run(["busctl", "--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                            "org.freedesktop.DBus", "ReloadConfig"], capture_output=True)
+            if kind != "none":
+                subprocess.run(["busctl", "--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                                "org.freedesktop.DBus", "StartServiceByName", "su", "org.freedesktop.secrets", "0"],
+                               capture_output=True, timeout=15)
+        print(f"keyring: {kind} will answer org.freedesktop.secrets")
+        return 0
+    die("usage: flamenco keyring get | use gnome|kde|keepassxc|oo7|none|default")
+
+
+# ─────────────────────────────── Hyprland ────────────────────────────────────
+# Same features on Hyprland: Settings write small files that hyprland.conf sources.
+
+HYPR_DIR = XDG_CONFIG / "hypr"
+HYPR_CONFIG = HYPR_DIR / "hyprland.conf"
+HYPR_BINDS = HYPR_DIR / "flamenco-binds.conf"
+HYPR_INPUT = HYPR_DIR / "flamenco-input.conf"
+HYPR_CURSOR = HYPR_DIR / "flamenco-cursor.conf"
+HYPR_MONITORS = HYPR_DIR / "flamenco-monitors.conf"
+HYPR_TRANSFORMS = {t: i for i, t in enumerate(TRANSFORMS)}       # normal=0 … flipped-270=7
+HYPR_KEYS = {"Comma": "comma", "Period": "period", "Slash": "slash", "BackSlash": "backslash", "Minus": "minus",
+             "Equal": "equal", "BracketLeft": "bracketleft", "BracketRight": "bracketright", "Semicolon": "semicolon",
+             "Apostrophe": "apostrophe", "Grave": "grave", "Space": "space"}
+HYPR_MODS = {"mod": "SUPER", "super": "SUPER", "ctrl": "CTRL", "alt": "ALT", "shift": "SHIFT"}
+
+
+def compositor() -> str:
+    if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        return "hyprland"
+    if os.environ.get("NIRI_SOCKET"):
+        return "niri"
+    desk = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    return "hyprland" if "hyprland" in desk else "niri"
+
+
+def hypr_niri_action(action: str) -> str | None:
+    """Translate a niri action into a Hyprland dispatcher (None if there's no equivalent)."""
+    a = action.split()
+    name, args = a[0], a[1:]
+    simple = {"close-window": "killactive", "fullscreen-window": "fullscreen, 0", "maximize-column": "fullscreen, 1",
+              "toggle-window-floating": "togglefloating", "center-column": "centerwindow",
+              "focus-column-left": "movefocus, l", "focus-column-right": "movefocus, r",
+              "focus-window-up": "movefocus, u", "focus-window-down": "movefocus, d",
+              "move-column-left": "movewindow, l", "move-column-right": "movewindow, r",
+              "focus-workspace-down": "workspace, e+1", "focus-workspace-up": "workspace, e-1",
+              "focus-monitor-left": "focusmonitor, l", "focus-monitor-right": "focusmonitor, r",
+              "quit": "exit", "power-off-monitors": "dpms, off", "toggle-column-tabbed-display": "togglegroup",
+              "screenshot": 'exec, grim -g "$(slurp)" - | wl-copy', "screenshot-screen": "exec, grim - | wl-copy",
+              "screenshot-window": 'exec, grim -g "$(hyprctl -j activewindow | jq -r \'"\\(.at[0]),\\(.at[1]) \\(.size[0])x\\(.size[1])"\')" - | wl-copy',
+              "switch-layout": "exec, hyprctl switchxkblayout all next"}
+    if name in ("focus-workspace", "move-column-to-workspace") and args:
+        return ("workspace, " if name == "focus-workspace" else "movetoworkspace, ") + args[0].strip('"')
+    return simple.get(name)
+
+
+def hypr_combo(key: str) -> tuple[str, str]:
+    parts = key.split("+")
+    mods = " ".join(HYPR_MODS.get(p.lower(), p.upper()) for p in parts[:-1])
+    k = parts[-1]
+    return mods, HYPR_KEYS.get(k, k)
+
+
+def hypr_bind_line(sc: dict) -> str:
+    mods, key = hypr_combo(sc["key"].strip())
+    t, v = sc.get("type"), str(sc.get("value", "")).strip()
+    note = f"  # {sc['title']}" if sc.get("title") else ""
+    if t == "none":
+        return f"unbind = {mods}, {key}"
+    flag = "bindl" if sc.get("locked") and t != "niri" else "bind"
+    if t == "flamenco":
+        if v not in SHELL_FUNCTIONS:
+            raise ValueError(f"unknown Flamenco function: {v!r}")
+        return f"{flag} = {mods}, {key}, exec, flamenco {' '.join(SHELL_FUNCTIONS[v][1])}{note}"
+    if t == "app":
+        return f"{flag} = {mods}, {key}, exec, flamenco launch {v}{note}"
+    if t == "command":
+        return f"{flag} = {mods}, {key}, exec, {v}{note}"
+    if t == "niri":
+        d = hypr_niri_action(v)
+        return f"{flag} = {mods}, {key}, {d}{note}" if d else f"# {sc['key']}: no Hyprland equivalent for niri action '{v}'"
+    raise ValueError(f"{sc['key']}: unknown shortcut type {t!r}")
+
+
+def hypr_write(path: Path, lines: list[str], data: dict | None = None):
+    head = [f"# {MARKER}: managed by Flamenco Settings, regenerated on change"]
+    if data is not None:
+        head.append("# flamenco-json: " + json.dumps(data))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(head + lines) + "\n")
+
+
+def hypr_read_json(path: Path) -> dict:
+    try:
+        m = re.search(r"^# flamenco-json: (.*)$", path.read_text(), re.M)
+        return json.loads(m.group(1)) if m else {}
+    except Exception:
+        return {}
+
+
+def hypr_reload():
+    if shutil.which("hyprctl"):
+        subprocess.run(["hyprctl", "reload"], capture_output=True)
+
+
+def hypr_apply_shortcuts(shortcuts: list[dict]):
+    keys = [norm_key(sc["key"]) for sc in shortcuts]
+    dup = {k for k in keys if keys.count(k) > 1}
+    if dup:
+        raise ValueError("the same key is used twice: " + ", ".join(sorted(dup)))
+    lines = []
+    # an "unbind" must come before Flamenco's own bind for the same key
+    for sc in sorted(shortcuts, key=lambda x: x.get("type") != "none"):
+        lines.append(hypr_bind_line(sc))
+    # a Flamenco shortcut takes its key even if hyprland.conf binds it: unbind first
+    for sc in shortcuts:
+        # skip niri actions Hyprland can't do: they bind nothing, so don't take the key away
+        if sc.get("type") != "none" and not (sc.get("type") == "niri" and hypr_niri_action(str(sc.get("value", ""))) is None):
+            mods, key = hypr_combo(sc["key"])
+            lines.insert(0, f"unbind = {mods}, {key}")
+    hypr_write(HYPR_BINDS, lines, {"shortcuts": shortcuts})
+
+
+def hypr_apply_input(kb: dict):
+    lines = ["input {"]
+    for k, hk in (("layout", "kb_layout"), ("variant", "kb_variant"), ("options", "kb_options"), ("model", "kb_model")):
+        if str(kb.get(k, "")).strip():
+            lines.append(f"    {hk} = {kb[k]}")
+    lines += [f"    repeat_delay = {int(kb.get('repeatDelay', 600))}", f"    repeat_rate = {int(kb.get('repeatRate', 25))}",
+              f"    numlock_by_default = {'true' if kb.get('numlock') else 'false'}", "}"]
+    hypr_write(HYPR_INPUT, lines, {"input": kb})
+
+
+def hypr_apply_cursor(theme: str, size: int):
+    hypr_write(HYPR_CURSOR, [f"env = XCURSOR_THEME,{theme}", f"env = XCURSOR_SIZE,{size}",
+                             f"env = HYPRCURSOR_THEME,{theme}", f"env = HYPRCURSOR_SIZE,{size}",
+                             f"exec-once = hyprctl setcursor {theme} {size}"])
+    if shutil.which("hyprctl"):
+        subprocess.run(["hyprctl", "setcursor", theme, str(size)], capture_output=True)
+
+
+def hypr_monitor_line(o: dict) -> str:
+    if not o.get("enabled", True):
+        return f"monitor = {o['name']}, disable"
+    m = o.get("mode") or {}
+    mode = f"{m['w']}x{m['h']}@{int(m['r']) / 1000:.2f}" if m else "preferred"
+    line = f"monitor = {o['name']}, {mode}, {int(o.get('x', 0))}x{int(o.get('y', 0))}, {fmt_scale(o.get('scale', 1))}"
+    line += f", transform, {HYPR_TRANSFORMS.get(norm_transform(o.get('transform')), 0)}"
+    if o.get("vrrSupported") and "vrr" in o:
+        line += f", vrr, {1 if o['vrr'] else 0}"
+    return line
+
+
+def hypr_display_list() -> list[dict]:
+    raw = run_out(["hyprctl", "-j", "monitors", "all"])
+    try:
+        mons = json.loads(raw)
+    except Exception:
+        die("could not query Hyprland monitors (is Hyprland running?)")
+    out = []
+    for mo in mons:
+        modes = []
+        for s_ in mo.get("availableModes", []):
+            mm = re.match(r"(\d+)x(\d+)@([\d.]+)Hz", s_)
+            if mm:
+                modes.append({"w": int(mm.group(1)), "h": int(mm.group(2)), "r": round(float(mm.group(3)) * 1000), "preferred": False})
+        if modes:
+            modes[0]["preferred"] = True
+        cur = {"w": mo["width"], "h": mo["height"], "r": round(mo.get("refreshRate", 60) * 1000), "preferred": False}
+        enabled = not mo.get("disabled", False)
+        tf = TRANSFORMS[mo.get("transform", 0)] if 0 <= mo.get("transform", 0) < 8 else "normal"
+        scale = mo.get("scale", 1.0) or 1.0
+        rot = tf in ("90", "270", "flipped-90", "flipped-270")
+        out.append({"name": mo["name"], "make": mo.get("make", ""), "model": mo.get("model", ""), "modes": modes,
+                    "current": cur if enabled else None, "enabled": enabled, "x": mo.get("x", 0), "y": mo.get("y", 0),
+                    "logicalW": round((mo["height"] if rot else mo["width"]) / scale),
+                    "logicalH": round((mo["width"] if rot else mo["height"]) / scale),
+                    "scale": scale, "transform": tf, "vrrSupported": True, "vrrEnabled": bool(mo.get("vrr")), "physical": None})
+    return sorted(out, key=lambda d: (d["x"], d["y"], d["name"]))
+
+
+def hypr_display_apply(spec: list[dict]) -> int:
+    failed = 0
+    for o in spec:
+        r = subprocess.run(["hyprctl", "keyword", "monitor", hypr_monitor_line(o).split("=", 1)[1].strip()],
+                           capture_output=True, text=True)
+        if r.returncode != 0 or "error" in r.stdout.lower():
+            failed += 1
+            print(f"flamenco: {o['name']}: {(r.stdout or r.stderr).strip()}", file=sys.stderr)
+    return 1 if failed else 0
+
+
+def hypr_display_save(spec: list[dict]) -> int:
+    hypr_write(HYPR_MONITORS, [hypr_monitor_line(o) for o in spec])
+    print(f"displays: saved to {HYPR_MONITORS}")
+    return 0
+
+
+def hypr_validate(path: Path) -> bool:
+    if not shutil.which("Hyprland"):
+        return True
+    r = subprocess.run(["Hyprland", "--verify-config", "-c", str(path)], capture_output=True, text=True)
+    return r.returncode == 0 and "error" not in (r.stdout + r.stderr).lower()
+
+
+def cmd_hyprland_config(args: list[str]) -> int:
+    here = Path(__file__).resolve().parent
+    tpl = next((c for c in (here.parent / "data/hypr/hyprland.conf", shell_dir().parent / "hypr/hyprland.conf",
+                            Path("/usr/share/flamenco-shell/hypr/hyprland.conf")) if c.is_file()), None)
+    if tpl is None:
+        die("Hyprland config template not found")
+    text = tpl.read_text().replace("@@TERMINAL@@", pick_terminal())
+    if "--print" in args:
+        print(text, end="")
+        return 0
+    HYPR_DIR.mkdir(parents=True, exist_ok=True)
+    # the sourced files must exist, or Hyprland reports errors
+    try:
+        saved = json.loads((CONFIG_DIR / "settings.json").read_text())
+    except Exception:
+        saved = {}
+    if not HYPR_BINDS.exists():
+        hypr_apply_shortcuts(saved.get("keyboard", {}).get("shortcuts") or DEFAULT_SHORTCUTS)
+    if not HYPR_INPUT.exists():
+        hypr_apply_input(saved.get("keyboard", {}) or {})
+    for f in (HYPR_CURSOR, HYPR_MONITORS):
+        if not f.exists():
+            hypr_write(f, [])
+    tmp = HYPR_CONFIG.with_suffix(".conf.flamenco-tmp")
+    tmp.write_text(text)
+    if not hypr_validate(tmp):
+        tmp.unlink()
+        die("Hyprland rejected the generated config; hyprland.conf was not changed")
+    if HYPR_CONFIG.exists():
+        import time
+        backup = HYPR_CONFIG.with_name(f"hyprland.conf.bak-{time.strftime('%Y%m%d-%H%M%S')}")
+        backup.write_text(HYPR_CONFIG.read_text())
+        print(f"previous config saved as {backup}")
+    tmp.replace(HYPR_CONFIG)
+    print(f"wrote {HYPR_CONFIG} (+ flamenco-*.conf)")
+    print(f"terminal: {pick_terminal()}  (Super+T / Super+Return)")
+    hypr_reload()
+    return 0
+
+
 # ─────────────────────────────── apps-theme ──────────────────────────────────
 
 def cmd_apps_theme(args: list[str]) -> int:
@@ -2494,14 +2893,22 @@ def doctor_checks() -> list[dict]:
     add("Core", "Terminal", "Mod+T, terminal apps, > commands in the launcher", have(*TERMINALS), "kitty", True)
 
     # ── session ──
-    cfg = NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() else ""
-    if have("niri") and cfg:
+    if compositor() == "hyprland":
+        hcfg = HYPR_CONFIG.read_text() if HYPR_CONFIG.is_file() else ""
+        add("Session", "Compositor", "Hyprland", True, "hyprland", True)
+        add("Session", "Starts with Hyprland", "exec-once = flamenco run in hyprland.conf",
+            bool(re.search(r"^\s*exec-once\s*=\s*flamenco run", hcfg, re.M)), "", True, hint="run `flamenco hyprland-config`")
+        add("Session", "Flamenco settings files", "hyprland.conf sources the flamenco-*.conf files",
+            "flamenco-binds.conf" in hcfg, "", False, hint="run `flamenco hyprland-config`")
+    cfg = NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() and compositor() == "niri" else ""
+    if compositor() == "niri" and have("niri") and cfg:
         r = subprocess.run(["niri", "validate", "-c", str(NIRI_CONFIG)], capture_output=True, text=True)
         add("Session", "niri config", "~/.config/niri/config.kdl is valid", r.returncode == 0, "", True,
             hint="" if r.returncode == 0 else (r.stderr or r.stdout).strip().splitlines()[-1:][0] if (r.stderr or r.stdout).strip() else "run `niri validate`")
     starts = [cfg[a:b] for a, b in kdl_spawn_lines(cfg)]
-    add("Session", "Starts with niri", "spawn-at-startup \"flamenco\" \"run\" in the niri config",
-        any("flamenco" in l for l in starts), "", True, hint="run `flamenco niri-config`")
+    if compositor() == "niri":
+        add("Session", "Starts with niri", "spawn-at-startup \"flamenco\" \"run\" in the niri config",
+            any("flamenco" in l for l in starts), "", True, hint="run `flamenco niri-config`")
     others = [x for x in ("dms", "waybar", "swaybg", "swww", "hyprpanel", "noctalia", "ags", "eww", "mako", "dunst", "swaync")
               if any(re.search(r'\b' + x + r'\b', l) for l in starts)]
     add("Session", "No other shell", "nothing else drawing a bar, wallpaper or notifications",
@@ -2632,7 +3039,7 @@ layer-rule {
 
 // settings app floats by default
 window-rule {
-    match title="^Flamenco Settings$"
+    match title="^Flamenco (Settings|Setup)$"
     open-floating true
 }
 
@@ -2677,7 +3084,7 @@ def main(argv: list[str]) -> int:
         return cmd_kill()
     if cmd == "restart":
         cmd_kill()
-        return cmd_run(rest)
+        return cmd_run([*rest, "--no-intro"])
     if cmd == "ipc":
         if len(rest) < 2:
             die("usage: flamenco ipc TARGET FUNCTION [ARGS...]")
@@ -2686,6 +3093,9 @@ def main(argv: list[str]) -> int:
         return cmd_power(rest)          # `flamenco power` alone still opens the power menu
     if cmd in PANELS:
         return ipc(PANELS[cmd], rest[0] if rest else "toggle")
+    if cmd == "setup":
+        ensure_running()
+        return ipc("setup", "open")
     if cmd == "settings":
         # launched from a desktop entry: start the shell first if needed
         ensure_running()
@@ -2720,6 +3130,10 @@ def main(argv: list[str]) -> int:
         return ipc("theme", "palette", a)
     if cmd == "apps-theme":
         return cmd_apps_theme(rest)
+    if cmd == "hyprland-config":
+        return cmd_hyprland_config(rest)
+    if cmd == "keyring":
+        return cmd_keyring(rest)
     if cmd == "firewall":
         return cmd_firewall(rest)
     if cmd == "fonts":
