@@ -13,17 +13,13 @@ BarChip {
     onMiddleClicked: Media.toggle()
     onRightClicked: Media.next()
 
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 8
-
+    BarFlow {
         // spinning "vinyl" cover
         ClippingRectangle {
             width: Theme.barHeight - 18
             height: width
             radius: width / 2
             color: Theme.surfaceHighest
-            anchors.verticalCenter: parent.verticalCenter
 
             Image {
                 anchors.fill: parent
@@ -48,11 +44,11 @@ BarChip {
         }
 
         FText {
+            visible: !Theme.barVertical
             width: Math.min(implicitWidth, 220)
             text: Media.title + (Media.artist ? "  ·  " + Media.artist : "")
             elide: Text.ElideRight
             font.pixelSize: Theme.fsSm
-            anchors.verticalCenter: parent.verticalCenter
         }
 
         FIcon {
@@ -60,7 +56,6 @@ BarChip {
             fill: 1
             size: 18
             color: Theme.accent
-            anchors.verticalCenter: parent.verticalCenter
         }
     }
 }

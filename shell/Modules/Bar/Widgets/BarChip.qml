@@ -2,31 +2,34 @@ import QtQuick
 import qs.Commons
 import qs.Widgets
 
-// Generic hoverable pill in the bar.
+// Generic hoverable chip in the bar: a pill in a horizontal bar, a rounded
+// tile in a vertical one.
 Rectangle {
     id: root
 
     default property alias content: holder.data
     property int padding: 10
     property bool highlighted: false
+    readonly property bool vertical: Theme.barVertical
+    readonly property int cross: Theme.barHeight - 10
     signal clicked
     signal rightClicked
     signal middleClicked
     signal wheel(var event)
 
-    implicitHeight: Theme.barHeight - 10
-    implicitWidth: holder.childrenRect.width + padding * 2
-    radius: height / 2
+    implicitWidth: vertical ? cross : holder.width + padding * 2
+    implicitHeight: vertical ? holder.height + 12 : cross
+    radius: vertical ? Theme.rMd : height / 2
     color: highlighted ? Theme.alpha(Theme.accent, 0.18) : "transparent"
 
     Behavior on color { CAnim {} }
-    Behavior on implicitWidth { Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
+    Behavior on implicitWidth { enabled: !root.vertical; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
     Item {
         id: holder
-        x: root.padding
+        anchors.centerIn: parent
         width: childrenRect.width
-        height: parent.height
+        height: childrenRect.height
     }
 
     StateLayer {

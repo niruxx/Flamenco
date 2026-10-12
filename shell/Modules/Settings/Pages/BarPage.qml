@@ -16,14 +16,29 @@ Page {
 
     Group {
         title: "Layout"
-        ChoiceRow { title: "Position"; icon: "vertical_align_top"; target: page.b; key: "position"; options: [{ value: "top", label: "Top" }, { value: "bottom", label: "Bottom" }] }
+        ChoiceRow {
+            title: "Position"
+            subtitle: "Left and right give a vertical bar"
+            icon: "screenshot_frame"
+            target: page.b
+            key: "position"
+            segWidth: 84
+            options: [{ value: "top", label: "Top", icon: "border_top" }, { value: "bottom", label: "Bottom", icon: "border_bottom" }, { value: "left", label: "Left", icon: "border_left" }, { value: "right", label: "Right", icon: "border_right" }]
+        }
         ChoiceRow { title: "Style"; icon: "style"; target: page.b; key: "style"; options: [{ value: "floating", label: "Floating" }, { value: "attached", label: "Attached" }, { value: "islands", label: "Islands" }] }
-        SliderRow { title: "Height"; icon: "height"; target: page.b; key: "height"; from: 30; to: 56; stepSize: 1; suffix: "px" }
+        SliderRow { title: "Thickness"; icon: "height"; target: page.b; key: "height"; from: 30; to: 56; stepSize: 1; suffix: "px" }
         ChoiceRow { title: "Workspace indicator"; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }] }
     }
 
+    Group {
+        title: "System tray (app indicators)"
+        SwitchRow { title: "Hide passive icons"; subtitle: "Apps that mark themselves idle stay out of the bar"; icon: "visibility_off"; target: page.b; key: "trayHidePassive" }
+        SliderRow { title: "Icons before overflow"; icon: "more_horiz"; target: page.b; key: "trayMaxVisible"; from: 2; to: 16; stepSize: 1 }
+        SwitchRow { title: "Native Qt menus"; subtitle: "Use the app's own Qt menu instead of the themed one"; icon: "menu"; target: page.b; key: "trayNativeMenus" }
+    }
+
     Repeater {
-        model: [{ key: "left", label: "Left" }, { key: "center", label: "Center" }, { key: "right", label: "Right" }]
+        model: [{ key: "left", label: Theme.barVertical ? "Top" : "Left" }, { key: "center", label: "Center" }, { key: "right", label: Theme.barVertical ? "Bottom" : "Right" }]
 
         Group {
             id: grp

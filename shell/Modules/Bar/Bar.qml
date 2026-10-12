@@ -21,14 +21,19 @@ Variants {
 
         screen: modelData
         color: "transparent"
+        readonly property bool vertical: Theme.barVertical
+        readonly property string pos: Theme.barPos
+        readonly property int thickness: Theme.barHeight + Theme.barMargin
+
         anchors {
-            top: Theme.barTop
-            bottom: !Theme.barTop
-            left: true
-            right: true
+            top: win.pos !== "bottom"
+            bottom: win.pos !== "top"
+            left: win.pos !== "right"
+            right: win.pos !== "left"
         }
-        implicitHeight: Theme.barHeight + Theme.barMargin
-        exclusiveZone: implicitHeight
+        implicitHeight: vertical ? 0 : thickness
+        implicitWidth: vertical ? thickness : 0
+        exclusiveZone: thickness
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.namespace: "flamenco-bar"
 
@@ -82,12 +87,17 @@ Variants {
         Item {
             id: content
             anchors.fill: parent
-            anchors.topMargin: Theme.barTop ? Theme.barMargin : 0
-            anchors.bottomMargin: Theme.barTop ? 0 : Theme.barMargin
-            anchors.leftMargin: Theme.barMargin
-            anchors.rightMargin: Theme.barMargin
+            // margin on the screen-edge side and both ends; none on the inner side
+            anchors.topMargin: win.pos === "bottom" ? 0 : Theme.barMargin
+            anchors.bottomMargin: win.pos === "top" ? 0 : Theme.barMargin
+            anchors.leftMargin: win.pos === "right" ? 0 : Theme.barMargin
+            anchors.rightMargin: win.pos === "left" ? 0 : Theme.barMargin
             opacity: win.enter
-            transform: Translate { y: (1 - win.enter) * (Theme.barTop ? -Theme.barHeight : Theme.barHeight) }
+            transform: Translate {
+                readonly property real d: (1 - win.enter) * Theme.barHeight
+                x: win.pos === "left" ? -d : win.pos === "right" ? d : 0
+                y: win.pos === "top" ? -d : win.pos === "bottom" ? d : 0
+            }
 
             Rectangle {
                 id: bg
@@ -107,32 +117,33 @@ Variants {
                 }
             }
 
+            // start (left / top)
             BarSection {
                 registry: win.registry
                 islands: win.islands
+                vertical: win.vertical
                 ids: win.cfg.left
-                anchors.left: parent.left
-                anchors.leftMargin: win.islands ? 0 : 6
-                anchors.verticalCenter: parent.verticalCenter
-                height: parent.height
+                x: win.vertical ? (parent.width - width) / 2 : (win.islands ? 0 : 6)
+                y: win.vertical ? (win.islands ? 0 : 6) : (parent.height - height) / 2
             }
 
+            // center
             BarSection {
                 registry: win.registry
                 islands: win.islands
+                vertical: win.vertical
                 ids: win.cfg.center
                 anchors.centerIn: parent
-                height: parent.height
             }
 
+            // end (right / bottom)
             BarSection {
                 registry: win.registry
                 islands: win.islands
+                vertical: win.vertical
                 ids: win.cfg.right
-                anchors.right: parent.right
-                anchors.rightMargin: win.islands ? 0 : 6
-                anchors.verticalCenter: parent.verticalCenter
-                height: parent.height
+                x: win.vertical ? (parent.width - width) / 2 : parent.width - width - (win.islands ? 0 : 6)
+                y: win.vertical ? parent.height - height - (win.islands ? 0 : 6) : (parent.height - height) / 2
             }
         }
     }

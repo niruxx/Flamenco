@@ -2,8 +2,8 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.1.0
-pkgrel=4
+pkgver=0.2.0
+pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
 url="https://github.com/niruxx/flamenco-shell"

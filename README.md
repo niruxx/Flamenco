@@ -6,7 +6,8 @@ A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor, built
 
 | | |
 |---|---|
-| **Bar** | Floating, attached or "islands" style, top or bottom. Widgets are reorderable: launcher, niri workspaces (gliding indicator), active window, clock, media (spinning cover art), tray (native Qt menus), CPU/RAM, keyboard layout, network, Bluetooth, volume, brightness, battery, notifications, weather, power |
+| **Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window, clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, brightness, battery, notifications, weather, power |
+| **App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
 | **Control center** | Volume, mic and brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, dark mode and wallpaper. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
 | **Launcher** | Fuzzy app search ranked by how often you use each app. `=` calculator, `>` run command, `;` clipboard history (cliphist) |
 | **Notifications** | Built-in daemon: popups with timeout bar, swipe to dismiss, actions, DND. History persists across restarts |
@@ -69,6 +70,7 @@ flamenco wallpaper [set PATH | random | next]
 flamenco theme PALETTE | dark | light | toggle | list | apply-apps
 flamenco apps-theme --json SPEC | --restore
 flamenco ipc TARGET FUNCTION [ARGS...]
+flamenco list-themes [--json]   installed icon / cursor / GTK / Qt-style / Kvantum themes
 flamenco doctor [--json]
 ```
 
@@ -89,7 +91,7 @@ Stylesheet options shared by both toolkits:
 - Accent-colored selections and focus rings
 - Surface contrast
 
-Qt also gets a widget style choice (Fusion, Breeze or Kvantum) and a KDE color scheme toggle. Both Qt and GTK get a free-form **custom QSS / CSS** box that's appended to the generated stylesheet.
+Icon theme, cursor theme, Qt widget style, Kvantum theme and base GTK theme are picked from dropdowns listing what's installed (`flamenco list-themes`). Qt also gets a KDE color scheme toggle. Both Qt and GTK get a free-form **custom QSS / CSS** box that's appended to the generated stylesheet.
 
 **Backups:** the first time Flamenco touches a file you wrote yourself, it backs the file up to `~/.local/state/flamenco/backup/` and records the previous gsettings values. `flamenco apps-theme --restore`, or *Restore originals* in Settings, puts everything back.
 
@@ -110,11 +112,12 @@ shell/Modules/               Bar, Background, ControlCenter, Launcher, Notificat
 
 Settings live in `~/.config/flamenco/settings.json`. The file is watched, so hand edits apply immediately.
 
+## Development
+
+`tools/qmlcheck.py` runs static checks over the QML without needing Qt (unknown types, unbalanced braces, and the `Behavior` patterns that crash Qt 6.12). Run it before building a package.
+
 ## TODO
-Add dock options to change the top bar from top to each corner of the screen
-
-Under app theming ensure a drop down can be used instead of typing in the theme - this should be able to select the ones installed.
-
-Include app Indicators support
-
-Improve the top left indicator as there's a lot of spaces between them.
+- [x] Add dock options to change the top bar from top to each corner of the screen (Settings → Bar → Position: top / bottom / left / right)
+- [x] Under app theming ensure a drop down can be used instead of typing in the theme - this should be able to select the ones installed.
+- [x] Include app Indicators support
+- [x] Improve the top left indicator as there's a lot of spaces between them.

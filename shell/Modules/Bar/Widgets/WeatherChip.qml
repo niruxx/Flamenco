@@ -8,10 +8,9 @@ BarChip {
     property bool barVisible: Weather.ready
     onClicked: Panels.toggle("calendar", screenName)
 
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 4
-        FIcon { icon: Weather.icon; size: 18; fill: 1; color: Theme.accent2; anchors.verticalCenter: parent.verticalCenter }
-        FText { text: Math.round(Weather.temp) + "°"; font.pixelSize: Theme.fsSm; anchors.verticalCenter: parent.verticalCenter }
+    BarFlow {
+        spacing: Theme.barVertical ? 0 : 4
+        FIcon { icon: Weather.icon; size: 18; fill: 1; color: Theme.accent2 }
+        FText { text: Math.round(Weather.temp) + "°"; font.pixelSize: Theme.barVertical ? Theme.fsXs : Theme.fsSm }
     }
 }

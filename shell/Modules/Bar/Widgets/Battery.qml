@@ -8,17 +8,15 @@ BarChip {
     property bool barVisible: Power.hasBattery
     onClicked: Panels.toggle("control", screenName)
 
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 4
+    BarFlow {
+        spacing: Theme.barVertical ? 0 : 4
 
         FIcon {
             icon: Power.icon
             size: 18
-            rotation: 90
+            rotation: Theme.barVertical ? 0 : 90
             fill: 1
             color: Power.charging ? Theme.success : Power.percent <= 15 ? Theme.error : Theme.text
-            anchors.verticalCenter: parent.verticalCenter
 
             SequentialAnimation on opacity {
                 running: Power.percent <= 10 && !Power.charging
@@ -28,10 +26,9 @@ BarChip {
             }
         }
         FText {
-            text: Power.percent + "%"
-            font.pixelSize: Theme.fsSm
+            text: Power.percent + (Theme.barVertical ? "" : "%")
+            font.pixelSize: Theme.barVertical ? Theme.fsXs : Theme.fsSm
             font.weight: Font.DemiBold
-            anchors.verticalCenter: parent.verticalCenter
         }
     }
 }

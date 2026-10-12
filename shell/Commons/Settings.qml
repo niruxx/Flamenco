@@ -51,10 +51,13 @@ Singleton {
             }
 
             property JsonObject bar: JsonObject {
-                property string position: "top"       // top | bottom
+                property string position: "top"       // top | bottom | left | right
                 property string style: "floating"     // floating | attached | islands
                 property int height: 40
                 property string workspaceStyle: "pills" // pills | numbers | dots
+                property bool trayHidePassive: false  // hide tray icons whose app reports "passive"
+                property bool trayNativeMenus: false  // use Qt's native menus instead of themed ones
+                property int trayMaxVisible: 6        // extra icons go into an overflow drawer
                 property var left: ["launcher", "workspaces", "window"]
                 property var center: ["clock", "media"]
                 property var right: ["tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "battery", "notifications", "power"]
@@ -120,6 +123,7 @@ Singleton {
                 property bool syncFonts: true         // push shell fonts to Qt + GTK
                 property string iconTheme: ""         // "" = leave untouched
                 property string cursorTheme: ""
+                property string gtkTheme: ""          // "" = adw-gtk3 when installed, else untouched
                 property int cursorSize: 24
 
                 // Shared stylesheet options (used by both the QSS and GTK CSS generators)
@@ -132,7 +136,8 @@ Singleton {
 
                 // Qt
                 property bool qt: true
-                property string qtStyle: "Fusion"     // Fusion | Breeze | kvantum | Windows
+                property string qtStyle: "Fusion"     // any installed style, see `flamenco list-themes`
+                property string kvantumTheme: ""      // used when qtStyle is "kvantum"
                 property bool qss: true               // ship a generated stylesheet via qt5ct/qt6ct
                 property bool kdeColors: true         // also write ~/.local/share/color-schemes + kdeglobals
                 property string customQss: ""

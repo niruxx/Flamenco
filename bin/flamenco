@@ -13,6 +13,7 @@
   flamenco theme PALETTE | dark | light | toggle | list
   flamenco ipc TARGET FUNCTION [ARGS...]
   flamenco apps-theme [--json SPEC | --restore]
+  flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum themes
   flamenco doctor [--json]
   flamenco niri-config
 """
@@ -27,7 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -435,6 +436,10 @@ def apply_qt(s: Spec, m: dict) -> list[str]:
         ini_update(base / f"{ct}.conf", updates, m)
         done.append(ct)
 
+    if style.lower() == "kvantum" and s.o.get("kvantumTheme"):
+        ini_update(XDG_CONFIG / "Kvantum/kvantum.kvconfig", {"General": {"theme": s.o["kvantumTheme"]}}, m)
+        done.append("kvantum")
+
     if s.o.get("kdeColors", True):
         apply_kde(s, m)
         done.append("kde")
@@ -635,6 +640,8 @@ def apply_gtk(s: Spec, m: dict) -> list[str]:
         ini["gtk-font-name"] = f"{s.font} {s.font_size}"
     if s.o.get("iconTheme"):
         ini["gtk-icon-theme-name"] = s.o["iconTheme"]
+    if s.o.get("gtkTheme"):
+        ini["gtk-theme-name"] = s.o["gtkTheme"]
     if s.o.get("cursorTheme"):
         ini["gtk-cursor-theme-name"] = s.o["cursorTheme"]
         ini["gtk-cursor-theme-size"] = str(s.o.get("cursorSize", 24))
@@ -644,9 +651,13 @@ def apply_gtk(s: Spec, m: dict) -> list[str]:
     # gsettings drives libadwaita + the xdg portal (color-scheme is what Firefox/Chromium follow)
     iface = "org.gnome.desktop.interface"
     gsettings(iface, "color-scheme", "prefer-dark" if s.dark else "default")
-    adw3 = "adw-gtk3-dark" if s.dark else "adw-gtk3"
-    if any((p / adw3).is_dir() for p in (Path("/usr/share/themes"), XDG_DATA / "themes", HOME / ".themes")):
-        gsettings(iface, "gtk-theme", adw3)
+    gtk_theme = s.o.get("gtkTheme") or ""
+    if not gtk_theme:
+        adw3 = "adw-gtk3-dark" if s.dark else "adw-gtk3"
+        if adw3 in gtk_themes():
+            gtk_theme = adw3
+    if gtk_theme:
+        gsettings(iface, "gtk-theme", gtk_theme)
     if s.o.get("syncFonts", True):
         gsettings(iface, "font-name", f"{s.font} {s.font_size + 1}")
         gsettings(iface, "monospace-font-name", f"{s.mono} {s.font_size + 1}")
@@ -730,6 +741,102 @@ def restore() -> int:
             gs += 1
     save_manifest({"files": [], "backups": {}})
     print(f"restored {restored} file(s), removed {removed} generated file(s), reset {gs} gsettings key(s)")
+    return 0
+
+
+# ─────────────────────────────── installed themes ────────────────────────────
+
+def data_dirs() -> list[Path]:
+    dirs = [XDG_DATA] + [Path(d) for d in os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share").split(":") if d]
+    for extra in (Path("/usr/share"), Path("/usr/local/share")):
+        if extra not in dirs:
+            dirs.append(extra)
+    return dirs
+
+
+def read_index(path: Path) -> configparser.RawConfigParser:
+    cp = configparser.RawConfigParser(strict=False, interpolation=None)
+    cp.optionxform = str
+    try:
+        cp.read(path, encoding="utf-8")
+    except (configparser.Error, UnicodeDecodeError):
+        pass
+    return cp
+
+
+def icon_and_cursor_themes() -> tuple[list[dict], list[dict]]:
+    icons: dict[str, dict] = {}
+    cursors: dict[str, dict] = {}
+    roots = [HOME / ".icons"] + [d / "icons" for d in data_dirs()]
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for t in sorted(root.iterdir()):
+            if not t.is_dir() or t.name in ("default", "hicolor", "locolor"):
+                continue
+            idx = read_index(t / "index.theme")
+            label = idx.get("Icon Theme", "Name", fallback=t.name) if idx.has_section("Icon Theme") else t.name
+            if (t / "cursors").is_dir() and t.name not in cursors:
+                cursors[t.name] = {"value": t.name, "label": label}
+            dirs = idx.get("Icon Theme", "Directories", fallback="") if idx.has_section("Icon Theme") else ""
+            if dirs.strip() and t.name not in icons:
+                icons[t.name] = {"value": t.name, "label": label}
+    key = lambda d: d["label"].lower()
+    return sorted(icons.values(), key=key), sorted(cursors.values(), key=key)
+
+
+def gtk_themes() -> list[str]:
+    names = {"Adwaita", "HighContrast"}  # built into GTK 3
+    for root in [HOME / ".themes"] + [d / "themes" for d in data_dirs()]:
+        if root.is_dir():
+            for t in root.iterdir():
+                g = t / "gtk-3.0"
+                # skip keybinding-only themes (Default, Emacs) that ship just gtk-keys.css
+                if any((g / f).exists() for f in ("gtk.css", "gtk-dark.css", "gtk.gresource")):
+                    names.add(t.name)
+    return sorted(names, key=str.lower)
+
+
+def qt_styles() -> list[str]:
+    styles = ["Fusion", "Windows"]
+    plugin_dirs = []
+    if shutil.which("qtpaths6"):
+        r = subprocess.run(["qtpaths6", "--query", "QT_INSTALL_PLUGINS"], capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip():
+            plugin_dirs.append(Path(r.stdout.strip()) / "styles")
+    plugin_dirs += [Path("/usr/lib/qt6/plugins/styles"), Path("/usr/lib64/qt6/plugins/styles")]
+    known = {"breeze": "Breeze", "kvantum": "kvantum", "oxygen": "Oxygen", "darkly": "Darkly",
+             "lightly": "Lightly", "klassy": "Klassy", "qt6ct-style": "qt6ct-style", "adwaita": "Adwaita"}
+    for d in plugin_dirs:
+        if not d.is_dir():
+            continue
+        for f in d.glob("*.so"):
+            base = f.stem.lower().removeprefix("lib")
+            name = next((v for k, v in known.items() if k in base), None)
+            if name and name not in styles:
+                styles.append(name)
+    return styles
+
+
+def kvantum_themes() -> list[str]:
+    names = set()
+    for root in [XDG_CONFIG / "Kvantum"] + [d / "Kvantum" for d in data_dirs()]:
+        if root.is_dir():
+            for t in root.iterdir():
+                if t.is_dir() and any(t.glob("*.kvconfig")):
+                    names.add(t.name)
+    return sorted(names, key=str.lower)
+
+
+def cmd_list_themes(args: list[str]) -> int:
+    icons, cursors = icon_and_cursor_themes()
+    out = {"icons": icons, "cursors": cursors, "gtk": gtk_themes(), "qtStyles": qt_styles(), "kvantum": kvantum_themes()}
+    if "--json" in args:
+        print(json.dumps(out))
+    else:
+        for k, v in out.items():
+            names = [x["value"] if isinstance(x, dict) else x for x in v]
+            print(f"{k}: {', '.join(names) or '(none)'}")
     return 0
 
 
@@ -877,6 +984,8 @@ def main(argv: list[str]) -> int:
         return ipc("theme", "palette", a)
     if cmd == "apps-theme":
         return cmd_apps_theme(rest)
+    if cmd == "list-themes":
+        return cmd_list_themes(rest)
     if cmd == "doctor":
         return cmd_doctor(rest)
     if cmd == "niri-config":

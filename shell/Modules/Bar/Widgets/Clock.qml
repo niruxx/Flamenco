@@ -3,31 +3,30 @@ import qs.Commons
 import qs.Services
 import qs.Widgets
 
+// Horizontal: "14:05 • Sat 11 Oct". Vertical: hours over minutes.
 BarChip {
     property string screenName
     highlighted: Panels.current === "calendar"
     onClicked: Panels.toggle("calendar", screenName)
 
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 8
+    BarFlow {
+        spacing: Theme.barVertical ? -2 : 8
 
         FText {
-            text: Time.time
+            text: Theme.barVertical ? Time.hours : Time.time
             font.weight: Font.Bold
-            font.pixelSize: Theme.fsMd
-            anchors.verticalCenter: parent.verticalCenter
         }
         Rectangle {
+            visible: !Theme.barVertical
             width: 4; height: 4; radius: 2
             color: Theme.accent
-            anchors.verticalCenter: parent.verticalCenter
         }
         FText {
-            text: Time.shortDate
-            dim: true
-            font.pixelSize: Theme.fsSm
-            anchors.verticalCenter: parent.verticalCenter
+            text: Theme.barVertical ? Time.minutes : Time.shortDate
+            dim: !Theme.barVertical
+            color: Theme.barVertical ? Theme.accent : Theme.textDim
+            font.weight: Theme.barVertical ? Font.Bold : Font.Normal
+            font.pixelSize: Theme.barVertical ? Theme.fsMd : Theme.fsSm
         }
     }
 }

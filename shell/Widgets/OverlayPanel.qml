@@ -70,12 +70,15 @@ PanelWindow {
     Rectangle {
         id: card
 
-        readonly property real travel: Theme.barTop ? -18 : 18
+        // which edge the card grows from: the bar's edge, or none when centered
+        readonly property string edge: root.centered ? "" : Theme.barPos
+        readonly property real travel: edge === "top" || edge === "left" ? -18 : 18
+        readonly property string hPos: edge === "left" ? "left" : edge === "right" ? "right" : root.hAlign
 
         width: root.cardWidth
         height: inner.implicitHeight + root.cardPadding * 2
-        x: root.hAlign === "left" ? Theme.gap : root.hAlign === "right" ? parent.width - width - Theme.gap : (parent.width - width) / 2
-        y: root.centered ? (parent.height - height) / 2.6 : Theme.barTop ? Theme.gap : parent.height - height - Theme.gap
+        x: hPos === "left" ? Theme.gap : hPos === "right" ? parent.width - width - Theme.gap : (parent.width - width) / 2
+        y: root.centered ? (parent.height - height) / 2.6 : edge === "bottom" ? parent.height - height - Theme.gap : Theme.gap
 
         radius: Theme.rXl
         color: Theme.panelBg
@@ -84,8 +87,12 @@ PanelWindow {
 
         opacity: root.progress
         scale: 0.94 + 0.06 * root.progress
-        transformOrigin: root.centered ? Item.Center : Theme.barTop ? Item.Top : Item.Bottom
-        transform: Translate { y: (1 - root.progress) * card.travel }
+        transformOrigin: card.edge === "top" ? Item.Top : card.edge === "bottom" ? Item.Bottom : card.edge === "left" ? Item.TopLeft : card.edge === "right" ? Item.TopRight : Item.Center
+        transform: Translate {
+            readonly property bool sideways: card.edge === "left" || card.edge === "right"
+            x: sideways ? (1 - root.progress) * card.travel : 0
+            y: sideways || card.edge === "" ? 0 : (1 - root.progress) * card.travel
+        }
 
         layer.enabled: Settings.data.appearance.shadows
         layer.effect: MultiEffect {

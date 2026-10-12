@@ -20,34 +20,39 @@ Rectangle {
     readonly property int activeW: numbers ? dot : style === "dots" ? dot * 2.2 : dot * 2.8
     readonly property int gap: numbers ? 2 : 4
     readonly property int pad: numbers ? 4 : 8
+    readonly property bool vertical: Theme.barVertical
 
-    implicitWidth: row.implicitWidth + pad * 2
-    implicitHeight: capsuleH
+    implicitWidth: vertical ? capsuleH : row.implicitWidth + pad * 2
+    implicitHeight: vertical ? row.implicitHeight + pad * 2 : capsuleH
     radius: height / 2
     color: Theme.alpha(Theme.text, 0.06)
     property bool barVisible: list.length > 0
 
-    Behavior on implicitWidth { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+    Behavior on implicitWidth { enabled: !root.vertical; Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+    Behavior on implicitHeight { enabled: root.vertical; Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
     // the gliding highlight
     Rectangle {
         readonly property Item target: rep.count > 0 && root.activeIndex >= 0 ? rep.itemAt(root.activeIndex) : null
         visible: target !== null
-        x: row.x + (target?.x ?? 0)
-        width: target?.width ?? 0
-        height: root.dot
-        anchors.verticalCenter: parent.verticalCenter
+        x: root.vertical ? (parent.width - width) / 2 : row.x + (target?.x ?? 0)
+        y: root.vertical ? row.y + (target?.y ?? 0) : (parent.height - height) / 2
+        width: root.vertical ? root.dot : target?.width ?? 0
+        height: root.vertical ? target?.height ?? 0 : root.dot
         radius: root.numbers ? Theme.rXs : height / 2
         color: Theme.accent
 
         Behavior on x { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
         Behavior on width { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
+        Behavior on y { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
+        Behavior on height { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
     }
 
-    Row {
+    Grid {
         id: row
-        x: root.pad
-        anchors.verticalCenter: parent.verticalCenter
+        columns: root.vertical ? 1 : Math.max(1, root.list.length)
+        x: root.vertical ? (parent.width - width) / 2 : root.pad
+        y: root.vertical ? root.pad : (parent.height - height) / 2
         spacing: root.gap
 
         Repeater {
@@ -62,15 +67,17 @@ Rectangle {
                 readonly property bool active: info.is_active ?? false
                 readonly property bool occupied: Niri.windowsOn(info.id).length > 0
 
-                width: active ? root.activeW : root.dot
-                height: root.capsuleH
+                readonly property real main: active ? root.activeW : root.dot
+                width: root.vertical ? root.capsuleH : main
+                height: root.vertical ? main : root.capsuleH
 
-                Behavior on width { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
+                Behavior on width { enabled: !root.vertical; Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
+                Behavior on height { enabled: root.vertical; Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
 
                 Rectangle {
                     anchors.centerIn: parent
-                    width: parent.width
-                    height: root.dot
+                    width: root.vertical ? root.dot : parent.width
+                    height: root.vertical ? parent.height : root.dot
                     radius: root.numbers ? Theme.rXs : height / 2
                     scale: hover.hovered && !ws.active ? 1.25 : 1
                     color: ws.active ? "transparent" : root.numbers ? (ws.occupied ? Theme.alpha(Theme.text, 0.12) : "transparent") : ws.occupied ? Theme.alpha(Theme.text, 0.55) : Theme.alpha(Theme.text, 0.2)

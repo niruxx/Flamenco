@@ -1,14 +1,14 @@
 import QtQuick
-import QtQuick.Layouts
 import qs.Commons
 import qs.Services
 import qs.Widgets
 
-RowLayout {
+// Focused window: icon + title (icon only on a vertical bar).
+BarFlow {
     id: root
     readonly property var win: Niri.focusedWindow
-    spacing: 8
     property bool barVisible: win !== null
+    spacing: 8
 
     AppIcon {
         implicitSize: 18
@@ -16,7 +16,8 @@ RowLayout {
     }
 
     FText {
-        Layout.maximumWidth: 280
+        visible: !Theme.barVertical
+        width: Math.min(implicitWidth, 280)
         text: root.win?.title ?? ""
         elide: Text.ElideRight
         font.pixelSize: Theme.fsSm

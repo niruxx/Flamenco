@@ -26,6 +26,8 @@ Singleton {
                 syncFonts: cfg.syncFonts,
                 iconTheme: cfg.iconTheme,
                 cursorTheme: cfg.cursorTheme,
+                gtkTheme: cfg.gtkTheme,
+                kvantumTheme: cfg.kvantumTheme,
                 cursorSize: cfg.cursorSize,
                 scrollbars: cfg.scrollbars,
                 buttons: cfg.buttons,
@@ -43,6 +45,29 @@ Singleton {
                 customGtkCss: cfg.customGtkCss
             }
         })
+
+    // Installed themes for the settings dropdowns (`flamenco list-themes --json`).
+    property var installed: ({ icons: [], cursors: [], gtk: [], qtStyles: ["Fusion"], kvantum: [] })
+    property bool scanning: lister.running
+
+    function refreshInstalled() {
+        if (!lister.running)
+            lister.running = true;
+    }
+
+    Process {
+        id: lister
+        command: [Paths.bin, "list-themes", "--json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.installed = JSON.parse(text);
+                } catch (e) {
+                    console.warn("[AppTheming] list-themes failed:", e);
+                }
+            }
+        }
+    }
 
     onSpecChanged: if (cfg.autoApply && Settings.ready) debounce.restart()
 

@@ -7,10 +7,9 @@ BarChip {
     property bool barVisible: Niri.layouts.length > 1
     onClicked: Niri.action("switch-layout", "next")
 
-    Row {
-        anchors.verticalCenter: parent.verticalCenter
+    BarFlow {
         spacing: 4
-        FIcon { icon: "keyboard"; size: 16; anchors.verticalCenter: parent.verticalCenter }
+        FIcon { visible: !Theme.barVertical; icon: "keyboard"; size: 16 }
         FText {
             text: {
                 const l = Niri.currentLayout;
@@ -19,7 +18,6 @@ BarChip {
             }
             font.pixelSize: Theme.fsSm
             font.weight: Font.Bold
-            anchors.verticalCenter: parent.verticalCenter
         }
     }
 }

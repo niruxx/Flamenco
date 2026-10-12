@@ -109,7 +109,11 @@ Singleton {
 
     // ── Bar ──
     readonly property var barCfg: Settings.data.bar
-    readonly property bool barTop: barCfg.position !== "bottom"
+    readonly property string barPos: ["top", "bottom", "left", "right"].includes(barCfg.position) ? barCfg.position : "top"
+    readonly property bool barVertical: barPos === "left" || barPos === "right"
+    // panels hang from the top unless the bar is at the bottom
+    readonly property bool barTop: barPos !== "bottom"
+    // bar thickness (height when horizontal, width when vertical)
     readonly property int barHeight: Math.round(barCfg.height * scale)
     readonly property int barMargin: barCfg.style === "attached" ? 0 : gap
 

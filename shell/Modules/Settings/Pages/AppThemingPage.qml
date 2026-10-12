@@ -10,6 +10,10 @@ Page {
     title: "App Theming"
     subtitle: "Style Qt and GTK applications with the shell palette. Flamenco writes qt5ct/qt6ct color schemes and stylesheets, a KDE color scheme, and GTK 3/4 CSS. Your own files are backed up before the first change."
     readonly property var o: Settings.data.apps
+    readonly property var inst: AppTheming.installed
+    readonly property var keep: [{ value: "", label: "Leave unchanged" }]
+
+    Component.onCompleted: AppTheming.refreshInstalled()
 
     RowLayout {
         Layout.fillWidth: true
@@ -99,8 +103,15 @@ Page {
         title: "General"
         SwitchRow { title: "Apply automatically"; subtitle: "Re-theme apps whenever the palette or these options change"; icon: "autorenew"; target: page.o; key: "autoApply" }
         SwitchRow { title: "Sync fonts"; subtitle: "Use the shell's interface and monospace fonts in apps"; icon: "font_download"; target: page.o; key: "syncFonts" }
-        TextRow { title: "Icon theme"; subtitle: "Leave empty to keep the current one"; icon: "category"; target: page.o; key: "iconTheme"; placeholder: "Papirus-Dark" }
-        TextRow { title: "Cursor theme"; icon: "arrow_selector_tool"; target: page.o; key: "cursorTheme"; placeholder: "Bibata-Modern-Classic" }
+        DropdownRow { title: "Icon theme"; subtitle: "Used by Qt and GTK apps"; icon: "category"; target: page.o; key: "iconTheme"; options: page.keep.concat(page.inst.icons) }
+        DropdownRow { title: "Cursor theme"; icon: "arrow_selector_tool"; target: page.o; key: "cursorTheme"; options: page.keep.concat(page.inst.cursors) }
+        SliderRow { visible: page.o.cursorTheme !== ""; title: "Cursor size"; icon: "straighten"; target: page.o; key: "cursorSize"; from: 16; to: 64; stepSize: 4; suffix: "px" }
+        SettingRow {
+            title: AppTheming.scanning ? "Scanning installed themes…" : "Installed themes"
+            subtitle: page.inst.icons.length + " icon · " + page.inst.cursors.length + " cursor · " + page.inst.gtk.length + " GTK · " + page.inst.qtStyles.length + " Qt styles"
+            icon: "inventory_2"
+            FIconButton { icon: "refresh"; onClicked: AppTheming.refreshInstalled() }
+        }
     }
 
     Group {
@@ -128,15 +139,23 @@ Page {
     Group {
         title: "Qt applications"
         SwitchRow { title: "Theme Qt apps"; subtitle: "Writes qt5ct + qt6ct configs. Requires QT_QPA_PLATFORMTHEME=qt6ct (see `flamenco doctor`)."; icon: "widgets"; target: page.o; key: "qt" }
-        ChoiceRow {
+        DropdownRow {
             visible: page.o.qt
             title: "Widget style"
-            subtitle: "Fusion takes the generated stylesheet best"
+            subtitle: "Installed Qt 6 styles. Fusion takes the generated stylesheet best."
             icon: "style"
             target: page.o
             key: "qtStyle"
-            segWidth: 92
-            options: [{ value: "Fusion", label: "Fusion" }, { value: "Breeze", label: "Breeze" }, { value: "kvantum", label: "Kvantum" }]
+            options: page.inst.qtStyles
+        }
+        DropdownRow {
+            visible: page.o.qt && page.o.qtStyle === "kvantum"
+            title: "Kvantum theme"
+            icon: "palette"
+            target: page.o
+            key: "kvantumTheme"
+            placeholder: page.inst.kvantum.length ? "Select…" : "No Kvantum themes found"
+            options: page.keep.concat(page.inst.kvantum)
         }
         SwitchRow { visible: page.o.qt; title: "Generated stylesheet (QSS)"; subtitle: "Rounded controls, accent focus, custom scrollbars"; icon: "css"; target: page.o; key: "qss" }
         SwitchRow { visible: page.o.qt; title: "KDE color scheme"; subtitle: "For KDE apps (Dolphin, Kate…) that read kdeglobals"; icon: "palette"; target: page.o; key: "kdeColors" }
@@ -155,6 +174,15 @@ Page {
     Group {
         title: "GTK applications"
         SwitchRow { title: "Theme GTK apps"; subtitle: "Writes ~/.config/gtk-3.0 and gtk-4.0 gtk.css and sets the dark/light preference"; icon: "widgets"; target: page.o; key: "gtk" }
+        DropdownRow {
+            visible: page.o.gtk
+            title: "Base GTK theme"
+            subtitle: "Automatic uses adw-gtk3 when installed so GTK 3 apps match libadwaita"
+            icon: "web"
+            target: page.o
+            key: "gtkTheme"
+            options: [{ value: "", label: "Automatic" }].concat(page.inst.gtk)
+        }
         SwitchRow { visible: page.o.gtk; title: "GTK 3"; icon: "looks_3"; target: page.o; key: "gtk3" }
         SwitchRow { visible: page.o.gtk; title: "GTK 4 / libadwaita"; icon: "looks_4"; target: page.o; key: "gtk4" }
         SwitchRow { visible: page.o.gtk; title: "Extra styling"; subtitle: "Apply radius, button and scrollbar options, not just colors"; icon: "auto_awesome"; target: page.o; key: "gtkExtras" }
