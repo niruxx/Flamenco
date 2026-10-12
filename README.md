@@ -6,6 +6,7 @@ A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor, built
 - [Features](#features)
 - [Getting started](#getting-started)
 - [Using the shell](#using-the-shell)
+- [Displays](#displays)
 - [Wallpapers](#wallpapers)
 - [Themes](#themes)
 - [Troubleshooting](#troubleshooting)
@@ -53,7 +54,8 @@ To regenerate these, run `tools/screenshots.sh` inside a niri session with the s
 | **Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; destructive actions need a second press |
 | **Wallpaper** | Fade, zoom, circle-reveal and wipe transitions, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **Calendar** | Month view with slide transitions, 5-day weather (Open-Meteo, no API key) |
-| **Dock** | Optional. Pinned and running apps, magnification, auto-hide |
+| **Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
+| **Displays** | Per-display resolution, refresh rate, scale, orientation (rotate and flip) and VRR; drag-to-arrange layout; live apply with 15-second auto-revert; saved to niri's config |
 | **Settings app** | Its own window (`flamenco settings`) with a page for every module. Every change applies live |
 | **App theming** | Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
 
@@ -174,7 +176,7 @@ Rearrange, add or remove widgets in **Settings → Bar**. The same page sets the
 
 ### Launcher
 
-Start typing to search apps. Results are ranked by match quality and how often you launch each app.
+Start typing to search apps. **Settings → Launcher** sets where it opens: center, top, bottom, any corner, or next to the bar. It also sets the launcher's width. Results are ranked by match quality and how often you launch each app.
 
 | Prefix | Mode |
 |---|---|
@@ -226,7 +228,13 @@ Use **Lock now** on the same page to preview your choice.
 
 ### Dock
 
-The dock is off by default. Turn it on in **Settings → Dock**.
+The dock is off by default. Turn it on in **Settings → Dock**. That page also has:
+- auto-hide, and how close to the bottom edge the pointer must be to reveal the dock
+- whether running apps that aren't pinned appear
+- magnification and icon size
+- the pinned-app list: pin apps from a dropdown of everything installed, reorder them, or remove them
+
+Pinned apps that aren't installed are hidden. A dock with auto-hide off reserves its space, and sits above a bottom bar.
 
 | Click | Action |
 |---|---|
@@ -235,6 +243,37 @@ The dock is off by default. Turn it on in **Settings → Dock**.
 | Right | pin or unpin |
 
 With auto-hide on, move the pointer to the bottom edge to reveal the dock.
+
+## Displays
+
+**Settings → Displays** (or `flamenco settings displays`) configures your monitors through niri.
+
+1. **Arrange:** drag screens on the canvas to position them. They snap to each other's edges. Click a screen to select it. Displays that are switched off are listed below the canvas.
+2. **Configure the selected display:**
+   - turn it on or off
+   - resolution (the native one is marked)
+   - refresh rate, from the rates available at that resolution
+   - scale, with the effective size shown
+   - orientation (normal, 90°, 180°, 270°) and the flip button
+   - variable refresh rate, on displays that support it
+3. **Apply:** changes take effect immediately. A **Keep these display settings?** prompt appears on every screen. Press **Keep changes** (or `Enter`) to save them, or **Revert** (or `Esc`). If you do nothing for 15 seconds, the previous settings come back on their own, so a mode your monitor can't show won't strand you.
+
+**Identify** shows each display's name on its screen.
+
+**Where it's saved:** keeping changes writes `output "NAME" { mode …; scale …; transform …; position …; }` blocks into `~/.config/niri/config.kdl`.
+- Existing `output` blocks are edited in place. Only those lines change; your other lines and comments are kept.
+- A display that's switched off gets just `off`, so its other settings survive for next time.
+- niri validates the file first.
+- A copy of your config from before the first change is kept at `~/.local/state/flamenco/backup/niri-config.before-displays.kdl`.
+
+The same operations are available from the command line:
+
+```sh
+flamenco display list          # current state of every display
+flamenco display list --json
+flamenco display apply --json '[{"name":"DP-1","mode":{"w":2560,"h":1440,"r":143998},"scale":1,"transform":"normal","x":0,"y":0}]'
+flamenco display save  --json '…'    # same format; writes niri's config
+```
 
 ## Wallpapers
 
@@ -345,6 +384,8 @@ Files written:
 | niri says `duplicate node binds` | Move the Flamenco key lines into your existing `binds { }` block |
 | Qt apps ignore the theme | `QT_QPA_PLATFORMTHEME` isn't `qt6ct`. Set it (the niri snippet does), log in again, and restart the app |
 | Cursor theme doesn't change | Press **Apply now** in **Settings → App Theming** and check `~/.config/niri/config.kdl` for the `cursor { }` block. Restart apps that were already open |
+| Dock never appears | Check **Show dock** in **Settings → Dock**. With auto-hide on, push the pointer against the bottom edge, or raise **Reveal edge**; on some VM displays the pointer can't reach the last few pixels |
+| Display change left a blank screen | Wait 15 seconds; it reverts on its own. If you already kept it, restore `~/.local/state/flamenco/backup/niri-config.before-displays.kdl` |
 | Locked in by an SDDM theme | Press **Ctrl+Alt+Shift+L** on the lock screen to switch to the built-in lock |
 | Tray menu misplaced or not opening | Turn on **Settings → Bar → Native Qt menus** |
 | The shell crashes on start | Run `flamenco run --fg` and read the error. The crash report is under `~/.cache/quickshell/crashes/` |
@@ -357,7 +398,7 @@ Files written:
 flamenco run [--fg]             start (daemonized unless --fg)
 flamenco kill | restart
 flamenco launcher | control | notifications | calendar | wallpapers | power
-flamenco settings [page]        appearance, apps, bar, dock, wallpaper, notifications, launcher, lock, clock, about
+flamenco settings [page]        appearance, apps, bar, dock, displays, wallpaper, notifications, launcher, lock, clock, about
 flamenco lock
 flamenco volume up|down|mute|mic-mute|set N
 flamenco brightness up|down|set N
@@ -365,6 +406,7 @@ flamenco media toggle|next|previous
 flamenco wallpaper [set PATH | random | next]
 flamenco theme PALETTE | dark | light | toggle | list | apply-apps
 flamenco apps-theme --json SPEC | --restore
+flamenco display list | apply --json SPEC | save --json SPEC
 flamenco list-themes [--json]   installed icon / cursor / GTK / Qt-style / Kvantum / SDDM themes
 flamenco ipc TARGET FUNCTION [ARGS...]
 flamenco doctor [--json]

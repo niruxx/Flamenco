@@ -26,6 +26,7 @@ LazyLoader {
             { id: "apps", icon: "format_paint", label: "App Theming", comp: appsC },
             { id: "bar", icon: "toolbar", label: "Bar", comp: barC },
             { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
+            { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
             { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
             { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
             { id: "launcher", icon: "apps", label: "Launcher", comp: launcherC },
@@ -39,6 +40,7 @@ LazyLoader {
         Component { id: appsC; AppThemingPage {} }
         Component { id: barC; BarPage {} }
         Component { id: dockC; DockPage {} }
+        Component { id: displaysC; DisplaysPage {} }
         Component { id: wallpaperC; WallpaperPage {} }
         Component { id: notifC; NotificationsPage {} }
         Component { id: launcherC; LauncherPage {} }

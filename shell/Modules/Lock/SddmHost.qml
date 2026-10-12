@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Services
+import qs.Widgets
 
 // Runs an SDDM greeter theme as the lock screen.
 //

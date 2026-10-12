@@ -13,6 +13,7 @@
   flamenco theme PALETTE | dark | light | toggle | list
   flamenco ipc TARGET FUNCTION [ARGS...]
   flamenco apps-theme [--json SPEC | --restore]
+  flamenco display list | apply --json SPEC | save --json SPEC
   flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
   flamenco doctor [--json]
   flamenco niri-config
@@ -28,7 +29,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -742,16 +743,25 @@ def kdl_mask(text: str) -> str:
     return "".join(out)
 
 
-def kdl_block(text: str, name: str):
-    """(start, open_brace, close_brace) of a top-level `name { … }` node, or None."""
+def kdl_block(text: str, name: str, arg: str | None = None):
+    """(start, open_brace, close_brace) of a top-level `name [arg] { … }` node, or None.
+
+    `arg` matches the node's first string argument (case-insensitively), e.g.
+    kdl_block(text, "output", "eDP-1") finds `output "eDP-1" { … }`.
+    """
     import re
     masked = kdl_mask(text)
     depth = 0
-    starts = {m.start(): m for m in re.finditer(r"(?m)^[ \t]*" + re.escape(name) + r"\s*\{", masked)}
+    starts = {m.start(): m for m in re.finditer(r"(?m)^[ \t]*" + re.escape(name) + r"(?=[\s{])[^{\n]*\{", masked)}
     for i, ch in enumerate(masked):
         if i in starts and depth == 0:
             m = starts[i]
             open_i = m.end() - 1
+            if arg is not None:
+                header = text[m.start():open_i]
+                q = re.search(r'"((?:[^"\\]|\\.)*)"', header)
+                if not q or q.group(1).lower() != arg.lower():
+                    continue
             d = 0
             for j in range(open_i, len(masked)):
                 if masked[j] == "{":
@@ -772,23 +782,22 @@ def kdl_quote(v: str) -> str:
     return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def cursor_line_values(text: str, block) -> dict:
+def block_line_values(text: str, block, keys) -> dict:
+    """key -> (start, end, line text) for direct child lines of `block`."""
     import re
     _, o, c = block
     inner = kdl_mask(text)[o + 1:c]
     vals = {}
-    for key in ("xcursor-theme", "xcursor-size"):
-        m = re.search(r"(?m)^[ \t]*" + key + r"\b[^\n]*", inner)
+    for key in keys:
+        m = re.search(r"(?m)^[ \t]*" + re.escape(key) + r"(?=[\s;{]|$)[^\n]*", inner)
         if m:
             vals[key] = (o + 1 + m.start(), o + 1 + m.end(), text[o + 1 + m.start():o + 1 + m.end()].strip())
     return vals
 
 
-def set_cursor_lines(text: str, wanted: dict) -> str:
-    """wanted: key -> new line text, or None to delete that line. Requires an existing cursor block."""
-    block = kdl_block(text, "cursor")
-    vals = cursor_line_values(text, block)
-    # edit from the end so offsets stay valid
+def set_block_lines(text: str, block, wanted: dict) -> str:
+    """wanted: key -> new line text, or None to delete that line."""
+    vals = block_line_values(text, block, wanted.keys())
     edits = []
     for key, line in wanted.items():
         if key in vals:
@@ -803,9 +812,18 @@ def set_cursor_lines(text: str, wanted: dict) -> str:
         elif line is not None:
             o = block[1]
             edits.append((o + 1, o + 1, "\n    " + line))
+    # edit from the end so offsets stay valid
     for a, b, rep in sorted(edits, reverse=True):
         text = text[:a] + rep + text[b:]
     return text
+
+
+def cursor_line_values(text: str, block) -> dict:
+    return block_line_values(text, block, ("xcursor-theme", "xcursor-size"))
+
+
+def set_cursor_lines(text: str, wanted: dict) -> str:
+    return set_block_lines(text, kdl_block(text, "cursor"), wanted)
 
 
 def niri_validate(path: Path) -> bool:
@@ -877,6 +895,169 @@ def restore_niri_cursor(m: dict):
     else:
         new = set_cursor_lines(text, {k: state.get(k) for k in ("xcursor-theme", "xcursor-size")})
     NIRI_CONFIG.write_text(new)
+
+
+# ─────────────────────────────── displays ────────────────────────────────────
+# Live changes go through `niri msg output …` (temporary); `save` persists them
+# as `output "NAME" { … }` blocks in niri's config.
+
+TRANSFORMS = ["normal", "90", "180", "270", "flipped", "flipped-90", "flipped-180", "flipped-270"]
+OUTPUT_MARK = "// flamenco: display settings (managed by Settings → Displays)"
+
+
+def norm_transform(t) -> str:
+    """niri IPC uses Normal / _90 / 90 / Flipped90 …; config and `niri msg` use normal / 90 / flipped-90 …"""
+    t = str(t or "normal").lower().lstrip("_")
+    if t.startswith("flipped") and t != "flipped" and not t.startswith("flipped-"):
+        t = "flipped-" + t[len("flipped"):].lstrip("_")
+    return t if t in TRANSFORMS else "normal"
+
+
+def fmt_mode(m: dict) -> str:
+    return f"{int(m['w'])}x{int(m['h'])}@{int(m['r']) / 1000:.3f}"
+
+
+def fmt_scale(v) -> str:
+    v = round(float(v), 2)
+    return str(int(v)) if v == int(v) else f"{v:g}"
+
+
+def display_list(raw_json: str | None = None) -> list[dict]:
+    if raw_json is None:
+        if not shutil.which("niri"):
+            die("niri is not installed")
+        r = subprocess.run(["niri", "msg", "--json", "outputs"], capture_output=True, text=True)
+        if r.returncode != 0:
+            die("could not query niri outputs: " + (r.stderr.strip() or "is niri running?"))
+        raw_json = r.stdout
+    data = json.loads(raw_json)
+    outs = data.values() if isinstance(data, dict) else data
+    result = []
+    for o in outs:
+        modes = [{"w": m["width"], "h": m["height"], "r": m["refresh_rate"], "preferred": bool(m.get("is_preferred"))}
+                 for m in o.get("modes", [])]
+        cur = o.get("current_mode")
+        logical = o.get("logical")
+        enabled = cur is not None and logical is not None
+        result.append({
+            "name": o["name"],
+            "make": o.get("make") or "",
+            "model": o.get("model") or "",
+            "modes": modes,
+            "current": modes[cur] if enabled and cur < len(modes) else None,
+            "enabled": enabled,
+            "x": logical["x"] if logical else 0,
+            "y": logical["y"] if logical else 0,
+            "logicalW": logical["width"] if logical else 0,
+            "logicalH": logical["height"] if logical else 0,
+            "scale": logical["scale"] if logical else 1.0,
+            "transform": norm_transform(logical["transform"] if logical else "normal"),
+            "vrrSupported": bool(o.get("vrr_supported")),
+            "vrrEnabled": bool(o.get("vrr_enabled")),
+            "physical": o.get("physical_size"),
+        })
+    return sorted(result, key=lambda d: (d["x"], d["y"], d["name"]))
+
+
+def display_commands(spec: list[dict]) -> list[list[str]]:
+    """niri msg invocations for a layout; outputs are switched on and moded before positioning."""
+    cmds, later = [], []
+    for o in spec:
+        base = ["niri", "msg", "output", o["name"]]
+        if not o.get("enabled", True):
+            cmds.append(base + ["off"])
+            continue
+        cmds.append(base + ["on"])
+        if o.get("mode"):
+            cmds.append(base + ["mode", fmt_mode(o["mode"])])
+        if o.get("scale"):
+            cmds.append(base + ["scale", fmt_scale(o["scale"])])
+        cmds.append(base + ["transform", norm_transform(o.get("transform"))])
+        if o.get("vrrSupported", True) and "vrr" in o:
+            cmds.append(base + ["vrr", "on" if o["vrr"] else "off"])
+        later.append(base + ["position", "set", str(int(o.get("x", 0))), str(int(o.get("y", 0)))])
+    return cmds + later
+
+
+def display_apply(spec: list[dict]) -> int:
+    failed = 0
+    for c in display_commands(spec):
+        r = subprocess.run(c, capture_output=True, text=True)
+        if r.returncode != 0:
+            failed += 1
+            print(f"flamenco: {' '.join(c[3:])}: {r.stderr.strip() or 'failed'}", file=sys.stderr)
+    return 1 if failed else 0
+
+
+def display_config_text(text: str, spec: list[dict]) -> str:
+    for o in spec:
+        wanted = {
+            "off": None if o.get("enabled", True) else "off",
+            "mode": f"mode {kdl_quote(fmt_mode(o['mode']))}" if o.get("mode") else None,
+            "scale": f"scale {fmt_scale(o['scale'])}" if o.get("scale") else None,
+            "transform": f"transform {kdl_quote(norm_transform(o.get('transform')))}",
+            "position": f"position x={int(o.get('x', 0))} y={int(o.get('y', 0))}",
+        }
+        if o.get("vrrSupported") and "vrr" in o:
+            wanted["variable-refresh-rate"] = "variable-refresh-rate" if o["vrr"] else None
+        if not o.get("enabled", True):
+            wanted = {"off": "off"}     # keep the display's other settings for when it's re-enabled
+        block = kdl_block(text, "output", o["name"])
+        if block is None:
+            lines = [v for v in wanted.values() if v]
+            body = "".join(f"\n    {l}" for l in lines)
+            text = text.rstrip("\n") + f"\n\n{OUTPUT_MARK}\noutput {kdl_quote(o['name'])} {{{body}\n}}\n"
+        else:
+            text = set_block_lines(text, block, wanted)
+    return text
+
+
+def display_save(spec: list[dict]) -> int:
+    if not NIRI_CONFIG.is_file():
+        die(f"{NIRI_CONFIG} not found")
+    text = NIRI_CONFIG.read_text()
+    backup = BACKUP_DIR / "niri-config.before-displays.kdl"
+    if not backup.exists():
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        backup.write_text(text)
+    new = display_config_text(text, spec)
+    if new == text:
+        print("displays: config already up to date")
+        return 0
+    tmp = NIRI_CONFIG.with_suffix(".kdl.flamenco-tmp")
+    tmp.write_text(new)
+    if not niri_validate(tmp):
+        tmp.unlink()
+        die("niri rejected the display settings; config.kdl left untouched")
+    tmp.replace(NIRI_CONFIG)
+    print(f"displays: saved to {NIRI_CONFIG} (first-time backup: {backup})")
+    return 0
+
+
+def cmd_display(args: list[str]) -> int:
+    sub = args[0] if args else "list"
+    if sub == "list":
+        raw = Path(args[args.index("--from") + 1]).read_text() if "--from" in args else None
+        outs = display_list(raw)
+        if "--json" in args:
+            print(json.dumps(outs))
+        else:
+            for o in outs:
+                state = f"{fmt_mode(o['current'])} scale {fmt_scale(o['scale'])} {o['transform']} at {o['x']},{o['y']}" if o["enabled"] else "off"
+                print(f"{o['name']:<10} {(o['make'] + ' ' + o['model']).strip():<30} {state}")
+        return 0
+    if "--json" not in args or args.index("--json") + 1 >= len(args):
+        die(f"usage: flamenco display {sub} --json SPEC")
+    spec = json.loads(args[args.index("--json") + 1])
+    if sub == "apply":
+        return display_apply(spec)
+    if sub == "save":
+        return display_save(spec)
+    if sub == "commands":   # dry run, for debugging
+        for c in display_commands(spec):
+            print(" ".join(c))
+        return 0
+    die("usage: flamenco display list | apply --json SPEC | save --json SPEC")
 
 
 # ─────────────────────────────── apps-theme ──────────────────────────────────
@@ -1213,6 +1394,8 @@ def main(argv: list[str]) -> int:
         return ipc("theme", "palette", a)
     if cmd == "apps-theme":
         return cmd_apps_theme(rest)
+    if cmd == "display":
+        return cmd_display(rest)
     if cmd == "list-themes":
         return cmd_list_themes(rest)
     if cmd == "doctor":

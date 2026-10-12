@@ -20,6 +20,7 @@ import qs.Modules.WallpaperPicker
 import qs.Modules.Session
 import qs.Modules.Lock
 import qs.Modules.Settings
+import qs.Modules.Displays
 
 ShellRoot {
     id: shell
@@ -45,6 +46,8 @@ ShellRoot {
     WallpaperPicker {}
     PowerMenu {}
     SettingsWindow {}
+    Identify {}
+    ConfirmChanges {}
     Lock { id: lock }
 
     // ── IPC: `flamenco ipc <target> <function> [args]` / `qs -p … ipc call …` ──

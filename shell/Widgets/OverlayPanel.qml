@@ -16,6 +16,10 @@ PanelWindow {
     property string name
     property string hAlign: "center"     // left | center | right
     property bool centered: false        // vertically centered instead of hugging the bar
+    // Explicit screen placement, overriding centered/hAlign:
+    // center | top | bottom | top-left | top-right | bottom-left | bottom-right | bar
+    property string placement: ""
+    readonly property string place: placement !== "" ? placement : centered ? "center" : "bar"
     property bool exclusiveKeyboard: false
     property int cardWidth: 420
     property int cardPadding: Theme.sp4
@@ -71,14 +75,14 @@ PanelWindow {
         id: card
 
         // which edge the card grows from: the bar's edge, or none when centered
-        readonly property string edge: root.centered ? "" : Theme.barPos
+        readonly property string edge: root.place === "bar" ? Theme.barPos : root.place === "center" ? "" : root.place.startsWith("bottom") ? "bottom" : "top"
         readonly property real travel: edge === "top" || edge === "left" ? -18 : 18
-        readonly property string hPos: edge === "left" ? "left" : edge === "right" ? "right" : root.hAlign
+        readonly property string hPos: root.place === "bar" ? (edge === "left" || edge === "right" ? edge : root.hAlign) : root.place.endsWith("left") ? "left" : root.place.endsWith("right") ? "right" : "center"
 
-        width: root.cardWidth
+        width: Math.min(root.cardWidth, parent.width - Theme.gap * 2)
         height: inner.implicitHeight + root.cardPadding * 2
         x: hPos === "left" ? Theme.gap : hPos === "right" ? parent.width - width - Theme.gap : (parent.width - width) / 2
-        y: root.centered ? (parent.height - height) / 2.6 : edge === "bottom" ? parent.height - height - Theme.gap : Theme.gap
+        y: root.place === "center" ? (parent.height - height) / 2.6 : edge === "bottom" ? parent.height - height - Theme.gap : Theme.gap
 
         radius: Theme.rXl
         color: Theme.panelBg

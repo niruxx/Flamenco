@@ -76,12 +76,16 @@ Singleton {
                 property bool enabled: false
                 property bool autoHide: true
                 property bool magnify: true
+                property bool showRunning: true       // also show running apps that aren't pinned
+                property int revealSize: 6            // px of the bottom edge that reveals an auto-hidden dock
                 property int iconSize: 48
                 property var pinned: ["firefox", "org.kde.dolphin", "kitty"]
             }
 
             property JsonObject launcher: JsonObject {
                 property int maxResults: 8
+                property string position: "center"    // center | top | bottom | top-left | top-right | bottom-left | bottom-right | bar
+                property int width: 600
                 property bool calculator: true
                 property bool clipboard: true
             }

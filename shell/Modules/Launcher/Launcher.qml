@@ -13,9 +13,11 @@ Variants {
     OverlayPanel {
         id: panel
         name: "launcher"
-        centered: true
+        // Settings → Launcher → Position; "bar" opens next to the bar's start (where the launcher button is)
+        placement: Settings.data.launcher.position
+        hAlign: "left"
         exclusiveKeyboard: true
-        cardWidth: 600
+        cardWidth: Settings.data.launcher.width
 
         property string query: ""
         readonly property string mode: query.startsWith("=") && Settings.data.launcher.calculator ? "calc" : query.startsWith(">") ? "run" : query.startsWith(";") && Settings.data.launcher.clipboard ? "clip" : "apps"
