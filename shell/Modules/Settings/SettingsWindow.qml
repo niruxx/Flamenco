@@ -46,129 +46,186 @@ LazyLoader {
         Component { id: clockC; ClockPage {} }
         Component { id: aboutC; AboutPage {} }
 
-        RowLayout {
+        ColumnLayout {
             anchors.fill: parent
             spacing: 0
 
-            // ── sidebar ──
+            // ── title bar ──
             Rectangle {
-                Layout.fillHeight: true
-                Layout.preferredWidth: 248
+                Layout.fillWidth: true
+                Layout.preferredHeight: 52
                 color: Theme.surface
 
-                ColumnLayout {
+                RowLayout {
                     anchors.fill: parent
-                    anchors.margins: Theme.sp4
-                    spacing: 4
+                    anchors.leftMargin: Theme.sp4
+                    anchors.rightMargin: 10
+                    spacing: 10
 
-                    RowLayout {
-                        Layout.bottomMargin: Theme.sp4
-                        Layout.leftMargin: 6
-                        spacing: 10
-                        Rectangle {
-                            width: 36; height: 36; radius: Theme.rMd
-                            gradient: Gradient {
-                                GradientStop { position: 0; color: Theme.accent }
-                                GradientStop { position: 1; color: Theme.accent2 }
-                            }
-                            FIcon { anchors.centerIn: parent; icon: "local_fire_department"; fill: 1; color: Theme.onAccent }
+                    Rectangle {
+                        Layout.preferredWidth: 30
+                        Layout.preferredHeight: 30
+                        radius: Theme.rSm
+                        gradient: Gradient {
+                            GradientStop { position: 0; color: Theme.accent }
+                            GradientStop { position: 1; color: Theme.accent2 }
                         }
-                        ColumnLayout {
-                            spacing: -2
-                            FText { text: "Flamenco"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
-                            FText { text: "Settings"; dim: true; font.pixelSize: Theme.fsSm }
-                        }
+                        FIcon { anchors.centerIn: parent; icon: "local_fire_department"; size: 18; fill: 1; color: Theme.onAccent }
                     }
-
+                    FText {
+                        text: "Flamenco Settings"
+                        font.pixelSize: Theme.fsLg
+                        font.weight: Font.Bold
+                    }
+                    FIcon {
+                        icon: "chevron_right"
+                        size: 18
+                        color: Theme.textDim
+                    }
+                    // current page, cross-fading on change
                     Item {
                         Layout.fillWidth: true
-                        implicitHeight: nav.implicitHeight
-
-                        // gliding selection
-                        Rectangle {
-                            width: parent.width
-                            height: 42
-                            y: win.index * 46
-                            radius: Theme.rMd
-                            color: Theme.accent
-                            Behavior on y { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
-                        }
-
-                        Column {
-                            id: nav
-                            width: parent.width
-                            spacing: 4
-                            Repeater {
-                                model: win.pages
-                                Item {
-                                    required property var modelData
-                                    required property int index
-                                    readonly property bool sel: win.index === index
-                                    width: nav.width
-                                    height: 42
-
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.leftMargin: 14
-                                        spacing: 12
-                                        FIcon {
-                                            icon: modelData.icon
-                                            fill: sel ? 1 : 0
-                                            color: sel ? Theme.onAccent : Theme.text
-                                        }
-                                        FText {
-                                            Layout.fillWidth: true
-                                            text: modelData.label
-                                            font.weight: sel ? Font.Bold : Font.Normal
-                                            color: sel ? Theme.onAccent : Theme.text
-                                        }
-                                    }
-                                    StateLayer {
-                                        radius: Theme.rMd
-                                        tint: sel ? Theme.onAccent : Theme.text
-                                        onClicked: Panels.settingsPage = modelData.id
-                                    }
+                        Layout.fillHeight: true
+                        FText {
+                            id: crumb
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: win.pages[win.index].label
+                            dim: true
+                            Behavior on text {
+                                SequentialAnimation {
+                                    NumberAnimation { target: crumb; property: "opacity"; to: 0; duration: Theme.durShort }
+                                    PropertyAction {}
+                                    NumberAnimation { target: crumb; property: "opacity"; to: 1; duration: Theme.durShort }
                                 }
                             }
                         }
                     }
-
-                    Item { Layout.fillHeight: true }
-
-                    FText {
-                        Layout.leftMargin: 6
-                        text: "Changes apply instantly"
-                        dim: true
-                        font.pixelSize: Theme.fsXs
+                    FIconButton {
+                        icon: "close"
+                        size: 32
+                        iconSize: 18
+                        iconColor: hovered ? Theme.onAccent : Theme.text
+                        activeColor: Theme.error
+                        active: hovered
+                        onClicked: Panels.settingsOpen = false
                     }
+                }
+
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    width: parent.width
+                    height: 1
+                    color: Theme.border
+                    opacity: 0.6
                 }
             }
 
-            // ── page ──
-            Item {
+            RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                clip: true
+                spacing: 0
 
-                Loader {
-                    id: loader
-                    anchors.fill: parent
-                    sourceComponent: win.pages[win.index].comp
-                    property real enter: 1
-                    opacity: enter
-                    transform: Translate { y: (1 - loader.enter) * 24 }
-                    onSourceComponentChanged: {
-                        enter = 0;
-                        enterAnim.restart();
+                // ── sidebar ──
+                Rectangle {
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 248
+                    color: Theme.surface
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: Theme.sp4
+                        spacing: 4
+
+                        Item {
+                            Layout.fillWidth: true
+                            implicitHeight: nav.implicitHeight
+
+                            // gliding selection
+                            Rectangle {
+                                width: parent.width
+                                height: 42
+                                y: win.index * 46
+                                radius: Theme.rMd
+                                color: Theme.accent
+                                Behavior on y { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
+                            }
+
+                            Column {
+                                id: nav
+                                width: parent.width
+                                spacing: 4
+                                Repeater {
+                                    model: win.pages
+                                    Item {
+                                        required property var modelData
+                                        required property int index
+                                        readonly property bool sel: win.index === index
+                                        width: nav.width
+                                        height: 42
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 14
+                                            spacing: 12
+                                            FIcon {
+                                                icon: modelData.icon
+                                                fill: sel ? 1 : 0
+                                                color: sel ? Theme.onAccent : Theme.text
+                                            }
+                                            FText {
+                                                Layout.fillWidth: true
+                                                text: modelData.label
+                                                font.weight: sel ? Font.Bold : Font.Normal
+                                                color: sel ? Theme.onAccent : Theme.text
+                                            }
+                                        }
+                                        StateLayer {
+                                            radius: Theme.rMd
+                                            tint: sel ? Theme.onAccent : Theme.text
+                                            onClicked: Panels.settingsPage = modelData.id
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Item { Layout.fillHeight: true }
+
+                        FText {
+                            Layout.leftMargin: 6
+                            text: "Changes apply instantly"
+                            dim: true
+                            font.pixelSize: Theme.fsXs
+                        }
                     }
-                    NumberAnimation {
-                        id: enterAnim
-                        target: loader
-                        property: "enter"
-                        to: 1
-                        duration: Theme.durLong
-                        easing.type: Easing.BezierSpline
-                        easing.bezierCurve: Theme.curves.emphasizedDecel
+                }
+
+                // ── page ──
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+
+                    Loader {
+                        id: loader
+                        anchors.fill: parent
+                        sourceComponent: win.pages[win.index].comp
+                        property real enter: 1
+                        opacity: enter
+                        transform: Translate { y: (1 - loader.enter) * 24 }
+                        onSourceComponentChanged: {
+                            enter = 0;
+                            enterAnim.restart();
+                        }
+                        NumberAnimation {
+                            id: enterAnim
+                            target: loader
+                            property: "enter"
+                            to: 1
+                            duration: Theme.durLong
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Theme.curves.emphasizedDecel
+                        }
                     }
                 }
             }

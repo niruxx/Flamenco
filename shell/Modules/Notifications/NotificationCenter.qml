@@ -50,12 +50,6 @@ Variants {
                     spacing: 8
                     opacity: Notifs.history.count === 0 ? 1 : 0
                     Behavior on opacity { Anim {} }
-                    FIcon {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        icon: "notifications_paused"
-                        size: 56
-                        color: Theme.textDim
-                    }
                     FText {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "You're all caught up"

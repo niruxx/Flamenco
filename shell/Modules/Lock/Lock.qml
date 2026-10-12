@@ -17,13 +17,34 @@ Scope {
     property string errorText: ""
     property int shakeCount: 0
 
+    readonly property var cfg: Settings.data.lock
+    // SDDM theme folder to show, or "" for the built-in lock
+    readonly property string sddmDir: cfg.backend !== "sddm" ? "" : cfg.sddmThemePath ? Paths.expand(cfg.sddmThemePath) : cfg.sddmTheme ? (cfg.sddmTheme.startsWith("/") ? cfg.sddmTheme : "/usr/share/sddm/themes/" + cfg.sddmTheme) : ""
+    // set when an SDDM theme fails or the emergency shortcut is used
+    property bool fallback: false
+    property string fallbackReason: ""
+
     function lock() {
+        if (cfg.backend === "command" && cfg.command.trim() !== "") {
+            Quickshell.execDetached(["sh", "-c", cfg.command]);
+            return;
+        }
         if (locked)
             return;
         buffer = "";
         errorText = "";
         unlocking = false;
+        fallback = false;
+        fallbackReason = "";
         locked = true;
+    }
+
+    function useFallback(reason) {
+        if (fallback)
+            return;
+        console.warn("[Lock] using built-in lock screen:", reason);
+        fallbackReason = reason;
+        fallback = true;
     }
 
     function submit() {
@@ -73,10 +94,34 @@ Scope {
         locked: root.locked
 
         WlSessionLockSurface {
+            id: surface
             color: "black"
-            LockSurface {
+
+            Loader {
                 anchors.fill: parent
-                ctx: root
+                focus: true
+                sourceComponent: root.sddmDir !== "" && !root.fallback ? sddmC : builtinC
+            }
+
+            Component {
+                id: builtinC
+                LockSurface { ctx: root }
+            }
+
+            Component {
+                id: sddmC
+                SddmHost {
+                    ctx: root
+                    themeDir: root.sddmDir
+                    onFailed: reason => root.useFallback(reason)
+                }
+            }
+
+            // Escape hatch if an SDDM theme misbehaves: always reach the built-in lock.
+            Shortcut {
+                sequence: "Ctrl+Alt+Shift+L"
+                context: Qt.WindowShortcut
+                onActivated: root.useFallback("emergency shortcut")
             }
         }
     }

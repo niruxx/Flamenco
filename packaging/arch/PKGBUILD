@@ -2,7 +2,7 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.2.0
+pkgver=0.3.0
 pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
@@ -33,6 +33,8 @@ package() {
     find "$pkgdir/usr/share/flamenco-shell" -type f -exec chmod 644 {} +
     find "$pkgdir/usr/share/flamenco-shell" -type d -exec chmod 755 {} +
     install -Dm644 "$src/examples/niri-flamenco.kdl" "$pkgdir/usr/share/flamenco-shell/examples/niri-flamenco.kdl"
+    install -Dm644 "$src/data/flamenco-settings.desktop" "$pkgdir/usr/share/applications/flamenco-settings.desktop"
+    install -Dm644 "$src/data/flamenco-settings.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/flamenco-settings.svg"
     install -Dm644 "$src/README.md" "$pkgdir/usr/share/doc/flamenco-shell/README.md"
     install -Dm644 "$src/shell/assets/fonts/MaterialSymbols-LICENSE.txt" "$pkgdir/usr/share/licenses/flamenco-shell/MaterialSymbols-LICENSE.txt"
 }

@@ -10,16 +10,20 @@ install:
 	cp -r shell $(SHARE)/
 	install -m 755 bin/flamenco $(SHARE)/flamenco
 	ln -sf $(SHARE)/flamenco $(BIN)/flamenco
+	install -Dm644 data/flamenco-settings.desktop $(PREFIX)/share/applications/flamenco-settings.desktop
+	install -Dm644 data/flamenco-settings.svg $(PREFIX)/share/icons/hicolor/scalable/apps/flamenco-settings.svg
 	@echo "Installed. Add the output of 'flamenco niri-config' to ~/.config/niri/config.kdl"
 
 # Symlink instead of copying, so edits in this checkout are live (Quickshell hot-reloads).
 dev:
 	install -d $(BIN)
 	ln -sf $(CURDIR)/bin/flamenco $(BIN)/flamenco
+	install -Dm644 data/flamenco-settings.desktop $(PREFIX)/share/applications/flamenco-settings.desktop
+	install -Dm644 data/flamenco-settings.svg $(PREFIX)/share/icons/hicolor/scalable/apps/flamenco-settings.svg
 	@echo "Linked $(BIN)/flamenco -> $(CURDIR)/bin/flamenco"
 
 uninstall:
-	rm -f $(BIN)/flamenco
+	rm -f $(BIN)/flamenco $(PREFIX)/share/applications/flamenco-settings.desktop $(PREFIX)/share/icons/hicolor/scalable/apps/flamenco-settings.svg
 	rm -rf $(SHARE)
 
 run:

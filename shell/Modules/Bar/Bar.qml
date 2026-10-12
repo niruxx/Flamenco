@@ -64,6 +64,7 @@ Variants {
                 battery: batteryC,
                 notifications: notifC,
                 weather: weatherC,
+                quicksettings: quickC,
                 power: powerC
             })
 
@@ -75,13 +76,14 @@ Variants {
         Component { id: trayC; Tray { window: win } }
         Component { id: statsC; SysStats {} }
         Component { id: keyboardC; KeyboardLayout {} }
-        Component { id: networkC; StatusIcon { screenName: win.modelData.name; icon: Network.icon; tip: Network.label } }
-        Component { id: bluetoothC; StatusIcon { screenName: win.modelData.name; icon: BluetoothState.icon; barVisible: BluetoothState.available } }
+        Component { id: networkC; StatusIcon { screenName: win.modelData.name; icon: Network.icon; tip: Network.label; detail: "wifi" } }
+        Component { id: bluetoothC; StatusIcon { screenName: win.modelData.name; icon: BluetoothState.icon; barVisible: BluetoothState.available; detail: "bluetooth" } }
         Component { id: audioC; AudioIcon { screenName: win.modelData.name } }
         Component { id: brightnessC; BrightnessIcon { screenName: win.modelData.name } }
         Component { id: batteryC; Battery { screenName: win.modelData.name } }
         Component { id: notifC; NotifBell { screenName: win.modelData.name } }
         Component { id: weatherC; WeatherChip { screenName: win.modelData.name } }
+        Component { id: quickC; FIconButton { icon: "menu"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name) } }
         Component { id: powerC; FIconButton { icon: "power_settings_new"; size: Theme.barHeight - 10; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name) } }
 
         Item {

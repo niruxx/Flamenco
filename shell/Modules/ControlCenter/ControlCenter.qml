@@ -15,8 +15,7 @@ Variants {
         hAlign: "right"
         cardWidth: 440
 
-        property string detail: ""
-        onShouldShowChanged: if (!shouldShow) detail = ""
+        readonly property string detail: Panels.controlDetail
 
         ColumnLayout {
             width: parent.width
@@ -44,7 +43,7 @@ Variants {
 
                     SlidersCard {
                         Layout.fillWidth: true
-                        onOpenDetail: d => panel.detail = d
+                        onOpenDetail: d => Panels.controlDetail = d
                     }
 
                     GridLayout {
@@ -62,7 +61,7 @@ Variants {
                             hasDetails: true
                             onClicked: Network.setWifi(!Network.wifiEnabled)
                             onDetailsClicked: {
-                                panel.detail = "wifi";
+                                Panels.controlDetail = "wifi";
                                 Network.scan(true);
                             }
                         }
@@ -74,7 +73,7 @@ Variants {
                             active: BluetoothState.enabled
                             hasDetails: BluetoothState.available
                             onClicked: BluetoothState.setEnabled(!BluetoothState.enabled)
-                            onDetailsClicked: panel.detail = "bluetooth"
+                            onDetailsClicked: Panels.controlDetail = "bluetooth"
                         }
                         FTile {
                             Layout.fillWidth: true
@@ -143,9 +142,9 @@ Variants {
             }
         }
 
-        Component { id: wifiC; WifiPage { onBack: panel.detail = "" } }
-        Component { id: btC; BluetoothPage { onBack: panel.detail = "" } }
-        Component { id: audioC; AudioDevicesPage { onBack: panel.detail = ""; input: false } }
-        Component { id: micC; AudioDevicesPage { onBack: panel.detail = ""; input: true } }
+        Component { id: wifiC; WifiPage { onBack: Panels.controlDetail = "" } }
+        Component { id: btC; BluetoothPage { onBack: Panels.controlDetail = "" } }
+        Component { id: audioC; AudioDevicesPage { onBack: Panels.controlDetail = ""; input: false } }
+        Component { id: micC; AudioDevicesPage { onBack: Panels.controlDetail = ""; input: true } }
     }
 }

@@ -19,16 +19,25 @@ Singleton {
         path: Paths.configDir + "/settings.json"
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: root.ready = true
+        onLoaded: {
+            root.migrate();
+            root.ready = true;
+        }
         onLoadFailed: err => {
-            if (err === FileViewError.FileNotFound)
+            if (err === FileViewError.FileNotFound) {
+                adapter.configVersion = root.currentVersion;
                 writeAdapter();
+            }
             root.ready = true;
         }
         onAdapterUpdated: saveTimer.restart()
 
         JsonAdapter {
             id: adapter
+
+            // bumped when defaults change in a way existing configs should pick up
+            // 0 = written before versioning existed; new files get currentVersion
+            property int configVersion: 0
 
             property JsonObject general: JsonObject {
                 property bool use24h: true
@@ -60,7 +69,7 @@ Singleton {
                 property int trayMaxVisible: 6        // extra icons go into an overflow drawer
                 property var left: ["launcher", "workspaces", "window"]
                 property var center: ["clock", "media"]
-                property var right: ["tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "battery", "notifications", "power"]
+                property var right: ["tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings", "power"]
             }
 
             property JsonObject dock: JsonObject {
@@ -104,6 +113,10 @@ Singleton {
                 property int idleMinutes: 10
                 property int screenOffMinutes: 15
                 property bool showMedia: true
+                property string backend: "flamenco"  // flamenco | sddm | command
+                property string sddmTheme: ""         // theme folder (full path, or a name under /usr/share/sddm/themes)
+                property string sddmThemePath: ""     // or any folder containing an SDDM theme (overrides sddmTheme)
+                property string command: ""           // e.g. "hyprlock" or "swaylock -f"
             }
 
             property JsonObject weather: JsonObject {
@@ -157,6 +170,27 @@ Singleton {
         id: saveTimer
         interval: 400
         onTriggered: file.writeAdapter()
+    }
+
+    readonly property int currentVersion: 2
+
+    // One-time upgrades for settings files written by older versions.
+    function migrate() {
+        const v = adapter.configVersion || 1;
+        if (v >= currentVersion)
+            return;
+        if (v < 2) {
+            // 0.3: quick-settings button next to power
+            const b = adapter.bar;
+            const used = (b.left || []).concat(b.center || [], b.right || []);
+            if (!used.includes("quicksettings")) {
+                const r = (b.right || []).slice();
+                const i = r.indexOf("power");
+                r.splice(i >= 0 ? i : r.length, 0, "quicksettings");
+                b.right = r;
+            }
+        }
+        adapter.configVersion = currentVersion;
     }
 
     // Helpers for list-valued settings (JsonAdapter needs reassignment to notice changes).

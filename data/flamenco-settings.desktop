@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Flamenco Settings
+GenericName=Desktop Settings
+Comment=Configure the Flamenco shell: appearance, bar, wallpaper, app theming and more
+Exec=flamenco settings
+Icon=flamenco-settings
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=flamenco;shell;theme;wallpaper;bar;appearance;lock;cursor;
+StartupNotify=false

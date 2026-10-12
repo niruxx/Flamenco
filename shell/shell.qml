@@ -1,5 +1,7 @@
 //@ pragma UseQApplication
 //@ pragma Env QS_NO_RELOAD_POPUP=1
+// the settings window draws its own title bar
+//@ pragma Env QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 
 import QtQuick
 import Quickshell

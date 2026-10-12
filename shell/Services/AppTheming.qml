@@ -47,7 +47,7 @@ Singleton {
         })
 
     // Installed themes for the settings dropdowns (`flamenco list-themes --json`).
-    property var installed: ({ icons: [], cursors: [], gtk: [], qtStyles: ["Fusion"], kvantum: [] })
+    property var installed: ({ icons: [], cursors: [], gtk: [], qtStyles: ["Fusion"], kvantum: [], sddm: [] })
     property bool scanning: lister.running
 
     function refreshInstalled() {

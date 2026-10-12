@@ -13,7 +13,7 @@
   flamenco theme PALETTE | dark | light | toggle | list
   flamenco ipc TARGET FUNCTION [ARGS...]
   flamenco apps-theme [--json SPEC | --restore]
-  flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum themes
+  flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
   flamenco doctor [--json]
   flamenco niri-config
 """
@@ -28,7 +28,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -103,6 +103,23 @@ def cmd_run(args: list[str]) -> int:
     if "--fg" in args:
         os.execvpe(cmd[0], cmd, env)
     return subprocess.run(cmd, env=env).returncode
+
+
+def is_running() -> bool:
+    return qs("ipc", "call", "theme", "list", capture=True).returncode == 0
+
+
+def ensure_running(timeout: float = 8.0):
+    if is_running():
+        return
+    cmd_run([])
+    import time
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        time.sleep(0.3)
+        if is_running():
+            return
+    die("the shell did not start (try `flamenco run --fg` to see why)")
 
 
 def cmd_kill() -> int:
@@ -677,6 +694,191 @@ def nearest_gnome_accent(color: str) -> str:
     return min(accents, key=lambda k: sum((x - y) ** 2 for x, y in zip((r, g, b), hex_to_rgb(accents[k]))))
 
 
+# ─────────────────────────────── cursor (niri) ───────────────────────────────
+# niri draws the pointer for most clients (cursor-shape protocol), from the
+# `cursor { xcursor-theme … }` block in its config, so toolkit settings alone
+# don't change what you see.
+
+NIRI_CONFIG = XDG_CONFIG / "niri/config.kdl"
+CURSOR_MARK = "// flamenco: cursor theme (managed by Settings → App Theming)"
+
+
+def kdl_mask(text: str) -> str:
+    """Blank out comments and strings (keeping offsets and newlines) so only real code is matched."""
+    out = list(text)
+    i, n = 0, len(text)
+
+    def blank(a, b):
+        for k in range(a, b):
+            if out[k] != "\n":
+                out[k] = " "
+
+    while i < n:
+        c = text[i]
+        if text.startswith("//", i):
+            j = text.find("\n", i)
+            j = n if j < 0 else j
+            blank(i, j)
+            i = j
+        elif text.startswith("/*", i):
+            depth, j = 1, i + 2
+            while j < n and depth:
+                if text.startswith("/*", j):
+                    depth, j = depth + 1, j + 2
+                elif text.startswith("*/", j):
+                    depth, j = depth - 1, j + 2
+                else:
+                    j += 1
+            blank(i, j)
+            i = j
+        elif c == '"':
+            j = i + 1
+            while j < n and text[j] != '"':
+                j += 2 if text[j] == "\\" else 1
+            blank(i, min(n, j + 1))
+            i = j + 1
+        else:
+            i += 1
+    return "".join(out)
+
+
+def kdl_block(text: str, name: str):
+    """(start, open_brace, close_brace) of a top-level `name { … }` node, or None."""
+    import re
+    masked = kdl_mask(text)
+    depth = 0
+    starts = {m.start(): m for m in re.finditer(r"(?m)^[ \t]*" + re.escape(name) + r"\s*\{", masked)}
+    for i, ch in enumerate(masked):
+        if i in starts and depth == 0:
+            m = starts[i]
+            open_i = m.end() - 1
+            d = 0
+            for j in range(open_i, len(masked)):
+                if masked[j] == "{":
+                    d += 1
+                elif masked[j] == "}":
+                    d -= 1
+                    if d == 0:
+                        return m.start(), open_i, j
+            return None
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+    return None
+
+
+def kdl_quote(v: str) -> str:
+    return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def cursor_line_values(text: str, block) -> dict:
+    import re
+    _, o, c = block
+    inner = kdl_mask(text)[o + 1:c]
+    vals = {}
+    for key in ("xcursor-theme", "xcursor-size"):
+        m = re.search(r"(?m)^[ \t]*" + key + r"\b[^\n]*", inner)
+        if m:
+            vals[key] = (o + 1 + m.start(), o + 1 + m.end(), text[o + 1 + m.start():o + 1 + m.end()].strip())
+    return vals
+
+
+def set_cursor_lines(text: str, wanted: dict) -> str:
+    """wanted: key -> new line text, or None to delete that line. Requires an existing cursor block."""
+    block = kdl_block(text, "cursor")
+    vals = cursor_line_values(text, block)
+    # edit from the end so offsets stay valid
+    edits = []
+    for key, line in wanted.items():
+        if key in vals:
+            a, b, _ = vals[key]
+            if line is None:
+                # drop the whole line including its newline
+                a = text.rfind("\n", 0, a) + 1
+                b = b + 1 if b < len(text) and text[b] == "\n" else b
+                edits.append((a, b, ""))
+            else:
+                edits.append((a, b, "    " + line))
+        elif line is not None:
+            o = block[1]
+            edits.append((o + 1, o + 1, "\n    " + line))
+    for a, b, rep in sorted(edits, reverse=True):
+        text = text[:a] + rep + text[b:]
+    return text
+
+
+def niri_validate(path: Path) -> bool:
+    if not shutil.which("niri"):
+        return True
+    r = subprocess.run(["niri", "validate", "-c", str(path)], capture_output=True, text=True)
+    return r.returncode == 0
+
+
+def apply_cursor(s: "Spec", m: dict) -> list[str]:
+    theme = s.o.get("cursorTheme") or ""
+    if not theme:
+        return []
+    size = int(s.o.get("cursorSize", 24))
+    done = []
+
+    # 1) niri's own cursor
+    if NIRI_CONFIG.is_file():
+        text = NIRI_CONFIG.read_text()
+        state = m.setdefault("niriCursor", None)
+        block = kdl_block(text, "cursor")
+        if state is None:
+            if block is None:
+                state = {"added": True}
+            else:
+                v = cursor_line_values(text, block)
+                state = {"added": False,
+                         "xcursor-theme": v.get("xcursor-theme", (0, 0, None))[2],
+                         "xcursor-size": v.get("xcursor-size", (0, 0, None))[2]}
+            m["niriCursor"] = state
+        if block is None:
+            new = text.rstrip("\n") + f"\n\n{CURSOR_MARK}\ncursor {{\n    xcursor-theme {kdl_quote(theme)}\n    xcursor-size {size}\n}}\n"
+        else:
+            new = set_cursor_lines(text, {"xcursor-theme": f"xcursor-theme {kdl_quote(theme)}", "xcursor-size": f"xcursor-size {size}"})
+        if new != text:
+            tmp = NIRI_CONFIG.with_suffix(".kdl.flamenco-tmp")
+            tmp.write_text(new)
+            if niri_validate(tmp):
+                tmp.replace(NIRI_CONFIG)
+                done.append("niri-cursor")
+            else:
+                tmp.unlink()
+                print("flamenco: niri rejected the cursor change; left config.kdl untouched", file=sys.stderr)
+        else:
+            done.append("niri-cursor")
+
+    # 2) default cursor for X11 / XWayland apps and anything reading the icon-theme fallback
+    write(XDG_DATA / "icons/default/index.theme",
+          f"# {MARKER}\n[Icon Theme]\nName=Default\nComment=Default cursor theme\nInherits={theme}\n", m)
+    done.append("xcursor")
+    return done
+
+
+def restore_niri_cursor(m: dict):
+    state = m.get("niriCursor")
+    if not state or not NIRI_CONFIG.is_file():
+        return
+    text = NIRI_CONFIG.read_text()
+    block = kdl_block(text, "cursor")
+    if block is None:
+        return
+    if state.get("added"):
+        start, _, close = block
+        mark_at = text.rfind(CURSOR_MARK, 0, start)
+        if mark_at >= 0 and text[mark_at:start].strip() == CURSOR_MARK:
+            start = mark_at
+        end = close + 1
+        new = text[:start].rstrip("\n") + "\n" + text[end:].lstrip("\n")
+    else:
+        new = set_cursor_lines(text, {k: state.get(k) for k in ("xcursor-theme", "xcursor-size")})
+    NIRI_CONFIG.write_text(new)
+
+
 # ─────────────────────────────── apps-theme ──────────────────────────────────
 
 def cmd_apps_theme(args: list[str]) -> int:
@@ -706,6 +908,7 @@ def cmd_apps_theme(args: list[str]) -> int:
             done += apply_qt(spec, m)
         if spec.o.get("gtk", True):
             done += apply_gtk(spec, m)
+        done += apply_cursor(spec, m)
     finally:
         save_manifest(m)
     print("themed: " + (", ".join(done) or "nothing (Qt and GTK disabled)"))
@@ -730,6 +933,7 @@ def restore() -> int:
         if p.exists() and f not in m.get("backups", {}):
             p.unlink()
             removed += 1
+    restore_niri_cursor(m)
     gs = 0
     if shutil.which("gsettings"):
         for k, v in m.get("gsettings", {}).items():
@@ -828,9 +1032,32 @@ def kvantum_themes() -> list[str]:
     return sorted(names, key=str.lower)
 
 
+def sddm_themes() -> list[dict]:
+    """SDDM greeter themes, usable as Flamenco lock screens."""
+    found: dict[str, dict] = {}
+    for root in [XDG_DATA / "sddm/themes"] + [d / "sddm/themes" for d in data_dirs()]:
+        if not root.is_dir():
+            continue
+        for t in sorted(root.iterdir()):
+            meta = t / "metadata.desktop"
+            if t.name in found or not meta.is_file():
+                continue
+            cp = read_index(meta)
+            sec = "SddmGreeterTheme"
+            name = cp.get(sec, "Name", fallback=t.name) if cp.has_section(sec) else t.name
+            qt = cp.get(sec, "QtVersion", fallback="5") if cp.has_section(sec) else "5"
+            main = cp.get(sec, "MainScript", fallback="Main.qml") if cp.has_section(sec) else "Main.qml"
+            if not (t / main).is_file():
+                continue
+            label = name if qt.strip() == "6" else f"{name} (Qt 5, may not load)"
+            found[t.name] = {"value": t.name, "label": label, "path": str(t), "qt": qt.strip()}
+    return sorted(found.values(), key=lambda d: d["label"].lower())
+
+
 def cmd_list_themes(args: list[str]) -> int:
     icons, cursors = icon_and_cursor_themes()
-    out = {"icons": icons, "cursors": cursors, "gtk": gtk_themes(), "qtStyles": qt_styles(), "kvantum": kvantum_themes()}
+    out = {"icons": icons, "cursors": cursors, "gtk": gtk_themes(), "qtStyles": qt_styles(), "kvantum": kvantum_themes(),
+           "sddm": sddm_themes()}
     if "--json" in args:
         print(json.dumps(out))
     else:
@@ -953,6 +1180,8 @@ def main(argv: list[str]) -> int:
     if cmd in PANELS:
         return ipc(PANELS[cmd], rest[0] if rest else "toggle")
     if cmd == "settings":
+        # launched from a desktop entry: start the shell first if needed
+        ensure_running()
         return ipc("settings", "open", rest[0] if rest else "")
     if cmd == "lock":
         return ipc("lock", "lock")

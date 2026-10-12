@@ -9,6 +9,8 @@ DetailPage {
     title: "Wi-Fi"
     property string askFor: ""
 
+    Component.onCompleted: Network.scan(true)
+
     headerExtra: [
         FIconButton {
             icon: "refresh"
