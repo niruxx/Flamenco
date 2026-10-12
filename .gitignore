@@ -1,0 +1,4 @@
+__pycache__/
+*.flamenco-tmp
+.qmlls.ini
+dist/

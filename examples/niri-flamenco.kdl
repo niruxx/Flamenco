@@ -1,0 +1,38 @@
+// ── Flamenco Shell: part 1, top level of ~/.config/niri/config.kdl ──
+// (remove any other shell's spawn-at-startup line, e.g. "dms run")
+spawn-at-startup "flamenco" "run"
+
+environment {
+    QT_QPA_PLATFORMTHEME "qt6ct"
+}
+
+// let the wallpaper show behind niri's overview
+layer-rule {
+    match namespace="^flamenco-wallpaper$"
+    place-within-backdrop true
+}
+
+// settings app floats by default
+window-rule {
+    match title="^Flamenco Settings$"
+    open-floating true
+}
+
+// ── Flamenco Shell: part 2, paste INSIDE your existing `binds { }` block ──
+// (niri allows only one binds block; drop any line whose key you already use)
+    Mod+Space        hotkey-overlay-title="Launcher"       { spawn "flamenco" "launcher"; }
+    Mod+A            hotkey-overlay-title="Control center" { spawn "flamenco" "control"; }
+    Mod+N            hotkey-overlay-title="Notifications"  { spawn "flamenco" "notifications"; }
+    Mod+Comma        hotkey-overlay-title="Settings"       { spawn "flamenco" "settings"; }
+    Mod+W            hotkey-overlay-title="Wallpapers"     { spawn "flamenco" "wallpapers"; }
+    Mod+Escape       hotkey-overlay-title="Power menu"     { spawn "flamenco" "power"; }
+    Super+Alt+L      hotkey-overlay-title="Lock"           { spawn "flamenco" "lock"; }
+
+// Optional: media keys through flamenco (only if you don't already bind them).
+// Your existing wpctl/brightnessctl binds work fine; the OSD follows PipeWire either way.
+//  XF86AudioRaiseVolume  allow-when-locked=true { spawn "flamenco" "volume" "up"; }
+//  XF86AudioLowerVolume  allow-when-locked=true { spawn "flamenco" "volume" "down"; }
+//  XF86AudioMute         allow-when-locked=true { spawn "flamenco" "volume" "mute"; }
+//  XF86MonBrightnessUp   allow-when-locked=true { spawn "flamenco" "brightness" "up"; }
+//  XF86MonBrightnessDown allow-when-locked=true { spawn "flamenco" "brightness" "down"; }
+

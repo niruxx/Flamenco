@@ -1,0 +1,38 @@
+# Maintainer: niruxxdaboi
+#
+# Builds from this local checkout:  cd packaging/arch && makepkg -si
+pkgname=flamenco-shell
+pkgver=0.1.0
+pkgrel=4
+pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
+arch=('any')
+url="https://github.com/niruxx/flamenco-shell"
+license=('unknown' 'Apache-2.0')  # Apache-2.0: bundled Material Symbols font
+depends=('quickshell' 'niri' 'python' 'qt6-declarative')
+optdepends=(
+    'networkmanager: network status and Wi-Fi control'
+    'brightnessctl: screen brightness'
+    'matugen: colors from wallpaper'
+    'cliphist: clipboard history in the launcher'
+    'wl-clipboard: copy from launcher / clipboard'
+    'gammastep: night light'
+    'qt5ct: theme Qt 5 apps'
+    'qt6ct: theme Qt 6 apps'
+    'adw-gtk-theme: libadwaita look for GTK 3 apps'
+    'power-profiles-daemon: power profile tile'
+    'upower: battery status'
+    'bluez: Bluetooth'
+)
+install=flamenco-shell.install
+
+package() {
+    local src="$startdir/../.."
+    install -Dm755 "$src/bin/flamenco" "$pkgdir/usr/bin/flamenco"
+    install -d "$pkgdir/usr/share/flamenco-shell"
+    cp -r --no-preserve=ownership "$src/shell" "$pkgdir/usr/share/flamenco-shell/"
+    find "$pkgdir/usr/share/flamenco-shell" -type f -exec chmod 644 {} +
+    find "$pkgdir/usr/share/flamenco-shell" -type d -exec chmod 755 {} +
+    install -Dm644 "$src/examples/niri-flamenco.kdl" "$pkgdir/usr/share/flamenco-shell/examples/niri-flamenco.kdl"
+    install -Dm644 "$src/README.md" "$pkgdir/usr/share/doc/flamenco-shell/README.md"
+    install -Dm644 "$src/shell/assets/fonts/MaterialSymbols-LICENSE.txt" "$pkgdir/usr/share/licenses/flamenco-shell/MaterialSymbols-LICENSE.txt"
+}

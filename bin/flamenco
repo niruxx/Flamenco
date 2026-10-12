@@ -1,0 +1,889 @@
+#!/usr/bin/env python3
+"""flamenco: launcher, IPC client and app-theming backend for Flamenco Shell.
+
+  flamenco run                 start the shell (daemonized unless --fg)
+  flamenco kill | restart
+  flamenco launcher|control|notifications|calendar|wallpapers|power
+  flamenco settings [page]
+  flamenco lock
+  flamenco volume up|down|mute|mic-mute|set N
+  flamenco brightness up|down|set N
+  flamenco media toggle|next|previous
+  flamenco wallpaper set PATH | random | next
+  flamenco theme PALETTE | dark | light | toggle | list
+  flamenco ipc TARGET FUNCTION [ARGS...]
+  flamenco apps-theme [--json SPEC | --restore]
+  flamenco doctor [--json]
+  flamenco niri-config
+"""
+
+from __future__ import annotations
+
+import configparser
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+VERSION = "0.1.0"
+MARKER = "flamenco-generated"
+
+HOME = Path.home()
+XDG_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
+XDG_DATA = Path(os.environ.get("XDG_DATA_HOME", HOME / ".local/share"))
+XDG_STATE = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local/state"))
+XDG_CACHE = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache"))
+CONFIG_DIR = XDG_CONFIG / "flamenco"
+STATE_DIR = XDG_STATE / "flamenco"
+BACKUP_DIR = STATE_DIR / "backup"
+MANIFEST = STATE_DIR / "generated.json"
+
+
+# ─────────────────────────────── shell process ───────────────────────────────
+
+def self_path() -> str:
+    return str(Path(__file__).resolve())
+
+
+def shell_dir() -> Path:
+    here = Path(__file__).resolve().parent
+    candidates = [
+        os.environ.get("FLAMENCO_SHELL_DIR"),
+        here.parent / "shell",
+        here.parent / "share/flamenco-shell/shell",
+        XDG_DATA / "flamenco-shell/shell",
+        Path("/usr/share/flamenco-shell/shell"),
+    ]
+    for c in candidates:
+        if c and (Path(c) / "shell.qml").is_file():
+            return Path(c)
+    die("could not find the shell directory (set FLAMENCO_SHELL_DIR)")
+
+
+def qs_bin() -> str:
+    for name in ("qs", "quickshell"):
+        p = shutil.which(name)
+        if p:
+            return p
+    die("quickshell is not installed (looked for `qs` and `quickshell`)")
+
+
+def die(msg: str, code: int = 1):
+    print(f"flamenco: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def qs(*args: str, capture: bool = False) -> subprocess.CompletedProcess:
+    cmd = [qs_bin(), "-p", str(shell_dir()), *args]
+    return subprocess.run(cmd, text=True, capture_output=capture)
+
+
+def ipc(target: str, fn: str, *args: str) -> int:
+    r = qs("ipc", "call", target, fn, *args, capture=True)
+    if r.stdout.strip():
+        print(r.stdout.strip())
+    if r.returncode != 0:
+        err = r.stderr.strip() or "IPC call failed"
+        if "No running instances" in err or "no running" in err.lower():
+            err = "the shell is not running (start it with `flamenco run`)"
+        die(err, r.returncode)
+    return 0
+
+
+def cmd_run(args: list[str]) -> int:
+    for d in (CONFIG_DIR, STATE_DIR, XDG_CACHE / "flamenco"):
+        d.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, FLAMENCO_BIN=self_path())
+    cmd = [qs_bin(), "-p", str(shell_dir()), "--no-duplicate"]
+    if "--fg" not in args:
+        cmd.append("--daemonize")
+    if "--fg" in args:
+        os.execvpe(cmd[0], cmd, env)
+    return subprocess.run(cmd, env=env).returncode
+
+
+def cmd_kill() -> int:
+    return qs("kill").returncode
+
+
+# ─────────────────────────────── color helpers ───────────────────────────────
+
+def hex_to_rgb(h: str) -> tuple[int, int, int]:
+    h = h.lstrip("#")
+    if len(h) == 8:  # AARRGGBB
+        h = h[2:]
+    return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+
+def rgb_to_hex(rgb) -> str:
+    return "#{:02x}{:02x}{:02x}".format(*(max(0, min(255, round(c))) for c in rgb))
+
+
+def mix(a: str, b: str, t: float) -> str:
+    ra, rb = hex_to_rgb(a), hex_to_rgb(b)
+    return rgb_to_hex(tuple(x * (1 - t) + y * t for x, y in zip(ra, rb)))
+
+
+def shade(c: str, amount: float) -> str:
+    """amount > 0 lightens towards white, < 0 darkens towards black."""
+    return mix(c, "#ffffff", amount) if amount >= 0 else mix(c, "#000000", -amount)
+
+
+def rgba(c: str, a: float) -> str:
+    r, g, b = hex_to_rgb(c)
+    return f"rgba({r}, {g}, {b}, {a:.2f})"
+
+
+def kde_rgb(c: str) -> str:
+    return ",".join(str(x) for x in hex_to_rgb(c))
+
+
+def argb(c: str) -> str:
+    return "#ff" + c.lstrip("#")[-6:]
+
+
+# ─────────────────────────────── theme model ─────────────────────────────────
+
+class Spec:
+    def __init__(self, raw: dict):
+        self.raw = raw
+        self.name = raw.get("name", "flamenco")
+        self.dark = bool(raw.get("dark", True))
+        c = {k: str(v) for k, v in raw.get("colors", {}).items()}
+        missing = {"bg", "surface", "surfaceHigh", "surfaceHighest", "border", "text", "textDim", "accent", "onAccent"} - c.keys()
+        if missing:
+            die(f"theme spec is missing colors: {', '.join(sorted(missing))}")
+        c.setdefault("accent2", c["accent"])
+        c.setdefault("error", "#e5534b")
+        c.setdefault("warning", "#d29922")
+        c.setdefault("success", "#57ab5a")
+        self.c = c
+        self.radius = int(raw.get("radius", 8))
+        self.font = raw.get("fontFamily", "Inter")
+        self.mono = raw.get("monoFamily", "monospace")
+        self.font_size = int(raw.get("fontSize", 10))
+        o = raw.get("options", {})
+        self.o = o
+        self.contrast = float(o.get("contrast", 0.0))
+        self.buttons = o.get("buttons", "soft")
+        self.scrollbars = o.get("scrollbars", "thin")
+        self.accent_sel = bool(o.get("accentSelection", True))
+
+        # Derived app-level surfaces. "contrast" pushes view/base further from window.
+        k = 0.06 + 0.06 * self.contrast
+        sign = -1 if self.dark else 1
+        self.window = c["surface"]
+        self.view = shade(c["bg"], sign * max(0.0, 0.5 * self.contrast) * 0.08) if self.dark else shade(c["surface"], 0.4 + 0.3 * self.contrast)
+        self.card = c["surfaceHigh"]
+        self.button = c["surfaceHigh"] if self.buttons == "soft" else self.window
+        self.button_hover = c["surfaceHighest"]
+        self.header = shade(self.window, sign * k)
+        self.sidebar = shade(self.window, sign * k * 0.5)
+        self.selection = c["accent"] if self.accent_sel else c["surfaceHighest"]
+        self.selection_fg = c["onAccent"] if self.accent_sel else c["text"]
+        self.disabled_fg = mix(c["text"], self.window, 0.55)
+
+
+# ─────────────────────────────── file helpers ────────────────────────────────
+
+def load_manifest() -> dict:
+    try:
+        return json.loads(MANIFEST.read_text())
+    except Exception:
+        return {"files": [], "backups": {}, "gsettings": {}}
+
+
+def save_manifest(m: dict):
+    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    MANIFEST.write_text(json.dumps(m, indent=2))
+
+
+def backup_once(path: Path, manifest: dict):
+    """Back up a user file the first time we touch it (and never our own output)."""
+    key = str(path)
+    if key in manifest["backups"] or key in manifest["files"]:
+        return
+    if path.exists():
+        try:
+            if MARKER in path.read_text(errors="ignore")[:400]:
+                return
+        except Exception:
+            pass
+        dest = BACKUP_DIR / path.relative_to(HOME) if path.is_relative_to(HOME) else BACKUP_DIR / path.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+        manifest["backups"][key] = str(dest)
+    else:
+        manifest["backups"][key] = None  # didn't exist: restore = delete
+
+
+def write(path: Path, content: str, manifest: dict, generated: bool = True):
+    backup_once(path, manifest)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".flamenco-tmp")
+    tmp.write_text(content)
+    tmp.replace(path)
+    if generated and str(path) not in manifest["files"]:
+        manifest["files"].append(str(path))
+
+
+def ini_read(path: Path) -> configparser.RawConfigParser:
+    cp = configparser.RawConfigParser(strict=False, interpolation=None, delimiters=("=",))
+    cp.optionxform = str  # keep key case
+    if path.exists():
+        try:
+            cp.read(path)
+        except configparser.Error:
+            pass
+    return cp
+
+
+def ini_update(path: Path, updates: dict[str, dict[str, str | None]], manifest: dict):
+    cp = ini_read(path)
+    for section, kv in updates.items():
+        if not cp.has_section(section):
+            cp.add_section(section)
+        for k, v in kv.items():
+            if v is None:
+                cp.remove_option(section, k)
+            else:
+                cp.set(section, k, v)
+    from io import StringIO
+    buf = StringIO()
+    cp.write(buf, space_around_delimiters=False)
+    write(path, buf.getvalue(), manifest, generated=False)
+
+
+# ─────────────────────────────── Qt ──────────────────────────────────────────
+
+QPALETTE_ROLES = ["WindowText", "Button", "Light", "Midlight", "Dark", "Mid", "Text", "BrightText", "ButtonText",
+                  "Base", "Window", "Shadow", "Highlight", "HighlightedText", "Link", "LinkVisited", "AlternateBase",
+                  "NoRole", "ToolTipBase", "ToolTipText", "PlaceholderText", "Accent"]
+
+
+def qt_palette(s: Spec, group: str) -> str:
+    c = s.c
+    text = c["text"]
+    if group == "disabled":
+        text = s.disabled_fg
+    hl = s.selection if group != "inactive" else mix(s.selection, s.window, 0.35)
+    roles = {
+        "WindowText": text,
+        "Button": s.button,
+        "Light": shade(c["surfaceHighest"], 0.08 if s.dark else 0.5),
+        "Midlight": c["surfaceHighest"],
+        "Dark": shade(s.window, -0.35),
+        "Mid": c["border"],
+        "Text": text,
+        "BrightText": "#ffffff" if s.dark else "#000000",
+        "ButtonText": text,
+        "Base": s.view,
+        "Window": s.window,
+        "Shadow": "#000000",
+        "Highlight": hl,
+        "HighlightedText": s.selection_fg,
+        "Link": c["accent"],
+        "LinkVisited": c.get("accent3", c["accent2"]),
+        "AlternateBase": mix(s.view, s.card, 0.5),
+        "NoRole": s.window,
+        "ToolTipBase": c["surfaceHighest"],
+        "ToolTipText": c["text"],
+        "PlaceholderText": c["textDim"],
+        "Accent": c["accent"],
+    }
+    return ", ".join(argb(roles[r]) for r in QPALETTE_ROLES)
+
+
+def qt_colors_conf(s: Spec) -> str:
+    return (f"# {MARKER}: palette '{s.name}'\n[ColorScheme]\n"
+            f"active_colors={qt_palette(s, 'active')}\n"
+            f"disabled_colors={qt_palette(s, 'disabled')}\n"
+            f"inactive_colors={qt_palette(s, 'inactive')}\n")
+
+
+def qss(s: Spec) -> str:
+    c, r = s.c, s.radius
+    btn_bg = {"soft": s.button, "flat": "transparent", "outlined": "transparent"}[s.buttons]
+    btn_border = f"1px solid {c['border']}" if s.buttons == "outlined" else "none"
+    focus = c["accent"] if s.accent_sel else c["border"]
+    sb_w = {"thin": 8, "overlay": 6, "classic": 14}[s.scrollbars]
+    sb_track = "transparent" if s.scrollbars != "classic" else s.view
+    sb_handle = rgba(c["text"], 0.28)
+    sb_handle_hover = rgba(c["text"], 0.45)
+    out = f"""/* {MARKER}: Flamenco Qt stylesheet, palette '{s.name}'. Regenerated on theme change; put your own rules in Settings → App Theming → Custom QSS. */
+
+QWidget {{ selection-background-color: {s.selection}; selection-color: {s.selection_fg}; }}
+
+QPushButton, QToolButton[popupMode="1"], QComboBox {{
+    background: {btn_bg};
+    border: {btn_border};
+    border-radius: {r}px;
+    padding: 5px 14px;
+    color: {c['text']};
+}}
+QPushButton:hover, QComboBox:hover {{ background: {s.button_hover}; }}
+QPushButton:pressed {{ background: {mix(s.button_hover, c['accent'], 0.2)}; }}
+QPushButton:default {{ background: {c['accent']}; color: {c['onAccent']}; border: none; }}
+QPushButton:default:hover {{ background: {shade(c['accent'], 0.1 if s.dark else -0.08)}; }}
+QPushButton:disabled {{ color: {s.disabled_fg}; }}
+QPushButton:focus, QComboBox:focus {{ outline: none; border: 1px solid {focus}; }}
+
+QToolButton {{ border-radius: {r}px; padding: 4px; background: transparent; }}
+QToolButton:hover {{ background: {rgba(c['text'], 0.08)}; }}
+QToolButton:checked, QToolButton:pressed {{ background: {rgba(c['accent'], 0.22)}; }}
+
+QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QDateTimeEdit, QAbstractSpinBox {{
+    background: {s.view};
+    border: 1px solid {c['border']};
+    border-radius: {r}px;
+    padding: 4px 8px;
+    color: {c['text']};
+}}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QAbstractSpinBox:focus {{ border: 1px solid {focus}; }}
+
+QComboBox QAbstractItemView {{
+    background: {c['surfaceHigh']};
+    border: 1px solid {c['border']};
+    border-radius: {r}px;
+    padding: 4px;
+    outline: none;
+}}
+
+QMenu {{
+    background: {c['surfaceHigh']};
+    border: 1px solid {c['border']};
+    border-radius: {r + 2}px;
+    padding: 6px;
+}}
+QMenu::item {{ padding: 6px 22px 6px 12px; border-radius: {max(0, r - 2)}px; }}
+QMenu::item:selected {{ background: {s.selection}; color: {s.selection_fg}; }}
+QMenu::separator {{ height: 1px; background: {c['border']}; margin: 4px 8px; }}
+
+QToolTip {{
+    background: {c['surfaceHighest']};
+    color: {c['text']};
+    border: 1px solid {c['border']};
+    border-radius: {r}px;
+    padding: 4px 8px;
+}}
+
+QTabBar::tab {{ padding: 6px 14px; border-radius: {r}px; margin: 2px; background: transparent; }}
+QTabBar::tab:selected {{ background: {c['surfaceHighest']}; }}
+QTabBar::tab:hover:!selected {{ background: {rgba(c['text'], 0.06)}; }}
+
+QAbstractItemView {{ outline: none; }}
+QAbstractItemView::item {{ border-radius: {max(0, r - 2)}px; padding: 2px; }}
+QAbstractItemView::item:selected {{ background: {s.selection}; color: {s.selection_fg}; }}
+QAbstractItemView::item:hover:!selected {{ background: {rgba(c['text'], 0.06)}; }}
+
+QHeaderView::section {{ background: {s.header}; border: none; border-bottom: 1px solid {c['border']}; padding: 4px 8px; }}
+
+QProgressBar {{ background: {c['surfaceHighest']}; border: none; border-radius: {r}px; text-align: center; }}
+QProgressBar::chunk {{ background: {c['accent']}; border-radius: {r}px; }}
+
+QSlider::groove:horizontal {{ height: 6px; background: {c['surfaceHighest']}; border-radius: 3px; }}
+QSlider::sub-page:horizontal {{ background: {c['accent']}; border-radius: 3px; }}
+QSlider::handle:horizontal {{ background: {c['accent']}; width: 16px; height: 16px; margin: -5px 0; border-radius: 8px; }}
+
+QCheckBox::indicator, QRadioButton::indicator {{ width: 16px; height: 16px; }}
+
+QScrollBar:vertical {{ background: {sb_track}; width: {sb_w}px; margin: 0; border: none; }}
+QScrollBar:horizontal {{ background: {sb_track}; height: {sb_w}px; margin: 0; border: none; }}
+QScrollBar::handle {{ background: {sb_handle}; border-radius: {sb_w // 2}px; min-height: 28px; min-width: 28px; margin: {1 if s.scrollbars != 'classic' else 2}px; }}
+QScrollBar::handle:hover {{ background: {sb_handle_hover}; }}
+QScrollBar::add-line, QScrollBar::sub-line {{ width: 0; height: 0; border: none; background: none; }}
+QScrollBar::add-page, QScrollBar::sub-page {{ background: none; }}
+"""
+    custom = s.o.get("customQss", "").strip()
+    if custom:
+        out += "\n/* ── custom ── */\n" + custom + "\n"
+    return out
+
+
+def qfont(family: str, size: int, qt6: bool) -> str:
+    # QFont::toString() formats for Qt 5 and Qt 6
+    if qt6:
+        return f'"{family},{size},-1,5,400,0,0,0,0,0,0,0,0,0,0,1"'
+    return f'"{family},{size},-1,5,50,0,0,0,0,0"'
+
+
+def apply_qt(s: Spec, m: dict) -> list[str]:
+    done = []
+    style = s.o.get("qtStyle", "Fusion")
+    for ct, qt6 in (("qt5ct", False), ("qt6ct", True)):
+        base = XDG_CONFIG / ct
+        colors = base / "colors/flamenco.conf"
+        sheet = base / "qss/flamenco.qss"
+        write(colors, qt_colors_conf(s), m)
+        if s.o.get("qss", True):
+            write(sheet, qss(s), m)
+        appearance = {
+            "color_scheme_path": str(colors),
+            "custom_palette": "true",
+            "style": style,
+        }
+        if s.o.get("iconTheme"):
+            appearance["icon_theme"] = s.o["iconTheme"]
+        updates = {
+            "Appearance": appearance,
+            "Interface": {"stylesheets": str(sheet) if s.o.get("qss", True) else "@Invalid()"},
+        }
+        if s.o.get("syncFonts", True):
+            updates["Fonts"] = {"general": qfont(s.font, s.font_size, qt6), "fixed": qfont(s.mono, s.font_size, qt6)}
+        ini_update(base / f"{ct}.conf", updates, m)
+        done.append(ct)
+
+    if s.o.get("kdeColors", True):
+        apply_kde(s, m)
+        done.append("kde")
+    return done
+
+
+def apply_kde(s: Spec, m: dict):
+    c = s.c
+
+    def group(bg, alt, fg, inactive=None):
+        return {
+            "BackgroundNormal": kde_rgb(bg),
+            "BackgroundAlternate": kde_rgb(alt),
+            "ForegroundNormal": kde_rgb(fg),
+            "ForegroundInactive": kde_rgb(inactive or c["textDim"]),
+            "ForegroundActive": kde_rgb(c["accent"]),
+            "ForegroundLink": kde_rgb(c["accent"]),
+            "ForegroundVisited": kde_rgb(c.get("accent3", c["accent2"])),
+            "ForegroundNegative": kde_rgb(c["error"]),
+            "ForegroundNeutral": kde_rgb(c["warning"]),
+            "ForegroundPositive": kde_rgb(c["success"]),
+            "DecorationFocus": kde_rgb(c["accent"]),
+            "DecorationHover": kde_rgb(c["accent"]),
+        }
+
+    groups = {
+        "Colors:Window": group(s.window, s.card, c["text"]),
+        "Colors:View": group(s.view, mix(s.view, s.card, 0.5), c["text"]),
+        "Colors:Button": group(s.button, s.button_hover, c["text"]),
+        "Colors:Selection": group(s.selection, shade(s.selection, -0.1), s.selection_fg, s.selection_fg),
+        "Colors:Tooltip": group(c["surfaceHighest"], c["surfaceHigh"], c["text"]),
+        "Colors:Complementary": group(c["bg"], c["surface"], c["text"]),
+        "Colors:Header": group(s.header, s.window, c["text"]),
+    }
+    general = {"ColorScheme": "Flamenco", "Name": "Flamenco"}
+    wm = {
+        "activeBackground": kde_rgb(s.header),
+        "activeForeground": kde_rgb(c["text"]),
+        "inactiveBackground": kde_rgb(s.window),
+        "inactiveForeground": kde_rgb(c["textDim"]),
+        "activeBlend": kde_rgb(s.header),
+        "inactiveBlend": kde_rgb(s.window),
+    }
+
+    lines = [f"# {MARKER}", "[General]", "ColorScheme=Flamenco", "Name=Flamenco", ""]
+    for name, kv in groups.items():
+        lines.append(f"[{name}]")
+        lines += [f"{k}={v}" for k, v in kv.items()]
+        lines.append("")
+    lines.append("[WM]")
+    lines += [f"{k}={v}" for k, v in wm.items()]
+    write(XDG_DATA / "color-schemes/Flamenco.colors", "\n".join(lines) + "\n", m)
+
+    updates = dict(groups)
+    updates["General"] = general
+    updates["WM"] = wm
+    updates["KDE"] = {"widgetStyle": s.o.get("qtStyle", "Fusion")}
+    if s.o.get("iconTheme"):
+        updates["Icons"] = {"Theme": s.o["iconTheme"]}
+    ini_update(XDG_CONFIG / "kdeglobals", updates, m)
+
+
+# ─────────────────────────────── GTK ─────────────────────────────────────────
+
+def gtk_css(s: Spec, gtk4: bool) -> str:
+    c = s.c
+    fg = c["text"]
+    defs = {
+        # libadwaita / adw-gtk3 named colors
+        "accent_color": c["accent"],
+        "accent_bg_color": c["accent"],
+        "accent_fg_color": c["onAccent"],
+        "destructive_color": c["error"],
+        "destructive_bg_color": c["error"],
+        "destructive_fg_color": "#ffffff",
+        "success_color": c["success"],
+        "success_bg_color": c["success"],
+        "success_fg_color": "#ffffff" if not s.dark else c["bg"],
+        "warning_color": c["warning"],
+        "warning_bg_color": c["warning"],
+        "warning_fg_color": rgba("#000000", 0.8),
+        "error_color": c["error"],
+        "error_bg_color": c["error"],
+        "error_fg_color": "#ffffff",
+        "window_bg_color": s.window,
+        "window_fg_color": fg,
+        "view_bg_color": s.view,
+        "view_fg_color": fg,
+        "headerbar_bg_color": s.header,
+        "headerbar_fg_color": fg,
+        "headerbar_border_color": fg,
+        "headerbar_backdrop_color": s.window,
+        "headerbar_shade_color": rgba("#000000", 0.36 if s.dark else 0.12),
+        "headerbar_darker_shade_color": rgba("#000000", 0.9 if s.dark else 0.12),
+        "sidebar_bg_color": s.sidebar,
+        "sidebar_fg_color": fg,
+        "sidebar_backdrop_color": s.window,
+        "sidebar_shade_color": rgba("#000000", 0.25 if s.dark else 0.07),
+        "sidebar_border_color": rgba("#000000", 0.36 if s.dark else 0.07),
+        "secondary_sidebar_bg_color": s.window,
+        "secondary_sidebar_fg_color": fg,
+        "secondary_sidebar_backdrop_color": s.window,
+        "secondary_sidebar_shade_color": rgba("#000000", 0.25 if s.dark else 0.07),
+        "secondary_sidebar_border_color": rgba("#000000", 0.36 if s.dark else 0.07),
+        "card_bg_color": rgba(c["surfaceHighest"], 0.55) if s.dark else "#ffffff",
+        "card_fg_color": fg,
+        "card_shade_color": rgba("#000000", 0.36 if s.dark else 0.07),
+        "dialog_bg_color": c["surfaceHigh"],
+        "dialog_fg_color": fg,
+        "popover_bg_color": c["surfaceHigh"],
+        "popover_fg_color": fg,
+        "popover_shade_color": rgba("#000000", 0.25 if s.dark else 0.07),
+        "thumbnail_bg_color": c["surfaceHigh"],
+        "thumbnail_fg_color": fg,
+        "shade_color": rgba("#000000", 0.25 if s.dark else 0.07),
+        "scrollbar_outline_color": rgba("#000000", 0.5) if s.dark else "#ffffff",
+        # classic GTK3 theme names (Adwaita, adw-gtk3, many others)
+        "theme_bg_color": s.window,
+        "theme_fg_color": fg,
+        "theme_base_color": s.view,
+        "theme_text_color": fg,
+        "theme_selected_bg_color": s.selection,
+        "theme_selected_fg_color": s.selection_fg,
+        "insensitive_bg_color": s.window,
+        "insensitive_fg_color": s.disabled_fg,
+        "insensitive_base_color": s.view,
+        "theme_unfocused_bg_color": s.window,
+        "theme_unfocused_fg_color": fg,
+        "theme_unfocused_base_color": s.view,
+        "theme_unfocused_text_color": fg,
+        "theme_unfocused_selected_bg_color": s.selection,
+        "theme_unfocused_selected_fg_color": s.selection_fg,
+        "borders": c["border"],
+        "unfocused_borders": c["border"],
+        "warning_color_classic": c["warning"],
+        "success_color_classic": c["success"],
+        "link_color": c["accent"],
+    }
+    lines = [f"/* {MARKER}: Flamenco GTK {'4' if gtk4 else '3'} theme, palette '{s.name}'. */", ""]
+    lines += [f"@define-color {k} {v};" for k, v in defs.items() if not k.endswith("_classic")]
+
+    if s.o.get("gtkExtras", True):
+        r = s.radius
+        sb = {"thin": 6, "overlay": 4, "classic": 10}[s.scrollbars]
+        lines += ["", "/* ── extras ── */"]
+        lines.append(f"button, entry, spinbutton, dropdown > button, combobox button {{ border-radius: {r}px; }}")
+        lines.append(f"popover > contents, popover.menu > contents {{ border-radius: {r + 4}px; }}")
+        lines.append(f"selection, *:selected {{ background-color: {s.selection}; color: {s.selection_fg}; }}")
+        if s.buttons == "flat":
+            lines.append("button:not(.suggested-action):not(.destructive-action) { background: transparent; box-shadow: none; }")
+            lines.append(f"button:not(.suggested-action):not(.destructive-action):hover {{ background: {rgba(c['text'], 0.08)}; }}")
+        elif s.buttons == "outlined":
+            lines.append(f"button:not(.suggested-action):not(.destructive-action):not(.flat) {{ background: transparent; box-shadow: inset 0 0 0 1px {c['border']}; }}")
+        else:
+            lines.append(f"button:not(.suggested-action):not(.destructive-action):not(.flat) {{ background-color: {s.button}; }}")
+            lines.append(f"button:not(.suggested-action):not(.destructive-action):not(.flat):hover {{ background-color: {s.button_hover}; }}")
+        if s.accent_sel:
+            lines.append(f"entry:focus-within, spinbutton:focus-within {{ outline-color: {rgba(c['accent'], 0.6)}; }}")
+        lines.append(f"scrollbar slider {{ min-width: {sb}px; min-height: {sb}px; border-radius: {sb}px; }}")
+        if s.scrollbars == "classic":
+            lines.append(f"scrollbar {{ background-color: {s.view}; }}")
+
+    custom = s.o.get("customGtkCss", "").strip()
+    if custom:
+        lines += ["", "/* ── custom ── */", custom]
+    return "\n".join(lines) + "\n"
+
+
+_GS_MANIFEST: dict | None = None
+
+
+def gsettings(schema: str, key: str, value: str):
+    if not shutil.which("gsettings"):
+        return
+    if _GS_MANIFEST is not None:
+        saved = _GS_MANIFEST.setdefault("gsettings", {})
+        k = f"{schema} {key}"
+        if k not in saved:
+            r = subprocess.run(["gsettings", "get", schema, key], capture_output=True, text=True)
+            if r.returncode == 0:
+                saved[k] = r.stdout.strip()
+    subprocess.run(["gsettings", "set", schema, key, value], capture_output=True)
+
+
+def apply_gtk(s: Spec, m: dict) -> list[str]:
+    global _GS_MANIFEST
+    _GS_MANIFEST = m
+    done = []
+    if s.o.get("gtk3", True):
+        write(XDG_CONFIG / "gtk-3.0/gtk.css", gtk_css(s, False), m)
+        done.append("gtk3")
+    if s.o.get("gtk4", True):
+        write(XDG_CONFIG / "gtk-4.0/gtk.css", gtk_css(s, True), m)
+        done.append("gtk4")
+
+    ini = {"gtk-application-prefer-dark-theme": "true" if s.dark else "false"}
+    if s.o.get("syncFonts", True):
+        ini["gtk-font-name"] = f"{s.font} {s.font_size}"
+    if s.o.get("iconTheme"):
+        ini["gtk-icon-theme-name"] = s.o["iconTheme"]
+    if s.o.get("cursorTheme"):
+        ini["gtk-cursor-theme-name"] = s.o["cursorTheme"]
+        ini["gtk-cursor-theme-size"] = str(s.o.get("cursorSize", 24))
+    for v in ("gtk-3.0", "gtk-4.0"):
+        ini_update(XDG_CONFIG / v / "settings.ini", {"Settings": ini}, m)
+
+    # gsettings drives libadwaita + the xdg portal (color-scheme is what Firefox/Chromium follow)
+    iface = "org.gnome.desktop.interface"
+    gsettings(iface, "color-scheme", "prefer-dark" if s.dark else "default")
+    adw3 = "adw-gtk3-dark" if s.dark else "adw-gtk3"
+    if any((p / adw3).is_dir() for p in (Path("/usr/share/themes"), XDG_DATA / "themes", HOME / ".themes")):
+        gsettings(iface, "gtk-theme", adw3)
+    if s.o.get("syncFonts", True):
+        gsettings(iface, "font-name", f"{s.font} {s.font_size + 1}")
+        gsettings(iface, "monospace-font-name", f"{s.mono} {s.font_size + 1}")
+    if s.o.get("iconTheme"):
+        gsettings(iface, "icon-theme", s.o["iconTheme"])
+    if s.o.get("cursorTheme"):
+        gsettings(iface, "cursor-theme", s.o["cursorTheme"])
+        gsettings(iface, "cursor-size", str(s.o.get("cursorSize", 24)))
+    gsettings(iface, "accent-color", nearest_gnome_accent(s.c["accent"]))
+    return done
+
+
+def nearest_gnome_accent(color: str) -> str:
+    accents = {"blue": "#3584e4", "teal": "#2190a4", "green": "#3a944a", "yellow": "#c88800",
+               "orange": "#ed5b00", "red": "#e62d42", "pink": "#d56199", "purple": "#9141ac", "slate": "#6f8396"}
+    r, g, b = hex_to_rgb(color)
+    return min(accents, key=lambda k: sum((x - y) ** 2 for x, y in zip((r, g, b), hex_to_rgb(accents[k]))))
+
+
+# ─────────────────────────────── apps-theme ──────────────────────────────────
+
+def cmd_apps_theme(args: list[str]) -> int:
+    if "--restore" in args:
+        return restore()
+    raw = None
+    if "--json" in args:
+        i = args.index("--json")
+        if i + 1 >= len(args):
+            die("--json needs an argument")
+        raw = args[i + 1]
+    elif "--stdin" in args:
+        raw = sys.stdin.read()
+    elif "--file" in args:
+        raw = Path(args[args.index("--file") + 1]).read_text()
+    else:
+        die("usage: flamenco apps-theme --json SPEC | --stdin | --file PATH | --restore")
+    try:
+        spec = Spec(json.loads(raw))
+    except json.JSONDecodeError as e:
+        die(f"invalid theme JSON: {e}")
+
+    m = load_manifest()
+    done = []
+    try:
+        if spec.o.get("qt", True):
+            done += apply_qt(spec, m)
+        if spec.o.get("gtk", True):
+            done += apply_gtk(spec, m)
+    finally:
+        save_manifest(m)
+    print("themed: " + (", ".join(done) or "nothing (Qt and GTK disabled)"))
+    return 0
+
+
+def restore() -> int:
+    m = load_manifest()
+    restored = removed = 0
+    for target, backup in m.get("backups", {}).items():
+        t = Path(target)
+        if backup is None:
+            if t.exists():
+                t.unlink()
+                removed += 1
+        elif Path(backup).exists():
+            t.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(backup, t)
+            restored += 1
+    for f in m.get("files", []):
+        p = Path(f)
+        if p.exists() and f not in m.get("backups", {}):
+            p.unlink()
+            removed += 1
+    gs = 0
+    if shutil.which("gsettings"):
+        for k, v in m.get("gsettings", {}).items():
+            schema, key = k.split(" ", 1)
+            # values come back GVariant-formatted ('foo'); strip quotes for `gsettings set`
+            if len(v) >= 2 and v[0] == v[-1] == "'":
+                v = v[1:-1]
+            subprocess.run(["gsettings", "set", schema, key, v], capture_output=True)
+            gs += 1
+    save_manifest({"files": [], "backups": {}})
+    print(f"restored {restored} file(s), removed {removed} generated file(s), reset {gs} gsettings key(s)")
+    return 0
+
+
+# ─────────────────────────────── doctor ──────────────────────────────────────
+
+def font_installed(name: str) -> bool:
+    if not shutil.which("fc-list"):
+        return False
+    r = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True)
+    return name.lower() in r.stdout.lower()
+
+
+def cmd_doctor(args: list[str]) -> int:
+    def b(name, purpose, required=False, alt=()):
+        ok = any(shutil.which(n) for n in (name, *alt))
+        return {"name": name, "purpose": purpose, "required": required, "ok": ok}
+
+    checks = [
+        b("qs", "Quickshell runtime (>= 0.2)", True, ("quickshell",)),
+        b("niri", "Compositor", True),
+        {"name": "Material Symbols Rounded", "purpose": "Icon font (bundled with the shell)", "required": True,
+         "ok": (shell_dir() / "assets/fonts/MaterialSymbolsRounded.ttf").is_file() or font_installed("Material Symbols Rounded")},
+        b("nmcli", "Wi-Fi / network (NetworkManager)"),
+        b("brightnessctl", "Screen brightness"),
+        b("matugen", "Colors from wallpaper"),
+        b("cliphist", "Clipboard history in launcher"),
+        b("wl-copy", "Clipboard (wl-clipboard)"),
+        b("gammastep", "Night light"),
+        b("qt6ct", "Qt 6 theming"),
+        b("qt5ct", "Qt 5 theming"),
+        b("gsettings", "GTK / portal dark-mode preference"),
+    ]
+    qpa = os.environ.get("QT_QPA_PLATFORMTHEME", "")
+    checks.append({"name": "QT_QPA_PLATFORMTHEME", "purpose": f"currently '{qpa or 'unset'}'; set to qt6ct so Qt apps pick up the theme",
+                   "required": False, "ok": qpa in ("qt5ct", "qt6ct", "qt6ct-kde")})
+
+    if "--json" in args:
+        print(json.dumps(checks))
+        return 0
+    for c in checks:
+        mark = "\033[32m✓\033[0m" if c["ok"] else ("\033[31m✗\033[0m" if c["required"] else "\033[33m-\033[0m")
+        print(f" {mark} {c['name']:<26} {c['purpose']}")
+    print(f"\n shell dir: {shell_dir()}\n config:    {CONFIG_DIR}")
+    return 0 if all(c["ok"] for c in checks if c["required"]) else 1
+
+
+NIRI_SNIPPET = """\
+// ── Flamenco Shell: part 1, top level of ~/.config/niri/config.kdl ──
+// (remove any other shell's spawn-at-startup line, e.g. "dms run")
+spawn-at-startup "flamenco" "run"
+
+environment {
+    QT_QPA_PLATFORMTHEME "qt6ct"
+}
+
+// let the wallpaper show behind niri's overview
+layer-rule {
+    match namespace="^flamenco-wallpaper$"
+    place-within-backdrop true
+}
+
+// settings app floats by default
+window-rule {
+    match title="^Flamenco Settings$"
+    open-floating true
+}
+
+// ── Flamenco Shell: part 2, paste INSIDE your existing `binds { }` block ──
+// (niri allows only one binds block; drop any line whose key you already use)
+    Mod+Space        hotkey-overlay-title="Launcher"       { spawn "flamenco" "launcher"; }
+    Mod+A            hotkey-overlay-title="Control center" { spawn "flamenco" "control"; }
+    Mod+N            hotkey-overlay-title="Notifications"  { spawn "flamenco" "notifications"; }
+    Mod+Comma        hotkey-overlay-title="Settings"       { spawn "flamenco" "settings"; }
+    Mod+W            hotkey-overlay-title="Wallpapers"     { spawn "flamenco" "wallpapers"; }
+    Mod+Escape       hotkey-overlay-title="Power menu"     { spawn "flamenco" "power"; }
+    Super+Alt+L      hotkey-overlay-title="Lock"           { spawn "flamenco" "lock"; }
+
+// Optional: media keys through flamenco (only if you don't already bind them).
+// Your existing wpctl/brightnessctl binds work fine; the OSD follows PipeWire either way.
+//  XF86AudioRaiseVolume  allow-when-locked=true { spawn "flamenco" "volume" "up"; }
+//  XF86AudioLowerVolume  allow-when-locked=true { spawn "flamenco" "volume" "down"; }
+//  XF86AudioMute         allow-when-locked=true { spawn "flamenco" "volume" "mute"; }
+//  XF86MonBrightnessUp   allow-when-locked=true { spawn "flamenco" "brightness" "up"; }
+//  XF86MonBrightnessDown allow-when-locked=true { spawn "flamenco" "brightness" "down"; }
+"""
+
+
+# ─────────────────────────────── dispatch ────────────────────────────────────
+
+PANELS = {"launcher": "launcher", "control": "control", "notifications": "notifications",
+          "calendar": "calendar", "wallpapers": "wallpapers", "power": "power"}
+
+
+def main(argv: list[str]) -> int:
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__)
+        return 0
+    cmd, rest = argv[0], argv[1:]
+
+    if cmd in ("-v", "--version", "version"):
+        print(f"flamenco {VERSION}")
+        return 0
+    if cmd == "run":
+        return cmd_run(rest)
+    if cmd == "kill":
+        return cmd_kill()
+    if cmd == "restart":
+        cmd_kill()
+        return cmd_run(rest)
+    if cmd == "ipc":
+        if len(rest) < 2:
+            die("usage: flamenco ipc TARGET FUNCTION [ARGS...]")
+        return ipc(*rest)
+    if cmd in PANELS:
+        return ipc(PANELS[cmd], rest[0] if rest else "toggle")
+    if cmd == "settings":
+        return ipc("settings", "open", rest[0] if rest else "")
+    if cmd == "lock":
+        return ipc("lock", "lock")
+    if cmd in ("volume", "brightness"):
+        if not rest:
+            die(f"usage: flamenco {cmd} up|down|set N" + ("|mute|mic-mute" if cmd == "volume" else ""))
+        action = {"mic-mute": "micMute"}.get(rest[0], rest[0])
+        return ipc(cmd, action, *rest[1:])
+    if cmd == "media":
+        return ipc("media", rest[0] if rest else "toggle")
+    if cmd == "wallpaper":
+        if not rest:
+            return ipc("wallpaper", "get")
+        if rest[0] == "set" and len(rest) > 1:
+            return ipc("wallpaper", "set", str(Path(rest[1]).expanduser().resolve()))
+        return ipc("wallpaper", rest[0])
+    if cmd == "theme":
+        if not rest:
+            die("usage: flamenco theme PALETTE | dark | light | toggle | list | apply-apps")
+        a = rest[0]
+        if a in ("dark", "light"):
+            return ipc("theme", "mode", a)
+        if a == "toggle":
+            return ipc("theme", "toggleMode")
+        if a == "list":
+            return ipc("theme", "list")
+        if a == "apply-apps":
+            return ipc("theme", "applyApps")
+        return ipc("theme", "palette", a)
+    if cmd == "apps-theme":
+        return cmd_apps_theme(rest)
+    if cmd == "doctor":
+        return cmd_doctor(rest)
+    if cmd == "niri-config":
+        print(NIRI_SNIPPET)
+        return 0
+    die(f"unknown command '{cmd}' (see `flamenco --help`)")
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

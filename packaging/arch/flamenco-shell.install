@@ -1,0 +1,10 @@
+post_install() {
+    echo ">> Flamenco Shell installed."
+    echo ">>   flamenco doctor        check dependencies"
+    echo ">>   flamenco niri-config   binds/rules for ~/.config/niri/config.kdl"
+    echo ">>   flamenco run --fg      start in the foreground (shows QML errors)"
+}
+
+post_upgrade() {
+    echo ">> Flamenco Shell upgraded. Run 'flamenco restart' to reload."
+}
