@@ -837,4 +837,11 @@ tools/screenshots.sh         regenerates docs/screenshots/
 - [X] First Time Run Setup Screen (dms checker)
 - [ ] Full Feature Parity
 - [X] Quality of Life Improvements
-
+- [ ] Flatpak Permissions Management
+- [ ] About page
+- [ ] Auto-start settings
+- [ ] Workspaces Settings
+- [ ] Default Applications Settings
+- [ ] More Color scheme and theme settings for the niri/flamenco shell specific
+- [ ] Other Quality of life settings entries.
+- [ ] Screen Edges customization and more layout presets in personalization
