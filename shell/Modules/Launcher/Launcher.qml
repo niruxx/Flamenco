@@ -119,7 +119,11 @@ Variants {
                 clip: true
                 model: panel.results
                 keyNavigationWraps: true
-                boundsBehavior: Flickable.StopAtBounds
+                boundsBehavior: Flickable.OvershootBounds
+
+                SmoothWheel {
+                    view: list
+                }
                 highlightMoveDuration: Theme.durMed
                 highlightResizeDuration: 0
                 highlightFollowsCurrentItem: true

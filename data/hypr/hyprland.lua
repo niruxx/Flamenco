@@ -191,6 +191,8 @@ bind("XF86AudioMute",         hl.dsp.exec_cmd("flamenco volume mute || wpctl set
 bind("XF86AudioMicMute",      hl.dsp.exec_cmd("flamenco volume mic-mute || wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
 bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("flamenco brightness up || brightnessctl --class=backlight set +5%"),   { locked = true, repeating = true })
 bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("flamenco brightness down || brightnessctl --class=backlight set 5%-"), { locked = true, repeating = true })
+bind("XF86KbdBrightnessUp",   hl.dsp.exec_cmd("flamenco brightness kbd up || brightnessctl --device='*::kbd_backlight' set +1"),   { locked = true, repeating = true })
+bind("XF86KbdBrightnessDown", hl.dsp.exec_cmd("flamenco brightness kbd down || brightnessctl --device='*::kbd_backlight' set 1-"), { locked = true, repeating = true })
 bind("XF86AudioPlay",         hl.dsp.exec_cmd("flamenco media toggle || playerctl play-pause"), { locked = true })
 bind("XF86AudioNext",         hl.dsp.exec_cmd("flamenco media next || playerctl next"),         { locked = true })
 bind("XF86AudioPrev",         hl.dsp.exec_cmd("flamenco media previous || playerctl previous"), { locked = true })

@@ -109,6 +109,11 @@ ShellRoot {
         function down(): void { Brightness.step(-0.05); }
         function set(percent: int): void { Brightness.set(percent / 100); }
         function get(): string { return String(Math.round(Brightness.value * 100)); }
+        function kbdUp(): void { Brightness.stepKbd(1); }
+        function kbdDown(): void { Brightness.stepKbd(-1); }
+        function kbdSet(percent: int): void { Brightness.setKbd(percent / 100); }
+        function kbdToggle(): void { Brightness.toggleKbd(); }
+        function kbdGet(): string { return Brightness.kbdAvailable ? String(Math.round(Brightness.kbdValue * 100)) : "none"; }
     }
 
     IpcHandler {

@@ -90,7 +90,11 @@ Variants {
                 clip: true
                 spacing: Theme.gap
                 model: Notifs.history
-                boundsBehavior: Flickable.StopAtBounds
+                boundsBehavior: Flickable.OvershootBounds
+
+                SmoothWheel {
+                    view: list
+                }
 
                 delegate: NotificationCard {
                     width: list.width

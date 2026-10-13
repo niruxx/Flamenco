@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1260" height="660" viewBox="0 0 1260 660" role="img" aria-label="The 13 Flamenco palettes (light)">
+<title>The 13 Flamenco palettes (light)</title>
+<g transform="translate(0 0)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#fbf3f1" stroke="#ddc6c2"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#f4e8e5"/>
+  <circle cx="44" cy="49" r="18" fill="#d0304d"/>
+  <circle cx="72" cy="49" r="18" fill="#b8740f" stroke="#f4e8e5" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#a8456a" stroke="#f4e8e5" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#2b1b1c" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#7b6564" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#2b1b1c">Flamenco</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#d0304d"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Light</text>
+</g>
+<g transform="translate(320 0)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#eff0f1" stroke="#c3c7cb"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#e3e5e7"/>
+  <circle cx="44" cy="49" r="18" fill="#3daee9"/>
+  <circle cx="72" cy="49" r="18" fill="#1d99f3" stroke="#e3e5e7" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#8e44ad" stroke="#e3e5e7" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#232629" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#707d8a" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#232629">Breeze</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#3daee9"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Light</text>
+</g>
+<g transform="translate(640 0)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#dce0e8" stroke="#bcc0cc"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#e6e9ef"/>
+  <circle cx="44" cy="49" r="18" fill="#8839ef"/>
+  <circle cx="72" cy="49" r="18" fill="#ea76cb" stroke="#e6e9ef" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#1e66f5" stroke="#e6e9ef" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#4c4f69" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#6c6f85" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#4c4f69">Catppuccin</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#8839ef"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#eff1f5">Light</text>
+</g>
+<g transform="translate(960 0)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#faf4ed" stroke="#dfdad9"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#f2e9e1"/>
+  <circle cx="44" cy="49" r="18" fill="#d7827e"/>
+  <circle cx="72" cy="49" r="18" fill="#907aa9" stroke="#f2e9e1" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#56949f" stroke="#f2e9e1" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#575279" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#797593" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#575279">Rosé Pine</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#d7827e"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#fffaf3">Light</text>
+</g>
+<g transform="translate(0 170)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#e5e9f0" stroke="#c2c9d6"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#dfe3eb"/>
+  <circle cx="44" cy="49" r="18" fill="#5e81ac"/>
+  <circle cx="72" cy="49" r="18" fill="#81a1c1" stroke="#dfe3eb" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#b48ead" stroke="#dfe3eb" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#2e3440" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#4c566a" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#2e3440">Nord</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#5e81ac"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#eceff4">Light</text>
+</g>
+<g transform="translate(320 170)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#d0d5e3" stroke="#a8aecb"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#d5d6db"/>
+  <circle cx="44" cy="49" r="18" fill="#2e7de9"/>
+  <circle cx="72" cy="49" r="18" fill="#9854f1" stroke="#d5d6db" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#007197" stroke="#d5d6db" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#3760bf" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#6172b0" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#3760bf">Tokyo Night</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#2e7de9"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#e1e2e7">Light</text>
+</g>
+<g transform="translate(640 170)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#f2e5bc" stroke="#bdae93"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#ebdbb2"/>
+  <circle cx="44" cy="49" r="18" fill="#af3a03"/>
+  <circle cx="72" cy="49" r="18" fill="#b57614" stroke="#ebdbb2" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#076678" stroke="#ebdbb2" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#3c3836" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#7c6f64" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#3c3836">Gruvbox</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#af3a03"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#fbf1c7">Light</text>
+</g>
+<g transform="translate(960 170)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#efebd4" stroke="#d8d3ba"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#f4f0d9"/>
+  <circle cx="44" cy="49" r="18" fill="#8da101"/>
+  <circle cx="72" cy="49" r="18" fill="#35a77c" stroke="#f4f0d9" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#df69ba" stroke="#f4f0d9" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#5c6a72" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#829181" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#5c6a72">Everforest</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#8da101"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#fdf6e3">Light</text>
+</g>
+<g transform="translate(0 340)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#f3f1f8" stroke="#cdc8de"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#ebe8f4"/>
+  <circle cx="44" cy="49" r="18" fill="#7c4dcc"/>
+  <circle cx="72" cy="49" r="18" fill="#c2307f" stroke="#ebe8f4" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#1c8aa3" stroke="#ebe8f4" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#282a36" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#6c6f85" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#282a36">Dracula</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#7c4dcc"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Light</text>
+</g>
+<g transform="translate(320 340)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#e7dba0" stroke="#c7bd8f"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#e5ddb0"/>
+  <circle cx="44" cy="49" r="18" fill="#4d699b"/>
+  <circle cx="72" cy="49" r="18" fill="#cc6d00" stroke="#e5ddb0" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#624c83" stroke="#e5ddb0" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#545464" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#716e61" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#545464">Kanagawa</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#4d699b"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#f2ecbc">Light</text>
+</g>
+<g transform="translate(640 340)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#eee8d5" stroke="#d6cfb8"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#f3ecd8"/>
+  <circle cx="44" cy="49" r="18" fill="#268bd2"/>
+  <circle cx="72" cy="49" r="18" fill="#2aa198" stroke="#f3ecd8" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#d33682" stroke="#f3ecd8" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#073642" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#657b83" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#073642">Solarized</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#268bd2"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#fdf6e3">Light</text>
+</g>
+<g transform="translate(960 340)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#f0f0f1" stroke="#cfd0d4"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#eaeaeb"/>
+  <circle cx="44" cy="49" r="18" fill="#4078f2"/>
+  <circle cx="72" cy="49" r="18" fill="#a626a4" stroke="#eaeaeb" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#0184bc" stroke="#eaeaeb" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#383a42" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#696c77" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#383a42">One Dark</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#4078f2"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Light</text>
+</g>
+<g transform="translate(0 510)">
+  <rect x=".5" y=".5" width="299" height="149" rx="22" fill="#f2f2f2" stroke="#cccccc"/>
+  <rect x="14" y="14" width="272" height="70" rx="16" fill="#ebebeb"/>
+  <circle cx="44" cy="49" r="18" fill="#1f1f1f"/>
+  <circle cx="72" cy="49" r="18" fill="#474747" stroke="#ebebeb" stroke-width="3"/>
+  <circle cx="100" cy="49" r="18" fill="#6e6e6e" stroke="#ebebeb" stroke-width="3"/>
+  <rect x="134" y="38" width="128" height="8" rx="4" fill="#161616" opacity=".85"/>
+  <rect x="134" y="54" width="90" height="8" rx="4" fill="#666666" opacity=".7"/>
+  <text x="22" y="120" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="700" fill="#161616">Monochrome</text>
+  <rect x="208" y="100" width="72" height="30" rx="15" fill="#1f1f1f"/>
+  <text x="244" y="120" text-anchor="middle" font-family="Inter, 'Google Sans', Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Light</text>
+</g>
+</svg>

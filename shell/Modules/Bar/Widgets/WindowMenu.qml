@@ -1,0 +1,366 @@
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import qs.Commons
+import qs.Services
+import qs.Widgets
+
+// Menu for the focused window, opened from the bar's window title: move it to
+// another workspace or monitor, float / fullscreen it, open a new window of the
+// app, pin it to the dock, switch to another window, close or force quit it.
+PopupWindow {
+    id: root
+
+    required property var window
+    property var win: null                     // snapshot of the window it was opened for
+    property string page: "main"               // main | workspaces | monitors | windows
+    property bool armed: false                 // force quit asks for a second click
+    property real closedAt: 0
+    property rect at: Qt.rect(0, 0, 1, 1)
+
+    // the live copy, so floating / workspace changes show while the menu is open
+    readonly property var live: win ? (Niri.windows.find(w => w.id === win.id) ?? null) : null
+    readonly property var entry: live ? Apps.lookup(live.app_id) : null
+    readonly property var outputs: {
+        const out = [];
+        for (const w of Niri.workspaces)
+            if (w.output && !out.includes(w.output))
+                out.push(w.output);
+        return out;
+    }
+    readonly property string winOutput: Niri.workspaces.find(w => w.id === live?.workspace_id)?.output ?? ""
+    readonly property bool pinned: !!live && Settings.data.dock.pinned.some(p => p.toLowerCase() === String(live.app_id).toLowerCase())
+
+    function open(w, rect) {
+        // the click that closed the menu (focus grab) shouldn't reopen it
+        if (Date.now() - closedAt < 250)
+            return;
+        win = w;
+        page = "main";
+        armed = false;
+        at = rect;
+        visible = true;
+        openAnim.restart();
+    }
+
+    function close() {
+        visible = false;
+    }
+
+    function run(f) {
+        if (live)
+            f(live);
+        close();
+    }
+
+    function wsLabel(ws) {
+        const name = ws.name ? ws.name : "Workspace " + ws.idx;
+        return outputs.length > 1 ? name + "  ·  " + ws.output : name;
+    }
+
+    // closes itself if its window goes away
+    onLiveChanged: if (visible && !live) close()
+    onVisibleChanged: if (!visible) {
+        closedAt = Date.now();
+        armed = false;
+    }
+
+    readonly property int gap: 8
+    anchor.window: window
+    anchor.rect.x: Theme.barPos === "right" ? at.x - gap : Theme.barPos === "left" ? at.x + at.width + gap : at.x + at.width / 2
+    anchor.rect.y: Theme.barPos === "bottom" ? at.y - gap : Theme.barVertical ? at.y : at.y + at.height + gap
+    anchor.rect.width: 1
+    anchor.rect.height: 1
+    anchor.edges: Theme.barPos === "bottom" ? Edges.Top : Theme.barPos === "left" ? Edges.Right : Theme.barPos === "right" ? Edges.Left : Edges.Bottom
+    anchor.gravity: Theme.barPos === "bottom" ? Edges.Top : Theme.barPos === "left" ? Edges.Right : Theme.barPos === "right" ? Edges.Left : Edges.Bottom
+    grabFocus: true
+    color: "transparent"
+    visible: false
+
+    implicitWidth: 300
+    implicitHeight: Math.min(list.implicitHeight + 12, (window?.screen?.height ?? 900) * 0.7)
+
+    Rectangle {
+        id: body
+        anchors.fill: parent
+        radius: Theme.rLg
+        color: Theme.panelBg
+        border.width: 1
+        border.color: Theme.alpha(Theme.border, 0.7)
+
+        property real p: 1
+        Anim {
+            id: openAnim
+            target: body
+            property: "p"
+            from: 0
+            to: 1
+            duration: Theme.durMed
+            easing.bezierCurve: Theme.curves.emphasizedDecel
+        }
+        opacity: p
+        scale: 0.94 + 0.06 * p
+
+        FScroll {
+            id: scroller
+            anchors.fill: parent
+            anchors.margins: 6
+            contentHeight: list.implicitHeight
+
+            ColumnLayout {
+                id: list
+                width: scroller.width - scroller.gutter
+                spacing: 0
+
+                // ── header: the app and its title ──
+                RowLayout {
+                    visible: root.page === "main"
+                    Layout.fillWidth: true
+                    Layout.margins: 8
+                    spacing: 12
+
+                    AppIcon {
+                        implicitSize: 32
+                        name: Apps.iconFor(root.live?.app_id ?? "")
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 1
+                        FText {
+                            Layout.fillWidth: true
+                            text: root.entry?.name ?? root.live?.app_id ?? ""
+                            font.weight: Font.DemiBold
+                            elide: Text.ElideRight
+                        }
+                        FText {
+                            Layout.fillWidth: true
+                            text: root.live?.title ?? ""
+                            color: Theme.textDim
+                            font.pixelSize: Theme.fsSm
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+
+                // back row on the sub-pages
+                MenuRow {
+                    visible: root.page !== "main"
+                    label: root.page === "workspaces" ? "Move to workspace" : root.page === "monitors" ? "Move to monitor" : "Open windows"
+                    leadIcon: "arrow_back"
+                    bold: true
+                    onActivated: root.page = "main"
+                }
+
+                Sep { visible: true }
+
+                // ── main page ──
+                MenuRow {
+                    visible: root.page === "main"
+                    label: "Move to workspace"
+                    leadIcon: "move_group"
+                    submenu: true
+                    onActivated: root.page = "workspaces"
+                }
+                MenuRow {
+                    visible: root.page === "main" && root.outputs.length > 1
+                    label: "Move to monitor"
+                    leadIcon: "monitor"
+                    submenu: true
+                    onActivated: root.page = "monitors"
+                }
+                MenuRow {
+                    visible: root.page === "main"
+                    label: root.live?.is_floating ? "Tile window" : "Float window"
+                    leadIcon: root.live?.is_floating ? "view_column" : "picture_in_picture"
+                    onActivated: root.run(w => Niri.toggleFloating(w))
+                }
+                MenuRow {
+                    visible: root.page === "main"
+                    label: "Fullscreen"
+                    leadIcon: "fullscreen"
+                    onActivated: root.run(w => Niri.toggleFullscreen(w))
+                }
+                MenuRow {
+                    visible: root.page === "main" && !Niri.hyprland && !root.live?.is_floating
+                    label: "Maximize column"
+                    leadIcon: "width_full"
+                    onActivated: root.run(w => Niri.action("maximize-column"))
+                }
+                MenuRow {
+                    visible: root.page === "main" && !Niri.hyprland && !root.live?.is_floating
+                    label: "Center column"
+                    leadIcon: "align_horizontal_center"
+                    onActivated: root.run(w => Niri.action("center-column"))
+                }
+
+                Sep { visible: root.page === "main" }
+
+                MenuRow {
+                    visible: root.page === "main" && root.entry !== null
+                    label: "New window"
+                    leadIcon: "add"
+                    onActivated: root.run(w => Apps.launch(root.entry))
+                }
+                MenuRow {
+                    visible: root.page === "main" && !!root.live?.app_id
+                    label: root.pinned ? "Unpin from dock" : "Pin to dock"
+                    leadIcon: root.pinned ? "keep_off" : "keep"
+                    onActivated: root.run(w => {
+                        const id = String(w.app_id);
+                        const cfg = Settings.data.dock;
+                        const have = cfg.pinned.find(p => p.toLowerCase() === id.toLowerCase());
+                        if (have !== undefined)
+                            Settings.listRemove(cfg, "pinned", have);
+                        else
+                            Settings.listAdd(cfg, "pinned", id);
+                    })
+                }
+                MenuRow {
+                    visible: root.page === "main" && Niri.windows.length > 1
+                    label: "Open windows"
+                    leadIcon: "select_window"
+                    submenu: true
+                    onActivated: root.page = "windows"
+                }
+
+                Sep { visible: root.page === "main" }
+
+                MenuRow {
+                    visible: root.page === "main"
+                    label: "Close window"
+                    leadIcon: "close"
+                    onActivated: root.run(w => Niri.closeWindow(w.id))
+                }
+                MenuRow {
+                    visible: root.page === "main" && (root.live?.pid ?? 0) > 0
+                    label: root.armed ? "Click again to force quit" : "Force quit"
+                    leadIcon: "dangerous"
+                    danger: true
+                    bold: root.armed
+                    onActivated: {
+                        if (!root.armed) {
+                            root.armed = true;
+                            disarm.restart();
+                        } else {
+                            root.run(w => Niri.forceQuit(w));
+                        }
+                    }
+                }
+
+                // ── workspaces page ──
+                Repeater {
+                    model: root.page === "workspaces" ? Niri.workspaces : []
+                    delegate: MenuRow {
+                        required property var modelData
+                        readonly property bool here: modelData.id === root.live?.workspace_id
+                        label: root.wsLabel(modelData)
+                        leadIcon: here ? "radio_button_checked" : "radio_button_unchecked"
+                        accent: here
+                        enabled: !here
+                        onActivated: root.run(w => Niri.moveWindowToWorkspace(w, modelData))
+                    }
+                }
+
+                // ── monitors page ──
+                Repeater {
+                    model: root.page === "monitors" ? root.outputs : []
+                    delegate: MenuRow {
+                        required property string modelData
+                        readonly property bool here: modelData === root.winOutput
+                        label: modelData
+                        leadIcon: here ? "radio_button_checked" : "radio_button_unchecked"
+                        accent: here
+                        enabled: !here
+                        onActivated: root.run(w => Niri.moveWindowToMonitor(w, modelData))
+                    }
+                }
+
+                // ── open windows page: switch to any of them ──
+                Repeater {
+                    model: root.page === "windows" ? Niri.windows : []
+                    delegate: MenuRow {
+                        required property var modelData
+                        label: modelData.title || modelData.app_id
+                        appIcon: Apps.iconFor(modelData.app_id)
+                        accent: modelData.id === root.live?.id
+                        onActivated: {
+                            Niri.focusWindow(modelData.id);
+                            root.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: disarm
+        interval: 3000
+        onTriggered: root.armed = false
+    }
+
+    component Sep: Rectangle {
+        Layout.fillWidth: true
+        Layout.topMargin: 4
+        Layout.bottomMargin: 4
+        implicitHeight: 1
+        color: Theme.border
+        opacity: 0.6
+    }
+
+    component MenuRow: Rectangle {
+        id: mr
+        property string label
+        property string leadIcon: ""
+        property string appIcon: ""
+        property bool submenu: false
+        property bool bold: false
+        property bool danger: false
+        property bool accent: false
+        signal activated
+
+        Layout.fillWidth: true
+        implicitHeight: 34
+        radius: Theme.rSm
+        color: "transparent"
+        opacity: enabled || accent ? 1 : 0.45
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            spacing: 12
+
+            FIcon {
+                visible: mr.leadIcon !== "" && mr.appIcon === ""
+                icon: mr.leadIcon
+                size: 18
+                fill: mr.accent ? 1 : 0
+                color: mr.danger ? Theme.error : mr.accent ? Theme.accent : Theme.text
+            }
+            AppIcon {
+                visible: mr.appIcon !== ""
+                implicitSize: 18
+                name: mr.appIcon
+            }
+            FText {
+                Layout.fillWidth: true
+                text: mr.label
+                color: mr.danger ? Theme.error : mr.accent ? Theme.accent : Theme.text
+                font.weight: mr.bold || mr.accent ? Font.DemiBold : Font.Normal
+                elide: Text.ElideRight
+            }
+            FIcon {
+                visible: mr.submenu
+                icon: "chevron_right"
+                size: 18
+                color: Theme.textDim
+            }
+        }
+
+        StateLayer {
+            disabled: !mr.enabled
+            onClicked: mr.activated()
+        }
+    }
+}

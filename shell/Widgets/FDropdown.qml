@@ -115,7 +115,11 @@ Rectangle {
                 Layout.fillHeight: true
                 clip: true
                 model: root.filtered
-                boundsBehavior: Flickable.StopAtBounds
+                boundsBehavior: Flickable.OvershootBounds
+
+                SmoothWheel {
+                    view: list
+                }
 
                 delegate: Rectangle {
                     id: opt

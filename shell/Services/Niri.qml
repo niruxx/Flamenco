@@ -60,6 +60,44 @@ Singleton {
         action("close-window", "--id", String(id));
     }
 
+    // ── window menu actions (bar window title) ──
+    function moveWindowToWorkspace(win, ws) {
+        if (hyprland) {
+            action("move-window-to-workspace", "--window-id", String(win.id), String(ws.id));
+            return;
+        }
+        // niri resolves a workspace index on the focused monitor, a name anywhere.
+        // For another monitor's unnamed workspace, take the window there first.
+        if (ws.name || ws.output === focusedOutput)
+            action("move-window-to-workspace", "--window-id", String(win.id), "--focus", "false", ws.name || String(ws.idx));
+        else
+            Quickshell.execDetached(["sh", "-c", 'niri msg action focus-window --id "$1" && niri msg action move-window-to-monitor "$2" && niri msg action move-window-to-workspace --focus false "$3"', "sh", String(win.id), ws.output, String(ws.idx)]);
+    }
+
+    function moveWindowToMonitor(win, output) {
+        if (hyprland) {
+            const ws = workspaces.find(w => w.output === output && w.is_active);
+            if (ws)
+                moveWindowToWorkspace(win, ws);
+            return;
+        }
+        action("move-window-to-monitor", "--id", String(win.id), output);
+    }
+
+    function toggleFloating(win) {
+        action("toggle-window-floating", "--id", String(win.id));
+    }
+
+    function toggleFullscreen(win) {
+        action("fullscreen-window", "--id", String(win.id));
+    }
+
+    // SIGKILL the app's process: for windows that don't answer a normal close
+    function forceQuit(win) {
+        if (win?.pid > 0)
+            Quickshell.execDetached(["kill", "-KILL", String(win.pid)]);
+    }
+
     function sortWorkspaces(list) {
         return list.slice().sort((a, b) => a.output === b.output ? a.idx - b.idx : String(a.output).localeCompare(String(b.output)));
     }
@@ -146,6 +184,8 @@ Singleton {
                     app_id: c.class || c.initialClass || "",
                     title: c.title || "",
                     workspace_id: c.workspace?.id,
+                    pid: c.pid ?? 0,
+                    is_floating: !!c.floating,
                     is_focused: c.focusHistoryID === 0
                 }));
         focusedWindowId = windows.find(w => w.is_focused)?.id ?? null;

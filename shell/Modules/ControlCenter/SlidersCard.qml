@@ -63,5 +63,17 @@ FCard {
             accent: Theme.accent3
             onMoved: v => Brightness.set(v)
         }
+
+        FSlider {
+            Layout.fillWidth: true
+            visible: Brightness.kbdAvailable
+            showValue: true
+            icon: Brightness.kbdLevel > 0 ? "backlight_high" : "backlight_high_off"
+            value: Brightness.kbdValue
+            stepSize: Brightness.kbdMax > 0 && Brightness.kbdMax <= 10 ? 1 / Brightness.kbdMax : 0
+            accent: Theme.accent3
+            onMoved: v => Brightness.setKbd(v)
+            onIconClicked: Brightness.toggleKbd()
+        }
     }
 }

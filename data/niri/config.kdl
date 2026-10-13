@@ -101,6 +101,8 @@ binds {
     XF86AudioMicMute      allow-when-locked=true { spawn-sh "flamenco volume mic-mute || wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
     XF86MonBrightnessUp   allow-when-locked=true { spawn-sh "flamenco brightness up || brightnessctl --class=backlight set +5%"; }
     XF86MonBrightnessDown allow-when-locked=true { spawn-sh "flamenco brightness down || brightnessctl --class=backlight set 5%-"; }
+    XF86KbdBrightnessUp   allow-when-locked=true { spawn-sh "flamenco brightness kbd up || brightnessctl --device='*::kbd_backlight' set +1"; }
+    XF86KbdBrightnessDown allow-when-locked=true { spawn-sh "flamenco brightness kbd down || brightnessctl --device='*::kbd_backlight' set 1-"; }
     XF86AudioPlay         allow-when-locked=true { spawn-sh "flamenco media toggle || playerctl play-pause"; }
     XF86AudioNext         allow-when-locked=true { spawn-sh "flamenco media next || playerctl next"; }
     XF86AudioPrev         allow-when-locked=true { spawn-sh "flamenco media previous || playerctl previous"; }

@@ -9,6 +9,7 @@
   flamenco lock
   flamenco volume up|down|mute|mic-mute|set N
   flamenco brightness up|down|set N
+  flamenco brightness kbd up|down|set N|toggle   keyboard backlight
   flamenco media toggle|next|previous
   flamenco wallpaper set PATH | random | next
   flamenco theme PALETTE | dark | light | toggle | list
@@ -50,7 +51,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.13.0"
+VERSION = "0.14.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1462,6 +1463,9 @@ SHELL_FUNCTIONS = {
     "mic-mute": ("Mute microphone", ["volume", "mic-mute"]),
     "brightness-up": ("Brightness up", ["brightness", "up"]),
     "brightness-down": ("Brightness down", ["brightness", "down"]),
+    "kbd-brightness-up": ("Keyboard backlight up", ["brightness", "kbd", "up"]),
+    "kbd-brightness-down": ("Keyboard backlight down", ["brightness", "kbd", "down"]),
+    "kbd-brightness-toggle": ("Keyboard backlight on / off", ["brightness", "kbd", "toggle"]),
     "media-toggle": ("Play / pause", ["media", "toggle"]),
     "media-next": ("Next track", ["media", "next"]),
     "media-previous": ("Previous track", ["media", "previous"]),
@@ -3168,6 +3172,11 @@ def cmd_hypr_dispatch(args: list[str]) -> int:
         lua, legacy = f"hl.dsp.focus({{ workspace = {w} }})", ["workspace", rest[0]]
     elif a == "focus-window" and win:
         lua, legacy = f'hl.dsp.focus({{ window = "address:{win}" }})', ["focuswindow", f"address:{win}"]   # Lua form: best guess
+    elif a == "move-window-to-workspace" and "--window-id" in rest:
+        wid = rest[rest.index("--window-id") + 1]
+        ws = [x for i, x in enumerate(rest) if not x.startswith("--") and (i == 0 or rest[i - 1] not in ("--window-id", "--focus"))][-1]
+        lua, legacy = (f'hl.dsp.window.move({{ workspace = {ws if ws.isdigit() else lua_str(ws)}, window = "address:{wid}", follow = false }})',   # Lua form: best guess
+                       ["movetoworkspacesilent", f"{ws},address:{wid}"])
     elif a == "close-window":
         lua, legacy = (f'hl.dsp.window.close({{ window = "address:{win}" }})', ["closewindow", f"address:{win}"]) if win \
             else ("hl.dsp.window.close()", ["killactive"])
@@ -3572,6 +3581,8 @@ window-rule {
 //  XF86AudioMute         allow-when-locked=true { spawn "flamenco" "volume" "mute"; }
 //  XF86MonBrightnessUp   allow-when-locked=true { spawn "flamenco" "brightness" "up"; }
 //  XF86MonBrightnessDown allow-when-locked=true { spawn "flamenco" "brightness" "down"; }
+//  XF86KbdBrightnessUp   allow-when-locked=true { spawn "flamenco" "brightness" "kbd" "up"; }
+//  XF86KbdBrightnessDown allow-when-locked=true { spawn "flamenco" "brightness" "kbd" "down"; }
 """
 
 
@@ -4726,6 +4737,12 @@ def main(argv: list[str]) -> int:
     if cmd in ("volume", "brightness"):
         if not rest:
             die(f"usage: flamenco {cmd} up|down|set N" + ("|mute|mic-mute" if cmd == "volume" else ""))
+        if cmd == "brightness" and rest[0] == "kbd":
+            # keyboard backlight: up|down|set N|toggle, no argument prints it
+            sub = rest[1] if len(rest) > 1 else "get"
+            if sub not in ("up", "down", "set", "toggle", "get"):
+                die("usage: flamenco brightness kbd up|down|set N|toggle")
+            return ipc("brightness", "kbd" + sub.capitalize(), *rest[2:])
         action = {"mic-mute": "micMute"}.get(rest[0], rest[0])
         return ipc(cmd, action, *rest[1:])
     if cmd == "media":

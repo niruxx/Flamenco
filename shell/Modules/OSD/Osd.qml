@@ -7,7 +7,7 @@ import qs.Commons
 import qs.Services
 import qs.Widgets
 
-// Volume / brightness / mic popup.
+// Volume / brightness / keyboard backlight / mic popup.
 Scope {
     id: root
 
@@ -15,8 +15,8 @@ Scope {
     property bool shown: false
     property bool armed: false
 
-    readonly property real value: kind === "brightness" ? Brightness.value : kind === "mic" ? Audio.micVolume : Audio.volume
-    readonly property string icon: kind === "brightness" ? "brightness_6" : kind === "mic" ? (Audio.micMuted ? "mic_off" : "mic") : Audio.icon
+    readonly property real value: kind === "brightness" ? Brightness.value : kind === "kbd" ? Brightness.kbdValue : kind === "mic" ? Audio.micVolume : Audio.volume
+    readonly property string icon: kind === "brightness" ? "brightness_6" : kind === "kbd" ? (Brightness.kbdLevel > 0 ? "backlight_high" : "backlight_high_off") : kind === "mic" ? (Audio.micMuted ? "mic_off" : "mic") : Audio.icon
     readonly property bool muted: kind === "volume" ? Audio.muted : kind === "mic" ? Audio.micMuted : false
 
     function show(k) {
@@ -43,6 +43,7 @@ Scope {
     Connections {
         target: Brightness
         function onChangedByUser() { root.show("brightness"); }
+        function onKbdChangedByUser() { root.show("kbd"); }
     }
 
     Variants {

@@ -12,7 +12,11 @@ GridView {
     cellHeight: cellWidth * 0.62
     clip: true
     model: Wallpapers.files
-    boundsBehavior: Flickable.StopAtBounds
+    boundsBehavior: Flickable.OvershootBounds
+
+    SmoothWheel {
+        view: grid
+    }
 
     FText {
         anchors.centerIn: parent

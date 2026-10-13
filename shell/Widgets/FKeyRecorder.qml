@@ -41,6 +41,7 @@ Rectangle {
             [Qt.Key_MediaPlay]: "XF86AudioPlay", [Qt.Key_MediaTogglePlayPause]: "XF86AudioPlay",
             [Qt.Key_MediaNext]: "XF86AudioNext", [Qt.Key_MediaPrevious]: "XF86AudioPrev",
             [Qt.Key_MonBrightnessUp]: "XF86MonBrightnessUp", [Qt.Key_MonBrightnessDown]: "XF86MonBrightnessDown",
+            [Qt.Key_KeyboardLightOnOff]: "XF86KbdLightOnOff", [Qt.Key_KeyboardBrightnessUp]: "XF86KbdBrightnessUp", [Qt.Key_KeyboardBrightnessDown]: "XF86KbdBrightnessDown",
             [Qt.Key_Calculator]: "XF86Calculator"
         })
     readonly property var modifierKeys: [Qt.Key_Shift, Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_Super_L, Qt.Key_Super_R, Qt.Key_AltGr, Qt.Key_CapsLock, Qt.Key_NumLock]

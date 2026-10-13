@@ -2,14 +2,20 @@ import QtQuick
 import qs.Commons
 
 // Flickable with a draggable scrollbar: grab the handle, or click the track
-// to jump there and keep dragging. Mouse wheel and touchpad work as usual.
+// to jump there and keep dragging. Wheel and touchpad scrolling glide and keep
+// a little momentum (SmoothWheel); strong flicks overshoot the ends and spring back.
 Flickable {
     id: root
 
     clip: true
-    boundsBehavior: Flickable.StopAtBounds
+    boundsBehavior: Flickable.OvershootBounds
     contentWidth: width
-    flickDeceleration: 4000
+    flickDeceleration: 2500
+
+    SmoothWheel {
+        id: smooth
+        view: root
+    }
 
     readonly property bool scrollable: contentHeight > height + 1
     readonly property real maxY: Math.max(0, contentHeight - height)
@@ -47,7 +53,7 @@ Flickable {
             id: handle
             anchors.right: parent.right
             anchors.rightMargin: 2
-            y: 2 + (root.maxY > 0 ? root.contentY / root.maxY : 0) * (track.height - 4 - track.handleH)
+            y: 2 + (root.maxY > 0 ? Math.max(0, Math.min(1, root.contentY / root.maxY)) : 0) * (track.height - 4 - track.handleH)
             width: track.active ? 8 : 4
             height: track.handleH
             radius: width / 2
@@ -75,7 +81,7 @@ Flickable {
             }
 
             onPressed: mouse => {
-                root.cancelFlick();
+                smooth.halt();
                 const onHandle = mouse.y >= handle.y && mouse.y <= handle.y + handle.height;
                 // clicking the track centers the handle under the pointer, then drags from there
                 grab = onHandle ? mouse.y - handle.y : track.handleH / 2;
@@ -86,9 +92,7 @@ Flickable {
                 if (pressed)
                     scrollTo(mouse.y);
             }
-            onWheel: wheel => {
-                root.contentY = Math.max(0, Math.min(root.maxY, root.contentY - wheel.angleDelta.y));
-            }
+            onWheel: wheel => smooth.scroll(wheel)
         }
     }
 }

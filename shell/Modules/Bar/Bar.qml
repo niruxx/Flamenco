@@ -95,7 +95,7 @@ Variants {
 
         Component { id: launcherC; LauncherButton { screenName: win.modelData.name } }
         Component { id: workspacesC; Workspaces { screenName: win.modelData.name } }
-        Component { id: windowC; WindowTitle {} }
+        Component { id: windowC; WindowTitle { window: win } }
         Component { id: clockC; Clock { screenName: win.modelData.name } }
         Component { id: mediaC; MediaMini { screenName: win.modelData.name } }
         Component { id: trayC; Tray { window: win } }

@@ -80,6 +80,9 @@ close_all
 flamenco settings appearance; shot settings-appearance
 flamenco settings apps;       shot settings-app-theming
 flamenco settings bar;        shot settings-bar
+for page in windows workspaces edges keyboard displays screenshots defaults autostart flatpak about; do
+    flamenco settings "$page"; shot "settings-$page"
+done
 close_all
 
 # a light-mode look at the control center
@@ -87,7 +90,7 @@ flamenco theme light
 open_panel control; shot control-center-light
 
 # a few palettes on the desktop
-for p in catppuccin rosepine nord gruvbox; do
+for p in catppuccin rosepine nord gruvbox dracula kanagawa tokyonight everforest; do
     close_all
     flamenco theme dark
     flamenco theme "$p"

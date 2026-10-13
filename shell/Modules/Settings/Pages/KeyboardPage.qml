@@ -64,6 +64,26 @@ Page {
         Keyboard.setInput({ options: [sw, caps, compose].concat(other).filter(o => o).join(",") });
     }
 
+    // ── backlight (only on keyboards that have one) ──
+    Group {
+        visible: Brightness.kbdAvailable
+        title: "Backlight"
+
+        SettingRow {
+            title: "Keyboard brightness"
+            subtitle: Brightness.kbdMax <= 10 ? Brightness.kbdMax + " levels · also on the keyboard's backlight keys" : "Also on the keyboard's backlight keys"
+            icon: Brightness.kbdLevel > 0 ? "backlight_high" : "backlight_high_off"
+            FSlider {
+                width: 260
+                showValue: true
+                value: Brightness.kbdValue
+                stepSize: Brightness.kbdMax > 0 && Brightness.kbdMax <= 10 ? 1 / Brightness.kbdMax : 0
+                accent: Theme.accent3
+                onMoved: v => Brightness.setKbd(v)
+            }
+        }
+    }
+
     // ── layout ──
     Group {
         title: "Layout"
