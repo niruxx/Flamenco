@@ -1,39 +1,57 @@
-# Flamenco Shell
+# 🦩 Flamenco Shell
 
-A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor (and [Hyprland](https://hyprland.org)), built with [Quickshell](https://quickshell.org). It's structured like Noctalia and DMS: a QML shell plus a small `flamenco` program that launches it, talks to it over IPC, and themes your Qt and GTK applications to match.
+<p align="center">
+  <img src="docs/screenshots/desktop.png" alt="Flamenco Shell Desktop" width="100%" style="border-radius: 16px;">
+</p>
 
-- [Screenshots](#screenshots)
-- [Features](#features)
-- [Getting started](#getting-started)
-- [Using the shell](#using-the-shell)
-- [Network, printers and power](#network-printers-and-power)
-- [Sound](#sound)
-- [Keyring](#keyring)
-- [Firewall](#firewall)
-- [Screen sharing](#screen-sharing)
-- [System check](#system-check)
-- [Keyboard & shortcuts](#keyboard--shortcuts)
-- [Displays](#displays)
-- [Wallpapers](#wallpapers)
-- [Themes](#themes)
-- [Troubleshooting](#troubleshooting)
-- [Reference](#reference)
+<p align="center">
+  <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell">
+  <img src="https://img.shields.io/badge/Compositor-Niri%20%7C%20Hyprland-00BCD4?style=for-the-badge" alt="Compositor">
+  <img src="https://img.shields.io/badge/Design-Material%20Design%203-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="MD3">
+  <img src="https://img.shields.io/badge/Arch%20Linux-Supported-1793D1?style=for-the-badge&logo=archlinux&logoColor=white" alt="Arch Linux">
+</p>
 
+---
 
-## Screenshots
+## 💻 About the Setup
+Tailored for power users running cutting-edge Linux environments, Flamenco Shell is a feature-complete, highly customizable desktop shell built natively with [Quickshell](https://quickshell.org). Designed primarily for the [niri](https://github.com/YaLTeR/niri) scrolling compositor and [Hyprland](https://hyprland.org), it delivers a fluid, cohesive Material Design 3 experience featuring dynamic theming via `matugen`, unified Qt/GTK styling, seamless popup architectures, and rich interactive dashboards.
+
+---
+
+## 📑 Table of Contents
+- [📸 Screenshots](#-screenshots)
+- [✨ Features](#-features)
+- [🚀 Getting Started](#-getting-started)
+- [🎛️ Using the Shell](#️-using-the-shell)
+- [🔊 Sound](#-sound)
+- [🔑 Keyring](#-keyring)
+- [🛡️ Firewall](#-firewall)
+- [📡 Network, Printers and Power](#-network-printers-and-power)
+- [🖥️ Screen Sharing](#-screen-sharing)
+- [🩺 System Check](#-system-check)
+- [⌨️ Keyboard & Shortcuts](#️-keyboard--shortcuts)
+- [🖥️ Displays](#-displays)
+- [🖼️ Wallpapers](#-wallpapers)
+- [🎨 Themes](#-themes)
+- [⚠️ Troubleshooting](#️-troubleshooting)
+- [📚 Reference](#-reference)
+
+---
+
+## 📸 Screenshots
 
 ![Desktop](docs/screenshots/desktop.png)
 
 | | |
 |---|---|
-| ![Launcher](docs/screenshots/launcher.png)<br>**Launcher** | ![Control center](docs/screenshots/control-center.png)<br>**Control center** |
-| ![Notification center](docs/screenshots/notification-center.png)<br>**Notification center** | ![Notification popups](docs/screenshots/notification-popups.png)<br>**Notification popups** |
-| ![Calendar](docs/screenshots/calendar.png)<br>**Calendar & weather** | ![Wallpaper picker](docs/screenshots/wallpaper-picker.png)<br>**Wallpaper picker** |
-| ![Power menu](docs/screenshots/power-menu.png)<br>**Power menu** | ![Control center, light](docs/screenshots/control-center-light.png)<br>**Light mode** |
-| ![Settings: appearance](docs/screenshots/settings-appearance.png)<br>**Settings → Appearance** | ![Settings: app theming](docs/screenshots/settings-app-theming.png)<br>**Settings → App Theming** |
-| ![Settings: bar](docs/screenshots/settings-bar.png)<br>**Settings → Bar** | |
+| ![Launcher](docs/screenshots/launcher.png)<br>**🔍 Launcher** | ![Control center](docs/screenshots/control-center.png)<br>**🎛️ Control Center** |
+| ![Notification center](docs/screenshots/notification-center.png)<br>**🔔 Notification Center** | ![Notification popups](docs/screenshots/notification-popups.png)<br>**💬 Notification Popups** |
+| ![Calendar](docs/screenshots/calendar.png)<br>**📅 Calendar & Weather** | ![Wallpaper picker](docs/screenshots/wallpaper-picker.png)<br>**🖼️ Wallpaper Picker** |
+| ![Power menu](docs/screenshots/power-menu.png)<br>**⚡ Power Menu** | ![Control center, light](docs/screenshots/control-center-light.png)<br>**☀️ Light Mode** |
+| ![Settings: appearance](docs/screenshots/settings-appearance.png)<br>**🎨 Settings → Appearance** | ![Settings: app theming](docs/screenshots/settings-app-theming.png)<br>**🖌️ Settings → App Theming** |
+| ![Settings: bar](docs/screenshots/settings-bar.png)<br>**📊 Settings → Bar** | |
 
-**Palettes**
+### 🎨 Palettes
 
 | | |
 |---|---|
@@ -42,39 +60,43 @@ A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor (and [
 
 To regenerate these, run `tools/screenshots.sh` inside a niri session with the shell running (needs `grim`).
 
-## Features
+---
+
+## ✨ Features
 
 | | |
 |---|---|
-| **Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window, clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, brightness, battery, notifications, weather, power |
-| **App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
-| **Control center** | Volume, mic and brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, dark mode and wallpaper. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
-| **Launcher** | Fuzzy app search ranked by how often you use each app. `=` calculator, `>` run command, `;` clipboard history (cliphist) |
-| **Notifications** | Built-in daemon: popups with timeout bar, swipe to dismiss, actions, DND. History persists across restarts |
-| **OSD** | Volume, brightness and mic popups |
-| **Lock screen** | PAM auth, blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
-| **Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; log out, restart and shut down run a 5-second cancellable countdown |
-| **Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
-| **Dashboard** | Opens from the bar clock. Tabs: Overview (clock, calendar, user, weather and media cards), Media (full player), Wallpapers (picker and folder), Weather (configurable forecast), and a shortcut to Settings |
-| **Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
-| **Network & VPN** | Wi-Fi, plus NetworkManager VPNs (WireGuard, OpenVPN): connect from the control center, import `.conf`/`.ovpn` files in Settings |
-| **Sound** | Pick an installed sound theme (shared with GTK, GNOME and KDE apps), notification and volume sounds, output/input devices |
-| **Keyring** | Choose which keyring stores app passwords: GNOME Keyring, KDE Wallet, KeePassXC, oo7, or none. Shows what's running and whether it unlocks at login |
-| **Login & logout animations** | Bloom, Curtain, Blinds, Zoom or Fade over your blurred wallpaper with a greeting; separate choices for login and logout, with previews |
-| **Firewall** | Detects ufw or firewalld: turn it on/off, default policies or zones, add/remove ports, services and rules (applied with one sudo prompt) |
-| **Screen sharing** | Choose the xdg-desktop-portal backend for screen sharing, screenshots and file pickers. The lightweight wlr setup avoids GNOME; also a screen picker and frame-rate limit |
-| **Printers** | CUPS: start and enable the service, set the default printer, print test pages, manage the queue |
-| **Power** | Power profiles, sleep on/off, idle suspend (battery / plugged in), lock before sleep, lid actions (battery / plugged in / docked) and the power button |
-| **System check** | Runs `flamenco doctor` in Settings, shows what's missing and gives the exact `pacman` command |
-| **Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
-| **Keyboard** | Layouts, variants, layout switching, Caps Lock / Compose, key repeat, and shortcuts that open apps, run commands, call Flamenco functions or niri actions. Keys are recorded or typed, and per-shortcut or full resets to the defaults are available. Written to niri's config |
-| **Displays** | Per-display resolution, refresh rate, scale, orientation (rotate and flip) and VRR; drag-to-arrange layout; live apply with 15-second auto-revert; saved to niri's config |
-| **Settings app** | Its own window (`flamenco settings`) with a page for every module. Every change applies live |
-| **App theming** | Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
+| **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window, clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, brightness, battery, notifications, weather, power |
+| **🔔 App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
+| **🎛️ Control center** | Volume, mic and brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, dark mode and wallpaper. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
+| **🔍 Launcher** | Fuzzy app search ranked by how often you use each app. `=` calculator, `>` run command, `;` clipboard history (cliphist) |
+| **💬 Notifications** | Built-in daemon: popups with timeout bar, swipe to dismiss, actions, DND. History persists across restarts |
+| **📢 OSD** | Volume, brightness and mic popups |
+| **🔒 Lock screen** | PAM auth, blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
+| **⚡ Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; log out, restart and shut down run a 5-second cancellable countdown |
+| **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
+| **📊 Dashboard** | Opens from the bar clock. Tabs: Overview (clock, calendar, user, weather and media cards), Media (full player), Wallpapers (picker and folder), Weather (configurable forecast), and a shortcut to Settings |
+| **📈 Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
+| **🌐 Network & VPN** | Wi-Fi, plus NetworkManager VPNs (WireGuard, OpenVPN): connect from the control center, import `.conf`/`.ovpn` files in Settings |
+| **🔊 Sound** | Pick an installed sound theme (shared with GTK, GNOME and KDE apps), notification and volume sounds, output/input devices |
+| **🔑 Keyring** | Choose which keyring stores app passwords: GNOME Keyring, KDE Wallet, KeePassXC, oo7, or none. Shows what's running and whether it unlocks at login |
+| **✨ Login & logout animations** | Bloom, Curtain, Blinds, Zoom or Fade over your blurred wallpaper with a greeting; separate choices for login and logout, with previews |
+| **🛡️ Firewall** | Detects ufw or firewalld: turn it on/off, default policies or zones, add/remove ports, services and rules (applied with one sudo prompt) |
+| **🖥️ Screen sharing** | Choose the xdg-desktop-portal backend for screen sharing, screenshots and file pickers. The lightweight wlr setup avoids GNOME; also a screen picker and frame-rate limit |
+| **🖨️ Printers** | CUPS: start and enable the service, set the default printer, print test pages, manage the queue |
+| **🔋 Power** | Power profiles, sleep on/off, idle suspend (battery / plugged in), lock before sleep, lid actions (battery / plugged in / docked) and the power button |
+| **🩺 System check** | Runs `flamenco doctor` in Settings, shows what's missing and gives the exact `pacman` command |
+| **📌 Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
+| **⌨️ Keyboard** | Layouts, variants, layout switching, Caps Lock / Compose, key repeat, and shortcuts that open apps, run commands, call Flamenco functions or niri actions. Keys are recorded or typed, and per-shortcut or full resets to the defaults are available. Written to niri's config |
+| **🖥️ Displays** | Per-display resolution, refresh rate, scale, orientation (rotate and flip) and VRR; drag-to-arrange layout; live apply with 15-second auto-revert; saved to niri's config |
+| **⚙️ Settings app** | Its own window (`flamenco settings`) with a page for every module. Every change applies live |
+| **🎨 App theming** | Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
 
 Eight hand-tuned palettes, each with dark and light variants: Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox and Everforest. You can also derive the palette from your wallpaper. Palette switches cross-fade across the whole shell.
 
-## Getting started
+---
+
+## 🚀 Getting Started
 
 ### 1. Install dependencies
 
