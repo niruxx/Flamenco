@@ -20,6 +20,7 @@
   flamenco firewall status [--json] | apply --json SPEC | load
   flamenco fonts [--json]      installed font families (and monospace ones)
   flamenco sound themes | play EVENT | find EVENT
+  flamenco pick folder [START_DIR]   choose a folder (portal file chooser)
   flamenco portals get | apply --json SPEC   screen sharing / file chooser backends
   flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
   flamenco launch APP_ID       start a desktop app (used by app shortcuts)
@@ -51,7 +52,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.14.1"
+VERSION = "0.14.2"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1966,6 +1967,86 @@ def cmd_keyboard(args: list[str]) -> int:
         print("keyboard: niri config updated" if new != text else "keyboard: already up to date")
         return 0
     die("usage: flamenco keyboard get | defaults | functions | layouts | apply --json SPEC")
+
+
+# ─────────────────────────────── folder picker ───────────────────────────────
+# The xdg-desktop-portal FileChooser first, so the file chooser picked on the
+# portals page is the one that opens; kdialog / zenity / yad if there's no portal.
+
+def portal_pick_folder(start: str, title: str):
+    """Chosen path, "" if cancelled, None if the portal can't be used."""
+    try:
+        import gi
+        gi.require_version("Gio", "2.0")
+        from gi.repository import Gio, GLib
+    except Exception:          # no PyGObject (or something else called gi)
+        return None
+    try:
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    except GLib.Error:
+        return None
+    # the answer comes as a Response signal on a request object whose path is
+    # known up front; subscribe before asking so it can't be missed
+    token = f"flamenco_{os.getpid()}"
+    sender = bus.get_unique_name().lstrip(":").replace(".", "_")
+    request = f"/org/freedesktop/portal/desktop/request/{sender}/{token}"
+    loop = GLib.MainLoop()
+    result = {}
+
+    def on_response(_conn, _sender, _path, _iface, _signal, params, *_):
+        code, res = params.unpack()
+        result["code"] = code
+        result["uris"] = res.get("uris", [])
+        loop.quit()
+
+    sub = bus.signal_subscribe("org.freedesktop.portal.Desktop", "org.freedesktop.portal.Request", "Response",
+                               request, None, Gio.DBusSignalFlags.NONE, on_response)
+    opts = {"handle_token": GLib.Variant("s", token), "directory": GLib.Variant("b", True),
+            "modal": GLib.Variant("b", True)}
+    if start and os.path.isdir(start):
+        opts["current_folder"] = GLib.Variant.new_bytestring(os.fsencode(start))
+    try:
+        bus.call_sync("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+                      "org.freedesktop.portal.FileChooser", "OpenFile",
+                      GLib.Variant("(ssa{sv})", ("", title, opts)), GLib.VariantType("(o)"),
+                      Gio.DBusCallFlags.NONE, -1, None)
+    except GLib.Error:
+        # no portal running, or no FileChooser backend for this desktop
+        bus.signal_unsubscribe(sub)
+        return None
+    loop.run()
+    bus.signal_unsubscribe(sub)
+    if result.get("code") == 1:
+        return ""
+    if result.get("code") != 0:
+        return None
+    uris = result.get("uris") or []
+    return Gio.File.new_for_uri(uris[0]).get_path() or "" if uris else ""
+
+
+def cmd_pick(args: list[str]) -> int:
+    if not args or args[0] != "folder":
+        die("usage: flamenco pick folder [START_DIR]")
+    start = str(Path(args[1]).expanduser()) if len(args) > 1 and args[1] else str(Path.home())
+    title = "Choose a folder"
+    picked = portal_pick_folder(start, title)
+    if picked is None:
+        if shutil.which("kdialog"):
+            cmd = ["kdialog", "--title", title, "--getexistingdirectory", start]
+        elif shutil.which("zenity"):
+            cmd = ["zenity", "--file-selection", "--directory", "--title", title, f"--filename={start}/"]
+        elif shutil.which("yad"):
+            cmd = ["yad", "--file", "--directory", "--title", title, f"--filename={start}/"]
+        else:
+            # the shell shows this; on a terminal it's the reason nothing opened
+            print("@none")
+            print("flamenco: no file chooser: install xdg-desktop-portal-gtk (or -gnome / -kde), "
+                  "or kdialog / zenity", file=sys.stderr)
+            return 1
+        picked = subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
+    if picked:
+        print(picked)
+    return 0
 
 
 # ─────────────────────────────── portals (screen sharing) ────────────────────
@@ -4782,6 +4863,8 @@ def main(argv: list[str]) -> int:
         return cmd_sound(rest)
     if cmd == "portals":
         return cmd_portals(rest)
+    if cmd == "pick":
+        return cmd_pick(rest)
     if cmd == "pointer":
         return cmd_pointer(rest)
     if cmd == "flatpak":

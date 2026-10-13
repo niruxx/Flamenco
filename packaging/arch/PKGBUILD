@@ -2,13 +2,13 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.14.1
+pkgver=0.14.2
 pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
 url="https://github.com/niruxx/flamenco-shell"
 license=('unknown' 'Apache-2.0')  # Apache-2.0: bundled Material Symbols font
-depends=('quickshell' 'python' 'qt6-declarative' 'procps-ng')
+depends=('quickshell' 'python' 'python-gobject' 'qt6-declarative' 'procps-ng')
 optdepends=(
     'niri: compositor (or hyprland)'
     'hyprland: compositor (or niri)'

@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.14.1-E8466F?style=for-the-badge" alt="Version 0.14.1">
+  <img src="https://img.shields.io/badge/version-0.14.2-E8466F?style=for-the-badge" alt="Version 0.14.2">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -244,6 +244,7 @@ Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest
 | `adw-gtk-theme` | GTK 3 apps that look like libadwaita apps |
 | `qt6-imageformats` | `.webp` wallpapers |
 | `power-profiles-daemon`, `upower`, `bluez` | power profile tile, battery, Bluetooth |
+| `python-gobject` + `xdg-desktop-portal-gtk` (or `-gnome` / `-kde`) | the **Browse** folder picker (falls back to kdialog, zenity or yad) |
 
 On Arch:
 
@@ -883,8 +884,8 @@ flamenco flatpak reset org.mozilla.firefox
 > Flamenco draws the wallpaper itself, so **you don't need `swaybg`, `swww` or any other wallpaper program**. Remove those from your niri config, or they'll cover the shell's wallpaper.
 
 **Where images come from:** the folder `~/Pictures/Wallpapers` by default, including its subfolders (up to 4 levels deep).
-- **Changing it:** type a path in the folder field (it applies a moment after you stop typing), or click **Browse** to pick one with kdialog, zenity or yad. `~`, `$HOME` and paths relative to your home folder all work.
-- **Feedback:** the field shows whether the folder was found and how many images it has. Supported formats are `.jpg`, `.jpeg`, `.png`, `.bmp`, `.gif`, `.webp`, `.avif` and `.jxl`; the last three need `qt6-imageformats` (and `kimageformats` for AVIF/JPEG XL). File names with spaces or symbols like `#` and `%` are fine. On first start the first image found is used. With no images you get a plain background in the palette's color.
+- **Changing it:** type a path in the folder field (it applies a moment after you stop typing), or click **Browse** to pick one. Browse opens the portal's file chooser (the one picked on the Screen sharing page), or kdialog, zenity or yad when there's no portal; the button says **No file chooser** if none of them is installed. `~`, `$HOME` and paths relative to your home folder all work.
+- **Feedback:** the field shows whether the folder was found and how many images it has. Supported formats are `.jpg`, `.jpeg`, `.png`, `.bmp`, `.gif`, `.webp`, `.avif` and `.jxl`; the last three need `qt6-imageformats` (and `kimageformats` for AVIF/JPEG XL). File names with spaces or symbols like `#` and `%` are fine. Hidden files and folders are skipped, including the `._name.jpg` metadata files macOS leaves on USB drives and shares. On first start the first image found is used. With no images you get a plain background in the palette's color.
 
 **Setting a wallpaper**, any of these:
 
@@ -1046,6 +1047,7 @@ flamenco media toggle|next|previous
 flamenco wallpaper [set PATH | random | next]
 flamenco theme PALETTE | dark | light | toggle | list | apply-apps
 flamenco apps-theme --json SPEC | --restore
+flamenco pick folder [START_DIR]   # choose a folder with the portal file chooser
 flamenco portals get | apply --json SPEC
 flamenco fonts [--json]
 flamenco sound themes | play EVENT | find EVENT

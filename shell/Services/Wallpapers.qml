@@ -40,8 +40,10 @@ Singleton {
         }
         pending = false;
         scannedDir = dir;
-        // `test -d` first so a missing folder is reported, not shown as "no images"
-        scanner.command = ["sh", "-c", 'test -d "$1" || { echo "@missing"; exit 0; }; find -L "$1" -maxdepth 4 -type f \\( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" -o -iname "*.gif" -o -iname "*.avif" -o -iname "*.jxl" \\) 2>/dev/null', "sh", dir];
+        // `test -d` first so a missing folder is reported, not shown as "no images".
+        // Hidden files and folders are skipped: macOS leaves "._name.jpg" metadata
+        // files (not images) on USB drives and shares, plus .Trashes etc.
+        scanner.command = ["sh", "-c", 'test -d "$1" || { echo "@missing"; exit 0; }; find -L "$1" -mindepth 1 -maxdepth 4 \\( -name ".*" -prune \\) -o \\( -type f \\( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.bmp" -o -iname "*.gif" -o -iname "*.avif" -o -iname "*.jxl" \\) -print \\) 2>/dev/null', "sh", dir];
         scanner.running = true;
     }
 
@@ -75,7 +77,8 @@ Singleton {
                 }
                 root.files = text.split("\n").filter(Boolean).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
                 root.status = root.files.length ? "ok" : "empty";
-                if (!root.current && root.files.length > 0)
+                // also replaces a "._name" metadata file picked before they were skipped
+                if ((!root.current || Paths.fileName(root.current).startsWith("._")) && root.files.length > 0)
                     root.set(root.files[0]);
             }
         }

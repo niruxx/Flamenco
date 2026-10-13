@@ -71,22 +71,22 @@ RowLayout {
     }
 
     FButton {
-        text: "Browse"
-        icon: "folder_open"
+        text: root.noPicker ? "No file chooser" : "Browse"
+        icon: root.noPicker ? "error" : "folder_open"
         variant: "tonal"
         implicitHeight: 38
         disabled: picker.running
-        onClicked: picker.running = true
+        onClicked: {
+            root.noPicker = false;
+            picker.running = true;
+        }
     }
 
-    // first folder picker available: kdialog, zenity or yad
+    // the portal's file chooser (the one picked on the portals page), else
+    // kdialog / zenity / yad; "@none" when there's nothing to open
     Process {
         id: picker
-        command: ["sh", "-c", 'start="$1"; ' +
-            'if command -v kdialog >/dev/null; then kdialog --getexistingdirectory "$start"; ' +
-            'elif command -v zenity >/dev/null; then zenity --file-selection --directory --filename="$start/"; ' +
-            'elif command -v yad >/dev/null; then yad --file --directory --filename="$start/"; ' +
-            'else echo "@none"; fi', "sh", Paths.normalize(root.path) || Paths.home]
+        command: [Paths.bin, "pick", "folder", Paths.normalize(root.path) || Paths.home]
         stdout: StdioCollector {
             onStreamFinished: {
                 const p = text.trim();
