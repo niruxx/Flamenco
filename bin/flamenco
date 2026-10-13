@@ -25,6 +25,12 @@
   flamenco printers [--json] | default NAME | test NAME | cancel ID|all | service ACTION | add
   flamenco display list | apply --json SPEC | save --json SPEC | fallback
   flamenco pointer get | apply --json SPEC   mouse / touchpad speed, acceleration, scrolling, tapping
+  flamenco screenshot [region|screen|window] [--delay N] [--no-save]   niri's own screenshot tools
+  flamenco compositor get | apply --json SPEC   gaps, focus ring, corners, cursor hiding, named workspaces…
+  flamenco flatpak list | info APP | set APP --json CHANGES | reset APP   per-app Flatpak permissions
+  flamenco autostart list | set ID on|off | add APP_ID | add-command NAME CMD | remove ID | run
+  flamenco defaults get | set CATEGORY APP_ID   default browser, file manager, terminal…
+  flamenco about [--json]      system information
   flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
   flamenco doctor [--json]
   flamenco niri-config [--print | --snippet]   write a complete ~/.config/niri/config.kdl (backs up the old one)
@@ -44,7 +50,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.12.0"
+VERSION = "0.13.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -122,6 +128,10 @@ def cmd_run(args: list[str]) -> int:
             display_fallback(quiet=True)
         except Exception:
             pass
+    if "--no-intro" not in args and autostart_enabled():
+        # XDG autostart apps, a few seconds in so spawn-at-startup ones are already up
+        subprocess.Popen([sys.executable, self_path(), "autostart", "run", "--delay", "4"], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     cmd = [qs_bin(), "-p", str(shell_dir()), "--no-duplicate"]
     if "--fg" in args:
         os.execvpe(cmd[0], cmd, env)
@@ -1461,6 +1471,9 @@ SHELL_FUNCTIONS = {
     "dnd": ("Toggle Do Not Disturb", ["ipc", "notifs", "toggleDnd"]),
     "caffeine": ("Toggle caffeine", ["ipc", "toggles", "caffeine"]),
     "night-light": ("Toggle night light", ["ipc", "toggles", "nightLight"]),
+    "screenshot": ("Screenshot (select an area)", ["screenshot", "region"]),
+    "screenshot-screen": ("Screenshot of the screen", ["screenshot", "screen"]),
+    "screenshot-window": ("Screenshot of the window", ["screenshot", "window"]),
     "restart-shell": ("Restart the shell", ["restart"]),
 }
 
@@ -2921,7 +2934,7 @@ def cmd_hyprland_config(args: list[str]) -> int:
         hypr_apply_shortcuts(saved.get("keyboard", {}).get("shortcuts") or DEFAULT_SHORTCUTS)
     if not HYPR_INPUT.exists():
         hypr_apply_input(saved.get("keyboard", {}) or {}, saved.get("pointer"))
-    for f in (HYPR_CURSOR, HYPR_MONITORS):
+    for f in (HYPR_CURSOR, HYPR_MONITORS, HYPR_LAYOUT):
         if not f.exists():
             hypr_write(f, [])
     tmp = HYPR_CONFIG.with_suffix(".conf.flamenco-tmp")
@@ -3564,6 +3577,1115 @@ window-rule {
 
 # ─────────────────────────────── dispatch ────────────────────────────────────
 
+# ─────────────────────────────── flatpak permissions ─────────────────────────
+# Per-app overrides live in ~/.local/share/flatpak/overrides/APP_ID (a keyfile,
+# the same file `flatpak override --user` writes). Each permission is tri-state:
+# "default" (whatever the app asks for), "allow", or "deny" ("!name").
+
+FLATPAK_OVERRIDES = XDG_DATA / "flatpak/overrides"
+FLATPAK_KEYS = ("shared", "sockets", "devices", "features", "filesystems")
+FLATPAK_KNOWN = {
+    "shared": ["network", "ipc"],
+    "sockets": ["wayland", "x11", "fallback-x11", "pulseaudio", "session-bus", "system-bus", "ssh-auth", "pcsc", "cups", "gpg-agent"],
+    "devices": ["dri", "input", "usb", "kvm", "shm", "all"],
+    "features": ["bluetooth", "devel", "multiarch", "canbus", "per-app-dev-shm"],
+    "filesystems": ["home", "host", "host-os", "host-etc", "xdg-download", "xdg-documents", "xdg-pictures",
+                    "xdg-music", "xdg-videos", "xdg-desktop", "xdg-config", "xdg-run/pipewire-0"],
+}
+FLATPAK_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+def flatpak_split(v: str) -> list[str]:
+    return [x for x in (v or "").split(";") if x.strip()]
+
+
+def flatpak_context(text: str) -> dict:
+    """[Context] lists from a metadata / override keyfile."""
+    cp = configparser.RawConfigParser(strict=False, interpolation=None)
+    cp.optionxform = str
+    try:
+        cp.read_string(text)
+    except configparser.Error:
+        return {k: [] for k in FLATPAK_KEYS}
+    return {k: flatpak_split(cp.get("Context", k, fallback="")) for k in FLATPAK_KEYS}
+
+
+def flatpak_fs_name(entry: str) -> str:
+    """'!home:ro' → 'home' (the path without negation or access suffix)."""
+    e = entry.lstrip("!")
+    return re.sub(r":(ro|rw|create)$", "", e)
+
+
+def flatpak_list() -> list[dict]:
+    out = run_out(["flatpak", "list", "--app", "--columns=application,name,version,installation"])
+    apps = []
+    for line in out.splitlines():
+        f = line.split("\t")
+        if not f or not FLATPAK_ID_RE.match(f[0].strip()):
+            continue
+        apps.append({"id": f[0].strip(), "name": (f[1] if len(f) > 1 else f[0]).strip() or f[0].strip(),
+                     "version": f[2].strip() if len(f) > 2 else "", "installation": f[3].strip() if len(f) > 3 else ""})
+    seen, uniq = set(), []
+    for a in sorted(apps, key=lambda a: a["name"].lower()):
+        if a["id"] not in seen:
+            seen.add(a["id"])
+            uniq.append(a)
+    return uniq
+
+
+def flatpak_info(app: str) -> dict:
+    meta = flatpak_context(run_out(["flatpak", "info", "-m", app]))
+    user = FLATPAK_OVERRIDES / app
+    over = flatpak_context(user.read_text()) if user.is_file() else {k: [] for k in FLATPAK_KEYS}
+    sysf = Path("/var/lib/flatpak/overrides") / app
+    sysover = flatpak_context(sysf.read_text()) if sysf.is_file() else {k: [] for k in FLATPAK_KEYS}
+    perms = {}
+    for key in FLATPAK_KEYS:
+        name = flatpak_fs_name if key == "filesystems" else (lambda e: e.lstrip("!"))
+        names = list(FLATPAK_KNOWN[key])
+        for e in meta[key] + over[key] + sysover[key]:
+            if name(e) not in names:
+                names.append(name(e))
+        rows = []
+        for n in names:
+            asked = next((e for e in meta[key] if name(e) == n and not e.startswith("!")), None)
+            sys_e = next((e for e in sysover[key] if name(e) == n), None)
+            user_e = next((e for e in over[key] if name(e) == n), None)
+            state = "default" if user_e is None else ("deny" if user_e.startswith("!") else "allow")
+            base = asked is not None
+            if sys_e is not None:
+                base = not sys_e.startswith("!")
+            effective = base if state == "default" else state == "allow"
+            access = ""
+            src = user_e or asked or ""
+            m = re.search(r":(ro|rw|create)$", src)
+            if key == "filesystems" and m:
+                access = m.group(1)
+            rows.append({"name": n, "requested": asked is not None, "state": state, "effective": effective,
+                         "access": access, "known": n in FLATPAK_KNOWN[key]})
+        perms[key] = rows
+    cp = configparser.RawConfigParser(strict=False, interpolation=None)
+    cp.optionxform = str
+    try:
+        cp.read_string(run_out(["flatpak", "info", "-m", app]))
+    except configparser.Error:
+        pass
+    env = dict(cp.items("Environment")) if cp.has_section("Environment") else {}
+    bus = dict(cp.items("Session Bus Policy")) if cp.has_section("Session Bus Policy") else {}
+    return {"id": app, "permissions": perms, "environment": env, "sessionBus": bus,
+            "hasOverrides": user.is_file(), "overridesFile": str(user)}
+
+
+def flatpak_set(app: str, changes: dict) -> None:
+    """changes: {key: {name: "allow"|"deny"|"default"|"ro"|"rw"}} written to the user override file."""
+    path = FLATPAK_OVERRIDES / app
+    cp = configparser.RawConfigParser(strict=False, interpolation=None)
+    cp.optionxform = str
+    if path.is_file():
+        cp.read(path, encoding="utf-8")
+    if not cp.has_section("Context"):
+        cp.add_section("Context")
+    for key, items in changes.items():
+        if key not in FLATPAK_KEYS or not isinstance(items, dict):
+            continue
+        name = flatpak_fs_name if key == "filesystems" else (lambda e: e.lstrip("!"))
+        cur = flatpak_split(cp.get("Context", key, fallback=""))
+        for n, want in items.items():
+            n = str(n).strip()
+            if not n or ";" in n or "\n" in n:
+                continue
+            cur = [e for e in cur if name(e) != n]
+            if want == "deny":
+                cur.append("!" + n)
+            elif want in ("allow", "rw", "ro", "create"):
+                suffix = f":{want}" if key == "filesystems" and want in ("ro", "create") else ""
+                cur.append(n + suffix)
+        if cur:
+            cp.set("Context", key, ";".join(cur) + ";")
+        elif cp.has_option("Context", key):
+            cp.remove_option("Context", key)
+    if not cp.items("Context"):
+        cp.remove_section("Context")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not cp.sections():
+        path.unlink(missing_ok=True)
+        return
+    with open(path, "w", encoding="utf-8") as f:
+        cp.write(f, space_around_delimiters=False)
+
+
+def cmd_flatpak(args: list[str]) -> int:
+    sub = args[0] if args else "list"
+    if not shutil.which("flatpak"):
+        print(json.dumps({"available": False, "apps": []}) if sub == "list" else "flatpak is not installed")
+        return 0 if sub == "list" else 1
+    if sub == "list":
+        print(json.dumps({"available": True, "apps": flatpak_list()}))
+        return 0
+    if len(args) < 2 or not FLATPAK_ID_RE.match(args[1]):
+        die("usage: flamenco flatpak list | info APP | set APP --json CHANGES | reset APP")
+    app = args[1]
+    if sub == "info":
+        print(json.dumps(flatpak_info(app)))
+        return 0
+    if sub == "set":
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco flatpak set APP --json CHANGES")
+        flatpak_set(app, json.loads(args[args.index("--json") + 1]))
+        print(f"flatpak: updated overrides for {app} (applies next time it starts)")
+        return 0
+    if sub == "reset":
+        (FLATPAK_OVERRIDES / app).unlink(missing_ok=True)
+        print(f"flatpak: {app} back to its own permissions")
+        return 0
+    die("usage: flamenco flatpak list | info APP | set APP --json CHANGES | reset APP")
+
+
+# ─────────────────────────────── about this computer ─────────────────────────
+
+def read_text(path: str) -> str:
+    try:
+        return Path(path).read_text(errors="replace")
+    except OSError:
+        return ""
+
+
+def first_line(cmd: list[str]) -> str:
+    out = run_out(cmd).strip().splitlines()
+    return out[0].strip() if out else ""
+
+
+def about_info() -> dict:
+    import platform
+    os_rel = {}
+    for line in (read_text("/etc/os-release") or read_text("/usr/lib/os-release")).splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            os_rel[k] = v.strip().strip('"')
+    cpu, cores = "", 0
+    for line in read_text("/proc/cpuinfo").splitlines():
+        if line.startswith("model name") and not cpu:
+            cpu = line.split(":", 1)[1].strip()
+        if line.startswith("processor"):
+            cores += 1
+    cpu = re.sub(r"\s+", " ", re.sub(r"\((R|TM|tm|r)\)", "", cpu)).replace(" CPU", "").strip()
+    gpus = []
+    if shutil.which("lspci"):
+        for line in run_out(["lspci", "-mm"]).splitlines():
+            if re.search(r'"(VGA compatible controller|3D controller|Display controller)"', line):
+                f = re.findall(r'"([^"]*)"', line)
+                if len(f) >= 3:
+                    vendor = re.sub(r"\s*(Corporation|Corp\.|Inc\.|\[AMD/ATI\]|Advanced Micro Devices, Inc\.)\s*", " ", f[1]).strip()
+                    name = re.sub(r".*\[(.*)\].*", r"\1", f[2]) if "[" in f[2] else f[2]
+                    gpus.append(f"{vendor} {name}".strip())
+    mem = {}
+    for line in read_text("/proc/meminfo").splitlines():
+        k, _, v = line.partition(":")
+        if v.strip().split()[:1]:
+            mem[k] = int(v.split()[0]) * 1024
+    try:
+        du = shutil.disk_usage("/")
+        disk = {"total": du.total, "used": du.used}
+    except OSError:
+        disk = {"total": 0, "used": 0}
+    try:
+        uptime = int(float(read_text("/proc/uptime").split()[0]))
+    except (IndexError, ValueError):
+        uptime = 0
+    comp = compositor()
+    if comp == "hyprland":
+        comp_ver = ""
+        try:
+            comp_ver = json.loads(run_out(["hyprctl", "version", "-j"]) or "{}").get("tag", "")
+        except json.JSONDecodeError:
+            pass
+        comp_name = "Hyprland"
+    else:
+        comp_name, comp_ver = "niri", re.sub(r"^niri\s*", "", first_line(["niri", "--version"]))
+    qs_exe = shutil.which("qs") or shutil.which("quickshell")
+    qs_ver = re.sub(r"^quickshell\s*", "", first_line([qs_exe, "--version"]), flags=re.I) if qs_exe else ""
+    pkgs = ""
+    if shutil.which("pacman"):
+        n = len(run_out(["pacman", "-Qq"]).splitlines())
+        pkgs = f"{n} (pacman)" if n else ""
+    elif shutil.which("dpkg-query"):
+        n = len(run_out(["dpkg-query", "-f", ".\n", "-W"]).splitlines())
+        pkgs = f"{n} (dpkg)" if n else ""
+    elif shutil.which("rpm"):
+        n = len(run_out(["rpm", "-qa"]).splitlines())
+        pkgs = f"{n} (rpm)" if n else ""
+    if shutil.which("flatpak"):
+        n = len(run_out(["flatpak", "list", "--app", "--columns=application"]).splitlines())
+        if n:
+            pkgs = (pkgs + ", " if pkgs else "") + f"{n} (flatpak)"
+    model = " ".join(x for x in (read_text("/sys/class/dmi/id/sys_vendor").strip(),
+                                 read_text("/sys/class/dmi/id/product_name").strip()) if x and "O.E.M" not in x)
+    return {
+        "os": os_rel.get("PRETTY_NAME") or os_rel.get("NAME") or platform.system(),
+        "osId": os_rel.get("ID", ""), "osUrl": os_rel.get("HOME_URL", ""), "logo": os_rel.get("LOGO", ""),
+        "hostname": platform.node(), "model": model, "kernel": platform.release(), "arch": platform.machine(),
+        "cpu": cpu, "cores": cores, "gpus": gpus,
+        "memTotal": mem.get("MemTotal", 0), "memAvailable": mem.get("MemAvailable", 0),
+        "diskTotal": disk["total"], "diskUsed": disk["used"], "uptime": uptime,
+        "compositor": comp_name, "compositorVersion": comp_ver, "quickshell": qs_ver, "flamenco": VERSION,
+        "packages": pkgs, "session": os.environ.get("XDG_SESSION_TYPE", ""), "user": os.environ.get("USER", ""),
+    }
+
+
+def cmd_about(args: list[str]) -> int:
+    info = about_info()
+    if "--json" in args:
+        print(json.dumps(info))
+        return 0
+    gib = lambda b: f"{b / 2**30:.1f} GiB"
+    rows = [("OS", info["os"]), ("Host", info["model"] or info["hostname"]), ("Kernel", info["kernel"]),
+            ("CPU", f"{info['cpu']} ({info['cores']} threads)"), ("GPU", ", ".join(info["gpus"])),
+            ("Memory", f"{gib(info['memTotal'] - info['memAvailable'])} / {gib(info['memTotal'])}"),
+            ("Disk (/)", f"{gib(info['diskUsed'])} / {gib(info['diskTotal'])}"),
+            ("Compositor", f"{info['compositor']} {info['compositorVersion']}".strip()),
+            ("Quickshell", info["quickshell"]), ("Flamenco", info["flamenco"]), ("Packages", info["packages"])]
+    for k, v in rows:
+        if v:
+            print(f"{k:<11} {v}")
+    return 0
+
+
+# ─────────────────────────────── autostart ───────────────────────────────────
+# XDG autostart: ~/.config/autostart overrides /etc/xdg/autostart by file name.
+# niri doesn't run these itself, so `flamenco run` starts them at login
+# (unless systemd's xdg-desktop-autostart.target already does).
+
+AUTOSTART_USER = XDG_CONFIG / "autostart"
+
+
+def autostart_system_dirs() -> list[Path]:
+    dirs = os.environ.get("XDG_CONFIG_DIRS", "/etc/xdg").split(":")
+    return [Path(d) / "autostart" for d in dirs if d]
+
+
+def desktop_names() -> list[str]:
+    desk = os.environ.get("XDG_CURRENT_DESKTOP", "") or ("Hyprland" if compositor() == "hyprland" else "niri")
+    return [d.lower() for d in desk.split(":") if d]
+
+
+def read_desktop(path: Path) -> dict:
+    cp = configparser.RawConfigParser(strict=False, interpolation=None)
+    cp.optionxform = str
+    try:
+        cp.read(path, encoding="utf-8")
+    except (configparser.Error, UnicodeDecodeError):
+        return {}
+    return dict(cp.items("Desktop Entry")) if cp.has_section("Desktop Entry") else {}
+
+
+def autostart_entries() -> list[dict]:
+    found: dict[str, dict] = {}
+    for d in reversed(autostart_system_dirs()):
+        for f in sorted(d.glob("*.desktop")) if d.is_dir() else []:
+            found[f.name] = {"system": f}
+    if AUTOSTART_USER.is_dir():
+        for f in sorted(AUTOSTART_USER.glob("*.desktop")):
+            found.setdefault(f.name, {})["user"] = f
+    names = desktop_names()
+    out = []
+    for fid, src in found.items():
+        e = read_desktop(src.get("user") or src["system"])
+        if not e:
+            continue
+        sys_e = read_desktop(src["system"]) if "system" in src else {}
+        hidden = e.get("Hidden", "false").lower() == "true"
+        gnome_off = e.get("X-GNOME-Autostart-enabled", "true").lower() == "false"
+        only = [x.lower() for x in e.get("OnlyShowIn", "").split(";") if x]
+        notin = [x.lower() for x in e.get("NotShowIn", "").split(";") if x]
+        here = (not only or any(n in only for n in names)) and not any(n in notin for n in names)
+        try_exec = e.get("TryExec", "")
+        installed = not try_exec or bool(shutil.which(try_exec) or Path(try_exec).is_file())
+        out.append({
+            "id": fid, "name": e.get("Name") or sys_e.get("Name") or fid[:-8],
+            "comment": e.get("Comment") or sys_e.get("Comment", ""), "icon": e.get("Icon") or sys_e.get("Icon", ""),
+            "exec": e.get("Exec") or sys_e.get("Exec", ""), "enabled": not hidden and not gnome_off,
+            "system": "system" in src, "user": "user" in src, "thisDesktop": here, "installed": installed,
+            "onlyShowIn": e.get("OnlyShowIn", ""),
+        })
+    return sorted(out, key=lambda x: (not x["thisDesktop"], x["name"].lower()))
+
+
+def autostart_write(path: Path, entry: dict):
+    lines = ["[Desktop Entry]"] + [f"{k}={v}" for k, v in entry.items()]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n")
+
+
+def autostart_set(fid: str, on: bool):
+    user = AUTOSTART_USER / fid
+    sysf = next((d / fid for d in autostart_system_dirs() if (d / fid).is_file()), None)
+    if user.is_file():
+        e = read_desktop(user)
+    elif sysf:
+        e = read_desktop(sysf)
+    else:
+        die(f"no autostart entry {fid!r}")
+    e.pop("X-GNOME-Autostart-enabled", None)
+    if on:
+        e.pop("Hidden", None)
+        # a user copy that only existed to hide a system entry isn't needed any more
+        if sysf and read_desktop(sysf) == e:
+            user.unlink(missing_ok=True)
+            return
+    else:
+        e["Hidden"] = "true"
+    autostart_write(user, e)
+
+
+def autostart_should_run(e: dict) -> bool:
+    if e.get("Hidden", "false").lower() == "true" or e.get("X-GNOME-Autostart-enabled", "true").lower() == "false":
+        return False
+    names = desktop_names()
+    only = [x.lower() for x in e.get("OnlyShowIn", "").split(";") if x]
+    notin = [x.lower() for x in e.get("NotShowIn", "").split(";") if x]
+    if (only and not any(n in only for n in names)) or any(n in notin for n in names):
+        return False
+    te = e.get("TryExec", "")
+    if te and not (shutil.which(te) or Path(te).is_file()):
+        return False
+    return bool(e.get("Exec"))
+
+
+def autostart_run(delay: float = 0) -> int:
+    import shlex
+    import time
+    if shutil.which("systemctl") and subprocess.run(
+            ["systemctl", "--user", "-q", "is-active", "xdg-desktop-autostart.target"]).returncode == 0:
+        return 0        # systemd already started them
+    runtime = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
+    session = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") or os.environ.get("NIRI_SOCKET") or os.environ.get("WAYLAND_DISPLAY", "")
+    stamp = runtime / "flamenco-autostart"
+    try:
+        if stamp.read_text() == session:
+            return 0    # already ran in this session
+    except OSError:
+        pass
+    try:
+        stamp.write_text(session)
+    except OSError:
+        pass
+    if delay:
+        time.sleep(delay)
+    started = 0
+    for item in autostart_entries():
+        path = (AUTOSTART_USER / item["id"]) if item["user"] else next(
+            d / item["id"] for d in autostart_system_dirs() if (d / item["id"]).is_file())
+        e = read_desktop(path)
+        if not autostart_should_run(e):
+            continue
+        try:
+            argv = [a.replace("%%", "%") for a in shlex.split(e["Exec"]) if not re.fullmatch(r"%[fFuUdDnNickvm]", a)]
+        except ValueError:
+            continue
+        if not argv:
+            continue
+        # skip things the compositor config already started (spawn-at-startup / exec-once)
+        if shutil.which("pgrep") and subprocess.run(["pgrep", "-x", Path(argv[0]).name[:15]],
+                                                    capture_output=True).returncode == 0:
+            continue
+        try:
+            subprocess.Popen(argv, start_new_session=True, stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            started += 1
+        except OSError:
+            pass
+    return 0
+
+
+def autostart_enabled() -> bool:
+    try:
+        return bool(json.loads((CONFIG_DIR / "settings.json").read_text()).get("autostart", {}).get("runEntries", True))
+    except Exception:
+        return True
+
+
+def cmd_autostart(args: list[str]) -> int:
+    sub = args[0] if args else "list"
+    if sub == "list":
+        print(json.dumps(autostart_entries()))
+        return 0
+    if sub == "run":
+        delay = float(args[args.index("--delay") + 1]) if "--delay" in args else 0
+        return autostart_run(delay)
+    if sub == "set" and len(args) == 3 and args[2] in ("on", "off"):
+        autostart_set(Path(args[1]).name, args[2] == "on")
+        print(f"autostart: {args[1]} {args[2]}")
+        return 0
+    if sub == "add" and len(args) == 2:
+        src = find_desktop_entry(args[1])
+        if src is None:
+            die(f"no desktop entry for {args[1]!r}")
+        e = read_desktop(src)
+        e.pop("Hidden", None)
+        e.pop("NoDisplay", None)
+        e.pop("Actions", None)
+        e.pop("X-GNOME-Autostart-enabled", None)
+        autostart_write(AUTOSTART_USER / src.name, e)
+        print(f"autostart: added {src.name}")
+        return 0
+    if sub == "add-command" and len(args) == 3:
+        name, command = args[1].strip(), args[2].strip()
+        if not name or not command or "\n" in name + command:
+            die("usage: flamenco autostart add-command NAME COMMAND")
+        slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "command"
+        path = AUTOSTART_USER / f"flamenco-{slug}.desktop"
+        i = 2
+        while path.exists():
+            path, i = AUTOSTART_USER / f"flamenco-{slug}-{i}.desktop", i + 1
+        autostart_write(path, {"Type": "Application", "Name": name, "Exec": command,
+                               "Comment": "Added in Flamenco Settings", "Icon": "utilities-terminal"})
+        print(f"autostart: added {path.name}")
+        return 0
+    if sub == "remove" and len(args) == 2:
+        fid = Path(args[1]).name
+        if any((d / fid).is_file() for d in autostart_system_dirs()):
+            autostart_set(fid, False)       # can't delete a system entry: hide it
+        else:
+            (AUTOSTART_USER / fid).unlink(missing_ok=True)
+        print(f"autostart: removed {fid}")
+        return 0
+    die("usage: flamenco autostart list | set ID on|off | add DESKTOP_ID | add-command NAME CMD | remove ID | run")
+
+
+# ─────────────────────────────── default applications ────────────────────────
+# Writes [Default Applications] in ~/.config/mimeapps.list for every MIME type of
+# a category. The terminal goes to xdg-terminals.list and the shell's own setting.
+
+DEFAULT_CATEGORIES = [
+    ("browser", "Web browser", "web", ["x-scheme-handler/http", "x-scheme-handler/https", "text/html",
+                                       "application/xhtml+xml", "x-scheme-handler/about", "x-scheme-handler/unknown"]),
+    ("files", "Files", "folder", ["inode/directory"]),
+    ("email", "Email", "mail", ["x-scheme-handler/mailto"]),
+    ("text", "Text editor", "edit_note", ["text/plain", "text/markdown", "application/x-shellscript", "text/x-python"]),
+    ("images", "Images", "image", ["image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/tiff",
+                                   "image/svg+xml", "image/avif", "image/heic"]),
+    ("video", "Video", "movie", ["video/mp4", "video/x-matroska", "video/webm", "video/mpeg", "video/quicktime",
+                                 "video/x-msvideo", "video/ogg"]),
+    ("music", "Music", "music_note", ["audio/mpeg", "audio/flac", "audio/ogg", "audio/x-wav", "audio/mp4", "audio/aac",
+                                      "audio/x-vorbis+ogg", "audio/opus"]),
+    ("pdf", "Documents (PDF)", "picture_as_pdf", ["application/pdf"]),
+    ("archives", "Archives", "folder_zip", ["application/zip", "application/x-tar", "application/x-7z-compressed",
+                                            "application/x-rar", "application/gzip", "application/x-compressed-tar"]),
+]
+MIMEAPPS = XDG_CONFIG / "mimeapps.list"
+
+
+def desktop_apps() -> dict[str, dict]:
+    """desktop id → {name, icon, mime[], categories[]} for every visible application."""
+    apps: dict[str, dict] = {}
+    for d in data_dirs():
+        root = d / "applications"
+        if not root.is_dir():
+            continue
+        for f in root.rglob("*.desktop"):
+            fid = str(f.relative_to(root)).replace("/", "-")
+            if fid in apps:
+                continue
+            e = read_desktop(f)
+            if not e or e.get("Type", "Application") != "Application":
+                apps[fid] = {}
+                continue
+            if e.get("Hidden", "false").lower() == "true":
+                apps[fid] = {}
+                continue
+            apps[fid] = {"id": fid, "name": e.get("Name", fid[:-8]), "icon": e.get("Icon", ""),
+                         "mime": [m for m in e.get("MimeType", "").split(";") if m],
+                         "categories": [c for c in e.get("Categories", "").split(";") if c],
+                         "noDisplay": e.get("NoDisplay", "false").lower() == "true"}
+    return {k: v for k, v in apps.items() if v}
+
+
+def mimeapps_default(mime: str) -> str:
+    files = [MIMEAPPS] + [Path(d) / "mimeapps.list" for d in os.environ.get("XDG_CONFIG_DIRS", "/etc/xdg").split(":") if d]
+    files += [d / "applications/mimeapps.list" for d in data_dirs()]
+    for f in files:
+        if not f.is_file():
+            continue
+        cp = configparser.RawConfigParser(strict=False, interpolation=None)
+        cp.optionxform = str
+        try:
+            cp.read(f, encoding="utf-8")
+        except (configparser.Error, UnicodeDecodeError):
+            continue
+        v = cp.get("Default Applications", mime, fallback="")
+        first = next((x for x in v.split(";") if x), "")
+        if first:
+            return first
+    return ""
+
+
+def terminal_apps(apps: dict) -> list[dict]:
+    return [a for a in apps.values() if "TerminalEmulator" in a["categories"]]
+
+
+def defaults_state() -> dict:
+    apps = desktop_apps()
+    cats = []
+    for cid, label, icon, mimes in DEFAULT_CATEGORIES:
+        cands = [a for a in apps.values() if any(m in a["mime"] for m in mimes[:2])]
+        if cid == "files":
+            cands = [a for a in cands if "FileManager" in a["categories"] or "System" in a["categories"] or not a["noDisplay"]]
+        cands = [a for a in cands if not a["noDisplay"] or cid == "email"]
+        cur = mimeapps_default(mimes[0])
+        cats.append({"id": cid, "label": label, "icon": icon, "current": cur,
+                     "candidates": [{"id": a["id"], "name": a["name"], "icon": a["icon"]}
+                                    for a in sorted(cands, key=lambda a: a["name"].lower())]})
+    term = pick_terminal().split()[0]
+    terms = terminal_apps(apps)
+    cur_t = next((a["id"] for a in terms if a["id"][:-8].lower().split(".")[-1] == term.lower()
+                  or a["id"][:-8].lower() == term.lower()), "")
+    lst = XDG_CONFIG / "xdg-terminals.list"
+    if lst.is_file():
+        first = next((x.strip() for x in lst.read_text().splitlines() if x.strip() and not x.startswith("#")), "")
+        cur_t = first or cur_t
+    cats.append({"id": "terminal", "label": "Terminal", "icon": "terminal", "current": cur_t,
+                 "candidates": [{"id": a["id"], "name": a["name"], "icon": a["icon"], "command": terminal_command(a["id"])}
+                                for a in sorted(terms, key=lambda a: a["name"].lower())]})
+    return {"categories": cats}
+
+
+def terminal_command(desktop_id: str) -> str:
+    e = read_desktop(find_desktop_entry(desktop_id) or Path("/nonexistent"))
+    import shlex
+    try:
+        argv = shlex.split(e.get("Exec", ""))
+    except ValueError:
+        argv = []
+    exe = Path(argv[0]).name if argv else desktop_id[:-8].split(".")[-1].lower()
+    return exe
+
+
+def defaults_set(cid: str, app: str, settings_too: bool = True) -> None:
+    if cid == "terminal":
+        lst = XDG_CONFIG / "xdg-terminals.list"
+        old = [x.strip() for x in lst.read_text().splitlines()] if lst.is_file() else []
+        lst.parent.mkdir(parents=True, exist_ok=True)
+        lst.write_text("\n".join([app] + [x for x in old if x and x != app]) + "\n")
+        settings = CONFIG_DIR / "settings.json"
+        if not settings_too:        # the running shell sets general.terminal itself
+            return
+        try:
+            data = json.loads(settings.read_text())
+        except Exception:
+            data = None
+        if isinstance(data, dict):
+            data.setdefault("general", {})["terminal"] = terminal_command(app)
+            settings.write_text(json.dumps(data, indent=4))
+        return
+    cat = next((c for c in DEFAULT_CATEGORIES if c[0] == cid), None)
+    if cat is None:
+        die(f"unknown category {cid!r} (one of: " + ", ".join(c[0] for c in DEFAULT_CATEGORIES) + ", terminal)")
+    cp = configparser.RawConfigParser(strict=False, interpolation=None, delimiters=("=",))
+    cp.optionxform = str
+    if MIMEAPPS.is_file():
+        cp.read(MIMEAPPS, encoding="utf-8")
+    for sec in ("Default Applications", "Added Associations"):
+        if not cp.has_section(sec):
+            cp.add_section(sec)
+    for mime in cat[3]:
+        cp.set("Default Applications", mime, app + ";")
+        added = [x for x in cp.get("Added Associations", mime, fallback="").split(";") if x and x != app]
+        cp.set("Added Associations", mime, ";".join([app] + added) + ";")
+    MIMEAPPS.parent.mkdir(parents=True, exist_ok=True)
+    with open(MIMEAPPS, "w", encoding="utf-8") as f:
+        cp.write(f, space_around_delimiters=False)
+
+
+def cmd_defaults(args: list[str]) -> int:
+    sub = args[0] if args else "get"
+    if sub == "get":
+        print(json.dumps(defaults_state()))
+        return 0
+    no_settings = "--no-settings" in args
+    args = [a for a in args if a != "--no-settings"]
+    if sub == "set" and len(args) == 3:
+        app = args[2] if args[2].endswith(".desktop") else args[2] + ".desktop"
+        if find_desktop_entry(app) is None:
+            die(f"no desktop entry {app!r}")
+        defaults_set(args[1], app, not no_settings)
+        print(f"defaults: {args[1]} → {app}")
+        return 0
+    die("usage: flamenco defaults get | set CATEGORY APP_ID [--no-settings]")
+
+
+# ─────────────────────────────── windows, layout & workspaces ────────────────
+# niri: edits layout { … }, cursor, input, hotkey-overlay, gestures and a marked
+# region (window corner radius + named workspaces) in config.kdl.
+# Hyprland: regenerates flamenco-layout.conf / flamenco/layout.lua.
+
+SHOT_PATH = "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+WINDOW_DEFAULTS = {
+    "gaps": 12, "struts": 0, "centerColumn": "never", "defaultWidth": 0.5,
+    "focusRing": True, "focusRingWidth": 2, "border": False, "borderWidth": 2,
+    "activeColor": "#ff5d73", "inactiveColor": "#46343a", "cornerRadius": 12, "shadows": True,
+    "focusFollowsMouse": False, "warpMouse": False, "hideCursorTyping": False, "hideCursorAfter": 0,
+    "preferNoCsd": True, "hotCorners": True, "skipHotkeyOverlay": True, "screenshotPath": SHOT_PATH,
+    "workspaceBackForth": False, "workspaces": [],
+}
+CENTER_MODES = ("never", "always", "on-overflow")
+LAYOUT_BEGIN = "// ── flamenco: window corners & named workspaces (edit in Flamenco Settings) ──"
+LAYOUT_END = "// ── end of flamenco window corners & workspaces ──"
+HYPR_LAYOUT = HYPR_DIR / "flamenco-layout.conf"
+HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
+
+
+def window_norm(w: dict) -> dict:
+    out = dict(WINDOW_DEFAULTS)
+    for k, d in WINDOW_DEFAULTS.items():
+        v = w.get(k, d)
+        if isinstance(d, bool):
+            out[k] = bool(v)
+        elif isinstance(d, (int, float)) and not isinstance(d, bool):
+            try:
+                out[k] = type(d)(v) if not isinstance(d, int) else int(round(float(v)))
+            except (TypeError, ValueError):
+                out[k] = d
+        elif isinstance(d, str):
+            out[k] = str(v) if v is not None else d
+        else:
+            out[k] = v if isinstance(v, list) else d
+    out["gaps"] = max(0, min(64, out["gaps"]))
+    out["struts"] = max(0, min(400, out["struts"]))
+    out["focusRingWidth"] = max(1, min(16, out["focusRingWidth"]))
+    out["borderWidth"] = max(1, min(16, out["borderWidth"]))
+    out["cornerRadius"] = max(0, min(40, out["cornerRadius"]))
+    out["hideCursorAfter"] = max(0, min(600000, out["hideCursorAfter"]))
+    out["defaultWidth"] = max(0.0, min(1.0, float(out["defaultWidth"])))
+    if out["centerColumn"] not in CENTER_MODES:
+        out["centerColumn"] = "never"
+    for k in ("activeColor", "inactiveColor"):
+        if not HEX_RE.match(out[k]):
+            out[k] = WINDOW_DEFAULTS[k]
+    out["screenshotPath"] = out["screenshotPath"].replace("\n", "").strip()
+    ws = []
+    for item in out["workspaces"]:
+        if isinstance(item, dict) and str(item.get("name", "")).strip():
+            ws.append({"name": str(item["name"]).strip()[:64].replace("\n", " "),
+                       "output": str(item.get("output", "")).strip().replace("\n", "")})
+    out["workspaces"] = ws
+    return out
+
+
+def kdl_top_nodes(text: str, name: str) -> list[tuple[int, int]]:
+    """(start, end) of every top-level `name …` node, with or without a { } block."""
+    masked = kdl_mask(text)
+    head = re.compile(r"[ \t]*" + re.escape(name) + r"(?=[\s;{]|$)")
+    spans, depth, i, n = [], 0, 0, len(masked)
+    while i < n:
+        if depth == 0 and (i == 0 or masked[i - 1] == "\n") and head.match(masked, i):
+            eol = masked.find("\n", i)
+            eol = n if eol < 0 else eol
+            brace = masked.find("{", i, eol)
+            end = eol
+            if brace >= 0:
+                d = 0
+                for j in range(brace, n):
+                    if masked[j] == "{":
+                        d += 1
+                    elif masked[j] == "}":
+                        d -= 1
+                        if d == 0:
+                            end = j + 1
+                            break
+            spans.append((i, end))
+            i = end
+            continue
+        ch = masked[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        i += 1
+    return spans
+
+
+def kdl_drop(text: str, spans) -> str:
+    for a, b in sorted(spans, reverse=True):
+        b = b + 1 if b < len(text) and text[b] == "\n" else b
+        text = text[:a] + text[b:]
+    return text
+
+
+def kdl_ensure(text: str, path: list[str]):
+    """Make sure `a { b { … } }` exists; returns (text, innermost block)."""
+    if kdl_block(text, path[0]) is None:
+        text = text.rstrip("\n") + f"\n\n{path[0]} {{\n}}\n"
+    for depth in range(1, len(path)):
+        parent = kdl_resolve(text, path[:depth])
+        if kdl_child_block(text, parent, path[depth]) is None:
+            pad = block_indent(text, parent)
+            text = text[:parent[1] + 1] + f"\n{pad}{path[depth]} {{\n{pad}}}" + text[parent[1] + 1:]
+    return text, kdl_resolve(text, path)
+
+
+def kdl_resolve(text: str, path: list[str]):
+    blk = kdl_block(text, path[0])
+    for p in path[1:]:
+        if blk is None:
+            return None
+        blk = kdl_child_block(text, blk, p)
+    return blk
+
+
+def kdl_replace_child(text: str, parent_path: list[str], name: str, line: str | None) -> str:
+    """Swap a whole child block (`name { … }` or one-liner) for `line`, or drop it."""
+    parent = kdl_resolve(text, parent_path)
+    if parent is None:
+        if line is None:
+            return text
+        text, parent = kdl_ensure(text, parent_path)
+    c = kdl_child_block(text, parent, name)
+    pad = block_indent(text, parent)
+    if c is not None:
+        a, b = c[0], c[2] + 1
+        if line is None:
+            a = text.rfind("\n", 0, a) + 1
+            b = b + 1 if b < len(text) and text[b] == "\n" else b
+            return text[:a] + text[b:]
+        line_start = text.rfind("\n", 0, a) + 1
+        return text[:line_start] + pad + line + text[b:]
+    if line is None:
+        return text
+    return text[:parent[1] + 1] + f"\n{pad}{line}" + text[parent[1] + 1:]
+
+
+def kdl_string_arg(line: str) -> str:
+    q = re.search(r'"((?:[^"\\]|\\.)*)"', line or "")
+    return kdl_unquote(q.group(1)) if q else ""
+
+
+def kdl_num_arg(line: str, d):
+    m = re.search(r"-?\d+(\.\d+)?", (line or "").split(None, 1)[1] if line and len(line.split(None, 1)) > 1 else "")
+    return float(m.group()) if m else d
+
+
+def niri_windows_get(text: str) -> dict:
+    out = dict(WINDOW_DEFAULTS, workspaces=[])
+    if not text:
+        return out
+    lay = kdl_block(text, "layout")
+    if lay:
+        v = block_line_values(text, lay, ("gaps", "center-focused-column"))
+        out["gaps"] = int(kdl_num_arg(v.get("gaps", (0, 0, ""))[2], 16))
+        if "center-focused-column" in v:
+            out["centerColumn"] = kdl_string_arg(v["center-focused-column"][2]) or "never"
+        st = kdl_child_block(text, lay, "struts")
+        if st:
+            m = re.search(r"\b(left|right)\s+(\d+)", text[st[1]:st[2]])
+            out["struts"] = int(m.group(2)) if m else 0
+        dw = kdl_child_block(text, lay, "default-column-width")
+        if dw:
+            m = re.search(r"proportion\s+([\d.]+)", text[dw[1]:dw[2]])
+            out["defaultWidth"] = float(m.group(1)) if m else 0.0
+        fr = kdl_child_block(text, lay, "focus-ring")
+        if fr:
+            fv = block_line_values(text, fr, ("off", "width", "active-color", "inactive-color"))
+            out["focusRing"] = "off" not in fv
+            out["focusRingWidth"] = int(kdl_num_arg(fv.get("width", (0, 0, ""))[2], 4))
+            out["activeColor"] = kdl_string_arg(fv.get("active-color", (0, 0, ""))[2]) or out["activeColor"]
+            out["inactiveColor"] = kdl_string_arg(fv.get("inactive-color", (0, 0, ""))[2]) or out["inactiveColor"]
+        bd = kdl_child_block(text, lay, "border")
+        if bd:
+            bv = block_line_values(text, bd, ("off", "on", "width"))
+            out["border"] = "off" not in bv or "on" in bv
+            out["borderWidth"] = int(kdl_num_arg(bv.get("width", (0, 0, ""))[2], 4))
+        else:
+            out["border"] = False
+        sh = kdl_child_block(text, lay, "shadow")
+        out["shadows"] = bool(sh and "on" in block_line_values(text, sh, ("on",)))
+    a = text.find(LAYOUT_BEGIN)
+    m = re.search(r"(?m)^\s*geometry-corner-radius\s+([\d.]+)", text[a:] if a >= 0 else kdl_mask(text))
+    out["cornerRadius"] = int(float(m.group(1))) if m else 0
+    out["preferNoCsd"] = bool(kdl_top_nodes(text, "prefer-no-csd"))
+    ho = kdl_block(text, "hotkey-overlay")
+    out["skipHotkeyOverlay"] = bool(ho and "skip-at-startup" in block_line_values(text, ho, ("skip-at-startup",)))
+    sp = kdl_top_nodes(text, "screenshot-path")
+    out["screenshotPath"] = kdl_string_arg(text[sp[0][0]:sp[0][1]]) if sp else SHOT_PATH
+    cur = kdl_block(text, "cursor")
+    if cur:
+        cv = block_line_values(text, cur, ("hide-when-typing", "hide-after-inactive-ms"))
+        out["hideCursorTyping"] = "hide-when-typing" in cv
+        out["hideCursorAfter"] = int(kdl_num_arg(cv.get("hide-after-inactive-ms", (0, 0, ""))[2], 0))
+    inp = kdl_block(text, "input")
+    if inp:
+        iv = block_line_values(text, inp, ("focus-follows-mouse", "warp-mouse-to-focus", "workspace-auto-back-and-forth"))
+        out["focusFollowsMouse"] = "focus-follows-mouse" in iv
+        out["warpMouse"] = "warp-mouse-to-focus" in iv
+        out["workspaceBackForth"] = "workspace-auto-back-and-forth" in iv
+    hc = kdl_resolve(text, ["gestures", "hot-corners"])
+    out["hotCorners"] = not (hc and "off" in block_line_values(text, hc, ("off",)))
+    for a, b in kdl_top_nodes(text, "workspace"):
+        node = text[a:b]
+        name = kdl_string_arg(node.split("{", 1)[0])
+        if name:
+            om = re.search(r'open-on-output\s+("(?:[^"\\]|\\.)*")', node)
+            out["workspaces"].append({"name": name, "output": kdl_string_arg(om.group(1)) if om else ""})
+    return out
+
+
+def niri_windows_apply(text: str, w: dict) -> str:
+    w = window_norm(w)
+    flag = lambda on, k: k if on else None
+    text, lay = kdl_ensure(text, ["layout"])
+    text = set_block_lines(text, lay, {
+        "gaps": f"gaps {w['gaps']}",
+        "center-focused-column": f"center-focused-column {kdl_quote(w['centerColumn'])}",
+    })
+    text = kdl_replace_child(text, ["layout"], "struts",
+                             f"struts {{ left {w['struts']}; right {w['struts']}; }}" if w["struts"] else None)
+    text = kdl_replace_child(text, ["layout"], "default-column-width",
+                             f"default-column-width {{ proportion {w['defaultWidth']:.5g}; }}" if w["defaultWidth"] > 0
+                             else "default-column-width {}")
+    text, fr = kdl_ensure(text, ["layout", "focus-ring"])
+    text = set_block_lines(text, fr, {"off": flag(not w["focusRing"], "off"), "on": None,
+                                      "width": f"width {w['focusRingWidth']}",
+                                      "active-color": f"active-color {kdl_quote(w['activeColor'])}",
+                                      "inactive-color": f"inactive-color {kdl_quote(w['inactiveColor'])}",
+                                      "active-gradient": None, "inactive-gradient": None})
+    text, bd = kdl_ensure(text, ["layout", "border"])
+    text = set_block_lines(text, bd, {"off": flag(not w["border"], "off"), "on": None,
+                                      "width": f"width {w['borderWidth']}",
+                                      "active-color": f"active-color {kdl_quote(w['activeColor'])}",
+                                      "inactive-color": f"inactive-color {kdl_quote(w['inactiveColor'])}",
+                                      "active-gradient": None, "inactive-gradient": None})
+    text, sh = kdl_ensure(text, ["layout", "shadow"])
+    text = set_block_lines(text, sh, {"on": flag(w["shadows"], "on"), "off": None})
+    # top-level flags
+    if w["preferNoCsd"] and not kdl_top_nodes(text, "prefer-no-csd"):
+        text = text.rstrip("\n") + "\n\nprefer-no-csd\n"
+    elif not w["preferNoCsd"]:
+        text = kdl_drop(text, kdl_top_nodes(text, "prefer-no-csd"))
+    sp = kdl_top_nodes(text, "screenshot-path")
+    shot = f"screenshot-path {kdl_quote(w['screenshotPath'] or SHOT_PATH)}"
+    if sp:
+        text = kdl_drop(text, sp[1:])
+        a = text.rfind("\n", 0, sp[0][0]) + 1
+        text = text[:a] + shot + text[sp[0][1]:]
+    else:
+        text = text.rstrip("\n") + f"\n\n{shot}\n"
+    if w["skipHotkeyOverlay"] or kdl_block(text, "hotkey-overlay"):
+        text, ho = kdl_ensure(text, ["hotkey-overlay"])
+        text = set_block_lines(text, ho, {"skip-at-startup": flag(w["skipHotkeyOverlay"], "skip-at-startup")})
+    text, cur = kdl_ensure(text, ["cursor"])
+    text = set_block_lines(text, cur, {
+        "hide-when-typing": flag(w["hideCursorTyping"], "hide-when-typing"),
+        "hide-after-inactive-ms": f"hide-after-inactive-ms {w['hideCursorAfter']}" if w["hideCursorAfter"] else None,
+    })
+    text, inp = kdl_ensure(text, ["input"])
+    text = set_block_lines(text, inp, {
+        "focus-follows-mouse": flag(w["focusFollowsMouse"], 'focus-follows-mouse max-scroll-amount="0%"'),
+        "warp-mouse-to-focus": flag(w["warpMouse"], "warp-mouse-to-focus"),
+        "workspace-auto-back-and-forth": flag(w["workspaceBackForth"], "workspace-auto-back-and-forth"),
+    })
+    # only touch hot corners when it changes: older niri doesn't know the option
+    hc = kdl_resolve(text, ["gestures", "hot-corners"])
+    has_off = bool(hc and "off" in block_line_values(text, hc, ("off",)))
+    if w["hotCorners"] and has_off:
+        text = kdl_replace_child(text, ["gestures"], "hot-corners", None)
+    elif not w["hotCorners"] and not has_off:
+        text, hc = kdl_ensure(text, ["gestures", "hot-corners"])
+        text = set_block_lines(text, hc, {"off": "off"})
+    # managed region: corner radius + named workspaces (all top-level workspaces move here)
+    a, b = text.find(LAYOUT_BEGIN), text.find(LAYOUT_END)
+    if a >= 0 and b > a:
+        b = b + len(LAYOUT_END)
+        b = b + 1 if b < len(text) and text[b] == "\n" else b
+        text = text[:a].rstrip("\n") + "\n" + text[b:]
+    text = kdl_drop(text, kdl_top_nodes(text, "workspace"))
+    region = [LAYOUT_BEGIN, "window-rule {", f"    geometry-corner-radius {w['cornerRadius']}",
+              f"    clip-to-geometry {'true' if w['cornerRadius'] else 'false'}", "}"]
+    for ws in w["workspaces"]:
+        inner = f" {{ open-on-output {kdl_quote(ws['output'])}; }}" if ws["output"] else ""
+        region.append(f"workspace {kdl_quote(ws['name'])}{inner}")
+    region.append(LAYOUT_END)
+    return text.rstrip("\n") + "\n\n" + "\n".join(region) + "\n"
+
+
+def hypr_rgb(c: str) -> str:
+    c = c.lstrip("#")
+    return f"rgba({c[:6]}{c[6:8] or 'ff'})"
+
+
+def hypr_layout_lines(w: dict) -> list[str]:
+    on = w["focusRing"] or w["border"]
+    bw = max(w["focusRingWidth"] if w["focusRing"] else 0, w["borderWidth"] if w["border"] else 0)
+    b = lambda v: "true" if v else "false"
+    lines = ["general {", f"    gaps_in = {max(0, w['gaps'] // 2)}", f"    gaps_out = {w['gaps']}",
+             f"    border_size = {bw if on else 0}", f"    col.active_border = {hypr_rgb(w['activeColor'])}",
+             f"    col.inactive_border = {hypr_rgb(w['inactiveColor'])}", "}",
+             "decoration {", f"    rounding = {w['cornerRadius']}", "    shadow {", f"        enabled = {b(w['shadows'])}",
+             "    }", "}",
+             "cursor {", f"    hide_on_key_press = {b(w['hideCursorTyping'])}",
+             f"    inactive_timeout = {w['hideCursorAfter'] / 1000:g}", f"    no_warps = {b(not w['warpMouse'])}", "}",
+             "input {", f"    follow_mouse = {1 if w['focusFollowsMouse'] else 0}", "}",
+             "binds {", f"    workspace_back_and_forth = {b(w['workspaceBackForth'])}", "}"]
+    for i, ws in enumerate(w["workspaces"], 1):
+        rule = f"workspace = {i}, defaultName:{ws['name'].replace(',', ' ')}, persistent:true"
+        if ws["output"]:
+            rule += f", monitor:{ws['output']}"
+        lines.append(rule)
+    return lines
+
+
+def lua_layout_lines(w: dict) -> list[str]:
+    on = w["focusRing"] or w["border"]
+    bw = max(w["focusRingWidth"] if w["focusRing"] else 0, w["borderWidth"] if w["border"] else 0)
+    b = lambda v: "true" if v else "false"
+    lines = ["hl.config({",
+             "    general = {", f"        gaps_in = {max(0, w['gaps'] // 2)},", f"        gaps_out = {w['gaps']},",
+             f"        border_size = {bw if on else 0},",
+             f"        col = {{ active_border = {lua_str(hypr_rgb(w['activeColor']))}, inactive_border = {lua_str(hypr_rgb(w['inactiveColor']))} }},",
+             "    },",
+             "    decoration = {", f"        rounding = {w['cornerRadius']},", f"        shadow = {{ enabled = {b(w['shadows'])} }},", "    },",
+             "    cursor = {", f"        hide_on_key_press = {b(w['hideCursorTyping'])},",
+             f"        inactive_timeout = {w['hideCursorAfter'] / 1000:g},", f"        no_warps = {b(not w['warpMouse'])},", "    },",
+             "    input = {", f"        follow_mouse = {1 if w['focusFollowsMouse'] else 0},", "    },",
+             "    binds = {", f"        workspace_back_and_forth = {b(w['workspaceBackForth'])},", "    },",
+             "})"]
+    for i, ws in enumerate(w["workspaces"], 1):
+        fields = f"workspace = {lua_str(i)}, default_name = {lua_str(ws['name'])}, persistent = true"
+        if ws["output"]:
+            fields += f", monitor = {lua_str(ws['output'])}"
+        lines.append(f"if hl.workspace_rule then pcall(hl.workspace_rule, {{ {fields} }}) end")
+    return lines
+
+
+def hypr_ensure_layout_loaded():
+    """Configs written before 0.13 don't load the layout module yet: add it at the end."""
+    if hypr_lua():
+        if HYPR_LUA.is_file() and "flamenco.layout" not in HYPR_LUA.read_text() and 'flamenco("layout")' not in HYPR_LUA.read_text():
+            with open(HYPR_LUA, "a") as f:
+                f.write('\n-- window look & workspaces (Flamenco Settings → Windows)\npcall(require, "flamenco.layout")\n')
+    elif HYPR_CONFIG.is_file() and "flamenco-layout.conf" not in HYPR_CONFIG.read_text():
+        with open(HYPR_CONFIG, "a") as f:
+            f.write("\n# window look & workspaces (Flamenco Settings → Windows)\nsource = ~/.config/hypr/flamenco-layout.conf\n")
+
+
+def cmd_compositor(args: list[str]) -> int:
+    sub = args[0] if args else "get"
+    hypr = compositor() == "hyprland"
+    if sub == "get":
+        if hypr:
+            d = (lua_read_json("layout") if hypr_lua() else hypr_read_json(HYPR_LAYOUT)).get("windows")
+            # first import: Hyprland's own defaults (focus follows the mouse, cursor warps)
+            out = dict(window_norm(d or {"focusFollowsMouse": True, "warpMouse": True}), imported=bool(d))
+        else:
+            text = NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() else ""
+            out = dict(window_norm(niri_windows_get(text)), imported=bool(text))
+        out["compositor"] = "hyprland" if hypr else "niri"
+        print(json.dumps(out))
+        return 0
+    if sub == "apply":
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco compositor apply --json SPEC")
+        w = window_norm(json.loads(args[args.index("--json") + 1]))
+        if hypr:
+            if hypr_lua():
+                lua_write("layout", lua_layout_lines(w), {"windows": w})
+            else:
+                hypr_write(HYPR_LAYOUT, hypr_layout_lines(w), {"windows": w})
+            hypr_ensure_layout_loaded()
+            hypr_reload()
+            print("compositor: Hyprland layout updated")
+            return 0
+        if not NIRI_CONFIG.is_file():
+            die(f"{NIRI_CONFIG} not found (run `flamenco niri-config` first)")
+        text = NIRI_CONFIG.read_text()
+        new = niri_windows_apply(text, w)
+        write_niri_config(new, text)
+        print("compositor: niri config updated" if new != text else "compositor: already up to date")
+        return 0
+    die("usage: flamenco compositor get | apply --json SPEC")
+
+
+# ─────────────────────────────── screenshots ─────────────────────────────────
+# niri: its own screenshot actions (region picker UI, screen, window), which copy
+# to the clipboard and save to screenshot-path. Hyprland: grim + slurp.
+
+def shot_settings() -> dict:
+    try:
+        s = json.loads((CONFIG_DIR / "settings.json").read_text()).get("screenshot", {})
+    except Exception:
+        s = {}
+    return {"showPointer": bool(s.get("showPointer", False)), "saveToDisk": bool(s.get("saveToDisk", True)),
+            "delay": max(0, min(30, int(s.get("delay", 0) or 0))), "path": str(s.get("path") or SHOT_PATH)}
+
+
+def hypr_screenshot(mode: str, s: dict) -> int:
+    import time
+    if not shutil.which("grim"):
+        die("grim is not installed")
+    geo = None
+    cmd = ["grim"] + (["-c"] if s["showPointer"] else [])
+    if mode == "region":
+        if not shutil.which("slurp"):
+            die("slurp is not installed")
+        r = subprocess.run(["slurp"], capture_output=True, text=True)
+        if r.returncode != 0:
+            return 1        # cancelled
+        geo = r.stdout.strip()
+    elif mode == "window":
+        try:
+            win = json.loads(run_out(["hyprctl", "activewindow", "-j"]) or "{}")
+            geo = f"{win['at'][0]},{win['at'][1]} {win['size'][0]}x{win['size'][1]}"
+        except (json.JSONDecodeError, KeyError, IndexError):
+            die("no focused window")
+    else:
+        try:
+            mon = next(m for m in json.loads(run_out(["hyprctl", "monitors", "-j"]) or "[]") if m.get("focused"))
+            cmd += ["-o", mon["name"]]
+        except (StopIteration, json.JSONDecodeError, KeyError):
+            pass
+    if geo:
+        cmd += ["-g", geo]
+    path = Path(os.path.expanduser(time.strftime(s["path"])))
+    if not s["saveToDisk"]:
+        path = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "flamenco-screenshot.png"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if subprocess.run(cmd + [str(path)]).returncode != 0:
+        return 1
+    if shutil.which("wl-copy"):
+        with open(path, "rb") as f:
+            subprocess.Popen(["wl-copy", "-t", "image/png"], stdin=f, start_new_session=True)
+    if shutil.which("notify-send"):
+        subprocess.Popen(["notify-send", "-a", "Screenshot", "-i", str(path), "Screenshot taken",
+                          "Copied to the clipboard" + (f" and saved to {path}" if s["saveToDisk"] else "")])
+    return 0
+
+
+def cmd_screenshot(args: list[str]) -> int:
+    import time
+    mode = args[0] if args and not args[0].startswith("-") else "region"
+    if mode not in ("region", "screen", "window"):
+        die("usage: flamenco screenshot [region|screen|window] [--delay N] [--no-save] [--pointer|--no-pointer]")
+    s = shot_settings()
+    if "--delay" in args and args.index("--delay") + 1 < len(args):
+        s["delay"] = max(0, min(30, int(args[args.index("--delay") + 1])))
+    if "--no-save" in args:
+        s["saveToDisk"] = False
+    if "--pointer" in args or "--no-pointer" in args:
+        s["showPointer"] = "--pointer" in args
+    if s["delay"]:
+        time.sleep(s["delay"])
+    if compositor() == "hyprland":
+        return hypr_screenshot(mode, s)
+    b = lambda v: "true" if v else "false"
+    action = {"region": "screenshot", "screen": "screenshot-screen", "window": "screenshot-window"}[mode]
+    flags = {"region": ["--show-pointer", b(s["showPointer"])],
+             "screen": ["--show-pointer", b(s["showPointer"]), "--write-to-disk", b(s["saveToDisk"])],
+             "window": ["--write-to-disk", b(s["saveToDisk"])]}[mode]
+    r = subprocess.run(["niri", "msg", "action", action, *flags], capture_output=True, text=True)
+    if r.returncode != 0:
+        # older niri without these flags
+        r = subprocess.run(["niri", "msg", "action", action])
+    return r.returncode
+
+
 PANELS = {"launcher": "launcher", "control": "control", "notifications": "notifications",
           "calendar": "calendar", "wallpapers": "wallpapers", "power": "power"}
 
@@ -3645,6 +4767,18 @@ def main(argv: list[str]) -> int:
         return cmd_portals(rest)
     if cmd == "pointer":
         return cmd_pointer(rest)
+    if cmd == "flatpak":
+        return cmd_flatpak(rest)
+    if cmd == "about":
+        return cmd_about(rest)
+    if cmd == "autostart":
+        return cmd_autostart(rest)
+    if cmd == "defaults":
+        return cmd_defaults(rest)
+    if cmd == "compositor":
+        return cmd_compositor(rest)
+    if cmd == "screenshot":
+        return cmd_screenshot(rest)
     if cmd == "keyboard":
         return cmd_keyboard(rest)
     if cmd == "launch":

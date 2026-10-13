@@ -8,7 +8,9 @@ Rectangle {
     id: root
 
     default property alias content: holder.data
-    property int padding: 10
+    // matches the inset of the bar's icon buttons ((size - icon) / 2), so every
+    // widget sits the same distance from its neighbours
+    property int padding: 7
     property bool highlighted: false
     readonly property bool vertical: Theme.barVertical
     readonly property int cross: Theme.barHeight - 10

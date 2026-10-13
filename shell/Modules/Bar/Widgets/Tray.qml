@@ -22,7 +22,7 @@ BarFlow {
     readonly property var shown: overflowing && !expanded ? items.slice(0, maxVisible) : items
     property bool barVisible: items.length > 0
 
-    spacing: 2
+    spacing: Theme.barVertical ? 2 : 4
 
     function anchorFor(item) {
         // rect of `item` in bar-window coordinates, for popup anchoring
@@ -48,7 +48,7 @@ BarFlow {
             id: it
             required property SystemTrayItem modelData
             readonly property bool attention: modelData.status === Status.NeedsAttention
-            width: Theme.barHeight - 12
+            width: Theme.barHeight - 10
             height: width
 
             IconImage {

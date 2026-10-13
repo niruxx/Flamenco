@@ -13,6 +13,8 @@ Flickable {
 
     readonly property bool scrollable: contentHeight > height + 1
     readonly property real maxY: Math.max(0, contentHeight - height)
+    // room to leave on the right for the scrollbar, so content doesn't sit under it
+    readonly property real gutter: scrollable ? track.width + 4 : 0
 
     Item {
         id: track

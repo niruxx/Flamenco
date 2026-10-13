@@ -10,6 +10,8 @@ BarFlow {
     property int barLevel: 0
     property bool barVisible: win !== null && barLevel < 2
     spacing: 8
+    leftPadding: Theme.barVertical ? 0 : 6
+    rightPadding: Theme.barVertical ? 0 : 6
 
     AppIcon {
         implicitSize: 18

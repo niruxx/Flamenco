@@ -26,12 +26,16 @@ LazyLoader {
             { id: "apps", icon: "format_paint", label: "App Theming", comp: appsC },
             { id: "bar", icon: "toolbar", label: "Bar", comp: barC },
             { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
+            { id: "windows", icon: "select_window", label: "Windows & Layout", comp: windowsC },
+            { id: "workspaces", icon: "view_carousel", label: "Workspaces", comp: workspacesC },
+            { id: "edges", icon: "select_all", label: "Screen edges", comp: edgesC },
             { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
             { id: "keyboard", icon: "keyboard", label: "Keyboard", comp: keyboardC },
             { id: "pointer", icon: "mouse", label: "Mouse & Touchpad", comp: pointerC },
             { id: "network", icon: "wifi", label: "Network", comp: networkC },
             { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
             { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
+            { id: "screenshots", icon: "screenshot_monitor", label: "Screenshots", comp: screenshotC },
             { id: "power", icon: "battery_charging_full", label: "Power", comp: powerC },
             { id: "firewall", icon: "shield", label: "Firewall", comp: firewallC },
             { id: "keyring", icon: "key", label: "Keyring", comp: keyringC },
@@ -39,6 +43,9 @@ LazyLoader {
             { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
             { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
             { id: "launcher", icon: "apps", label: "Launcher", comp: launcherC },
+            { id: "defaults", icon: "open_in_new", label: "Default apps", comp: defaultsC },
+            { id: "autostart", icon: "rocket_launch", label: "Auto-start", comp: autostartC },
+            { id: "flatpak", icon: "inventory_2", label: "Flatpak permissions", comp: flatpakC },
             { id: "lock", icon: "lock", label: "Lock & Idle", comp: lockC },
             { id: "clock", icon: "schedule", label: "Clock & Weather", comp: clockC },
             { id: "system", icon: "health_and_safety", label: "System check", comp: systemC },
@@ -67,6 +74,13 @@ LazyLoader {
         Component { id: lockC; LockPage {} }
         Component { id: clockC; ClockPage {} }
         Component { id: aboutC; AboutPage {} }
+        Component { id: windowsC; WindowsPage {} }
+        Component { id: workspacesC; WorkspacesPage {} }
+        Component { id: edgesC; EdgesPage {} }
+        Component { id: screenshotC; ScreenshotPage {} }
+        Component { id: defaultsC; DefaultAppsPage {} }
+        Component { id: autostartC; AutostartPage {} }
+        Component { id: flatpakC; FlatpakPage {} }
 
         ColumnLayout {
             anchors.fill: parent
@@ -166,22 +180,24 @@ LazyLoader {
                 // ── sidebar ──
                 Rectangle {
                     Layout.fillHeight: true
-                    Layout.preferredWidth: 248
+                    Layout.preferredWidth: 268
                     color: Theme.surface
 
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: Theme.sp4
+                        anchors.rightMargin: Theme.sp2
                         spacing: 4
 
                         FScroll {
+                            id: navScroll
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             contentHeight: nav.implicitHeight
 
                             // gliding selection
                             Rectangle {
-                                width: parent.width
+                                width: nav.width
                                 height: 38
                                 y: win.index * 40
                                 radius: Theme.rMd
@@ -191,7 +207,8 @@ LazyLoader {
 
                             Column {
                                 id: nav
-                                width: parent.width
+                                width: navScroll.width - navScroll.gutter
+                                Behavior on width { Anim { duration: Theme.durShort } }
                                 spacing: 2
                                 Repeater {
                                     model: win.pages
@@ -213,7 +230,9 @@ LazyLoader {
                                             }
                                             FText {
                                                 Layout.fillWidth: true
+                                                Layout.rightMargin: 10
                                                 text: modelData.label
+                                                elide: Text.ElideRight
                                                 font.weight: sel ? Font.Bold : Font.Normal
                                                 color: sel ? Theme.onAccent : Theme.text
                                             }

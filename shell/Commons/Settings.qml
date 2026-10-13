@@ -58,6 +58,8 @@ Singleton {
                 property string monoFamily: "JetBrains Mono"
                 property bool shadows: true
                 property bool dimBehindPanels: true
+                property string accentOverride: ""    // "#rrggbb" replaces the palette's accent ("" = palette)
+                property string layoutPreset: ""      // last preset picked in Appearance → Layout presets
             }
 
             property JsonObject bar: JsonObject {
@@ -166,6 +168,62 @@ Singleton {
                 property bool dwt: true               // disable while typing
                 property real touchScroll: 1.0
                 property bool disableWithMouse: false // turn the touchpad off while a mouse is plugged in
+            }
+
+            // Window look & behavior, written into the compositor config by `flamenco compositor apply`
+            property JsonObject windows: JsonObject {
+                property bool imported: false         // true once read from the compositor config
+                property int gaps: 12
+                property int struts: 0                // niri: px left and right where neighbour columns peek in
+                property string centerColumn: "never" // niri: never | always | on-overflow
+                property real defaultWidth: 0.5       // niri: new column width (0 = the app decides)
+                property bool focusRing: true
+                property int focusRingWidth: 2
+                property bool border: false
+                property int borderWidth: 2
+                property bool syncColors: true        // ring / border colors follow the shell palette
+                property string activeColor: "#ff5d73"
+                property string inactiveColor: "#46343a"
+                property int cornerRadius: 12
+                property bool shadows: true
+                property bool focusFollowsMouse: false
+                property bool warpMouse: false        // move the pointer to newly focused windows
+                property bool hideCursorTyping: false
+                property int hideCursorAfter: 0       // ms idle before hiding the pointer (0 = never)
+                property bool preferNoCsd: true       // ask apps not to draw their own title bars
+                property bool hotCorners: true        // niri: top-left corner opens the overview
+                property bool skipHotkeyOverlay: true // niri: don't show the shortcut cheat sheet at login
+                property bool workspaceBackForth: false // switching to the current workspace goes back
+            }
+
+            property JsonObject workspaces: JsonObject {
+                property var named: []                // [{ name, output }] persistent named workspaces
+                property bool hideEmpty: false        // bar: only show workspaces with windows (and the active one)
+                property bool scrollSwitch: true      // bar: scroll over the workspaces to switch
+                property bool invertScroll: false
+                property bool showCount: false        // bar: window count on each workspace
+            }
+
+            // Screen corners: hover a corner to run an action
+            property JsonObject edges: JsonObject {
+                property bool enabled: false
+                property string topLeft: "none"       // none | launcher | control | notifications | dashboard | overview | …
+                property string topRight: "none"
+                property string bottomLeft: "none"
+                property string bottomRight: "none"
+                property int delay: 250               // ms the pointer has to rest in the corner
+                property int size: 2                  // px of the trigger area
+            }
+
+            property JsonObject screenshot: JsonObject {
+                property bool showPointer: false
+                property bool saveToDisk: true        // false: clipboard only
+                property int delay: 0                 // seconds
+                property string path: "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+            }
+
+            property JsonObject autostart: JsonObject {
+                property bool runEntries: true        // start XDG autostart apps at login
             }
 
             property JsonObject displays: JsonObject {

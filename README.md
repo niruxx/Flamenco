@@ -32,6 +32,9 @@ Tailored for power users running cutting-edge Linux environments, Flamenco Shell
 - [⌨️ Keyboard & Shortcuts](#️-keyboard--shortcuts)
 - [🖱️ Mouse & Touchpad](#mouse--touchpad)
 - [🖥️ Displays](#-displays)
+- [🪟 Windows, Workspaces & Screen Edges](#windows-workspaces--screen-edges)
+- [📷 Taking Screenshots](#taking-screenshots)
+- [📦 Apps: Defaults, Auto-start & Flatpak](#apps-defaults-auto-start--flatpak)
 - [🖼️ Wallpapers](#-wallpapers)
 - [🎨 Themes](#-themes)
 - [⚠️ Troubleshooting](#️-troubleshooting)
@@ -91,10 +94,18 @@ To regenerate these, run `tools/screenshots.sh` inside a niri session with the s
 | **⌨️ Keyboard** | Layouts, variants, layout switching, Caps Lock / Compose, key repeat, and shortcuts that open apps, run commands, call Flamenco functions or niri actions. Keys are recorded or typed, and per-shortcut or full resets to the defaults are available. Written to niri's config |
 | **🖱️ Mouse & Touchpad** | Pointer speed, flat or adaptive acceleration, scroll speed, natural scrolling, left-handed, tap to click, disable while typing; written to the niri or Hyprland config |
 | **🖥️ Displays** | Per-display resolution, refresh rate, scale, orientation (rotate and flip) and VRR; drag-to-arrange layout; live apply with 15-second auto-revert; saved to niri's config. Turns the laptop screen back on if every screen would otherwise be off |
+| **🪟 Windows & Layout** | Gaps, edge margins, new-window width, column centering, corner radius, focus ring and border (colors follow the theme or your own), shadows, focus follows mouse, pointer warping, cursor hiding; written to the niri or Hyprland config |
+| **🗂️ Workspaces** | Named workspaces pinned to a screen, switch back and forth, and bar switcher options: hide empty, scroll to switch (or reversed), window count |
+| **↖️ Screen edges** | Hot corners on every screen: overview, launcher, control center, notifications, dashboard, power menu, settings, screenshot, workspace up/down or lock, with an adjustable delay and size |
+| **📷 Screenshots** | niri's own area / screen / window screenshots (grim + slurp on Hyprland) from Settings, the keyboard or `flamenco screenshot`: pointer on/off, save to disk or clipboard only, delay, file name |
+| **📦 Default apps** | Browser, file manager, email, text editor, images, video, music, PDF, archives and terminal, written to `mimeapps.list` |
+| **🚀 Auto-start** | XDG autostart entries: turn them on or off, add apps or plain commands; Flamenco runs them at login unless systemd already does |
+| **🔐 Flatpak permissions** | Per-app overrides for files and folders, network, display, sound, devices and features: app default, allow, read-only or deny |
+| **ℹ️ About** | OS, hardware, memory, disk, kernel, compositor, Quickshell and package counts, with a copy button for bug reports |
 | **⚙️ Settings app** | Its own window (`flamenco settings`) with a page for every module. Every change applies live |
 | **🎨 App theming** | Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
 
-Eight hand-tuned palettes, each with dark and light variants: Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox and Everforest. You can also derive the palette from your wallpaper. Palette switches cross-fade across the whole shell.
+Thirteen hand-tuned palettes, each with dark and light variants: Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, Dracula, Kanagawa, Solarized, One Dark and Monochrome. You can also derive the palette from your wallpaper, swap in your own accent color, and pick a whole layout preset (Modern, Minimal, Classic, Dock & menu bar, Vertical). Palette switches cross-fade across the whole shell.
 
 ---
 
@@ -639,6 +650,80 @@ flamenco display save  --json '…'    # same format; writes niri's config
 flamenco display fallback      # turn a screen on if none is on
 ```
 
+## Windows, Workspaces & Screen Edges
+
+**Settings → Windows & Layout** controls how windows look and behave:
+- **Layout:** gaps, an extra margin along the left and right edges, the width of new columns, when to center the focused column, and asking apps not to draw their own title bars.
+- **Look:** corner radius, focus ring and border (on/off and width), shadows. The ring and border colors follow your palette's accent, or you can turn that off and type your own hex colors.
+- **Focus & pointer:** focus follows the mouse, move the pointer to a window focused from the keyboard, hide the pointer while typing or after some idle seconds, niri's own top-left hot corner, and skipping niri's shortcut cheat sheet at login.
+
+The first time you open the page, it reads what your config already has. On niri, changes are written into `layout { … }`, `cursor`, `input`, `gestures` and `hotkey-overlay` in `~/.config/niri/config.kdl`. Window corners and named workspaces go into a marked block at the end of the file. On Hyprland they go into `flamenco-layout.conf` (or `flamenco/layout.lua`), which the config sources. Run `niri validate` if you've edited the config by hand too.
+
+**Settings → Workspaces:**
+- **Named workspaces** always exist, keep their place, and can be pinned to a screen (niri `workspace "web" { open-on-output "DP-1"; }`). Add, rename, re-pin or delete them on the page.
+- **Switch back and forth:** choosing the workspace you're on goes back to the previous one.
+- **Bar switcher:** style (pills, dots, numbers), hide empty workspaces, scroll on the bar to switch (and reverse the direction), and show how many windows are on the current workspace.
+
+**Settings → Screen edges** turns on hot corners. Each corner of every screen can run an action when the pointer rests there: the overview (niri), the app launcher, control center, notifications, calendar & dashboard, power menu, wallpapers, settings, a screenshot, the previous or next workspace, or locking the screen. You can set how long the pointer has to rest and how big the corner is. If you put something on the top-left corner, turn off niri's own hot corner under **Windows & Layout** so both don't fire.
+
+```sh
+flamenco compositor get
+flamenco compositor apply --json '{"gaps":16,"cornerRadius":10,"workspaces":[{"name":"web","output":""}]}'
+```
+
+## Taking screenshots
+
+Screenshots use niri's built-in tools (on Hyprland: `grim`, `slurp` and `wl-copy`). They're always copied to the clipboard.
+
+| Key | Takes |
+|---|---|
+| `Print` | an area you select |
+| `Ctrl+Print` | the whole screen |
+| `Alt+Print` | the focused window |
+
+**Settings → Screenshots** takes a screenshot from buttons (Settings gets out of the way first) and sets:
+- whether the pointer is included
+- whether to save a file or use the clipboard only
+- a delay before capturing the screen or a window
+- where the file is saved (niri's `screenshot-path`; strftime codes like `%Y-%m-%d` work)
+
+You can rebind the keys under **Settings → Keyboard → Shortcuts**, where the three are listed as Flamenco functions. From a terminal or script:
+
+```sh
+flamenco screenshot             # select an area
+flamenco screenshot screen --delay 3
+flamenco screenshot window --no-save
+```
+
+## Apps: Defaults, Auto-start & Flatpak
+
+**Settings → Default apps** picks the app for web links, files, email, text, images, video, music, PDFs and archives. The choice is written to `[Default Applications]` in `~/.config/mimeapps.list` for every file type in that group, so every app that opens files honors it. The terminal is saved to `~/.config/xdg-terminals.list` and is also the terminal the shell opens.
+
+**Settings → Auto-start** lists the apps that start at login from `~/.config/autostart` and `/etc/xdg/autostart`:
+- Turn entries on or off. A system entry is switched off with a `Hidden=true` copy in your own folder, and your copy is removed again when you switch it back on.
+- Add an installed app, or a plain command with a name.
+- Flamenco starts these entries a few seconds after the shell starts, once per login. It skips any app that's already running, and it skips everything when systemd's `xdg-desktop-autostart.target` is already handling them. You can turn this off at the top of the page.
+
+**Settings → Flatpak permissions** picks an installed Flatpak app and shows each permission with what the app asks for and what it actually gets. Set each one to:
+- **Default:** what the app asks for
+- **Allow**
+- **Read** (folders only): read-only access
+- **Deny**
+
+Changes are saved as your own overrides in `~/.local/share/flatpak/overrides/APP`, the same file `flatpak override --user` writes, and apply the next time the app starts. **Reset** removes them.
+
+```sh
+flamenco defaults get
+flamenco defaults set browser firefox
+flamenco autostart list
+flamenco autostart add-command "Sync notes" "rclone sync ~/notes remote:notes"
+flamenco flatpak info org.mozilla.firefox
+flamenco flatpak set org.mozilla.firefox --json '{"filesystems":{"home":"deny","xdg-download":"rw"}}'
+flamenco flatpak reset org.mozilla.firefox
+```
+
+**Settings → About** shows the system details (OS, computer, processor, graphics, memory, disk, kernel, compositor, Quickshell, packages, uptime) and copies them for bug reports. Also `flamenco about`.
+
 ## Wallpapers
 
 Flamenco draws the wallpaper itself, so **you don't need `swaybg`, `swww` or any other wallpaper program**. Remove those from your niri config, or they'll cover the shell's wallpaper.
@@ -683,7 +768,14 @@ Theming has two layers: the **shell palette**, which colors the shell itself, an
 In **Settings → Appearance**:
 
 - **Color mode:** dark or light.
-- **Palette:** Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, or *From wallpaper*.
+- **Palette:** Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, Dracula, Kanagawa, Solarized, One Dark, Monochrome, or *From wallpaper*.
+- **Accent:** keep the palette's accent, pick a swatch, or type any hex color. It recolors the whole shell, the window focus ring and your themed apps.
+- **Layout presets:** one click sets up the bar, dock, launcher and notifications:
+  - *Modern*: floating top bar, centered clock
+  - *Minimal*: slim islands with just the essentials
+  - *Classic*: a Windows-style taskbar at the bottom
+  - *Dock & menu bar*: a thin top bar and a dock, macOS-style
+  - *Vertical*: a bar on the left side
 - **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels.
 - **Motion:** animation speed; 0% turns animations off.
 - **Typography:** interface and monospace fonts, picked from dropdowns of installed fonts (system and `~/.local/share/fonts`) and shown in their own typeface, plus UI scale and a live preview.
@@ -775,7 +867,8 @@ Files written:
 flamenco run [--fg]             start (daemonized unless --fg)
 flamenco kill | restart
 flamenco launcher | control | notifications | calendar | wallpapers | power
-flamenco settings [page]        appearance, apps, bar, dock, displays, wallpaper, notifications, launcher, lock, clock, about
+flamenco settings [page]        appearance, apps, bar, dock, windows, workspaces, edges, displays, screenshots,
+                                defaults, autostart, flatpak, wallpaper, notifications, launcher, lock, clock, about
 flamenco lock
 flamenco volume up|down|mute|mic-mute|set N
 flamenco brightness up|down|set N
@@ -793,6 +886,12 @@ flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
 flamenco pointer get | apply --json SPEC
 flamenco launch APP_ID
 flamenco display list | apply --json SPEC | save --json SPEC | fallback
+flamenco compositor get | apply --json SPEC   gaps, focus ring, corners, cursor, named workspaces
+flamenco screenshot [region|screen|window] [--delay N] [--no-save] [--pointer|--no-pointer]
+flamenco defaults get | set CATEGORY APP_ID
+flamenco autostart list | set ID on|off | add APP_ID | add-command NAME CMD | remove ID | run
+flamenco flatpak list | info APP | set APP --json CHANGES | reset APP
+flamenco about [--json]
 flamenco list-themes [--json]   installed icon / cursor / GTK / Qt-style / Kvantum / SDDM themes
 flamenco ipc TARGET FUNCTION [ARGS...]
 flamenco doctor [--json]
@@ -810,10 +909,11 @@ bin/flamenco                 CLI: launcher, IPC client, Qt/GTK theme generator
 shell/shell.qml              root: modules + IPC handlers
 shell/Commons/               Theme (tokens + motion curves), Settings (JSON), Palettes, ColorGen, Paths
 shell/Services/              Niri, Audio, Brightness, Network, BluetoothState, Power, Media, Notifs,
-                             Wallpapers, Weather, Apps, SystemStats, Time, Toggles, Panels, AppTheming
+                             Wallpapers, Weather, Apps, SystemStats, Time, Toggles, Panels, AppTheming,
+                             Compositor, Edges
 shell/Widgets/               F* component library (buttons, switch, slider, dropdown, tiles, ripple, OverlayPanel…)
 shell/Modules/               Bar, Background, ControlCenter, Launcher, Notifications, OSD, Lock,
-                             Session, Calendar, WallpaperPicker, Dock, Settings
+                             Session, Calendar, WallpaperPicker, Dock, Edges (hot corners), Settings
 data/                        desktop entry and icon for Flamenco Settings
 packaging/arch/              PKGBUILD and a makepkg-free build script
 tools/qmlcheck.py            static QML checks

@@ -10,7 +10,19 @@ Singleton {
     readonly property var a: Settings.data.appearance
     readonly property bool dark: a.mode !== "light"
     readonly property string paletteName: a.palette
-    readonly property var palette: (paletteName === "wallpaper" && ColorGen.available) ? (dark ? ColorGen.dark : ColorGen.light) : Palettes.get(paletteName, dark)
+    readonly property var basePalette: (paletteName === "wallpaper" && ColorGen.available) ? (dark ? ColorGen.dark : ColorGen.light) : Palettes.get(paletteName, dark)
+    readonly property var palette: withAccent(basePalette, a.accentOverride)
+
+    // Appearance → Accent color: swap the palette's accent (and pick readable text on it)
+    function withAccent(p, c) {
+        if (!/^#[0-9a-fA-F]{6}$/.test(c || ""))
+            return p;
+        const o = Object.assign({}, p);
+        const q = Qt.color(c);
+        o.accent = c;
+        o.onAccent = (0.2126 * q.r + 0.7152 * q.g + 0.0722 * q.b) > 0.55 ? "#161616" : "#ffffff";
+        return o;
+    }
 
     // ── Colors ──
     // Palette switches cross-fade: `t` runs 0 → 1 from the previous palette to

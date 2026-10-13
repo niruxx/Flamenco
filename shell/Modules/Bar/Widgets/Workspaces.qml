@@ -9,7 +9,10 @@ Rectangle {
     id: root
 
     property string screenName
-    readonly property var list: Niri.workspacesOn(screenName)
+    readonly property var wcfg: Settings.data.workspaces
+    readonly property var list: Niri.workspacesOn(screenName).filter(w => !wcfg.hideEmpty || w.is_active || Niri.windowsOn(w.id).length > 0)
+    readonly property int windowCount: activeIndex >= 0 ? Niri.windowsOn(list[activeIndex].id).length : 0
+    readonly property bool showCount: wcfg.showCount && barLevel < 2
     readonly property int activeIndex: list.findIndex(w => w.is_active)
     property int barLevel: 0
     readonly property string style: barLevel >= 2 ? "dots" : Settings.data.bar.workspaceStyle
@@ -23,8 +26,9 @@ Rectangle {
     readonly property int pad: numbers ? 4 : 8
     readonly property bool vertical: Theme.barVertical
 
-    implicitWidth: vertical ? capsuleH : row.implicitWidth + pad * 2
-    implicitHeight: vertical ? row.implicitHeight + pad * 2 : capsuleH
+    readonly property real countSize: showCount ? (vertical ? count.implicitHeight : count.implicitWidth) + gap + 2 : 0
+    implicitWidth: vertical ? capsuleH : row.implicitWidth + pad * 2 + countSize
+    implicitHeight: vertical ? row.implicitHeight + pad * 2 + countSize : capsuleH
     radius: height / 2
     color: Theme.alpha(Theme.text, 0.06)
     property bool barVisible: list.length > 0
@@ -108,7 +112,20 @@ Rectangle {
         }
     }
 
+    // windows on the current workspace
+    FText {
+        id: count
+        visible: root.showCount
+        x: root.vertical ? (parent.width - width) / 2 : row.x + row.width + root.gap + 2
+        y: root.vertical ? row.y + row.height + root.gap + 2 : (parent.height - height) / 2
+        text: root.windowCount
+        font.pixelSize: Theme.fsXs
+        font.weight: Font.Bold
+        color: Theme.textDim
+    }
+
     WheelHandler {
-        onWheel: event => Niri.action(event.angleDelta.y > 0 ? "focus-workspace-up" : "focus-workspace-down")
+        enabled: root.wcfg.scrollSwitch
+        onWheel: event => Niri.action((event.angleDelta.y > 0) !== root.wcfg.invertScroll ? "focus-workspace-up" : "focus-workspace-down")
     }
 }

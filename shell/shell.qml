@@ -11,6 +11,7 @@ import qs.Services
 import qs.Modules.Background
 import qs.Modules.Bar
 import qs.Modules.Dock
+import qs.Modules.Edges
 import qs.Modules.OSD
 import qs.Modules.Notifications
 import qs.Modules.ControlCenter
@@ -48,6 +49,7 @@ ShellRoot {
     Background {}
     Bar {}
     Dock {}
+    HotCorners {}
     Popups {}
     Osd { id: osd }
 

@@ -8,7 +8,7 @@ import Quickshell
 Singleton {
     id: root
 
-    readonly property var names: ["flamenco", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest"]
+    readonly property var names: ["flamenco", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
 
     readonly property var labels: ({
             flamenco: "Flamenco",
@@ -19,6 +19,11 @@ Singleton {
             tokyonight: "Tokyo Night",
             gruvbox: "Gruvbox",
             everforest: "Everforest",
+            dracula: "Dracula",
+            kanagawa: "Kanagawa",
+            solarized: "Solarized",
+            onedark: "One Dark",
+            monochrome: "Monochrome",
             wallpaper: "From wallpaper"
         })
 
@@ -133,6 +138,76 @@ Singleton {
                     border: "#d8d3ba", text: "#5c6a72", textDim: "#829181",
                     accent: "#8da101", onAccent: "#fdf6e3", accent2: "#35a77c", accent3: "#df69ba",
                     error: "#f85552", warning: "#dfa000", success: "#8da101"
+                }
+            },
+            dracula: {
+                dark: {
+                    bg: "#1e1f29", surface: "#282a36", surfaceHigh: "#323443", surfaceHighest: "#3d3f51",
+                    border: "#44475a", text: "#f8f8f2", textDim: "#b4b6c8",
+                    accent: "#bd93f9", onAccent: "#21222c", accent2: "#ff79c6", accent3: "#8be9fd",
+                    error: "#ff5555", warning: "#ffb86c", success: "#50fa7b"
+                },
+                light: {
+                    bg: "#f3f1f8", surface: "#fbfaff", surfaceHigh: "#ebe8f4", surfaceHighest: "#dfdbec",
+                    border: "#cdc8de", text: "#282a36", textDim: "#6c6f85",
+                    accent: "#7c4dcc", onAccent: "#ffffff", accent2: "#c2307f", accent3: "#1c8aa3",
+                    error: "#d02b2b", warning: "#b8640d", success: "#1f8f45"
+                }
+            },
+            kanagawa: {
+                dark: {
+                    bg: "#16161d", surface: "#1f1f28", surfaceHigh: "#2a2a37", surfaceHighest: "#363646",
+                    border: "#3f3f52", text: "#dcd7ba", textDim: "#a6a69c",
+                    accent: "#7e9cd8", onAccent: "#16161d", accent2: "#ffa066", accent3: "#957fb8",
+                    error: "#e46876", warning: "#e6c384", success: "#98bb6c"
+                },
+                light: {
+                    bg: "#e7dba0", surface: "#f2ecbc", surfaceHigh: "#e5ddb0", surfaceHighest: "#dcd5ac",
+                    border: "#c7bd8f", text: "#545464", textDim: "#716e61",
+                    accent: "#4d699b", onAccent: "#f2ecbc", accent2: "#cc6d00", accent3: "#624c83",
+                    error: "#c84053", warning: "#836f4a", success: "#6f894e"
+                }
+            },
+            solarized: {
+                dark: {
+                    bg: "#00212b", surface: "#002b36", surfaceHigh: "#073642", surfaceHighest: "#0d4351",
+                    border: "#1b4e5b", text: "#eee8d5", textDim: "#93a1a1",
+                    accent: "#268bd2", onAccent: "#fdf6e3", accent2: "#2aa198", accent3: "#d33682",
+                    error: "#dc322f", warning: "#b58900", success: "#859900"
+                },
+                light: {
+                    bg: "#eee8d5", surface: "#fdf6e3", surfaceHigh: "#f3ecd8", surfaceHighest: "#e6dfc9",
+                    border: "#d6cfb8", text: "#073642", textDim: "#657b83",
+                    accent: "#268bd2", onAccent: "#fdf6e3", accent2: "#2aa198", accent3: "#d33682",
+                    error: "#dc322f", warning: "#b58900", success: "#859900"
+                }
+            },
+            onedark: {
+                dark: {
+                    bg: "#1e2127", surface: "#282c34", surfaceHigh: "#2f343e", surfaceHighest: "#3a3f4b",
+                    border: "#434956", text: "#dcdfe4", textDim: "#9da5b4",
+                    accent: "#61afef", onAccent: "#1e2127", accent2: "#c678dd", accent3: "#56b6c2",
+                    error: "#e06c75", warning: "#e5c07b", success: "#98c379"
+                },
+                light: {
+                    bg: "#f0f0f1", surface: "#fafafa", surfaceHigh: "#eaeaeb", surfaceHighest: "#dfdfe1",
+                    border: "#cfd0d4", text: "#383a42", textDim: "#696c77",
+                    accent: "#4078f2", onAccent: "#ffffff", accent2: "#a626a4", accent3: "#0184bc",
+                    error: "#e45649", warning: "#c18401", success: "#50a14f"
+                }
+            },
+            monochrome: {
+                dark: {
+                    bg: "#0e0e0e", surface: "#171717", surfaceHigh: "#212121", surfaceHighest: "#2c2c2c",
+                    border: "#3a3a3a", text: "#ededed", textDim: "#a0a0a0",
+                    accent: "#e6e6e6", onAccent: "#111111", accent2: "#bdbdbd", accent3: "#8f8f8f",
+                    error: "#ff6b6b", warning: "#e0b050", success: "#7cc489"
+                },
+                light: {
+                    bg: "#f2f2f2", surface: "#ffffff", surfaceHigh: "#ebebeb", surfaceHighest: "#dedede",
+                    border: "#cccccc", text: "#161616", textDim: "#666666",
+                    accent: "#1f1f1f", onAccent: "#ffffff", accent2: "#474747", accent3: "#6e6e6e",
+                    error: "#c62828", warning: "#a66f00", success: "#2e7d4f"
                 }
             }
         })

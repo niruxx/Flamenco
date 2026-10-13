@@ -3,7 +3,7 @@
 -- Reference: https://wiki.hypr.land/Configuring/Start/
 --
 -- Flamenco Settings writes the files in ./flamenco/ (shortcuts, keyboard,
--- cursor, displays). They're loaded with pcall, so a problem in one of them
+-- cursor, displays, window look). They're loaded with pcall, so a problem in one of them
 -- is logged instead of breaking this config.
 
 local function flamenco(module)
@@ -221,3 +221,4 @@ hl.window_rule({
 flamenco("monitors")
 flamenco("input")
 flamenco("cursor")
+flamenco("layout")
