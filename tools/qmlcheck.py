@@ -7,6 +7,8 @@ Catches the load-time errors we've actually hit:
   - `Behavior on` a readonly property            (QML refuses to load)
   - `Behavior` attached to a non-Item object      (Qt 6.12 segfaults)
   - shell types used without importing their module ("X is not a type")
+  - child objects in a type with no default property ("Cannot assign to
+    non-existent default property"), e.g. a Timer inside a WheelHandler
 
 usage: tools/qmlcheck.py [shell-dir]
 """
@@ -34,6 +36,16 @@ WlSessionLockSurface PamContext IdleMonitor ClippingRectangle IconImage QsMenuOp
 # objects that aren't QQuickItems; a Behavior directly inside them crashes Qt 6.12
 NON_ITEM = {"Singleton", "Scope", "ShellRoot", "PanelWindow", "FloatingWindow", "PopupWindow", "Variants", "LazyLoader",
             "QtObject", "WlSessionLock", "WlSessionLockSurface", "Popup", "OverlayPanel", "TrayMenu", "TrayTooltip"}
+# types with no default property: a child object declared inside one fails to load
+NO_DEFAULT = {"Timer", "WheelHandler", "TapHandler", "HoverHandler", "DragHandler", "PointHandler", "PinchHandler",
+              "NumberAnimation", "ColorAnimation", "PropertyAction", "PauseAnimation", "RotationAnimation",
+              "Process", "StdioCollector", "SplitParser", "Socket", "FontLoader", "SystemClock", "IdleMonitor"}
+# shell files whose root object is one of those (and that don't add a default property)
+for f in files:
+    body = re.sub(r'(?m)^\s*(import|pragma)\b.*$|/\*.*?\*/|//[^\n]*', '', f.read_text(), flags=re.S)
+    m = re.search(r'([A-Z]\w*)\s*\{', body)
+    if m and m.group(1) in NO_DEFAULT and "default property" not in body:
+        NO_DEFAULT.add(f.stem)
 
 problems = 0
 
@@ -89,6 +101,9 @@ for f in files:
                 owner = next((x for x in reversed(stack) if x), None)
                 if owner in NON_ITEM:
                     report(f, f"{line(m.start())}: Behavior directly inside non-Item {owner}")
+            # a bare `Type {` (not `prop: Type {` or inside a list) directly in its parent
+            elif stack and stack[-1] in NO_DEFAULT and not re.search(r'[:\[,]\s*$', code[:m.start()]):
+                report(f, f"{line(m.start())}: {t} declared inside {stack[-1]}, which has no default property")
             stack.append(t)
 
 print(f"{len(files)} files checked, {problems} problem(s)")

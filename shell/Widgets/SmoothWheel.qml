@@ -87,13 +87,12 @@ WheelHandler {
         settle.restart();
     }
 
-    Timer {
-        id: settle
+    // a handler has no default property, so its helpers hang off properties
+    property Timer settle: Timer {
         onTriggered: root.release()
     }
 
-    NumberAnimation {
-        id: glide
+    property NumberAnimation glide: NumberAnimation {
         target: root.view
         property: "contentY"
         duration: 280
