@@ -12,6 +12,7 @@ SettingRow {
     property string suffix: ""
     property int decimals: 0
     property real factor: 1
+    signal edited
     FSlider {
         width: 260
         from: root.from
@@ -20,6 +21,9 @@ SettingRow {
         value: root.target[root.key]
         showValue: true
         valueText: (value * root.factor).toFixed(root.decimals) + root.suffix
-        onMoved: v => root.target[root.key] = v
+        onMoved: v => {
+            root.target[root.key] = v;
+            root.edited();
+        }
     }
 }

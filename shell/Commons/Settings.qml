@@ -151,6 +151,27 @@ Singleton {
                 property var shortcuts: []            // [{ key, type: flamenco|app|command|niri, value, title, locked }]
             }
 
+            // Mouse & touchpad, written into the compositor config by `flamenco pointer apply`
+            property JsonObject pointer: JsonObject {
+                property bool imported: false         // true once read from the compositor config
+                property real mouseSpeed: 0.0         // -1 (slow) … 1 (fast)
+                property string mouseAccel: "adaptive" // adaptive | flat
+                property bool mouseNatural: false
+                property bool mouseLeftHanded: false
+                property real mouseScroll: 1.0        // scroll speed multiplier
+                property real touchSpeed: 0.0
+                property string touchAccel: "adaptive"
+                property bool touchNatural: true
+                property bool tap: true               // tap to click
+                property bool dwt: true               // disable while typing
+                property real touchScroll: 1.0
+                property bool disableWithMouse: false // turn the touchpad off while a mouse is plugged in
+            }
+
+            property JsonObject displays: JsonObject {
+                property bool fallback: true          // turn the laptop screen on when no other screen is on
+            }
+
             // Sleep: what the shell does itself (lid / power button live in logind, see Settings → Power)
             property JsonObject power: JsonObject {
                 property bool allowSleep: true        // false: hold a systemd sleep inhibitor (lid, idle, menu)
@@ -161,10 +182,11 @@ Singleton {
 
             // Sounds: theme for apps (gsettings / GTK / KDE) and the shell's own event sounds
             property JsonObject sound: JsonObject {
-                property string theme: "freedesktop"
+                property string theme: "flamenco"     // bundled; falls back to it when a theme is missing
                 property bool eventSounds: true       // let apps play event sounds
                 property bool notifications: true     // shell: sound when a notification pops up
                 property bool volumeFeedback: true    // shell: click when you change the volume
+                property bool brightnessFeedback: true // shell: tick when you change the brightness
             }
 
             // Login / logout animations

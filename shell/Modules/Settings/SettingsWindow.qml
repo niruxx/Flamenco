@@ -28,6 +28,7 @@ LazyLoader {
             { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
             { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
             { id: "keyboard", icon: "keyboard", label: "Keyboard", comp: keyboardC },
+            { id: "pointer", icon: "mouse", label: "Mouse & Touchpad", comp: pointerC },
             { id: "network", icon: "wifi", label: "Network", comp: networkC },
             { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
             { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
@@ -51,6 +52,7 @@ LazyLoader {
         Component { id: dockC; DockPage {} }
         Component { id: displaysC; DisplaysPage {} }
         Component { id: keyboardC; KeyboardPage {} }
+        Component { id: pointerC; PointerPage {} }
         Component { id: networkC; NetworkPage {} }
         Component { id: sharingC; ScreenSharingPage {} }
         Component { id: soundC; SoundPage {} }

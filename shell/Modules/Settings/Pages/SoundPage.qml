@@ -16,7 +16,7 @@ Page {
         title: "Sound theme"
         SettingRow {
             title: "Theme"
-            subtitle: Sounds.themes.length ? "Installed themes from /usr/share/sounds and ~/.local/share/sounds. Apps get it through GTK, GNOME and KDE settings." : "No sound themes found. Install sound-theme-freedesktop (or ocean-sound-theme for KDE's)."
+            subtitle: Sounds.themes.length ? "Installed themes from /usr/share/sounds and ~/.local/share/sounds. Apps get it through GTK, GNOME and KDE settings." : "Only the bundled Flamenco theme was found. More: sound-theme-freedesktop, ocean-sound-theme."
             icon: "library_music"
             FDropdown {
                 implicitWidth: 280
@@ -40,6 +40,7 @@ Page {
                     model: [
                         { e: "message-new-instant", l: "Notification" },
                         { e: "audio-volume-change", l: "Volume" },
+                        { e: "brightness-change", l: "Brightness" },
                         { e: "dialog-warning", l: "Warning" },
                         { e: "complete", l: "Complete" },
                         { e: "bell", l: "Bell" },
@@ -62,6 +63,7 @@ Page {
         title: "Event sounds"
         SwitchRow { title: "Notification sound"; subtitle: "When a notification pops up (silent in Do Not Disturb)"; icon: "notifications_active"; target: page.sd; key: "notifications" }
         SwitchRow { title: "Volume feedback"; subtitle: "A click after you change the volume"; icon: "volume_up"; target: page.sd; key: "volumeFeedback" }
+        SwitchRow { title: "Brightness feedback"; subtitle: "A tick after you change the screen brightness"; icon: "brightness_6"; target: page.sd; key: "brightnessFeedback" }
         SwitchRow { title: "App event sounds"; subtitle: "Let GTK, GNOME and KDE apps play their event sounds"; icon: "apps"; target: page.sd; key: "eventSounds" }
     }
 

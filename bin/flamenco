@@ -23,7 +23,8 @@
   flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
   flamenco launch APP_ID       start a desktop app (used by app shortcuts)
   flamenco printers [--json] | default NAME | test NAME | cancel ID|all | service ACTION | add
-  flamenco display list | apply --json SPEC | save --json SPEC
+  flamenco display list | apply --json SPEC | save --json SPEC | fallback
+  flamenco pointer get | apply --json SPEC   mouse / touchpad speed, acceleration, scrolling, tapping
   flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
   flamenco doctor [--json]
   flamenco niri-config [--print | --snippet]   write a complete ~/.config/niri/config.kdl (backs up the old one)
@@ -43,7 +44,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.11.2"
+VERSION = "0.12.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -116,6 +117,11 @@ def cmd_run(args: list[str]) -> int:
         d.mkdir(parents=True, exist_ok=True)
     # the login animation plays when niri starts the shell, not on `flamenco restart`
     env = dict(os.environ, FLAMENCO_BIN=self_path(), FLAMENCO_INTRO="0" if "--no-intro" in args else "1")
+    if fallback_enabled():
+        try:
+            display_fallback(quiet=True)
+        except Exception:
+            pass
     cmd = [qs_bin(), "-p", str(shell_dir()), "--no-duplicate"]
     if "--fg" in args:
         os.execvpe(cmd[0], cmd, env)
@@ -1110,9 +1116,77 @@ def display_save(spec: list[dict]) -> int:
     return 0
 
 
+# ── never leave every screen off ──
+# A laptop screen switched off in the config stays off at the next login even
+# when the external monitor isn't plugged in, which leaves a black session.
+# `fallback` (run by the shell at start and whenever screens come or go)
+# switches the internal display back on for this session, and off again once
+# another display is connected, so the saved layout is left alone.
+
+FALLBACK_STATE = STATE_DIR / "display-fallback.json"
+INTERNAL_PREFIXES = ("eDP", "LVDS", "DSI")
+
+
+def is_internal(name: str) -> bool:
+    return name.startswith(INTERNAL_PREFIXES)
+
+
+def display_power(name: str, on: bool, hypr: bool) -> bool:
+    if hypr:
+        line = f"{name}, preferred, auto, auto" if on else f"{name}, disable"
+        r = subprocess.run(["hyprctl", "keyword", "monitor", line], capture_output=True, text=True)
+        return r.returncode == 0 and "error" not in r.stdout.lower()
+    r = subprocess.run(["niri", "msg", "output", name, "on" if on else "off"], capture_output=True, text=True)
+    return r.returncode == 0
+
+
+def display_fallback(quiet: bool = False) -> int:
+    hypr = compositor() == "hyprland"
+    try:
+        outs = hypr_display_list() if hypr else display_list()
+    except SystemExit:
+        return 1        # compositor not reachable
+    # Hyprland adds a headless FALLBACK output when nothing is on; it doesn't count
+    outs = [o for o in outs if o["name"] != "FALLBACK" and not o["name"].startswith("HEADLESS")]
+    try:
+        state = json.loads(FALLBACK_STATE.read_text())
+    except Exception:
+        state = {}
+    on = [o for o in outs if o["enabled"]]
+    say = (lambda m: None) if quiet else print
+    if not on and outs:
+        pick = next((o for o in outs if is_internal(o["name"])), outs[0])
+        if display_power(pick["name"], True, hypr):
+            FALLBACK_STATE.parent.mkdir(parents=True, exist_ok=True)
+            FALLBACK_STATE.write_text(json.dumps({"name": pick["name"]}))
+            say(f"displays: no screen was on, switched {pick['name']} on")
+            return 0
+        print(f"flamenco: could not switch {pick['name']} on", file=sys.stderr)
+        return 1
+    name = state.get("name")
+    if name and any(o["enabled"] and o["name"] != name for o in outs):
+        # another display is back: return to the saved layout (that screen off)
+        if any(o["name"] == name and o["enabled"] for o in outs):
+            display_power(name, False, hypr)
+            say(f"displays: another screen is connected, switched {name} back off")
+        FALLBACK_STATE.unlink(missing_ok=True)
+    elif name and not any(o["name"] == name for o in outs):
+        FALLBACK_STATE.unlink(missing_ok=True)
+    return 0
+
+
+def fallback_enabled() -> bool:
+    try:
+        return json.loads((CONFIG_DIR / "settings.json").read_text()).get("displays", {}).get("fallback", True) is not False
+    except Exception:
+        return True
+
+
 def cmd_display(args: list[str]) -> int:
     sub = args[0] if args else "list"
     hypr = compositor() == "hyprland" and "--from" not in args
+    if sub == "fallback":
+        return display_fallback("--quiet" in args)
     if sub == "list":
         raw = Path(args[args.index("--from") + 1]).read_text() if "--from" in args else None
         outs = hypr_display_list() if hypr else display_list(raw)
@@ -1126,6 +1200,8 @@ def cmd_display(args: list[str]) -> int:
     if "--json" not in args or args.index("--json") + 1 >= len(args):
         die(f"usage: flamenco display {sub} --json SPEC")
     spec = json.loads(args[args.index("--json") + 1])
+    if sub == "save":
+        FALLBACK_STATE.unlink(missing_ok=True)   # a layout chosen by hand wins
     if hypr and hypr_lua() and sub in ("apply", "save"):
         return lua_display_write(spec)   # reload applies it; revert rewrites the previous layout
     if sub == "apply":
@@ -1136,7 +1212,7 @@ def cmd_display(args: list[str]) -> int:
         for c in display_commands(spec):
             print(" ".join(c))
         return 0
-    die("usage: flamenco display list | apply --json SPEC | save --json SPEC")
+    die("usage: flamenco display list | apply --json SPEC | save --json SPEC | fallback")
 
 
 # ─────────────────────────────── niri config ─────────────────────────────────
@@ -1617,6 +1693,120 @@ def apply_keyboard_input(text: str, kb: dict) -> str:
     return text
 
 
+# ─────────────────────────────── mouse & touchpad ────────────────────────────
+# niri: input { mouse { … } touchpad { … } }. Hyprland: written with the keyboard
+# settings into flamenco-input.conf / flamenco/input.lua.
+
+POINTER_DEFAULTS = {
+    "mouseSpeed": 0.0, "mouseAccel": "adaptive", "mouseNatural": False, "mouseLeftHanded": False, "mouseScroll": 1.0,
+    "touchSpeed": 0.0, "touchAccel": "adaptive", "touchNatural": True, "tap": True, "dwt": True,
+    "touchScroll": 1.0, "disableWithMouse": False,
+}
+POINTER_ACCEL = ("adaptive", "flat")
+
+
+def _num(v, lo, hi, d):
+    try:
+        return max(lo, min(hi, float(v)))
+    except (TypeError, ValueError):
+        return d
+
+
+def pointer_norm(p: dict) -> dict:
+    out = dict(POINTER_DEFAULTS)
+    out.update({k: v for k, v in (p or {}).items() if k in POINTER_DEFAULTS})
+    for k in ("mouseSpeed", "touchSpeed"):
+        out[k] = round(_num(out[k], -1, 1, 0.0), 2)
+    for k in ("mouseScroll", "touchScroll"):
+        out[k] = round(_num(out[k], 0.1, 5, 1.0), 2)
+    for k in ("mouseAccel", "touchAccel"):
+        out[k] = out[k] if out[k] in POINTER_ACCEL else "adaptive"
+    return out
+
+
+def pointer_settings(text: str) -> dict:
+    """Read mouse/touchpad settings from niri's config (missing lines = libinput defaults)."""
+    out = dict(POINTER_DEFAULTS, touchNatural=False, tap=False, dwt=False)
+    inp = kdl_block(text, "input")
+    keys = ("accel-speed", "accel-profile", "natural-scroll", "left-handed", "scroll-factor", "tap", "dwt",
+            "disabled-on-external-mouse", "off")
+    num = lambda v, d: float(m.group()) if (m := re.search(r"-?\d+(\.\d+)?", v)) else d
+    prof = lambda v: (m.group(1) if (m := re.search(r'"([^"]*)"', v)) else "adaptive")
+    for dev, pre in (("mouse", "mouse"), ("touchpad", "touch")):
+        b = kdl_child_block(text, inp, dev) if inp else None
+        vals = block_line_values(text, b, keys) if b else {}
+        if "accel-speed" in vals:
+            out[pre + "Speed"] = num(vals["accel-speed"][2], 0.0)
+        if "accel-profile" in vals:
+            out[pre + "Accel"] = prof(vals["accel-profile"][2])
+        if "scroll-factor" in vals:
+            out[pre + "Scroll"] = num(vals["scroll-factor"][2], 1.0)
+        out[pre + "Natural"] = "natural-scroll" in vals
+        if dev == "mouse":
+            out["mouseLeftHanded"] = "left-handed" in vals
+        else:
+            out["tap"] = "tap" in vals
+            out["dwt"] = "dwt" in vals
+            out["disableWithMouse"] = "disabled-on-external-mouse" in vals
+    return pointer_norm(out)
+
+
+def apply_pointer_input(text: str, p: dict) -> str:
+    p = pointer_norm(p)
+    if kdl_block(text, "input") is None:
+        text = text.rstrip("\n") + "\n\ninput {\n}\n"
+    flag = lambda on, k: k if on else None
+    for dev, pre in (("mouse", "mouse"), ("touchpad", "touch")):
+        inp = kdl_block(text, "input")
+        if kdl_child_block(text, inp, dev) is None:
+            pad = block_indent(text, inp)
+            text = text[:inp[1] + 1] + f"\n{pad}{dev} {{\n{pad}}}" + text[inp[1] + 1:]
+        b = kdl_child_block(text, kdl_block(text, "input"), dev)
+        wanted = {
+            "accel-speed": f"accel-speed {p[pre + 'Speed']:g}" if p[pre + "Speed"] else None,
+            "accel-profile": f'accel-profile "{p[pre + "Accel"]}"' if p[pre + "Accel"] != "adaptive" else None,
+            "scroll-factor": f"scroll-factor {p[pre + 'Scroll']:g}" if p[pre + "Scroll"] != 1 else None,
+            "natural-scroll": flag(p[pre + "Natural"], "natural-scroll"),
+        }
+        if dev == "mouse":
+            wanted["left-handed"] = flag(p["mouseLeftHanded"], "left-handed")
+        else:
+            wanted.update({"tap": flag(p["tap"], "tap"), "dwt": flag(p["dwt"], "dwt"),
+                           "disabled-on-external-mouse": flag(p["disableWithMouse"], "disabled-on-external-mouse")})
+        text = set_block_lines(text, b, wanted)
+    return text
+
+
+def cmd_pointer(args: list[str]) -> int:
+    sub = args[0] if args else "get"
+    hypr = compositor() == "hyprland"
+    if sub == "get":
+        if hypr:
+            d = lua_read_json("input") if hypr_lua() else hypr_read_json(HYPR_INPUT)
+            out = pointer_norm(d.get("pointer") or {})
+        else:
+            out = pointer_settings(NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() else "")
+        print(json.dumps(out))
+        return 0
+    if sub == "apply":
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco pointer apply --json SPEC")
+        spec = pointer_norm(json.loads(args[args.index("--json") + 1]))
+        if hypr:
+            (lua_apply_input if hypr_lua() else hypr_apply_input)(None, spec)
+            hypr_reload()
+            print("pointer: Hyprland config updated")
+            return 0
+        if not NIRI_CONFIG.is_file():
+            die(f"{NIRI_CONFIG} not found (run `flamenco niri-config` first)")
+        text = NIRI_CONFIG.read_text()
+        new = apply_pointer_input(text, spec)
+        write_niri_config(new, text)
+        print("pointer: niri config updated" if new != text else "pointer: already up to date")
+        return 0
+    die("usage: flamenco pointer get | apply --json SPEC")
+
+
 def xkb_catalog() -> dict:
     """Layouts, variants and options from the XKB rules database."""
     lst = next((p for p in (Path("/usr/share/X11/xkb/rules/evdev.lst"), Path("/usr/share/X11/xkb/rules/base.lst")) if p.exists()), None)
@@ -1923,10 +2113,22 @@ def cmd_fonts(args: list[str]) -> int:
     return 0
 
 
+def bundled_sounds() -> Path | None:
+    """The "flamenco" sound theme that ships with the shell (also found from a git checkout)."""
+    here = Path(__file__).resolve().parent
+    for c in (here.parent / "data/sounds", here.parent / "share/flamenco-shell/sounds",
+              XDG_DATA / "flamenco-shell/sounds", Path("/usr/share/flamenco-shell/sounds")):
+        if (c / "flamenco/index.theme").is_file():
+            return c
+    return None
+
+
 def sound_theme_dirs() -> dict[str, Path]:
     found = {}
-    for d in [XDG_DATA] + data_dirs():
-        root = d / "sounds"
+    roots = [d / "sounds" for d in [XDG_DATA] + data_dirs()]
+    if (b := bundled_sounds()):
+        roots.append(b)
+    for root in roots:
         if root.is_dir():
             for t in sorted(root.iterdir()):
                 if t.name not in found and (t / "index.theme").is_file():
@@ -1943,10 +2145,23 @@ def sound_themes() -> list[dict]:
     return sorted(out, key=lambda t: t["label"].lower())
 
 
-def find_sound(event: str, theme: str) -> Path | None:
-    """freedesktop sound-theme lookup: theme dirs, then Inherits, then 'freedesktop'."""
-    themes = sound_theme_dirs()
-    seen, queue = set(), [theme, "freedesktop"]
+# Events the shell plays that not every theme has, with stand-ins to try next.
+SOUND_ALIASES = {
+    "brightness-change": ["audio-volume-change", "button-pressed"],
+    "audio-volume-change": ["button-pressed", "bell"],
+    "message-new-instant": ["message", "dialog-information", "bell"],
+    "message": ["message-new-instant", "dialog-information", "bell"],
+    "dialog-warning": ["dialog-error", "bell"],
+    "dialog-error": ["dialog-warning", "bell"],
+    "screen-capture": ["camera-shutter"],
+    "camera-shutter": ["screen-capture"],
+    "complete": ["dialog-information", "bell"],
+}
+
+
+def _sound_in_theme(event: str, theme: str, themes: dict[str, Path]) -> Path | None:
+    """freedesktop sound-theme lookup in one theme and the themes it inherits."""
+    seen, queue = set(), [theme]
     while queue:
         t = queue.pop(0)
         if t in seen or t not in themes:
@@ -1964,11 +2179,24 @@ def find_sound(event: str, theme: str) -> Path | None:
     return None
 
 
+def find_sound(event: str, theme: str) -> Path | None:
+    """The chosen theme first; when it isn't installed or lacks the event, fall
+    back to freedesktop and then the bundled flamenco theme, so the shell is
+    never silent. Each step also tries the event's stand-ins."""
+    themes = sound_theme_dirs()
+    events = [event] + SOUND_ALIASES.get(event, [])
+    for t in dict.fromkeys([theme, "freedesktop", "flamenco"]):
+        for e in events:
+            if (f := _sound_in_theme(e, t, themes)):
+                return f
+    return None
+
+
 def configured_sound_theme() -> str:
     try:
-        return json.loads((CONFIG_DIR / "settings.json").read_text()).get("sound", {}).get("theme") or "freedesktop"
+        return json.loads((CONFIG_DIR / "settings.json").read_text()).get("sound", {}).get("theme") or "flamenco"
     except Exception:
-        return "freedesktop"
+        return "flamenco"
 
 
 def cmd_sound(args: list[str]) -> int:
@@ -2561,14 +2789,41 @@ def hypr_apply_shortcuts(shortcuts: list[dict]):
     hypr_write(HYPR_BINDS, lines, {"shortcuts": shortcuts})
 
 
-def hypr_apply_input(kb: dict):
+def hypr_pointer_fields(p: dict | None) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """(input fields, input:touchpad fields). Hyprland has one global speed/profile: the mouse's."""
+    if not p:
+        return [], []
+    p = pointer_norm(p)
+    b = lambda v: "true" if v else "false"
+    top = [("sensitivity", f"{p['mouseSpeed']:g}"), ("natural_scroll", b(p["mouseNatural"])),
+           ("left_handed", b(p["mouseLeftHanded"])), ("scroll_factor", f"{p['mouseScroll']:g}")]
+    if p["mouseAccel"] == "flat":
+        top.append(("accel_profile", "flat"))
+    tp = [("natural_scroll", b(p["touchNatural"])), ("tap-to-click", b(p["tap"])),
+          ("disable_while_typing", b(p["dwt"])), ("scroll_factor", f"{p['touchScroll']:g}")]
+    return top, tp
+
+
+def hypr_apply_input(kb: dict | None, pointer: dict | None = None):
+    """Keyboard and/or pointer settings; whichever is None keeps what the file had."""
+    old = hypr_read_json(HYPR_INPUT)
+    kb = kb if kb is not None else old.get("input") or {}
+    pointer = pointer if pointer is not None else old.get("pointer")
     lines = ["input {"]
     for k, hk in (("layout", "kb_layout"), ("variant", "kb_variant"), ("options", "kb_options"), ("model", "kb_model")):
         if str(kb.get(k, "")).strip():
             lines.append(f"    {hk} = {kb[k]}")
     lines += [f"    repeat_delay = {int(kb.get('repeatDelay', 600))}", f"    repeat_rate = {int(kb.get('repeatRate', 25))}",
-              f"    numlock_by_default = {'true' if kb.get('numlock') else 'false'}", "}"]
-    hypr_write(HYPR_INPUT, lines, {"input": kb})
+              f"    numlock_by_default = {'true' if kb.get('numlock') else 'false'}"]
+    top, tp = hypr_pointer_fields(pointer)
+    lines += [f"    {k} = {v}" for k, v in top]
+    if tp:
+        lines += ["    touchpad {", *[f"        {k} = {v}" for k, v in tp], "    }"]
+    lines.append("}")
+    data = {"input": kb}
+    if pointer is not None:
+        data["pointer"] = pointer
+    hypr_write(HYPR_INPUT, lines, data)
 
 
 def hypr_apply_cursor(theme: str, size: int):
@@ -2665,7 +2920,7 @@ def cmd_hyprland_config(args: list[str]) -> int:
     if not HYPR_BINDS.exists():
         hypr_apply_shortcuts(saved.get("keyboard", {}).get("shortcuts") or DEFAULT_SHORTCUTS)
     if not HYPR_INPUT.exists():
-        hypr_apply_input(saved.get("keyboard", {}) or {})
+        hypr_apply_input(saved.get("keyboard", {}) or {}, saved.get("pointer"))
     for f in (HYPR_CURSOR, HYPR_MONITORS):
         if not f.exists():
             hypr_write(f, [])
@@ -2788,7 +3043,10 @@ def lua_apply_shortcuts(shortcuts: list[dict]):
     lua_write("binds", lines, {"shortcuts": shortcuts})
 
 
-def lua_apply_input(kb: dict):
+def lua_apply_input(kb: dict | None, pointer: dict | None = None):
+    old = lua_read_json("input")
+    kb = kb if kb is not None else old.get("input") or {}
+    pointer = pointer if pointer is not None else old.get("pointer")
     fields = []
     for k, hk in (("layout", "kb_layout"), ("variant", "kb_variant"), ("options", "kb_options"), ("model", "kb_model")):
         if str(kb.get(k, "")).strip():
@@ -2796,7 +3054,16 @@ def lua_apply_input(kb: dict):
     fields += [f"        repeat_delay = {int(kb.get('repeatDelay', 600))},",
                f"        repeat_rate = {int(kb.get('repeatRate', 25))},",
                f"        numlock_by_default = {'true' if kb.get('numlock') else 'false'},"]
-    lua_write("input", ["hl.config({", "    input = {", *fields, "    },", "})"], {"input": kb})
+    lval = lambda v: v if v in ("true", "false") or re.fullmatch(r"-?[\d.]+", v) else lua_str(v)
+    lkey = lambda k: k if re.fullmatch(r"[A-Za-z_]\w*", k) else f"[{lua_str(k)}]"
+    top, tp = hypr_pointer_fields(pointer)
+    fields += [f"        {lkey(k)} = {lval(v)}," for k, v in top]
+    if tp:
+        fields += ["        touchpad = {", *[f"            {lkey(k)} = {lval(v)}," for k, v in tp], "        },"]
+    data = {"input": kb}
+    if pointer is not None:
+        data["pointer"] = pointer
+    lua_write("input", ["hl.config({", "    input = {", *fields, "    },", "})"], data)
 
 
 def lua_apply_cursor(theme: str, size: int):
@@ -2849,7 +3116,7 @@ def cmd_hyprland_lua_config(args: list[str]) -> int:
     if not (HYPR_LUA_DIR / "binds.lua").exists():
         lua_apply_shortcuts(saved.get("keyboard", {}).get("shortcuts") or DEFAULT_SHORTCUTS)
     if not (HYPR_LUA_DIR / "input.lua").exists():
-        lua_apply_input(saved.get("keyboard", {}) or {})
+        lua_apply_input(saved.get("keyboard", {}) or {}, saved.get("pointer"))
     for name in ("cursor", "monitors"):
         if not (HYPR_LUA_DIR / f"{name}.lua").exists():
             lua_write(name, [])
@@ -3376,6 +3643,8 @@ def main(argv: list[str]) -> int:
         return cmd_sound(rest)
     if cmd == "portals":
         return cmd_portals(rest)
+    if cmd == "pointer":
+        return cmd_pointer(rest)
     if cmd == "keyboard":
         return cmd_keyboard(rest)
     if cmd == "launch":

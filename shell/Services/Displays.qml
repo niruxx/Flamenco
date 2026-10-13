@@ -90,6 +90,35 @@ Singleton {
         }
     }
 
+    // ── never leave every screen off (see `flamenco display fallback`) ──
+    readonly property int screenCount: Quickshell.screens.length
+    onScreenCountChanged: if (Settings.data.displays.fallback) fallbackDelay.restart()
+    Component.onCompleted: if (Settings.data.displays.fallback) fallbackDelay.restart()
+
+    function checkFallback() {
+        fallbackDelay.restart();
+    }
+
+    // let hotplug settle before deciding
+    Timer {
+        id: fallbackDelay
+        interval: 1500
+        onTriggered: if (!fallback.running) fallback.running = true
+    }
+
+    Process {
+        id: fallback
+        command: [Paths.bin, "display", "fallback"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim()) {
+                    root.status = text.trim().split("\n").pop();
+                    root.refresh();
+                }
+            }
+        }
+    }
+
     function identify() {
         identifying = true;
         identifyTimer.restart();

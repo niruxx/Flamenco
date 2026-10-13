@@ -30,6 +30,7 @@ Tailored for power users running cutting-edge Linux environments, Flamenco Shell
 - [🖥️ Screen Sharing](#-screen-sharing)
 - [🩺 System Check](#-system-check)
 - [⌨️ Keyboard & Shortcuts](#️-keyboard--shortcuts)
+- [🖱️ Mouse & Touchpad](#mouse--touchpad)
 - [🖥️ Displays](#-displays)
 - [🖼️ Wallpapers](#-wallpapers)
 - [🎨 Themes](#-themes)
@@ -73,12 +74,12 @@ To regenerate these, run `tools/screenshots.sh` inside a niri session with the s
 | **💬 Notifications** | Built-in daemon: popups with timeout bar, swipe to dismiss, actions, DND. History persists across restarts |
 | **📢 OSD** | Volume, brightness and mic popups |
 | **🔒 Lock screen** | PAM auth, blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
-| **⚡ Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; log out, restart and shut down run a 5-second cancellable countdown |
+| **⚡ Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; log out, restart and shut down must be held for 3 seconds |
 | **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **📊 Dashboard** | Opens from the bar clock. Tabs: Overview (clock, calendar, user, weather and media cards), Media (full player), Wallpapers (picker and folder), Weather (configurable forecast), and a shortcut to Settings |
 | **📈 Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
 | **🌐 Network & VPN** | Wi-Fi, plus NetworkManager VPNs (WireGuard, OpenVPN): connect from the control center, import `.conf`/`.ovpn` files in Settings |
-| **🔊 Sound** | Pick an installed sound theme (shared with GTK, GNOME and KDE apps), notification and volume sounds, output/input devices |
+| **🔊 Sound** | Pick an installed sound theme (shared with GTK, GNOME and KDE apps), notification, volume and brightness sounds, output/input devices |
 | **🔑 Keyring** | Choose which keyring stores app passwords: GNOME Keyring, KDE Wallet, KeePassXC, oo7, or none. Shows what's running and whether it unlocks at login |
 | **✨ Login & logout animations** | Bloom, Curtain, Blinds, Zoom or Fade over your blurred wallpaper with a greeting; separate choices for login and logout, with previews |
 | **🛡️ Firewall** | Detects ufw or firewalld: turn it on/off, default policies or zones, add/remove ports, services and rules (applied with one sudo prompt) |
@@ -88,7 +89,8 @@ To regenerate these, run `tools/screenshots.sh` inside a niri session with the s
 | **🩺 System check** | Runs `flamenco doctor` in Settings, shows what's missing and gives the exact `pacman` command |
 | **📌 Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
 | **⌨️ Keyboard** | Layouts, variants, layout switching, Caps Lock / Compose, key repeat, and shortcuts that open apps, run commands, call Flamenco functions or niri actions. Keys are recorded or typed, and per-shortcut or full resets to the defaults are available. Written to niri's config |
-| **🖥️ Displays** | Per-display resolution, refresh rate, scale, orientation (rotate and flip) and VRR; drag-to-arrange layout; live apply with 15-second auto-revert; saved to niri's config |
+| **🖱️ Mouse & Touchpad** | Pointer speed, flat or adaptive acceleration, scroll speed, natural scrolling, left-handed, tap to click, disable while typing; written to the niri or Hyprland config |
+| **🖥️ Displays** | Per-display resolution, refresh rate, scale, orientation (rotate and flip) and VRR; drag-to-arrange layout; live apply with 15-second auto-revert; saved to niri's config. Turns the laptop screen back on if every screen would otherwise be off |
 | **⚙️ Settings app** | Its own window (`flamenco settings`) with a page for every module. Every change applies live |
 | **🎨 App theming** | Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
 
@@ -366,13 +368,13 @@ Past notifications stay in the notification center (`Mod+N`). It also has button
 - **Lock** (`Super+Alt+L`, or automatically after the idle time in **Settings → Lock & Idle**): type your password and press `Enter`. `Esc` clears what you typed. See [Lock screen options](#lock-screen-options) to use an SDDM theme or another locker instead.
 - **Power menu** (`Mod+Escape`): choose with the arrow keys or `h`/`l` and press `Enter`.
   - **Lock and Suspend** act immediately. Suspend locks the screen first.
-  - **Log out, Restart and Shut down** start a **5-second countdown**: the button fills up and shows the seconds left, and the action runs when it's full. Click the button again, press `Esc` or click outside to cancel.
+  - **Log out, Restart and Shut down** must be **held for 3 seconds** (mouse button, or `Enter`/`Space`). The button fills up and shows the seconds left, and the action runs when it's full. Let go early to cancel.
 
 ### Login & logout animations
 
 **Login:** when niri starts the shell at login, a short intro plays. It covers your screen with your wallpaper, blurred and dimmed, plus the flame badge and "Good evening, *you*" with the date, then opens to reveal the desktop. `flamenco restart` and live config reloads skip it.
 
-**Log out, restart, shut down:** after the power menu's countdown, an outro covers the screen ("See you soon…", "Restarting…") before the action runs.
+**Log out, restart, shut down:** after you hold the button in the power menu, an outro covers the screen ("See you soon…", "Restarting…") before the action runs.
 
 **Settings → Appearance → Login & logout** picks each one separately:
 
@@ -426,11 +428,11 @@ With auto-hide on, move the pointer to the bottom edge to reveal the dock.
 ## Sound
 
 **Settings → Sound**
-- **Sound theme:** any installed freedesktop sound theme (`/usr/share/sounds`, `~/.local/share/sounds`), with **Preview** buttons for common events. The theme also goes to apps: gsettings for GNOME/GTK, `settings.ini`, and `kdeglobals` for KDE.
-- **Event sounds:** a sound when a notification pops up (silent in Do Not Disturb), a click after you change the volume, and whether apps play event sounds.
+- **Sound theme:** the bundled **Flamenco** theme (the default) or any installed freedesktop sound theme (`/usr/share/sounds`, `~/.local/share/sounds`), with **Preview** buttons for common events. The theme also goes to apps: gsettings for GNOME/GTK, `settings.ini`, and `kdeglobals` for KDE.
+- **Event sounds:** a sound when a notification pops up (silent in Do Not Disturb), a click after you change the volume, a tick after you change the brightness, and whether apps play event sounds.
 - **Devices:** output and input device and volume.
 
-Sounds are looked up in the chosen theme, then the themes it inherits from, then `freedesktop`, and played with `pw-play`. From a terminal: `flamenco sound themes`, `flamenco sound play message-new-instant`.
+Sounds are looked up in the chosen theme, then the themes it inherits from, then `freedesktop`, then the bundled `flamenco` theme, so the shell has sounds even with no theme installed. Events a theme lacks fall back to similar ones (for example `brightness-change` → `audio-volume-change`). Sounds are played with `pw-play`. From a terminal: `flamenco sound themes`, `flamenco sound play message-new-instant`.
 
 ## Keyring
 
@@ -587,6 +589,22 @@ flamenco keyboard apply --json '{"shortcuts":[{"key":"Mod+B","type":"app","value
 flamenco launch firefox            # what app shortcuts run
 ```
 
+## Mouse & Touchpad
+
+**Settings → Mouse & Touchpad** sets, separately for mice and touchpads:
+- **Pointer speed** (−100% to +100%; 0% is the default)
+- **Acceleration:** adaptive, or flat (the same distance however fast you move)
+- **Scroll speed** and **natural scrolling**
+- **Mouse:** left-handed (swapped buttons)
+- **Touchpad:** tap to click, disable while typing, and off while a mouse is plugged in
+
+The first time you open the page, it reads what your config already has. Changes are written into `input { mouse { … } touchpad { … } }` in `~/.config/niri/config.kdl`, or into `flamenco-input.conf` / `flamenco/input.lua` on Hyprland, and apply right away. Hyprland has one pointer speed for every device, so the mouse speed is used for touchpads too.
+
+```sh
+flamenco pointer get
+flamenco pointer apply --json '{"mouseSpeed":-0.3,"mouseAccel":"flat","tap":true}'
+```
+
 ## Displays
 
 **Settings → Displays** (or `flamenco settings displays`) configures your monitors through niri.
@@ -609,6 +627,8 @@ flamenco launch firefox            # what app shortcuts run
 - niri validates the file first.
 - A copy of your config from before the first change is kept at `~/.local/state/flamenco/backup/niri-config.before-displays.kdl`.
 
+**Never leave every screen off** (on by default, in the **Safety** group): if you switch the laptop screen off and later log in without the external display, you'd get a black screen. Instead, when no screen is on (at login, or when you unplug a display), Flamenco switches the laptop screen on for that session. When another display is connected again, it switches the laptop screen back off, so your saved layout is left as it was. Run it by hand with `flamenco display fallback`.
+
 The same operations are available from the command line:
 
 ```sh
@@ -616,6 +636,7 @@ flamenco display list          # current state of every display
 flamenco display list --json
 flamenco display apply --json '[{"name":"DP-1","mode":{"w":2560,"h":1440,"r":143998},"scale":1,"transform":"normal","x":0,"y":0}]'
 flamenco display save  --json '…'    # same format; writes niri's config
+flamenco display fallback      # turn a screen on if none is on
 ```
 
 ## Wallpapers
@@ -769,8 +790,9 @@ flamenco firewall status [--json] | apply --json SPEC | load
 flamenco keyring get | use gnome|kde|keepassxc|oo7|none|default
 flamenco power logind get | apply --json SPEC | reset
 flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
+flamenco pointer get | apply --json SPEC
 flamenco launch APP_ID
-flamenco display list | apply --json SPEC | save --json SPEC
+flamenco display list | apply --json SPEC | save --json SPEC | fallback
 flamenco list-themes [--json]   installed icon / cursor / GTK / Qt-style / Kvantum / SDDM themes
 flamenco ipc TARGET FUNCTION [ARGS...]
 flamenco doctor [--json]
@@ -809,10 +831,10 @@ tools/screenshots.sh         regenerates docs/screenshots/
 - [x] Under app theming ensure a drop down can be used instead of typing in the theme - this should be able to select the ones installed.
 - [x] Include app Indicators support
 - [x] Improve the top left indicator as there's a lot of spaces between them.
-- [ ] Sounds for Volume and Brightness are not functional.
-- [ ] Add Cursor control settings to manage speed
-- [ ] Alternative Display Manager Support
+- [x] Sounds for Volume and Brightness are not functional.
+- [X] Add Cursor control settings to manage speed
+- [X] Alternative Display Manager Support
 - [X] First Time Run Setup Screen (dms checker)
 - [ ] Full Feature Parity
-- [ ] Quality of Life Improvements
+- [X] Quality of Life Improvements
 

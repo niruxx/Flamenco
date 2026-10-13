@@ -368,4 +368,16 @@ Page {
             elide: Text.ElideRight
         }
     }
+
+    Group {
+        title: "Safety"
+        SwitchRow {
+            title: "Never leave every screen off"
+            subtitle: "If the laptop screen is switched off and no other display is connected (e.g. at login), turn it back on. It goes off again when the external display returns."
+            icon: "screenshot_monitor"
+            target: Settings.data.displays
+            key: "fallback"
+            onEdited: if (Settings.data.displays.fallback) Displays.checkFallback()
+        }
+    }
 }

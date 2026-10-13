@@ -35,6 +35,7 @@ ShellRoot {
         ColorGen.available;
         Toggles.nightLight;
         SessionFx.startup();
+        Displays.screenCount;
     }
 
     // first run: open setup once settings are loaded (after the login animation)

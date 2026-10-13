@@ -28,6 +28,10 @@ Singleton {
         if (cfg.volumeFeedback)
             volumeDebounce.restart();
     }
+    function brightnessChanged() {
+        if (cfg.brightnessFeedback)
+            brightnessDebounce.restart();
+    }
 
     function load() {
         if (themes.length === 0 && !themeProc.running)
@@ -41,6 +45,11 @@ Singleton {
         id: volumeDebounce
         interval: 160
         onTriggered: root.play("audio-volume-change")
+    }
+    Timer {
+        id: brightnessDebounce
+        interval: 160
+        onTriggered: root.play("brightness-change")
     }
 
     Process {

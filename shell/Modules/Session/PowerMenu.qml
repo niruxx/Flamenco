@@ -18,10 +18,11 @@ Variants {
         readonly property bool shouldShow: Panels.current === "power" && Panels.screen === modelData.name
         readonly property real p: pAnim.v
         property int sel: 0
-        // destructive actions arm a 5 s countdown instead of running at once
+        // destructive actions run only after being held down for holdMs
+        readonly property int holdMs: 3000
         property string pending: ""
-        property real charge: 0          // 0 → 1 over the countdown
-        readonly property int remaining: Math.max(1, Math.ceil(5 * (1 - charge)))
+        property real charge: 0          // 0 → 1 while held
+        readonly property int remaining: Math.max(1, Math.ceil(holdMs / 1000 * (1 - charge)))
         readonly property var pendingAction: actions.find(a => a.id === pending) ?? null
 
         readonly property var actions: [
@@ -34,45 +35,63 @@ Variants {
 
         function cancel() {
             countdown.stop();
+            release.stop();
             pending = "";
             charge = 0;
         }
 
+        // click (or Enter) on a harmless action runs it at once
         function trigger(i) {
             const a = actions[i];
-            if (a.verb) {
-                // clicking the counting-down button again cancels it
-                if (pending === a.id) {
-                    cancel();
-                    return;
-                }
-                pending = a.id;
-                charge = 0;
-                countdown.restart();
+            if (a.verb)
                 return;
-            }
             cancel();
             Panels.close();
             a.run();
         }
 
-        // real 5 s regardless of the animation speed setting
+        // press on a destructive action starts filling it; letting go early drains it
+        function holdStart(i) {
+            const a = actions[i];
+            if (!a.verb)
+                return;
+            release.stop();
+            pending = a.id;
+            countdown.from = charge;
+            countdown.duration = Math.max(1, holdMs * (1 - charge));
+            countdown.restart();
+        }
+
+        function holdEnd() {
+            if (!countdown.running)
+                return;
+            countdown.stop();
+            release.restart();
+        }
+
+        // real 3 s regardless of the animation speed setting
         NumberAnimation {
             id: countdown
             target: win
             property: "charge"
-            from: 0
             to: 1
-            duration: 5000
             easing.type: Easing.Linear
             onFinished: {
+                if (win.charge < 1)
+                    return;     // stopped early by holdEnd()
                 const a = win.pendingAction;
                 win.pending = "";
+                win.charge = 0;
                 Panels.close();
                 // the logout animation covers the screen first, then the action runs
                 if (a)
                     SessionFx.playOutro(a.verb + "…", a.run, false);
             }
+        }
+        SequentialAnimation {
+            id: release
+            NumberAnimation { target: win; property: "charge"; to: 0; duration: 250; easing.type: Easing.OutCubic }
+            PropertyAction { target: win; property: "pending"; value: "" }
         }
         onShouldShowChanged: {
             cancel();
@@ -105,21 +124,32 @@ Variants {
             anchors.fill: parent
             color: Theme.alpha(Theme.bg, 0.72)
             opacity: win.p
-            MouseArea { anchors.fill: parent; onClicked: win.pending ? win.cancel() : Panels.close() }
+            MouseArea { anchors.fill: parent; onClicked: Panels.close() }
         }
 
         Item {
             id: focusItem
             focus: true
+            readonly property var confirmKeys: [Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space]
             Keys.onPressed: event => {
-                if (event.key === Qt.Key_Escape)
+                if (event.isAutoRepeat)
+                    return;
+                if (event.key === Qt.Key_Escape) {
                     win.pending ? win.cancel() : Panels.close();
-                else if (event.key === Qt.Key_Left || event.key === Qt.Key_H)
+                } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
+                    win.holdEnd();
                     win.sel = (win.sel + win.actions.length - 1) % win.actions.length;
-                else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab)
+                } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab) {
+                    win.holdEnd();
                     win.sel = (win.sel + 1) % win.actions.length;
-                else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)
+                } else if (confirmKeys.includes(event.key)) {
                     win.trigger(win.sel);
+                    win.holdStart(win.sel);
+                }
+            }
+            Keys.onReleased: event => {
+                if (!event.isAutoRepeat && confirmKeys.includes(event.key))
+                    win.holdEnd();
             }
         }
 
@@ -138,10 +168,8 @@ Variants {
             FText {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: -Theme.sp5
-                text: "Click it again or press Esc to cancel"
+                text: win.pending ? "Let go to cancel" : "Hold Log out, Restart or Shut down for 3 seconds"
                 dim: true
-                opacity: win.pending ? 1 : 0
-                Behavior on opacity { Anim {} }
             }
 
             Row {
@@ -213,7 +241,7 @@ Variants {
                             }
                             FText {
                                 Layout.alignment: Qt.AlignHCenter
-                                text: btn.danger ? "Cancel · " + win.remaining + "s" : btn.modelData.label
+                                text: btn.danger ? win.remaining + "s" : btn.modelData.label
                                 font.weight: Font.DemiBold
                                 color: btn.selected || btn.danger ? Theme.onAccent : Theme.text
                             }
@@ -224,6 +252,12 @@ Variants {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onEntered: win.sel = btn.index
+                            onPressed: {
+                                win.sel = btn.index;
+                                win.holdStart(btn.index);
+                            }
+                            onReleased: win.holdEnd()
+                            onCanceled: win.holdEnd()
                             onClicked: win.trigger(btn.index)
                         }
 

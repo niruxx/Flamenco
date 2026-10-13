@@ -12,6 +12,8 @@ install:
 	install -Dm644 data/hypr/hyprland.conf $(SHARE)/hypr/hyprland.conf
 	install -Dm644 data/hypr/hyprland.lua $(SHARE)/hypr/hyprland.lua
 	install -m 755 bin/flamenco $(SHARE)/flamenco
+	install -d $(PREFIX)/share/sounds
+	cp -r data/sounds/flamenco $(PREFIX)/share/sounds/
 	ln -sf $(SHARE)/flamenco $(BIN)/flamenco
 	install -Dm644 data/flamenco-settings.desktop $(PREFIX)/share/applications/flamenco-settings.desktop
 	install -Dm644 data/flamenco-settings.svg $(PREFIX)/share/icons/hicolor/scalable/apps/flamenco-settings.svg
@@ -27,7 +29,7 @@ dev:
 
 uninstall:
 	rm -f $(BIN)/flamenco $(PREFIX)/share/applications/flamenco-settings.desktop $(PREFIX)/share/icons/hicolor/scalable/apps/flamenco-settings.svg
-	rm -rf $(SHARE)
+	rm -rf $(SHARE) $(PREFIX)/share/sounds/flamenco
 
 run:
 	./bin/flamenco run --fg

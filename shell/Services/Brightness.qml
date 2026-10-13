@@ -20,6 +20,7 @@ Singleton {
         pending = v;
         writeTimer.restart();
         changedByUser();
+        Sounds.brightnessChanged();
     }
 
     function step(delta) {

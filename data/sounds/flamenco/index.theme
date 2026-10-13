@@ -1,0 +1,8 @@
+[Sound Theme]
+Name=Flamenco
+Comment=Soft chimes and clicks bundled with Flamenco Shell
+Inherits=freedesktop
+Directories=stereo
+
+[stereo]
+OutputProfile=stereo
