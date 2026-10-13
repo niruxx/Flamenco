@@ -19,11 +19,6 @@ A desktop shell for the [niri](https://github.com/YaLTeR/niri) compositor (and [
 - [Troubleshooting](#troubleshooting)
 - [Reference](#reference)
 
-## TODO
-Alternative Display Manager Support
-Full Feature Parity
-Quality of Life Improvements
-First Time Run Setup Screen (dms checker)
 
 ## Screenshots
 
@@ -794,4 +789,8 @@ tools/screenshots.sh         regenerates docs/screenshots/
 - [x] Improve the top left indicator as there's a lot of spaces between them.
 - [ ] Sounds for Volume and Brightness are not functional.
 - [ ] Add Cursor control settings to manage speed
-- [ ] 
+- [ ] Alternative Display Manager Support
+- [X] First Time Run Setup Screen (dms checker)
+- [ ] Full Feature Parity
+- [ ] Quality of Life Improvements
+
