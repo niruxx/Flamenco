@@ -21,11 +21,30 @@ Singleton {
         return String(path).replace(/^~(?=\/|$)/, home);
     }
 
+    // Turn a path typed by a person into an absolute path: ~, $HOME, relative
+    // to home, stray whitespace and trailing slashes.
+    function normalize(path) {
+        let p = String(path ?? "").trim();
+        if (p.startsWith("file://"))
+            p = decodeURIComponent(p.slice(7));
+        if (!p)
+            return "";
+        p = p.replace(/^\$HOME(?=\/|$)/, home).replace(/^~(?=\/|$)/, home);
+        if (!p.startsWith("/"))
+            p = home + "/" + p;
+        p = p.replace(/\/{2,}/g, "/");
+        return p.length > 1 ? p.replace(/\/+$/, "") : p;
+    }
+
+    // file:// URL for a path. Each segment is percent-encoded, so names with
+    // spaces, #, % or ? still load.
     function toUrl(path) {
         if (!path)
             return "";
-        const p = expand(path);
-        return p.startsWith("file://") || p.startsWith("image://") ? p : "file://" + p;
+        const s = String(path);
+        if (s.startsWith("file://") || s.startsWith("image://") || s.startsWith("qrc:"))
+            return s;
+        return "file://" + expand(s).split("/").map(encodeURIComponent).join("/");
     }
 
     // Command line that runs `args` in the user's terminal. Terminals disagree

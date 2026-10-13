@@ -605,7 +605,9 @@ flamenco display save  --json '…'    # same format; writes niri's config
 
 Flamenco draws the wallpaper itself, so **you don't need `swaybg`, `swww` or any other wallpaper program**. Remove those from your niri config, or they'll cover the shell's wallpaper.
 
-**Where images come from:** the folder `~/Pictures/Wallpapers` by default, searched up to 3 levels deep. Supported formats are `.jpg`, `.jpeg`, `.png`, `.bmp` and `.webp`; `.webp` needs `qt6-imageformats`. On first start the first image found is used. With no images you get a plain background in the palette's color.
+**Where images come from:** the folder `~/Pictures/Wallpapers` by default, including its subfolders (up to 4 levels deep).
+- **Changing it:** type a path in the folder field (it applies a moment after you stop typing), or click **Browse** to pick one with kdialog, zenity or yad. `~`, `$HOME` and paths relative to your home folder all work.
+- **Feedback:** the field shows whether the folder was found and how many images it has. Supported formats are `.jpg`, `.jpeg`, `.png`, `.bmp`, `.gif`, `.webp`, `.avif` and `.jxl`; the last three need `qt6-imageformats` (and `kimageformats` for AVIF/JPEG XL). File names with spaces or symbols like `#` and `%` are fine. On first start the first image found is used. With no images you get a plain background in the palette's color.
 
 **Setting a wallpaper**, any of these:
 
@@ -711,7 +713,7 @@ Files written:
 | Symptom | Fix |
 |---|---|
 | Icons show as words ("apps", "settings") | The icon font didn't load. Make sure `shell/assets/fonts/MaterialSymbolsRounded.ttf` exists in the installed shell (`flamenco doctor` checks for it) and restart the shell |
-| Plain colored background, no wallpaper | `~/Pictures/Wallpapers` is missing or empty. Add images, or point **Settings → Wallpaper → Folder** at another folder |
+| Plain colored background, no wallpaper | `~/Pictures/Wallpapers` is missing or empty. Add images, or point **Settings → Wallpaper → Folder** at another folder (type a path, or use **Browse**). The icon next to the field shows whether the folder was found |
 | Dark background on workspaces, wallpaper only visible while switching | A `layer-rule` with `place-within-backdrop` matches the desktop wallpaper. Only `flamenco-wallpaper` (the blurred backdrop copy) should be in the backdrop; don't add a rule for `flamenco-desktop` |
 | Wallpaper hidden or flickering | Another wallpaper program or shell is running (`swaybg`, `swww`, DMS). Remove it from your niri config |
 | niri says `duplicate node binds` | Move the Flamenco key lines into your existing `binds { }` block |

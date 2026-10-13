@@ -13,13 +13,12 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         spacing: Theme.sp2
-        FTextField {
+        FFolderField {
             Layout.fillWidth: true
-            icon: "folder"
-            placeholder: "~/Pictures/Wallpapers"
-            text: Settings.data.wallpaper.dir
-            onAccepted: Settings.data.wallpaper.dir = text
-            onEditingFinished: Settings.data.wallpaper.dir = text
+            path: Settings.data.wallpaper.dir
+            status: Wallpapers.status
+            busy: Wallpapers.scanning
+            onChanged: p => Wallpapers.setDir(p)
         }
         FIconButton { icon: "shuffle"; flat: false; onClicked: Wallpapers.random() }
         FIconButton { icon: "refresh"; flat: false; onClicked: Wallpapers.rescan() }
@@ -27,7 +26,9 @@ ColumnLayout {
     }
 
     FText {
-        text: Wallpapers.files.length + " images · current: " + (Paths.fileName(Wallpapers.current) || "none")
+        text: Wallpapers.status === "missing" ? "Folder not found: " + Wallpapers.dir
+            : Wallpapers.scanning ? "Scanning " + Wallpapers.dir + "…"
+            : Wallpapers.files.length + " images in " + Wallpapers.dir + " · current: " + (Paths.fileName(Wallpapers.current) || "none")
         dim: true
         font.pixelSize: Theme.fsSm
         Layout.fillWidth: true

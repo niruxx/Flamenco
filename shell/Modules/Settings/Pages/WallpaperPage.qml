@@ -11,7 +11,18 @@ Page {
     readonly property var w: Settings.data.wallpaper
 
     Group {
-        TextRow { title: "Folder"; icon: "folder"; target: page.w; key: "dir"; placeholder: "~/Pictures/Wallpapers" }
+        SettingRow {
+            title: "Folder"
+            subtitle: Wallpapers.status === "missing" ? "Folder not found" : Wallpapers.scanning ? "Scanning…" : Wallpapers.files.length + " images (including subfolders)"
+            icon: "folder"
+            FFolderField {
+                width: 400
+                path: page.w.dir
+                status: Wallpapers.status
+                busy: Wallpapers.scanning
+                onChanged: p => Wallpapers.setDir(p)
+            }
+        }
         DropdownRow {
             title: "Transition"
             subtitle: "How a new wallpaper appears"

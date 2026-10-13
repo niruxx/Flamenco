@@ -17,7 +17,8 @@ GridView {
     FText {
         anchors.centerIn: parent
         visible: grid.count === 0
-        text: "No images in " + Settings.data.wallpaper.dir
+        text: Wallpapers.scanning ? "Scanning…" : Wallpapers.status === "missing" ? "Folder not found:\n" + Wallpapers.dir : "No images in " + Wallpapers.dir
+        horizontalAlignment: Text.AlignHCenter
         dim: true
     }
 
@@ -42,7 +43,7 @@ GridView {
 
             Image {
                 anchors.fill: parent
-                source: "file://" + cell.modelData
+                source: Paths.toUrl(cell.modelData)
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 sourceSize: Qt.size(320, 200)
