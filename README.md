@@ -790,3 +790,6 @@ tools/screenshots.sh         regenerates docs/screenshots/
 - [x] Under app theming ensure a drop down can be used instead of typing in the theme - this should be able to select the ones installed.
 - [x] Include app Indicators support
 - [x] Improve the top left indicator as there's a lot of spaces between them.
+- [ ] Sounds for Volume and Brightness are not functional.
+- [ ] Add Cursor control settings to manage speed
+- [ ] 
