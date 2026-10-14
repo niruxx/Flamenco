@@ -49,7 +49,7 @@ Page {
         SwitchRow { title: "Move the pointer with focus"; subtitle: "The pointer jumps to a window focused from the keyboard"; icon: "jump_to_element"; target: page.w; key: "warpMouse"; onEdited: Compositor.queue() }
         SwitchRow { title: "Hide the pointer while typing"; icon: "keyboard"; target: page.w; key: "hideCursorTyping"; onEdited: Compositor.queue() }
         SliderRow { title: "Hide the pointer when idle"; subtitle: "Off at 0"; icon: "timer"; target: page.w; key: "hideCursorAfter"; from: 0; to: 30; stepSize: 1; suffix: " s"; onEdited: Compositor.queue() }
-        SwitchRow { title: "Hot corner opens the overview"; subtitle: "niri's own top-left corner. Turn it off if you set the corner in Screen edges"; icon: "north_west"; visible: !Niri.hyprland; target: page.w; key: "hotCorners"; onEdited: Compositor.queue() }
+        SettingRow { title: "Hot corners"; subtitle: "Set in Screen edges, including the corners that open niri's overview"; icon: "north_west"; visible: !Niri.hyprland }
         SwitchRow { title: "Skip the shortcut help at login"; subtitle: "niri shows its key cheat sheet when it starts"; icon: "help"; visible: !Niri.hyprland; target: page.w; key: "skipHotkeyOverlay"; onEdited: Compositor.queue() }
     }
 

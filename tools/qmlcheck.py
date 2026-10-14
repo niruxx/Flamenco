@@ -26,7 +26,7 @@ for f in files:
 
 KNOWN = set("""
 Item Rectangle Text TextInput TextEdit Image Row Column Flow Grid Repeater Loader MouseArea Timer Behavior
-NumberAnimation ColorAnimation SequentialAnimation ParallelAnimation PauseAnimation PropertyAction RotationAnimation
+NumberAnimation ColorAnimation SequentialAnimation ParallelAnimation PauseAnimation PropertyAction RotationAnimation FrameAnimation
 Transition Connections Component QtObject Binding Gradient GradientStop Translate ListView GridView Flickable ListModel
 HoverHandler DragHandler WheelHandler TapHandler FontLoader MultiEffect RowLayout ColumnLayout GridLayout
 ShellRoot Scope Variants PanelWindow FloatingWindow PopupWindow LazyLoader Singleton SystemClock Process StdioCollector
@@ -38,7 +38,7 @@ NON_ITEM = {"Singleton", "Scope", "ShellRoot", "PanelWindow", "FloatingWindow", 
             "QtObject", "WlSessionLock", "WlSessionLockSurface", "Popup", "OverlayPanel", "TrayMenu", "TrayTooltip"}
 # types with no default property: a child object declared inside one fails to load
 NO_DEFAULT = {"Timer", "WheelHandler", "TapHandler", "HoverHandler", "DragHandler", "PointHandler", "PinchHandler",
-              "NumberAnimation", "ColorAnimation", "PropertyAction", "PauseAnimation", "RotationAnimation",
+              "NumberAnimation", "ColorAnimation", "PropertyAction", "PauseAnimation", "RotationAnimation", "FrameAnimation",
               "Process", "StdioCollector", "SplitParser", "Socket", "FontLoader", "SystemClock", "IdleMonitor"}
 # shell files whose root object is one of those (and that don't add a default property)
 for f in files:

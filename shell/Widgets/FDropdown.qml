@@ -51,9 +51,25 @@ Rectangle {
         }
     }
 
+    // room for the list: below the field, or above it when there's more space there,
+    // so it never runs past the window's edge (where it couldn't be scrolled to)
+    property real room: 360
+    property bool up: false
+
+    function place() {
+        const want = Math.min(360, root.items.length * 34 + (root.searchable ? 44 : 0) + 12);
+        const winH = root.Window.height > 0 ? root.Window.height : 800;
+        const top = root.mapToItem(null, 0, 0).y;
+        const below = winH - top - root.height - 12;
+        const above = top - 12;
+        up = below < want && above > below;
+        room = Math.max(120, Math.min(360, up ? above - 4 : below - 4));
+    }
+
     StateLayer {
         onClicked: {
             root.filter = "";
+            root.place();
             popup.open();
         }
     }
@@ -61,9 +77,10 @@ Rectangle {
     QQC.Popup {
         id: popup
 
-        y: root.height + 4
+        y: root.up ? -height - 4 : root.height + 4
         width: Math.max(root.width, 240)
-        height: Math.min(360, list.contentHeight + (search.visible ? search.height + 8 : 0) + 12)
+        height: Math.min(root.room, list.contentHeight + (search.visible ? search.height + 8 : 0) + 12)
+        margins: 8                       // and Qt keeps it inside the window as a last resort
         padding: 6
         modal: false
         focus: true

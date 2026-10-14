@@ -40,6 +40,8 @@ Singleton {
             s.activeColor = hex(Theme.palette.accent);
             s.inactiveColor = hex(Theme.palette.border);
         }
+        s.overviewCorners = Edges.overviewCorners();
+        s.hotCorners = s.overviewCorners.length > 0;
         s.workspaces = Settings.data.workspaces.named || [];
         s.screenshotPath = Settings.data.screenshot.path;
         return s;
@@ -84,6 +86,9 @@ Singleton {
                     // keep custom colors that differ from the palette
                     root.cfg.syncColors = d.activeColor === root.hex(Theme.palette.accent) || d.activeColor === "#ff5d73";
                     root.cfg.imported = true;
+                    // Screen edges may already want other corners than niri's config has
+                    if (JSON.stringify(Edges.overviewCorners()) !== JSON.stringify(d.overviewCorners ?? []))
+                        root.queue();
                 } catch (e) {}
             }
         }

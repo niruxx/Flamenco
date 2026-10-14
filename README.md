@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.16.0-E8466F?style=for-the-badge" alt="Version 0.16.0">
+  <img src="https://img.shields.io/badge/version-0.16.3-E8466F?style=for-the-badge" alt="Version 0.16.3">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -844,7 +844,7 @@ flamenco display fallback      # turn a screen on if none is on
 **Settings → Windows & Layout** controls how windows look and behave:
 - **Layout:** gaps, an extra margin along the left and right edges, the width of new columns, when to center the focused column, and asking apps not to draw their own title bars.
 - **Look:** corner radius, focus ring and border (on/off and width), shadows. The ring and border colors follow your palette's accent, or you can turn that off and type your own hex colors.
-- **Focus & pointer:** focus follows the mouse, move the pointer to a window focused from the keyboard, hide the pointer while typing or after some idle seconds, niri's own top-left hot corner, and skipping niri's shortcut cheat sheet at login.
+- **Focus & pointer:** focus follows the mouse, move the pointer to a window focused from the keyboard, hide the pointer while typing or after some idle seconds, and skipping niri's shortcut cheat sheet at login.
 
 The first time you open the page, it reads what your config already has. On niri, changes are written into `layout { … }`, `cursor`, `input`, `gestures` and `hotkey-overlay` in `~/.config/niri/config.kdl`. Window corners and named workspaces go into a marked block at the end of the file. On Hyprland they go into `flamenco-layout.conf` (or `flamenco/layout.lua`), which the config sources. Run `niri validate` if you've edited the config by hand too.
 
@@ -853,7 +853,13 @@ The first time you open the page, it reads what your config already has. On niri
 - **Switch back and forth:** choosing the workspace you're on goes back to the previous one.
 - **Bar switcher:** style (pills, dots, numbers), hide empty workspaces, scroll on the bar to switch (and reverse the direction), and show how many windows are on the current workspace.
 
-**Settings → Screen edges** turns on hot corners. Each corner of every screen can run an action when the pointer rests there: the overview (niri), the app launcher, control center, notifications, calendar & dashboard, power menu, wallpapers, settings, a screenshot, the previous or next workspace, or locking the screen. You can set how long the pointer has to rest and how big the corner is. If you put something on the top-left corner, turn off niri's own hot corner under **Windows & Layout** so both don't fire.
+**Settings → Screen edges** turns on hot corners. Each corner of every screen can run an action when the pointer rests there: the overview (niri), the app launcher, control center, notifications, calendar & dashboard, power menu, wallpapers, settings, a screenshot, the previous or next workspace, or locking the screen. You can set how long the pointer has to rest and how big the corner is.
+
+On niri, this page also controls niri's own hot corners:
+- **Overview corners:** a corner set to **Overview** becomes niri's own hot corner, so it works while you drag a window too. It reacts at once, so the delay and size don't apply.
+- **Other corners:** niri's corner is turned off on every corner that isn't Overview, so it can't take the corner from the action you picked.
+- **Older niri:** before niri 25.11, niri only has a top-left corner, so Overview on any other corner is done by Flamenco.
+- **Your existing setup:** the first time this version starts, it reads the corners already in your niri config and shows them here as Overview.
 
 ```sh
 flamenco compositor get

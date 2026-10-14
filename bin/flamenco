@@ -55,7 +55,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.16.0"
+VERSION = "0.16.3"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -4783,8 +4783,9 @@ WINDOW_DEFAULTS = {
     "activeColor": "#ff5d73", "inactiveColor": "#46343a", "cornerRadius": 12, "shadows": True,
     "focusFollowsMouse": False, "warpMouse": False, "hideCursorTyping": False, "hideCursorAfter": 0,
     "preferNoCsd": True, "hotCorners": True, "skipHotkeyOverlay": True, "screenshotPath": SHOT_PATH,
-    "workspaceBackForth": False, "workspaces": [],
+    "workspaceBackForth": False, "workspaces": [], "overviewCorners": ["top-left"],
 }
+HOT_CORNERS = ("top-left", "top-right", "bottom-left", "bottom-right")
 CENTER_MODES = ("never", "always", "on-overflow")
 LAYOUT_BEGIN = "// ── flamenco: window corners & named workspaces (edit in Flamenco Settings) ──"
 LAYOUT_END = "// ── end of flamenco window corners & workspaces ──"
@@ -4806,7 +4807,13 @@ def window_norm(w: dict) -> dict:
         elif isinstance(d, str):
             out[k] = str(v) if v is not None else d
         else:
-            out[k] = v if isinstance(v, list) else d
+            out[k] = list(v) if isinstance(v, list) else list(d)
+    # which corners niri itself turns into overview corners (Settings → Screen edges);
+    # specs from before that only had the top-left on/off switch
+    if "overviewCorners" not in w:
+        out["overviewCorners"] = ["top-left"] if out["hotCorners"] else []
+    out["overviewCorners"] = [c for c in HOT_CORNERS if c in out["overviewCorners"]]
+    out["hotCorners"] = bool(out["overviewCorners"])
     out["gaps"] = max(0, min(64, out["gaps"]))
     out["struts"] = max(0, min(400, out["struts"]))
     out["focusRingWidth"] = max(1, min(16, out["focusRingWidth"]))
@@ -4975,8 +4982,8 @@ def niri_windows_get(text: str) -> dict:
         out["focusFollowsMouse"] = "focus-follows-mouse" in iv
         out["warpMouse"] = "warp-mouse-to-focus" in iv
         out["workspaceBackForth"] = "workspace-auto-back-and-forth" in iv
-    hc = kdl_resolve(text, ["gestures", "hot-corners"])
-    out["hotCorners"] = not (hc and "off" in block_line_values(text, hc, ("off",)))
+    out["overviewCorners"] = niri_hot_corners(text)
+    out["hotCorners"] = bool(out["overviewCorners"])
     for a, b in kdl_top_nodes(text, "workspace"):
         node = text[a:b]
         name = kdl_string_arg(node.split("{", 1)[0])
@@ -4984,6 +4991,42 @@ def niri_windows_get(text: str) -> dict:
             om = re.search(r'open-on-output\s+("(?:[^"\\]|\\.)*")', node)
             out["workspaces"].append({"name": name, "output": kdl_string_arg(om.group(1)) if om else ""})
     return out
+
+
+def niri_per_corner() -> bool:
+    """niri 25.11 and later can turn on each corner (top-right…); before, only the top-left one."""
+    m = re.search(r"(\d+)\.(\d+)", first_line(["niri", "--version"]) if shutil.which("niri") else "")
+    return bool(m) and (int(m.group(1)), int(m.group(2))) >= (25, 11)
+
+
+def niri_hot_corners(text: str) -> list[str]:
+    """The corners where niri itself opens the overview."""
+    hc = kdl_resolve(text, ["gestures", "hot-corners"])
+    if not hc:
+        return ["top-left"]                 # niri's default
+    vals = block_line_values(text, hc, ("off",) + HOT_CORNERS)
+    if "off" in vals:
+        return []
+    return [c for c in HOT_CORNERS if c in vals] or ["top-left"]
+
+
+def niri_set_hot_corners(text: str, corners: list[str]) -> str:
+    """Make niri's own hot corners exactly `corners`. Only writes when they differ,
+    so a config that already matches (or an older niri) isn't touched."""
+    if niri_hot_corners(text) == corners:
+        return text
+    per = niri_per_corner()
+    if not per:
+        # older niri: on (top-left) or off; other overview corners are done by the shell
+        if ("top-left" in corners) == bool(niri_hot_corners(text)):
+            return text
+        corners = ["top-left"] if "top-left" in corners else []
+    if corners == ["top-left"] and not per:
+        return kdl_replace_child(text, ["gestures"], "hot-corners", None)
+    text, hc = kdl_ensure(text, ["gestures", "hot-corners"])
+    wanted = {"off": None if corners else "off"}
+    wanted.update({c: c if per and c in corners else None for c in HOT_CORNERS})
+    return set_block_lines(text, hc, wanted)
 
 
 def niri_windows_apply(text: str, w: dict) -> str:
@@ -5040,14 +5083,7 @@ def niri_windows_apply(text: str, w: dict) -> str:
         "warp-mouse-to-focus": flag(w["warpMouse"], "warp-mouse-to-focus"),
         "workspace-auto-back-and-forth": flag(w["workspaceBackForth"], "workspace-auto-back-and-forth"),
     })
-    # only touch hot corners when it changes: older niri doesn't know the option
-    hc = kdl_resolve(text, ["gestures", "hot-corners"])
-    has_off = bool(hc and "off" in block_line_values(text, hc, ("off",)))
-    if w["hotCorners"] and has_off:
-        text = kdl_replace_child(text, ["gestures"], "hot-corners", None)
-    elif not w["hotCorners"] and not has_off:
-        text, hc = kdl_ensure(text, ["gestures", "hot-corners"])
-        text = set_block_lines(text, hc, {"off": "off"})
+    text = niri_set_hot_corners(text, w["overviewCorners"])
     # managed region: corner radius + named workspaces (all top-level workspaces move here)
     a, b = text.find(LAYOUT_BEGIN), text.find(LAYOUT_END)
     if a >= 0 and b > a:

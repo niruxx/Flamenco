@@ -212,7 +212,7 @@ Singleton {
                 property bool hideCursorTyping: false
                 property int hideCursorAfter: 0       // ms idle before hiding the pointer (0 = never)
                 property bool preferNoCsd: true       // ask apps not to draw their own title bars
-                property bool hotCorners: true        // niri: top-left corner opens the overview
+                property bool hotCorners: true        // niri's own corner (before Screen edges took it over)
                 property bool skipHotkeyOverlay: true // niri: don't show the shortcut cheat sheet at login
                 property bool workspaceBackForth: false // switching to the current workspace goes back
             }
@@ -234,6 +234,7 @@ Singleton {
                 property string bottomRight: "none"
                 property int delay: 250               // ms the pointer has to rest in the corner
                 property int size: 2                  // px of the trigger area
+                property bool niriImported: false     // niri's own hot corners were brought in here once
             }
 
             property JsonObject screenshot: JsonObject {

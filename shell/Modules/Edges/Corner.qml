@@ -15,7 +15,8 @@ PanelWindow {
     readonly property var cfg: Settings.data.edges
     readonly property string action: cfg[key]
 
-    visible: action !== "none"
+    // niri's own corner takes Overview corners (see Edges)
+    visible: action !== "none" && !Edges.native(key)
     screen: output
     color: "transparent"
     anchors {
