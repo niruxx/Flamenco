@@ -73,6 +73,8 @@ Singleton {
 
     readonly property color panelBg: alpha(surface, a.panelOpacity)
     readonly property color barBg: alpha(bg, a.panelOpacity)
+    // panels grow out of the bar as one surface (not with the islands bar style)
+    readonly property bool blendPanels: a.blendPanels && Settings.data.bar.style !== "islands"
 
     function alpha(c, value) {
         return Qt.rgba(c.r, c.g, c.b, value);
@@ -110,6 +112,18 @@ Singleton {
         id: iconLoader
         source: "file://" + Quickshell.shellDir + "/assets/fonts/MaterialSymbolsRounded.ttf"
     }
+
+    // Google Sans Flex / Code, the default text fonts, also bundled (the package
+    // also links them into /usr/share/fonts for other apps and the greeter).
+    // Loading them registers the families for the whole shell.
+    FontLoader { source: "file://" + Quickshell.shellDir + "/assets/fonts/GoogleSansFlex.ttf" }
+    FontLoader { source: "file://" + Quickshell.shellDir + "/assets/fonts/GoogleSansCode.ttf" }
+    FontLoader { source: "file://" + Quickshell.shellDir + "/assets/fonts/GoogleSansCode-Italic.ttf" }
+
+    // icon look (Settings → Appearance): filled and a little heavier by default,
+    // like Material 3 Expressive
+    readonly property real iconFill: a.iconStyle === "outlined" ? 0 : 1
+    readonly property int iconWeight: a.iconWeight > 0 ? a.iconWeight : 500
     readonly property int fsXs: Math.round(11 * scale)
     readonly property int fsSm: Math.round(12 * scale)
     readonly property int fsMd: Math.round(14 * scale)

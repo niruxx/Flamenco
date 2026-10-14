@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -7,18 +8,61 @@ import qs.Widgets
 Page {
     id: page
     title: "Dock"
-    subtitle: "Left-click focuses an app (again to cycle its windows), middle-click opens a new window, right-click pins or unpins."
+    subtitle: "Left-click focuses an app (again to cycle its windows), middle-click opens a new window, right-click pins or unpins. Changes show right away."
     readonly property var d: Settings.data.dock
     // installed apps that aren't pinned yet, for the picker
     readonly property var pinnable: Apps.all.filter(e => !d.pinned.includes(e.id)).map(e => ({ value: e.id, label: e.name }))
 
     Group {
         SwitchRow { title: "Show dock"; icon: "dock_to_bottom"; target: page.d; key: "enabled" }
-        SwitchRow { title: "Auto-hide"; subtitle: "Hidden until the pointer touches the bottom edge of the screen"; icon: "visibility_off"; target: page.d; key: "autoHide" }
-        SliderRow { visible: page.d.autoHide; title: "Reveal edge"; subtitle: "How close to the bottom edge the pointer has to be"; icon: "vertical_align_bottom"; target: page.d; key: "revealSize"; from: 2; to: 24; stepSize: 1; suffix: "px" }
+        ChoiceRow {
+            title: "Position"
+            icon: "picture_in_picture"
+            target: page.d
+            key: "position"
+            options: [{ value: "bottom", label: "Bottom" }, { value: "left", label: "Left" }, { value: "right", label: "Right" }]
+        }
+        DropdownRow {
+            visible: Quickshell.screens.length > 1
+            title: "Show on"
+            icon: "monitor"
+            target: page.d
+            key: "screen"
+            options: [{ value: "", label: "Every screen" }].concat(Quickshell.screens.map(s => ({ value: s.name, label: s.name + (s.model ? " · " + s.model : "") })))
+        }
         SwitchRow { title: "Show running apps"; subtitle: "Apps with open windows appear even when not pinned"; icon: "apps"; target: page.d; key: "showRunning" }
-        SwitchRow { title: "Magnification"; icon: "zoom_in"; target: page.d; key: "magnify" }
-        SliderRow { title: "Icon size"; icon: "photo_size_select_large"; target: page.d; key: "iconSize"; from: 32; to: 72; stepSize: 2; suffix: "px" }
+        SwitchRow { visible: page.d.showRunning; title: "Separate pinned apps"; subtitle: "A line between pinned apps and the other running ones"; icon: "more_vert"; target: page.d; key: "separator" }
+        SwitchRow { title: "App names on hover"; icon: "label"; target: page.d; key: "labels" }
+        ChoiceRow {
+            title: "Running indicator"
+            icon: "more_horiz"
+            target: page.d
+            key: "indicator"
+            options: [{ value: "line", label: "Line" }, { value: "dot", label: "Dots" }, { value: "none", label: "None" }]
+        }
+    }
+
+    Group {
+        title: "Hiding"
+        SwitchRow { title: "Auto-hide"; subtitle: "Hidden until the pointer touches the screen edge"; icon: "visibility_off"; target: page.d; key: "autoHide" }
+        SliderRow { visible: page.d.autoHide; title: "Reveal edge"; subtitle: "How close to the edge the pointer has to be"; icon: "vertical_align_bottom"; target: page.d; key: "revealSize"; from: 2; to: 24; stepSize: 1; suffix: " px" }
+        SliderRow { visible: page.d.autoHide; title: "Hide after"; subtitle: "How long it stays once the pointer leaves"; icon: "timer"; target: page.d; key: "hideDelay"; from: 0; to: 2000; stepSize: 50; suffix: " ms" }
+    }
+
+    Group {
+        title: "Size"
+        SliderRow { title: "Icon size"; icon: "photo_size_select_large"; target: page.d; key: "iconSize"; from: 24; to: 96; stepSize: 2; suffix: " px" }
+        SliderRow { title: "Icon spacing"; icon: "space_bar"; target: page.d; key: "spacing"; from: 0; to: 24; stepSize: 1; suffix: " px" }
+        SwitchRow { title: "Magnification"; subtitle: "Icons grow under the pointer"; icon: "zoom_in"; target: page.d; key: "magnify" }
+        SliderRow { visible: page.d.magnify; title: "Magnification amount"; icon: "zoom_out_map"; target: page.d; key: "zoom"; from: 0.1; to: 1.5; stepSize: 0.05; factor: 100; suffix: "%" }
+    }
+
+    Group {
+        title: "Look"
+        SliderRow { title: "Distance from the edge"; subtitle: "0 sits flush against the screen edge"; icon: "border_bottom"; target: page.d; key: "margin"; from: 0; to: 48; stepSize: 1; suffix: " px" }
+        SliderRow { title: "Background opacity"; subtitle: "0% leaves only the icons"; icon: "opacity"; target: page.d; key: "opacity"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
+        SliderRow { title: "Corner roundness"; icon: "rounded_corner"; target: page.d; key: "roundness"; from: 0; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
+        SwitchRow { title: "Border"; icon: "border_style"; target: page.d; key: "border" }
     }
 
     Group {

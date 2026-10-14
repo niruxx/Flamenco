@@ -277,6 +277,13 @@ Page {
         SliderRow { title: "Panel opacity"; icon: "opacity"; target: page.a; key: "panelOpacity"; from: 0.5; to: 1; factor: 100; suffix: "%" }
         SwitchRow { title: "Drop shadows"; icon: "shadow"; target: page.a; key: "shadows" }
         SwitchRow { title: "Dim screen behind panels"; icon: "gradient"; target: page.a; key: "dimBehindPanels" }
+        SwitchRow {
+            title: "Connect panels to the bar"
+            subtitle: Settings.data.bar.style === "islands" ? "Not with the Islands bar style, which has no bar to connect to" : "Quick settings, the calendar and other panels grow out of the bar as one surface, with no gap showing the wallpaper"
+            icon: "join"
+            target: page.a
+            key: "blendPanels"
+        }
     }
 
     Group {
@@ -361,6 +368,15 @@ Page {
             }
         }
         SliderRow { title: "Scale"; icon: "format_size"; target: page.a; key: "uiScale"; from: 0.8; to: 1.4; stepSize: 0.05; factor: 100; suffix: "%" }
+        ChoiceRow {
+            title: "Icons"
+            subtitle: "Material Symbols. Filled is the newer Material 3 look; outlined fills only what's active."
+            icon: "interests"
+            target: page.a
+            key: "iconStyle"
+            options: [{ value: "filled", label: "Filled" }, { value: "outlined", label: "Outlined" }]
+        }
+        SliderRow { title: "Icon weight"; subtitle: "How thick icon strokes are"; icon: "line_weight"; target: page.a; key: "iconWeight"; from: 300; to: 700; stepSize: 100 }
 
         // live preview
         Rectangle {

@@ -24,6 +24,8 @@
   flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable
                                login screen: Flamenco Greeter and greetd
   flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   fingerprints (fprintd)
+  flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC
+                               Wi-Fi and wired connections (NetworkManager)
   flamenco portals get | apply --json SPEC   screen sharing / file chooser backends
   flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
   flamenco launch APP_ID       start a desktop app (used by app shortcuts)
@@ -55,7 +57,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.16.5"
+VERSION = "0.18.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -234,7 +236,7 @@ class Spec:
         c.setdefault("success", "#57ab5a")
         self.c = c
         self.radius = int(raw.get("radius", 8))
-        self.font = raw.get("fontFamily", "Inter")
+        self.font = raw.get("fontFamily", "Google Sans Flex")
         self.mono = raw.get("monoFamily", "monospace")
         self.font_size = int(raw.get("fontSize", 10))
         o = raw.get("options", {})
@@ -2269,7 +2271,7 @@ def greeter_config(spec: dict) -> tuple[dict, dict]:
         "appearance": {
             "dark": bool(a.get("dark", True)),
             "colors": {k: str(v) for k, v in (a.get("colors") or {}).items()},
-            "fontFamily": a.get("fontFamily") or "Inter",
+            "fontFamily": a.get("fontFamily") or "Google Sans Flex",
             "monoFamily": a.get("monoFamily") or "monospace",
             "fontScale": max(0.5, min(2.0, float(a.get("fontScale", 1.0)))),
             "roundness": float(a.get("roundness", 1.0)),
@@ -2404,6 +2406,361 @@ def cmd_greeter(args: list[str]) -> int:
         print("greetd: enabled; it replaces your current login manager from the next boot")
         return 0
     die("usage: flamenco greeter status [--json] | sessions | apply --json SPEC | greetd --json SPEC | enable")
+
+
+# ─────────────────────────────── network connections (nmcli) ────────────────
+# Settings → Network edits Wi-Fi and wired connections itself instead of handing
+# off to nm-connection-editor. Values are checked here before nmcli sees them.
+# Saved passwords are never read back: a new one can only be set.
+
+UUID_RE = re.compile(r"^[0-9a-fA-F-]{36}$")
+NET_FIELDS = (
+    "connection.id", "connection.uuid", "connection.type", "connection.interface-name", "connection.autoconnect",
+    "connection.autoconnect-priority", "connection.metered",
+    "802-11-wireless.ssid", "802-11-wireless.hidden", "802-11-wireless.band", "802-11-wireless.cloned-mac-address",
+    "802-11-wireless.mtu", "802-11-wireless-security.key-mgmt",
+    "802-3-ethernet.cloned-mac-address", "802-3-ethernet.mtu",
+    "ipv4.method", "ipv4.addresses", "ipv4.gateway", "ipv4.dns", "ipv4.ignore-auto-dns", "ipv4.dns-search", "ipv4.never-default",
+    "ipv6.method", "ipv6.addresses", "ipv6.gateway", "ipv6.dns", "ipv6.ignore-auto-dns", "ipv6.dns-search", "ipv6.never-default",
+    "ipv6.ip6-privacy",
+    "GENERAL.STATE", "GENERAL.DEVICES",
+)
+IP4_METHODS = ("auto", "manual", "link-local", "shared", "disabled")
+IP6_METHODS = ("auto", "dhcp", "manual", "link-local", "ignore", "disabled", "shared")
+MAC_MODES = ("", "permanent", "random", "stable", "preserve")
+
+
+def nm_unescape(v: str) -> str:
+    return re.sub(r"\\(.)", r"\1", v)
+
+
+def nm_terse_fields(line: str) -> list[str]:
+    """Split one `nmcli -t` line on unescaped colons."""
+    out, cur, i = [], "", 0
+    while i < len(line):
+        c = line[i]
+        if c == "\\" and i + 1 < len(line):
+            cur += line[i + 1]
+            i += 2
+            continue
+        if c == ":":
+            out.append(cur)
+            cur = ""
+        else:
+            cur += c
+        i += 1
+    out.append(cur)
+    return out
+
+
+def nm_records(text: str) -> dict:
+    """`nmcli -t` multiline output (key:value per line) → {key: value}; [n] keys become lists."""
+    rec: dict = {}
+    for line in text.splitlines():
+        if ":" not in line:
+            continue
+        key, val = line.split(":", 1)
+        val = nm_unescape(val)
+        m = re.match(r"^(.*)\[\d+\]$", key)
+        if m:
+            rec.setdefault(m.group(1), []).append(val)
+        else:
+            rec[key] = val
+    return rec
+
+
+def nm_list(v) -> list[str]:
+    if isinstance(v, list):
+        return [x.strip() for x in v if x.strip() and x.strip() != "--"]
+    return [x.strip() for x in str(v or "").split(",") if x.strip() and x.strip() != "--"]
+
+
+def nm_val(v) -> str:
+    v = str(v if v is not None else "")
+    return "" if v == "--" else v
+
+
+def nmcli(args: list[str], root: bool = False) -> subprocess.CompletedProcess:
+    cmd = ["nmcli"] + args
+    if root:
+        rc = privileged(cmd)
+        return subprocess.CompletedProcess(cmd, rc, "", "")
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+def net_devices() -> list[dict]:
+    out = []
+    r = nmcli(["-t", "-f", "DEVICE,TYPE,STATE,CON-UUID,CONNECTION", "device"])
+    for line in r.stdout.splitlines():
+        f = nm_terse_fields(line)
+        if len(f) < 5 or f[1] not in ("ethernet", "wifi"):
+            continue
+        dev = {"device": f[0], "type": f[1], "state": f[2], "uuid": f[3], "connection": f[4]}
+        info = nm_records(nmcli(["-t", "device", "show", f[0]]).stdout)
+        dev.update({
+            "mac": info.get("GENERAL.HWADDR", ""),
+            "ip4": nm_list(info.get("IP4.ADDRESS", [])), "gateway4": nm_val(info.get("IP4.GATEWAY", "")),
+            "dns4": nm_list(info.get("IP4.DNS", [])),
+            "ip6": nm_list(info.get("IP6.ADDRESS", [])), "gateway6": nm_val(info.get("IP6.GATEWAY", "")),
+            "speed": nm_val(info.get("CAPABILITIES.SPEED", "")),
+            "driver": nm_val(info.get("GENERAL.DRIVER", "")),
+        })
+        out.append(dev)
+    return out
+
+
+def net_list() -> dict:
+    conns = []
+    r = nmcli(["-t", "-f", "NAME,UUID,TYPE,DEVICE,ACTIVE,AUTOCONNECT,TIMESTAMP", "connection", "show"])
+    for line in r.stdout.splitlines():
+        f = nm_terse_fields(line)
+        if len(f) < 7:
+            continue
+        kind = {"802-11-wireless": "wifi", "802-3-ethernet": "ethernet"}.get(f[2])
+        if not kind:
+            continue
+        conns.append({"name": f[0], "uuid": f[1], "type": kind, "device": f[3], "active": f[4] == "yes",
+                      "autoconnect": f[5] == "yes", "lastUsed": int(f[6] or 0)})
+    conns.sort(key=lambda c: (not c["active"], c["type"], -c["lastUsed"], c["name"].lower()))
+    return {"installed": shutil.which("nmcli") is not None, "connections": conns, "devices": net_devices(),
+            "error": "" if r.returncode == 0 else (r.stderr.strip() or "nmcli failed")}
+
+
+def net_get(uuid: str) -> dict:
+    r = nmcli(["-t", "-f", ",".join(NET_FIELDS), "connection", "show", uuid])
+    if r.returncode != 0:
+        die((r.stderr.strip() or "no such connection").splitlines()[-1])
+    rec = nm_records(r.stdout)
+    kind = {"802-11-wireless": "wifi", "802-3-ethernet": "ethernet"}.get(rec.get("connection.type", ""), "other")
+    key = "802-11-wireless" if kind == "wifi" else "802-3-ethernet"
+    km = nm_val(rec.get("802-11-wireless-security.key-mgmt", ""))
+    yes = lambda k: nm_val(rec.get(k, "")) == "yes"
+    out = {
+        "uuid": uuid, "type": kind, "name": rec.get("connection.id", ""),
+        "active": bool(nm_val(rec.get("GENERAL.STATE", ""))), "device": nm_val(rec.get("GENERAL.DEVICES", "")),
+        "interface": nm_val(rec.get("connection.interface-name", "")),
+        "autoconnect": yes("connection.autoconnect"),
+        "priority": int(nm_val(rec.get("connection.autoconnect-priority", "0")) or 0),
+        "metered": nm_val(rec.get("connection.metered", "unknown")) or "unknown",
+        "mac": nm_val(rec.get(f"{key}.cloned-mac-address", "")),
+        "mtu": nm_val(rec.get(f"{key}.mtu", "auto")).replace("auto", "") or "",
+        "ssid": nm_val(rec.get("802-11-wireless.ssid", "")), "hidden": yes("802-11-wireless.hidden"),
+        "band": nm_val(rec.get("802-11-wireless.band", "")),
+        "security": "none" if not km else km,
+        "ip4": {"method": nm_val(rec.get("ipv4.method", "auto")) or "auto", "addresses": nm_list(rec.get("ipv4.addresses")),
+                "gateway": nm_val(rec.get("ipv4.gateway", "")), "dns": nm_list(rec.get("ipv4.dns")),
+                "autoDns": not yes("ipv4.ignore-auto-dns"), "search": nm_list(rec.get("ipv4.dns-search")),
+                "neverDefault": yes("ipv4.never-default")},
+        "ip6": {"method": nm_val(rec.get("ipv6.method", "auto")) or "auto", "addresses": nm_list(rec.get("ipv6.addresses")),
+                "gateway": nm_val(rec.get("ipv6.gateway", "")), "dns": nm_list(rec.get("ipv6.dns")),
+                "autoDns": not yes("ipv6.ignore-auto-dns"), "search": nm_list(rec.get("ipv6.dns-search")),
+                "neverDefault": yes("ipv6.never-default"),
+                "privacy": {"-1": "default", "0": "off", "1": "public", "2": "temporary"}.get(
+                    (re.match(r"\s*(-?\d+)", nm_val(rec.get("ipv6.ip6-privacy", ""))) or re.match("(-1)", "-1")).group(1), "default")},
+    }
+    return out
+
+
+def net_check_list(vals, kind: str, family: int) -> str:
+    """Comma-separated, validated: kind is 'iface' (address/prefix), 'addr' or 'domain'."""
+    import ipaddress
+    raw = vals if isinstance(vals, list) else str(vals or "").replace(";", ",").replace(" ", ",").split(",")
+    items = [str(x).strip() for x in raw if str(x).strip()]
+    if kind == "iface":
+        # an address without a prefix gets the usual one
+        items = [it if "/" in it else it + ("/24" if family == 4 else "/64") for it in items]
+    for it in items:
+        try:
+            if kind == "iface":
+                ok = ipaddress.ip_interface(it).version == family
+            elif kind == "addr":
+                ok = ipaddress.ip_address(it).version == family
+            else:
+                ok = bool(re.fullmatch(r"~?[A-Za-z0-9.-]{1,253}", it))
+        except ValueError:
+            ok = False
+        if not ok:
+            die(f"not a valid IPv{family} {'address' if kind != 'domain' else 'search domain'}: {it}")
+    return ",".join(items)
+
+
+def net_set_args(cur: dict, spec: dict) -> list[str]:
+    """nmcli `connection modify` arguments for what changed in spec."""
+    import ipaddress
+    a: list[str] = []
+    key = "802-11-wireless" if cur["type"] == "wifi" else "802-3-ethernet"
+
+    def put(k, v):
+        a.extend([k, str(v)])
+
+    if "name" in spec:
+        name = str(spec["name"]).strip()
+        if not name or "\n" in name:
+            die("the connection needs a name")
+        if name != cur["name"]:
+            put("connection.id", name)
+    if "autoconnect" in spec:
+        put("connection.autoconnect", "yes" if spec["autoconnect"] else "no")
+    if "priority" in spec:
+        put("connection.autoconnect-priority", max(-999, min(999, int(spec["priority"]))))
+    if "metered" in spec:
+        if spec["metered"] not in ("unknown", "yes", "no"):
+            die("metered must be unknown, yes or no")
+        put("connection.metered", spec["metered"])
+    if "mac" in spec:
+        mac = str(spec["mac"]).strip().lower()
+        if mac not in MAC_MODES and not re.fullmatch(r"([0-9a-f]{2}:){5}[0-9a-f]{2}", mac):
+            die(f"MAC address must be default, permanent, random, stable or a MAC: {mac}")
+        put(f"{key}.cloned-mac-address", mac)
+    if "mtu" in spec:
+        mtu = str(spec["mtu"]).strip()
+        if mtu and not (mtu.isdigit() and 576 <= int(mtu) <= 9000):
+            die("MTU must be empty (automatic) or 576–9000")
+        put(f"{key}.mtu", mtu or "0")
+    if cur["type"] == "wifi":
+        if "ssid" in spec:
+            ssid = str(spec["ssid"])
+            if not 1 <= len(ssid.encode()) <= 32:
+                die("a Wi-Fi name is 1–32 bytes")
+            put("802-11-wireless.ssid", ssid)
+        if "hidden" in spec:
+            put("802-11-wireless.hidden", "yes" if spec["hidden"] else "no")
+        if "band" in spec:
+            if spec["band"] not in ("", "a", "bg"):
+                die("band must be empty (any), a (5 GHz) or bg (2.4 GHz)")
+            put("802-11-wireless.band", spec["band"])
+            if spec["band"] == "":
+                put("802-11-wireless.channel", "0")
+        sec, pw = spec.get("security"), str(spec.get("password") or "")
+        if sec is not None and sec != cur["security"] or pw:
+            sec = sec or cur["security"]
+            if sec == "none":
+                pass                # cmd_net removes the security setting first
+            elif sec in ("wpa-psk", "sae"):
+                if not pw and cur["security"] not in ("wpa-psk", "sae"):
+                    die("enter the Wi-Fi password")
+                if pw and not 8 <= len(pw) <= 63:
+                    die("a WPA password is 8–63 characters")
+                put("802-11-wireless-security.key-mgmt", sec)
+                if pw:
+                    put("802-11-wireless-security.psk", pw)
+            elif sec != cur["security"]:
+                die("only open, WPA/WPA2 and WPA3 personal security can be set here")
+    for fam in (4, 6):
+        s = spec.get(f"ip{fam}")
+        if not isinstance(s, dict):
+            continue
+        p = f"ipv{fam}"
+        methods = IP4_METHODS if fam == 4 else IP6_METHODS
+        method = s.get("method", cur[f"ip{fam}"]["method"])
+        if method not in methods:
+            die(f"IPv{fam} method must be one of: {', '.join(methods)}")
+        addrs = net_check_list(s.get("addresses", cur[f"ip{fam}"]["addresses"]), "iface", fam)
+        if method == "manual" and not addrs:
+            die(f"manual IPv{fam} needs at least one address")
+        gw = str(s.get("gateway", cur[f"ip{fam}"]["gateway"]) or "").strip()
+        if gw:
+            try:
+                if ipaddress.ip_address(gw).version != fam:
+                    raise ValueError
+            except ValueError:
+                die(f"not a valid IPv{fam} gateway: {gw}")
+        put(f"{p}.method", method)
+        put(f"{p}.addresses", addrs)
+        put(f"{p}.gateway", gw)
+        put(f"{p}.dns", net_check_list(s.get("dns", cur[f"ip{fam}"]["dns"]), "addr", fam))
+        put(f"{p}.dns-search", net_check_list(s.get("search", cur[f"ip{fam}"]["search"]), "domain", fam))
+        put(f"{p}.ignore-auto-dns", "no" if s.get("autoDns", cur[f"ip{fam}"]["autoDns"]) else "yes")
+        put(f"{p}.never-default", "yes" if s.get("neverDefault", cur[f"ip{fam}"]["neverDefault"]) else "no")
+        if fam == 6 and "privacy" in s:
+            pv = {"default": "-1", "off": "0", "public": "1", "temporary": "2"}.get(s["privacy"])
+            if pv is None:
+                die("IPv6 privacy must be default, off, public or temporary")
+            put("ipv6.ip6-privacy", pv)
+    return a
+
+
+def net_apply(cur: dict, root: bool) -> None:
+    """Make a saved change take effect on an active connection."""
+    if not cur["active"]:
+        return
+    dev = cur["device"].split(",")[0]
+    if dev and nmcli(["device", "reapply", dev], root).returncode == 0:
+        return
+    nmcli(["connection", "up", cur["uuid"]], root)
+
+
+def net_fail(r: subprocess.CompletedProcess, what: str) -> None:
+    msg = (r.stderr or r.stdout or "").strip().splitlines()
+    msg = msg[-1] if msg else f"nmcli exited with {r.returncode}"
+    if re.search(r"(?i)insufficient privileges|not authorized|permission", msg):
+        die(f"{what}: NetworkManager needs administrator rights for this (permission)", 3)
+    die(f"{what}: {msg.removeprefix('Error: ')}")
+
+
+def cmd_net(args: list[str]) -> int:
+    root = "--sudo" in args
+    args = [x for x in args if x != "--sudo"]
+    sub = args[0] if args else "list"
+    if not shutil.which("nmcli"):
+        die("NetworkManager (nmcli) isn't installed")
+    if sub == "list":
+        print(json.dumps(net_list()))
+        return 0
+    uuid = args[1] if len(args) > 1 else ""
+    if sub in ("get", "set", "delete", "up", "down") and not UUID_RE.match(uuid):
+        die("usage: flamenco net get|set|delete|up|down UUID")
+    if sub == "get":
+        print(json.dumps(net_get(uuid)))
+        return 0
+    if sub == "set":
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco net set UUID --json SPEC")
+        spec = json.loads(args[args.index("--json") + 1])
+        cur = net_get(uuid)
+        mod = net_set_args(cur, spec)
+        if spec.get("security") == "none" and cur["security"] not in ("none", ""):
+            r = nmcli(["connection", "modify", uuid, "remove", "802-11-wireless-security"], root)
+            if r.returncode != 0:
+                net_fail(r, "couldn't remove the Wi-Fi password")
+        if mod:
+            r = nmcli(["connection", "modify", uuid] + mod, root)
+            if r.returncode != 0:
+                net_fail(r, "couldn't save the connection")
+        net_apply(cur, root)
+        print(f"net: saved {cur['name']}" + (" and applied it" if cur["active"] else ""))
+        return 0
+    if sub in ("delete", "up", "down"):
+        r = nmcli(["connection", sub, uuid], root)
+        if r.returncode != 0:
+            net_fail(r, f"couldn't {'forget' if sub == 'delete' else 'connect' if sub == 'up' else 'disconnect'} the connection")
+        return 0
+    if sub == "add-ethernet":
+        name = args[1] if len(args) > 1 else "Wired connection"
+        iface = args[2] if len(args) > 2 else ""
+        if iface and not re.fullmatch(r"[\w.-]{1,15}", iface):
+            die("not a valid interface name")
+        r = nmcli(["connection", "add", "type", "ethernet", "con-name", name, "ifname", iface or "*"], root)
+        if r.returncode != 0:
+            net_fail(r, "couldn't add the connection")
+        m = re.search(r"\(([0-9a-fA-F-]{36})\)", r.stdout)
+        print(m.group(1) if m else "")
+        return 0
+    if sub == "add-wifi":
+        if "--json" not in args or args.index("--json") + 1 >= len(args):
+            die("usage: flamenco net add-wifi --json {ssid, password, hidden}")
+        spec = json.loads(args[args.index("--json") + 1])
+        ssid, pw = str(spec.get("ssid", "")), str(spec.get("password") or "")
+        if not 1 <= len(ssid.encode()) <= 32:
+            die("a Wi-Fi name is 1–32 bytes")
+        if pw and not 8 <= len(pw) <= 63:
+            die("a WPA password is 8–63 characters")
+        cmd = ["device", "wifi", "connect", ssid] + (["password", pw] if pw else []) + (["hidden", "yes"] if spec.get("hidden") else [])
+        r = nmcli(cmd, root)
+        if r.returncode != 0:
+            net_fail(r, f"couldn't connect to {ssid}")
+        return 0
+    die("usage: flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet [NAME [IFACE]] | add-wifi --json SPEC  [--sudo]")
 
 
 # ─────────────────────────────── fingerprints (fprintd) ──────────────────────
@@ -3986,6 +4343,9 @@ def doctor_checks() -> list[dict]:
     add("Core", "niri", "Compositor", have("niri"), "niri", True)
     add("Core", "Icon font", "Material Symbols (bundled)",
         (shell_dir() / "assets/fonts/MaterialSymbolsRounded.ttf").is_file() or font_installed("Material Symbols Rounded"), "", True)
+    add("Core", "Google Sans Flex", "the default font (bundled; other apps need it installed, which the package does)",
+        font_installed("Google Sans Flex"), "", False,
+        hint="the package links it into /usr/share/fonts; from a git checkout: cp shell/assets/fonts/GoogleSans*.ttf ~/.local/share/fonts/")
     add("Core", "Terminal", "Mod+T, terminal apps, > commands in the launcher", have(*TERMINALS), "kitty", True)
 
     # ── session ──
@@ -5400,6 +5760,8 @@ def main(argv: list[str]) -> int:
         return cmd_greeter(rest)
     if cmd == "fingerprint":
         return cmd_fingerprint(rest)
+    if cmd == "net":
+        return cmd_net(rest)
     if cmd == "pointer":
         return cmd_pointer(rest)
     if cmd == "flatpak":

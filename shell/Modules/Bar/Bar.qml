@@ -132,7 +132,8 @@ Variants {
                 visible: !win.islands
                 color: Theme.barBg
                 radius: win.attached ? 0 : Theme.rLg
-                border.width: win.attached ? 0 : 1
+                // no outline when panels blend into the bar: it would show as a seam
+                border.width: win.attached || Theme.blendPanels ? 0 : 1
                 border.color: Theme.alpha(Theme.border, 0.5)
 
                 layer.enabled: Settings.data.appearance.shadows && !win.attached

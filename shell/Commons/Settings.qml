@@ -45,6 +45,8 @@ Singleton {
                 property string avatar: "~/.face"
                 property string terminal: "kitty"
                 property bool setupDone: false        // first-run setup finished (or skipped)
+                property bool nativeNetworkEditor: true          // edit connections in Settings → Network
+                property string networkEditor: "nm-connection-editor"  // …or with this app
             }
 
             property JsonObject appearance: JsonObject {
@@ -54,8 +56,11 @@ Singleton {
                 property real panelOpacity: 0.94
                 property real animSpeed: 1.0          // 0 disables animations
                 property real uiScale: 1.0
-                property string fontFamily: "Inter"
-                property string monoFamily: "JetBrains Mono"
+                property string fontFamily: "Google Sans Flex"
+                property string monoFamily: "Google Sans Code"
+                property string iconStyle: "filled"     // filled | outlined
+                property bool blendPanels: false        // panels connect to the bar, no gap (like DMS)
+                property int iconWeight: 500            // 300 (light) … 700 (bold)
                 property bool shadows: true
                 property bool dimBehindPanels: true
                 property string accentOverride: ""    // "#rrggbb" replaces the palette's accent ("" = palette)
@@ -83,6 +88,18 @@ Singleton {
                 property int revealSize: 6            // px of the bottom edge that reveals an auto-hidden dock
                 property int iconSize: 48
                 property var pinned: ["firefox", "org.kde.dolphin", "kitty"]
+                property string position: "bottom"   // bottom | left | right
+                property string screen: ""           // output name; "" = every screen
+                property real zoom: 0.5              // magnification: how much bigger the icon under the pointer gets
+                property int spacing: 6              // px between icons
+                property int margin: 8               // px between the dock and the screen edge
+                property int hideDelay: 450          // ms an auto-hidden dock stays after the pointer leaves
+                property real opacity: 1.0           // background opacity (on top of the panel opacity)
+                property real roundness: 1.0         // corner radius, as a share of the theme's
+                property bool border: true
+                property string indicator: "line"    // line | dot | none
+                property bool separator: true        // line between pinned and other running apps
+                property bool labels: true           // app name on hover
             }
 
             property JsonObject launcher: JsonObject {
@@ -331,7 +348,7 @@ Singleton {
         onTriggered: file.writeAdapter()
     }
 
-    readonly property int currentVersion: 2
+    readonly property int currentVersion: 3
 
     // One-time upgrades for settings files written by older versions.
     function migrate() {
@@ -348,6 +365,14 @@ Singleton {
                 r.splice(i >= 0 ? i : r.length, 0, "quicksettings");
                 b.right = r;
             }
+        }
+        if (v < 3) {
+            // 0.17: Google Sans replaces the old default fonts (a font you picked stays)
+            const a = adapter.appearance;
+            if (a.fontFamily === "Inter")
+                a.fontFamily = "Google Sans Flex";
+            if (a.monoFamily === "JetBrains Mono")
+                a.monoFamily = "Google Sans Code";
         }
         adapter.configVersion = currentVersion;
     }

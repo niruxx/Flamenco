@@ -134,20 +134,26 @@ Singleton {
         id: list
         stdout: StdioCollector {
             onStreamFinished: {
-                const seen = {};
-                const nets = [];
+                // one entry per name; a name can have several access points (mesh,
+                // 2.4 + 5 GHz), so keep the one in use, else the strongest
+                const byName = {};
+                let current = -1;
                 for (const line of text.trim().split("\n")) {
                     if (!line)
                         continue;
                     const [inUse, sig, ssid, sec] = root.splitTerse(line);
-                    if (!ssid || seen[ssid])
-                        continue;
-                    seen[ssid] = true;
                     const n = { ssid, signal: parseInt(sig) || 0, secure: !!sec && sec !== "--", active: inUse === "*" };
                     if (n.active)
-                        root.signal = n.signal;
-                    nets.push(n);
+                        current = n.signal;
+                    if (!ssid)
+                        continue;
+                    const had = byName[ssid];
+                    if (!had || n.active || (!had.active && n.signal > had.signal))
+                        byName[ssid] = n;
                 }
+                if (current >= 0)
+                    root.signal = current;
+                const nets = Object.values(byName);
                 nets.sort((a, b) => (b.active - a.active) || (b.signal - a.signal));
                 root.networks = nets;
                 root.scanning = false;
@@ -192,6 +198,31 @@ Singleton {
         onExited: {
             root.vpnBusy = "";
             root.refresh();
+        }
+    }
+
+    // nmcli monitor reports connection changes, not signal strength, so read the
+    // strength now and then while on Wi-Fi (cached scan results, no new scan)
+    Timer {
+        running: root.ssid !== "" && !root.ethernet
+        repeat: true
+        interval: 10000
+        onTriggered: if (!strength.running) strength.running = true
+    }
+
+    Process {
+        id: strength
+        command: ["nmcli", "-t", "-f", "IN-USE,SIGNAL", "device", "wifi", "list", "--rescan", "no"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                for (const line of text.trim().split("\n")) {
+                    const [inUse, sig] = root.splitTerse(line);
+                    if (inUse === "*") {
+                        root.signal = parseInt(sig) || 0;
+                        return;
+                    }
+                }
+            }
         }
     }
 

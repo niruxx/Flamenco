@@ -2,12 +2,12 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.16.5
+pkgver=0.18.0
 pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
 url="https://github.com/niruxx/flamenco-shell"
-license=('unknown' 'Apache-2.0')  # Apache-2.0: bundled Material Symbols font
+license=('unknown' 'Apache-2.0' 'OFL-1.1')  # Apache-2.0: Material Symbols; OFL-1.1: Google Sans Flex / Code
 depends=('quickshell' 'python' 'python-gobject' 'qt6-declarative' 'procps-ng')
 optdepends=(
     'niri: compositor (or hyprland)'
@@ -58,4 +58,12 @@ package() {
     install -Dm644 "$src/data/flamenco-settings.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/flamenco-settings.svg"
     install -Dm644 "$src/README.md" "$pkgdir/usr/share/doc/flamenco-shell/README.md"
     install -Dm644 "$src/shell/assets/fonts/MaterialSymbols-LICENSE.txt" "$pkgdir/usr/share/licenses/flamenco-shell/MaterialSymbols-LICENSE.txt"
+    install -Dm644 "$src/shell/assets/fonts/GoogleSansFlex-OFL.txt" "$pkgdir/usr/share/licenses/flamenco-shell/GoogleSansFlex-OFL.txt"
+    install -Dm644 "$src/shell/assets/fonts/GoogleSansCode-OFL.txt" "$pkgdir/usr/share/licenses/flamenco-shell/GoogleSansCode-OFL.txt"
+    # the default fonts for every app (GTK, the greeter), not just the shell;
+    # linked to the shell's copies, and fontconfig's pacman hook refreshes the cache
+    install -d "$pkgdir/usr/share/fonts/flamenco-shell"
+    for f in GoogleSansFlex.ttf GoogleSansCode.ttf GoogleSansCode-Italic.ttf; do
+        ln -s "../../flamenco-shell/shell/assets/fonts/$f" "$pkgdir/usr/share/fonts/flamenco-shell/$f"
+    done
 }

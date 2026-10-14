@@ -79,27 +79,51 @@ PanelWindow {
         readonly property real travel: edge === "top" || edge === "left" ? -18 : 18
         readonly property string hPos: root.place === "bar" ? (edge === "left" || edge === "right" ? edge : root.hAlign) : root.place.endsWith("left") ? "left" : root.place.endsWith("right") ? "right" : "center"
 
+        // Blend (Settings → Appearance): the card grows out of the bar as one
+        // surface, flush against it in the bar's color, joined by concave corners
+        readonly property bool blend: Theme.blendPanels && root.place === "bar"
+        readonly property int fillet: Math.min(Theme.rXl, 24)
+        // keep clear of the bar's ends (margin + rounded corner) so the joins sit on its straight part
+        readonly property int inset: blend ? Theme.barMargin + (Settings.data.bar.style === "attached" ? 0 : Theme.rLg) + fillet : Theme.gap
+        readonly property bool alongTop: edge === "top" || edge === "bottom"
+
         width: Math.min(root.cardWidth, parent.width - Theme.gap * 2)
         // never taller than the screen (minus a gap); the content scrolls instead
         height: Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.gap * 2)
-        x: hPos === "left" ? Theme.gap : hPos === "right" ? parent.width - width - Theme.gap : (parent.width - width) / 2
-        y: root.place === "center" ? (parent.height - height) / 2.6 : edge === "bottom" ? parent.height - height - Theme.gap : Theme.gap
+        x: blend && edge === "left" ? 0 : blend && edge === "right" ? parent.width - width
+            : hPos === "left" ? (blend ? inset : Theme.gap) : hPos === "right" ? parent.width - width - (blend ? inset : Theme.gap) : (parent.width - width) / 2
+        y: root.place === "center" ? (parent.height - height) / 2.6
+            : blend && edge === "top" ? 0 : blend && edge === "bottom" ? parent.height - height
+            : blend ? inset
+            : edge === "bottom" ? parent.height - height - Theme.gap : Theme.gap
 
         radius: Theme.rXl
-        color: Theme.panelBg
-        border.width: 1
+        // square where it meets the bar
+        topLeftRadius: blend && (edge === "top" || edge === "left") ? 0 : Theme.rXl
+        topRightRadius: blend && (edge === "top" || edge === "right") ? 0 : Theme.rXl
+        bottomLeftRadius: blend && (edge === "bottom" || edge === "left") ? 0 : Theme.rXl
+        bottomRightRadius: blend && (edge === "bottom" || edge === "right") ? 0 : Theme.rXl
+        color: blend ? Theme.barBg : Theme.panelBg
+        border.width: blend ? 0 : 1
         border.color: Theme.alpha(Theme.border, 0.7)
 
-        opacity: root.progress
-        scale: 0.94 + 0.06 * root.progress
+        opacity: card.blend ? Math.min(1, root.progress * 1.6) : root.progress
+        // blended cards slide out from under the bar instead of zooming
+        scale: card.blend ? 1 : 0.94 + 0.06 * root.progress
         transformOrigin: card.edge === "top" ? Item.Top : card.edge === "bottom" ? Item.Bottom : card.edge === "left" ? Item.TopLeft : card.edge === "right" ? Item.TopRight : Item.Center
         transform: Translate {
             readonly property bool sideways: card.edge === "left" || card.edge === "right"
-            x: sideways ? (1 - root.progress) * card.travel : 0
-            y: sideways || card.edge === "" ? 0 : (1 - root.progress) * card.travel
+            readonly property real dist: card.blend ? (sideways ? card.width : card.height) * 0.35 : Math.abs(card.travel)
+            readonly property real sign: card.edge === "top" || card.edge === "left" ? -1 : 1
+            x: sideways ? (1 - root.progress) * dist * sign : 0
+            y: sideways || card.edge === "" ? 0 : (1 - root.progress) * dist * sign
         }
 
-        layer.enabled: Settings.data.appearance.shadows
+        // the concave joins on either side of a blended card
+        Fillet { host: card; visible: card.blend; first: true }
+        Fillet { host: card; visible: card.blend; first: false }
+
+        layer.enabled: Settings.data.appearance.shadows && !card.blend
         layer.effect: MultiEffect {
             shadowEnabled: true
             shadowColor: Theme.alpha(Theme.shadow, 0.45)
@@ -127,6 +151,37 @@ PanelWindow {
                 height: implicitHeight
                 implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
             }
+        }
+    }
+
+    // A square of the bar's color with a quarter circle cut out, filling the
+    // corner between the bar and one side of a blended card.
+    component Fillet: Canvas {
+        id: f
+        required property var host     // the card (inline components can't see this file's ids)
+        property bool first: true      // left (or top, on a side bar) of the card
+        readonly property int r: f.host.fillet
+        readonly property string edge: f.host.edge
+        readonly property color fill: Theme.barBg
+        width: r
+        height: r
+        x: f.host.alongTop ? (first ? -r : f.host.width) : (edge === "left" ? 0 : f.host.width - r)
+        y: f.host.alongTop ? (edge === "top" ? 0 : f.host.height - r) : (first ? -r : f.host.height)
+        // the cut-out circle's center: the corner of this square away from the bar and the card
+        readonly property point hole: f.host.alongTop
+            ? Qt.point(first ? 0 : r, edge === "top" ? r : 0)
+            : Qt.point(edge === "left" ? r : 0, first ? 0 : r)
+        onFillChanged: requestPaint()
+        onHoleChanged: requestPaint()
+        onPaint: {
+            const ctx = getContext("2d");
+            ctx.reset();
+            ctx.fillStyle = f.fill;
+            ctx.fillRect(0, 0, f.r, f.r);
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.beginPath();
+            ctx.arc(f.hole.x, f.hole.y, f.r, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 }

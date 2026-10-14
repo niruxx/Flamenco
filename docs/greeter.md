@@ -41,8 +41,8 @@ Each Apply replaces `config.json`, `wallpaper.*` and `avatars/*`. Anything else 
     "colors": { "bg": "#…", "surface": "#…", "surfaceHigh": "#…", "surfaceHighest": "#…", "border": "#…",
                 "text": "#…", "textDim": "#…", "accent": "#…", "onAccent": "#…", "accent2": "#…",
                 "accent3": "#…", "error": "#…", "warning": "#…", "success": "#…" },
-    "fontFamily": "Inter",
-    "monoFamily": "JetBrains Mono",
+    "fontFamily": "Google Sans Flex",
+    "monoFamily": "Google Sans Code",
     "fontScale": 1.0,
     "roundness": 1.0
   },

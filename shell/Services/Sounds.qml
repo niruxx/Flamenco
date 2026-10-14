@@ -132,8 +132,10 @@ Singleton {
             onStreamFinished: {
                 try {
                     const d = JSON.parse(text);
-                    root.fonts = d.families;
-                    root.monoFonts = d.mono;
+                    // the shell's bundled fonts are there even when not installed system-wide
+                    const add = (list, f) => list.includes(f) ? list : [f].concat(list);
+                    root.fonts = add(add(d.families, "Google Sans Code"), "Google Sans Flex");
+                    root.monoFonts = add(d.mono, "Google Sans Code");
                 } catch (e) {}
             }
         }

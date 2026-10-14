@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.16.5-E8466F?style=for-the-badge" alt="Version 0.16.5">
+  <img src="https://img.shields.io/badge/version-0.18.0-E8466F?style=for-the-badge" alt="Version 0.18.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -168,7 +168,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **📢 OSD** | Volume, screen brightness, keyboard backlight and mic popups |
 | **🗓️ Dashboard** | Opens from the bar clock. Tabs: Overview (clock, calendar, user, weather and media cards), Media (full player), Wallpapers (picker and folder), Weather (configurable forecast), and a shortcut to Settings |
 | **📈 Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
-| **📌 Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
+| **📌 Dock** | Optional. Bottom, left or right edge; pinned and running apps, magnification, auto-hide, app names on hover, running indicators, and its size, spacing, background and corners |
 | **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **🔒 Lock screen** | PAM auth with password or **fingerprint** (enroll fingers in Settings), blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
 | **🚪 Login screen** | Set up **Flamenco Greeter** (greetd) from Settings: wallpaper, blur and dim, fonts, the session picker, user list and power buttons, in the shell's palette. Edits greetd itself too: greeter, VT and auto-login |
@@ -191,7 +191,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 
 | | |
 |---|---|
-| **🌐 Network & VPN** | Wi-Fi, plus NetworkManager VPNs (WireGuard, OpenVPN): connect from the control center, import `.conf`/`.ovpn` files in Settings |
+| **🌐 Network & VPN** | Wi-Fi and wired connections edited right in Settings (addresses, DNS, security, MAC, metered…), or in your own network app if you prefer, plus NetworkManager VPNs (WireGuard, OpenVPN) |
 | **🔊 Sound** | Pick an installed sound theme (shared with GTK, GNOME and KDE apps), notification, volume and brightness sounds, output/input devices |
 | **🔑 Keyring** | Choose which keyring stores app passwords: GNOME Keyring, KDE Wallet, KeePassXC, oo7, or none. Shows what's running and whether it unlocks at login |
 | **🛡️ Firewall** | Detects ufw or firewalld: turn it on/off, default policies or zones, add/remove ports, services and rules (applied with one sudo prompt) |
@@ -230,7 +230,7 @@ Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest
 
 ### 1️⃣ Install dependencies
 
-**Required:** `quickshell` (developed against 0.3.2 with Qt 6.12; 0.2 or newer should work), `niri`, `python3`. The *Material Symbols Rounded* icon font (Apache-2.0) is bundled in `shell/assets/fonts/`, so you don't need to install it.
+**Required:** `quickshell` (developed against 0.3.2 with Qt 6.12; 0.2 or newer should work), `niri`, `python3`. The *Material Symbols Rounded* icon font (Apache-2.0) and the default fonts, *Google Sans Flex* and *Google Sans Code* (OFL-1.1), are bundled in `shell/assets/fonts/`, so you don't need to install them. The Arch package also links the Google Sans fonts into `/usr/share/fonts`, so GTK apps and the login screen can use them too.
 
 **Optional** (each enables one feature):
 
@@ -587,10 +587,13 @@ What Settings writes for the greeter is described in [docs/greeter.md](docs/gree
 ### 📌 Dock
 
 The dock is off by default. Turn it on in **Settings → Dock**. That page also has:
-- auto-hide, and how close to the bottom edge the pointer must be to reveal the dock
-- whether running apps that aren't pinned appear
-- magnification and icon size
-- the pinned-app list: pin apps from a dropdown of everything installed, reorder them, or remove them
+- **Position:** the bottom, left or right edge, and on a setup with several screens, every screen or just one.
+- **Apps:** whether running apps that aren't pinned appear, and a line separating them from pinned ones.
+- **Hover and indicators:** app names on hover, and the running indicator as a line, dots or nothing.
+- **Hiding:** auto-hide, how close to the edge the pointer must be to reveal the dock, and how long it stays after the pointer leaves.
+- **Size:** icon size, spacing, and magnification with how much it zooms.
+- **Look:** distance from the screen edge, background opacity, corner roundness, and a border.
+- **Pinned apps:** pin apps from a dropdown of everything installed, reorder them, or remove them.
 
 Pinned apps that aren't installed are hidden. A dock with auto-hide off reserves its space, and sits above a bottom bar.
 
@@ -658,10 +661,18 @@ From a terminal: `flamenco firewall status`, `flamenco firewall apply --json '{"
 ### 📡 Network, printers and power
 
 **Settings → Network**
-- **Wi-Fi:** on/off.
+- **Wi-Fi:** on/off, your saved networks (connect, disconnect, edit), and joining a hidden network.
+- **Wired:** each adapter with its cable state, address, speed and MAC, your wired connections, and adding another.
+- **Editing a connection:**
+  - **General:** name, connecting automatically and its priority, metered, the MAC address shown to the network (the adapter's own, random, or random per network), and MTU.
+  - **Wi-Fi only:** the network name, hidden, band (2.4 or 5 GHz), and security (open, WPA/WPA2 or WPA3 Personal) with a new password. Saved passwords are never shown, only replaced.
+  - **IPv4 and IPv6:** automatic, manual (addresses and gateway), link-local, shared or off, plus DNS servers, search domains, and IPv6 privacy addresses.
+  - **Saving:** a connected connection applies the change right away. Every value is checked before NetworkManager sees it.
+  - **Live details:** the addresses, gateway and DNS in use.
+- **Administrator rights:** if NetworkManager wants them for a change, **Use sudo** runs the same change in a terminal.
+- **Your own app instead:** turn off **Use Flamenco's editor** and Edit opens `nm-connection-editor` (or any app you name) as before.
 - **VPNs:** your NetworkManager VPNs, with connect switches and delete buttons.
 - **Import:** a WireGuard `.conf` or OpenVPN `.ovpn` file. OpenVPN needs `networkmanager-openvpn`.
-- **Connection editor:** a button that opens `nm-connection-editor` for everything else.
 
 **Settings → Printers** manages CUPS:
 - **Not installed:** an **Install** button sets up `cups`, `cups-pdf` and `system-config-printer`, and enables the service.
@@ -978,9 +989,10 @@ In **Settings → Appearance**:
   - *Classic*: a Windows-style taskbar at the bottom
   - *Dock & menu bar*: a thin top bar and a dock, macOS-style
   - *Vertical*: a bar on the left side
-- **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels.
+- **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels, and **Connect panels to the bar**. With that last one, quick settings, the calendar and the other panels grow out of the bar as one surface, with curved joins and no gap showing the wallpaper. It doesn't apply to the Islands bar style.
 - **Motion:** animation speed; 0% turns animations off.
-- **Typography:** interface and monospace fonts, picked from dropdowns of installed fonts (system and `~/.local/share/fonts`) and shown in their own typeface, plus UI scale and a live preview.
+- **Typography:** interface and monospace fonts (Google Sans Flex and Google Sans Code by default), picked from dropdowns of installed fonts (system and `~/.local/share/fonts`) and shown in their own typeface, plus UI scale and a live preview.
+- **Icons:** filled (the Material 3 Expressive look, the default) or outlined, and how heavy the strokes are.
 
 From the command line, or bound to keys in niri:
 
@@ -1097,6 +1109,7 @@ flamenco apps-theme --json SPEC | --restore
 flamenco pick folder|image [START]   # choose a folder or an image with the portal file chooser
 flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable   # login screen
 flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   # fprintd fingerprints
+flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC   # Wi-Fi and wired connections
 flamenco portals get | apply --json SPEC
 flamenco fonts [--json]
 flamenco sound themes | play EVENT | find EVENT

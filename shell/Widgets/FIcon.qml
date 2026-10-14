@@ -1,20 +1,21 @@
 import QtQuick
 import qs.Commons
 
-// Material Symbols Rounded glyph. `fill` animates between outlined and filled.
+// Material Symbols Rounded glyph. `fill` animates between outlined and filled;
+// the icon style setting (Theme.iconFill) fills every icon.
 Text {
     id: root
 
     property string icon: ""
     property int size: Theme.iconSize
     property real fill: 0
-    property int weight: 400
+    property int weight: Theme.iconWeight
 
     text: icon
     color: Theme.text
     font.family: Theme.iconFont
     font.pixelSize: size
-    font.variableAxes: ({ "FILL": fill, "wght": weight, "opsz": Math.max(20, Math.min(48, size)) })
+    font.variableAxes: ({ "FILL": Math.max(fill, Theme.iconFill), "wght": weight, "opsz": Math.max(20, Math.min(48, size)) })
     horizontalAlignment: Text.AlignHCenter
     verticalAlignment: Text.AlignVCenter
 
