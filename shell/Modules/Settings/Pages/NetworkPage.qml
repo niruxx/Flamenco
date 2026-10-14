@@ -27,7 +27,7 @@ Page {
     readonly property QtObject d: draft
     readonly property bool busy: runner.running
     // Flamenco's own editor, or the app you used before (Settings → Network)
-    readonly property bool native: Settings.data.general.nativeNetworkEditor
+    readonly property bool inShell: Settings.data.general.nativeNetworkEditor
     readonly property string external: Settings.data.general.networkEditor.trim() || "nm-connection-editor"
     readonly property bool nmce: external.split(" ")[0].endsWith("nm-connection-editor")
 
@@ -47,7 +47,7 @@ Page {
     }
 
     function open(uuid) {
-        if (!native) {
+        if (!inShell) {
             openExternal("--edit=" + uuid);
             return;
         }
@@ -225,13 +225,13 @@ Page {
         title: "Editing connections"
         SwitchRow {
             title: "Use Flamenco's editor"
-            subtitle: page.native ? "Wi-Fi and wired settings open right here" : "Edit opens " + page.external + " instead"
+            subtitle: page.inShell ? "Wi-Fi and wired settings open right here" : "Edit opens " + page.external + " instead"
             icon: "tune"
             target: Settings.data.general
             key: "nativeNetworkEditor"
         }
         TextRow {
-            visible: !page.native
+            visible: !page.inShell
             title: "Network app"
             subtitle: "The app to open for editing connections"
             icon: "apps"
@@ -240,7 +240,7 @@ Page {
             placeholder: "nm-connection-editor"
         }
         SettingRow {
-            visible: !page.native
+            visible: !page.inShell
             title: "Open " + page.external
             subtitle: "Everything NetworkManager can do, including VPNs, bridges and 802.1X"
             icon: "open_in_new"
@@ -331,7 +331,7 @@ Page {
                 icon: "add"
                 variant: "tonal"
                 disabled: runner.running
-                onClicked: if (!page.native) page.openExternal("--create --type=802-3-ethernet"); else page.run(["add-ethernet", "Wired connection " + (page.wired.length + 1)], out => {
+                onClicked: if (!page.inShell) page.openExternal("--create --type=802-3-ethernet"); else page.run(["add-ethernet", "Wired connection " + (page.wired.length + 1)], out => {
                     if (/^[0-9a-f-]{36}$/i.test(out))
                         page.open(out);
                 })

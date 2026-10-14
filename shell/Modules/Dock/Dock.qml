@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import qs.Commons
 import qs.Services
 import qs.Widgets
+import "../Bar/Widgets"
 
 // Pinned + running apps, macOS-style magnification, auto-hide.
 // Bottom, left or right edge; everything is set in Settings → Dock.
@@ -34,7 +35,7 @@ Variants {
         readonly property int reach: margin + thickness + Math.ceil(iconSize * zoom) + 8
         readonly property int labelRoom: cfg.labels ? (vertical ? 220 : 34) : 0
         // revealed while hovered, and for a moment after the pointer leaves
-        readonly property bool revealed: !cfg.autoHide || hover.hovered || hideDelay.running
+        readonly property bool revealed: !cfg.autoHide || hover.hovered || hideDelay.running || menu.visible
         property real mouse: -1000                                // pointer along the dock
 
         // App ids only, so the list (and its delegates) stays stable while
@@ -111,6 +112,13 @@ Variants {
                     hideDelay.restart();
                 }
             }
+        }
+
+        // right-click menu: the same one as the bar's window title
+        WindowMenu {
+            id: menu
+            window: win
+            side: win.edge
         }
 
         Timer {
@@ -256,10 +264,10 @@ Variants {
                             onClicked: mouse => {
                                 const wins = app.windows;
                                 if (mouse.button === Qt.RightButton) {
-                                    if (app.pinned)
-                                        Settings.listRemove(win.cfg, "pinned", app.modelData);
-                                    else
-                                        Settings.listAdd(win.cfg, "pinned", app.modelData);
+                                    // the app's focused window, else its first; none: Open / Unpin
+                                    const w = wins.find(x => x.id === Niri.focusedWindowId) ?? wins[0] ?? null;
+                                    const p = app.mapToItem(null, 0, 0);
+                                    menu.open(w, Qt.rect(p.x, p.y, app.width, app.height), app.modelData);
                                 } else if (mouse.button === Qt.MiddleButton || wins.length === 0) {
                                     Apps.launch(app.entry);
                                 } else {

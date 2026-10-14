@@ -29,7 +29,7 @@ Singleton {
     }
 
     // niri handles this corner, so the shell's corner window stays out of its way
-    function native(key) {
+    function nativeCorner(key) {
         return !Niri.hyprland && cfg.niriImported && cfg.enabled && cfg[key] === "overview" && (perCorner || key === "topLeft");
     }
 
@@ -62,10 +62,10 @@ Singleton {
                 const e = root.cfg;
                 const wasOn = e.enabled;
                 for (const k of Object.keys(root.names)) {
-                    const native = d.overviewCorners.includes(root.names[k]);
-                    if (native && (e[k] === "none" || !wasOn))
+                    const niriHas = d.overviewCorners.includes(root.names[k]);
+                    if (niriHas && (e[k] === "none" || !wasOn))
                         e[k] = "overview";
-                    else if (!wasOn && !native)
+                    else if (!wasOn && !niriHas)
                         e[k] = "none";      // corners that were switched off stay off
                 }
                 if (d.overviewCorners.length)

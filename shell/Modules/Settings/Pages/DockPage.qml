@@ -8,7 +8,7 @@ import qs.Widgets
 Page {
     id: page
     title: "Dock"
-    subtitle: "Left-click focuses an app (again to cycle its windows), middle-click opens a new window, right-click pins or unpins. Changes show right away."
+    subtitle: "Left-click focuses an app (again to cycle its windows), middle-click opens a new window, right-click opens a menu (move to a workspace, pin, close, force quit…). Changes show right away."
     readonly property var d: Settings.data.dock
     // installed apps that aren't pinned yet, for the picker
     readonly property var pinnable: Apps.all.filter(e => !d.pinned.includes(e.id)).map(e => ({ value: e.id, label: e.name }))

@@ -37,6 +37,13 @@ WlSessionLockSurface PamContext IdleMonitor ClippingRectangle IconImage QsMenuOp
 NON_ITEM = {"Singleton", "Scope", "ShellRoot", "PanelWindow", "FloatingWindow", "PopupWindow", "Variants", "LazyLoader",
             "QtObject", "WlSessionLock", "WlSessionLockSurface", "Popup", "OverlayPanel", "TrayMenu", "TrayTooltip"}
 # types with no default property: a child object declared inside one fails to load
+# JavaScript reserved and future-reserved words; QML rejects them as identifiers
+RESERVED = set("""
+break case catch class const continue debugger default delete do else enum export extends false finally for function
+if implements import in instanceof interface let new null package private protected public return static super switch
+this throw true try typeof var void while with yield abstract boolean byte char double final float goto int long
+native short synchronized throws transient volatile
+""".split())
 NO_DEFAULT = {"Timer", "WheelHandler", "TapHandler", "HoverHandler", "DragHandler", "PointHandler", "PinchHandler",
               "NumberAnimation", "ColorAnimation", "PropertyAction", "PauseAnimation", "RotationAnimation", "FrameAnimation",
               "Process", "StdioCollector", "SplitParser", "Socket", "FontLoader", "SystemClock", "IdleMonitor"}
@@ -81,6 +88,11 @@ for f in files:
             here = f.parent.relative_to(root).as_posix()
             if here not in homes[t] and not homes[t] & visible:
                 report(f, f"{line(m.start())}: {t} is defined in {'/'.join(sorted(homes[t]))} but not imported")
+
+    # reserved words QML refuses as names (the file then fails to load at all)
+    for m in re.finditer(r'\b(?:property\s+[\w<>.]+|function|const|let|var|id\s*:)\s+(\w+)', code):
+        if m.group(1) in RESERVED:
+            report(f, f"{line(m.start())}: '{m.group(1)}' is a reserved word in QML and can't be used as a name")
 
     readonly = set(re.findall(r'readonly property \S+ (\w+)', code))
     for m in re.finditer(r'Behavior on ([\w.]+)', code):

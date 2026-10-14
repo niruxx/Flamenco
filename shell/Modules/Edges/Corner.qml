@@ -16,7 +16,7 @@ PanelWindow {
     readonly property string action: cfg[key]
 
     // niri's own corner takes Overview corners (see Edges)
-    visible: action !== "none" && !Edges.native(key)
+    visible: action !== "none" && !Edges.nativeCorner(key)
     screen: output
     color: "transparent"
     anchors {

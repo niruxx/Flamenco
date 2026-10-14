@@ -5,14 +5,20 @@ import qs.Commons
 import qs.Services
 import qs.Widgets
 
-// Menu for the focused window, opened from the bar's window title: move it to
-// another workspace or monitor, float / fullscreen it, open a new window of the
-// app, pin it to the dock, switch to another window, close or force quit it.
+// Menu for a window, opened from the bar's window title or by right-clicking an
+// app in the dock: move it to another workspace or monitor, float / fullscreen
+// it, open a new window of the app, pin it to the dock, switch to another
+// window, close or force quit it. For a pinned app with no window, just Open
+// and Unpin.
 PopupWindow {
     id: root
 
     required property var window
     property var win: null                     // snapshot of the window it was opened for
+    property string appId: ""                  // the app, when opened for one without a window (dock)
+    // the edge it opens away from: the bar's, or the dock's
+    property string side: Theme.barPos
+    readonly property bool sideVertical: side === "left" || side === "right"
     property string page: "main"               // main | workspaces | monitors | windows
     property bool armed: false                 // force quit asks for a second click
     property real closedAt: 0
@@ -20,7 +26,9 @@ PopupWindow {
 
     // the live copy, so floating / workspace changes show while the menu is open
     readonly property var live: win ? (Niri.windows.find(w => w.id === win.id) ?? null) : null
-    readonly property var entry: live ? Apps.lookup(live.app_id) : null
+    readonly property string app: live?.app_id ?? appId
+    readonly property var entry: app ? Apps.lookup(app) : null
+    readonly property int appWindows: app ? Niri.windows.filter(w => String(w.app_id).toLowerCase() === app.toLowerCase()).length : 0
     readonly property var outputs: {
         const out = [];
         for (const w of Niri.workspaces)
@@ -29,13 +37,15 @@ PopupWindow {
         return out;
     }
     readonly property string winOutput: Niri.workspaces.find(w => w.id === live?.workspace_id)?.output ?? ""
-    readonly property bool pinned: !!live && Settings.data.dock.pinned.some(p => p.toLowerCase() === String(live.app_id).toLowerCase())
+    readonly property bool pinned: !!app && Settings.data.dock.pinned.some(p => p.toLowerCase() === app.toLowerCase())
 
-    function open(w, rect) {
+    // w: a window, or null with appId for an app that isn't running
+    function open(w, rect, appId) {
         // the click that closed the menu (focus grab) shouldn't reopen it
         if (Date.now() - closedAt < 250)
             return;
         win = w;
+        root.appId = appId ?? "";
         page = "main";
         armed = false;
         at = rect;
@@ -53,13 +63,19 @@ PopupWindow {
         close();
     }
 
+    // app actions that don't need a window
+    function runApp(f) {
+        f();
+        close();
+    }
+
     function wsLabel(ws) {
         const name = ws.name ? ws.name : "Workspace " + ws.idx;
         return outputs.length > 1 ? name + "  ·  " + ws.output : name;
     }
 
     // closes itself if its window goes away
-    onLiveChanged: if (visible && !live) close()
+    onLiveChanged: if (visible && win && !live) close()
     onVisibleChanged: if (!visible) {
         closedAt = Date.now();
         armed = false;
@@ -67,12 +83,12 @@ PopupWindow {
 
     readonly property int gap: 8
     anchor.window: window
-    anchor.rect.x: Theme.barPos === "right" ? at.x - gap : Theme.barPos === "left" ? at.x + at.width + gap : at.x + at.width / 2
-    anchor.rect.y: Theme.barPos === "bottom" ? at.y - gap : Theme.barVertical ? at.y : at.y + at.height + gap
+    anchor.rect.x: side === "right" ? at.x - gap : side === "left" ? at.x + at.width + gap : at.x + at.width / 2
+    anchor.rect.y: side === "bottom" ? at.y - gap : sideVertical ? at.y : at.y + at.height + gap
     anchor.rect.width: 1
     anchor.rect.height: 1
-    anchor.edges: Theme.barPos === "bottom" ? Edges.Top : Theme.barPos === "left" ? Edges.Right : Theme.barPos === "right" ? Edges.Left : Edges.Bottom
-    anchor.gravity: Theme.barPos === "bottom" ? Edges.Top : Theme.barPos === "left" ? Edges.Right : Theme.barPos === "right" ? Edges.Left : Edges.Bottom
+    anchor.edges: side === "bottom" ? Edges.Top : side === "left" ? Edges.Right : side === "right" ? Edges.Left : Edges.Bottom
+    anchor.gravity: side === "bottom" ? Edges.Top : side === "left" ? Edges.Right : side === "right" ? Edges.Left : Edges.Bottom
     grabFocus: true
     color: "transparent"
     visible: false
@@ -121,20 +137,20 @@ PopupWindow {
 
                     AppIcon {
                         implicitSize: 32
-                        name: Apps.iconFor(root.live?.app_id ?? "")
+                        name: root.entry?.icon ?? Apps.iconFor(root.app)
                     }
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 1
                         FText {
                             Layout.fillWidth: true
-                            text: root.entry?.name ?? root.live?.app_id ?? ""
+                            text: root.entry?.name ?? root.app
                             font.weight: Font.DemiBold
                             elide: Text.ElideRight
                         }
                         FText {
                             Layout.fillWidth: true
-                            text: root.live?.title ?? ""
+                            text: root.live?.title ?? (root.appWindows > 0 ? "" : "Not running")
                             color: Theme.textDim
                             font.pixelSize: Theme.fsSm
                             elide: Text.ElideRight
@@ -155,58 +171,58 @@ PopupWindow {
 
                 // ── main page ──
                 MenuRow {
-                    visible: root.page === "main"
+                    visible: root.page === "main" && !!root.live
                     label: "Move to workspace"
                     leadIcon: "move_group"
                     submenu: true
                     onActivated: root.page = "workspaces"
                 }
                 MenuRow {
-                    visible: root.page === "main" && root.outputs.length > 1
+                    visible: root.page === "main" && !!root.live && root.outputs.length > 1
                     label: "Move to monitor"
                     leadIcon: "monitor"
                     submenu: true
                     onActivated: root.page = "monitors"
                 }
                 MenuRow {
-                    visible: root.page === "main"
+                    visible: root.page === "main" && !!root.live
                     label: root.live?.is_floating ? "Tile window" : "Float window"
                     leadIcon: root.live?.is_floating ? "view_column" : "picture_in_picture"
                     onActivated: root.run(w => Niri.toggleFloating(w))
                 }
                 MenuRow {
-                    visible: root.page === "main"
+                    visible: root.page === "main" && !!root.live
                     label: "Fullscreen"
                     leadIcon: "fullscreen"
                     onActivated: root.run(w => Niri.toggleFullscreen(w))
                 }
                 MenuRow {
-                    visible: root.page === "main" && !Niri.hyprland && !root.live?.is_floating
+                    visible: root.page === "main" && !!root.live && !Niri.hyprland && !root.live?.is_floating
                     label: "Maximize column"
                     leadIcon: "width_full"
                     onActivated: root.run(w => Niri.action("maximize-column"))
                 }
                 MenuRow {
-                    visible: root.page === "main" && !Niri.hyprland && !root.live?.is_floating
+                    visible: root.page === "main" && !!root.live && !Niri.hyprland && !root.live?.is_floating
                     label: "Center column"
                     leadIcon: "align_horizontal_center"
                     onActivated: root.run(w => Niri.action("center-column"))
                 }
 
-                Sep { visible: root.page === "main" }
+                Sep { visible: root.page === "main" && !!root.live }
 
                 MenuRow {
                     visible: root.page === "main" && root.entry !== null
-                    label: "New window"
-                    leadIcon: "add"
-                    onActivated: root.run(w => Apps.launch(root.entry))
+                    label: root.appWindows > 0 ? "New window" : "Open"
+                    leadIcon: root.appWindows > 0 ? "add" : "open_in_new"
+                    onActivated: root.runApp(() => Apps.launch(root.entry))
                 }
                 MenuRow {
-                    visible: root.page === "main" && !!root.live?.app_id
+                    visible: root.page === "main" && root.app !== ""
                     label: root.pinned ? "Unpin from dock" : "Pin to dock"
                     leadIcon: root.pinned ? "keep_off" : "keep"
-                    onActivated: root.run(w => {
-                        const id = String(w.app_id);
+                    onActivated: root.runApp(() => {
+                        const id = root.app;
                         const cfg = Settings.data.dock;
                         const have = cfg.pinned.find(p => p.toLowerCase() === id.toLowerCase());
                         if (have !== undefined)
@@ -223,16 +239,25 @@ PopupWindow {
                     onActivated: root.page = "windows"
                 }
 
-                Sep { visible: root.page === "main" }
+                Sep { visible: root.page === "main" && !!root.live }
 
                 MenuRow {
-                    visible: root.page === "main"
+                    visible: root.page === "main" && !!root.live
                     label: "Close window"
                     leadIcon: "close"
                     onActivated: root.run(w => Niri.closeWindow(w.id))
                 }
                 MenuRow {
-                    visible: root.page === "main" && (root.live?.pid ?? 0) > 0
+                    visible: root.page === "main" && root.appWindows > 1
+                    label: "Close all " + root.appWindows + " windows"
+                    leadIcon: "close_fullscreen"
+                    onActivated: root.runApp(() => {
+                        for (const w of Niri.windows.filter(x => String(x.app_id).toLowerCase() === root.app.toLowerCase()))
+                            Niri.closeWindow(w.id);
+                    })
+                }
+                MenuRow {
+                    visible: root.page === "main" && !!root.live && (root.live?.pid ?? 0) > 0
                     label: root.armed ? "Click again to force quit" : "Force quit"
                     leadIcon: "dangerous"
                     danger: true

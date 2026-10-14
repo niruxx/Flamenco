@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.18.0-E8466F?style=for-the-badge" alt="Version 0.18.0">
+  <img src="https://img.shields.io/badge/version-0.18.2-E8466F?style=for-the-badge" alt="Version 0.18.2">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -601,7 +601,7 @@ Pinned apps that aren't installed are hidden. A dock with auto-hide off reserves
 |---|---|
 | Left | focus the app's window; click again to cycle through its windows |
 | Middle | open a new instance |
-| Right | pin or unpin |
+| Right | a menu: move the window to another workspace or monitor, float, fullscreen, new window, pin or unpin, switch to another window, close (or close all of the app's windows), force quit. For a pinned app that isn't running: Open and Unpin |
 
 With auto-hide on, move the pointer to the bottom edge to reveal the dock.
 
