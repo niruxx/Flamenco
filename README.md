@@ -1,5 +1,18 @@
 <a id="top"></a>
 
+
+//
+
+[32m  INFO[0m: Launching config: "/usr/share/flamenco-shell/shell/shell.qml"
+[32m  INFO[0m: Shell ID: "978e25e120f86752baf17c207a271f93" Path ID "978e25e120f86752baf17c207a271f93"
+[32m  INFO[0m: Saving logs to "/run/user/1000/quickshell/by-id/58l338mvmt/log.qslog"
+[31m ERROR[0m: Failed to load configuration
+[31m ERROR[0m:   caused by @shell.qml[65:5]: Type SettingsWindow unavailable
+[31m ERROR[0m:   caused by @Modules/Settings/SettingsWindow.qml[63:35]: Type NetworkPage unavailable
+[31m ERROR[0m:   caused by @Modules/Settings/Pages/NetworkPage.qml[30:28]: Reserved keyword "native" cannot be used as a QML identifier.
+
+//
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner-light.svg">
