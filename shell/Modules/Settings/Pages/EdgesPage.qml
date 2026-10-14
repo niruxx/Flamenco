@@ -43,4 +43,13 @@ Page {
         dim: true
         wrapMode: Text.Wrap
     }
+
+    FText {
+        Layout.fillWidth: true
+        visible: !Niri.hyprland && Compositor.status !== ""
+        text: Compositor.status
+        dim: !Compositor.failed
+        color: Compositor.failed ? Theme.error : Theme.textDim
+        wrapMode: Text.Wrap
+    }
 }

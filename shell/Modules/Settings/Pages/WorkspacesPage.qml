@@ -105,7 +105,8 @@ Page {
         Layout.fillWidth: true
         visible: Compositor.status !== ""
         text: Compositor.status
-        dim: true
+        dim: !Compositor.failed
+        color: Compositor.failed ? Theme.error : Theme.textDim
         wrapMode: Text.Wrap
     }
 }

@@ -20,10 +20,18 @@ Rectangle {
 
     // geometry, all derived from the bar height
     readonly property int capsuleH: Theme.barHeight - 12
-    readonly property int dot: numbers ? capsuleH - 8 : style === "dots" ? Math.round(capsuleH * 0.26) : Math.round(capsuleH * 0.34)
+    readonly property int dot: numbers ? capsuleH - 10 : style === "dots" ? Math.round(capsuleH * 0.26) : Math.round(capsuleH * 0.34)
     readonly property int activeW: numbers ? dot : style === "dots" ? dot * 2.2 : dot * 2.8
     readonly property int gap: numbers ? 2 : 4
-    readonly property int pad: numbers ? 4 : 8
+    readonly property int tileR: Math.min(Theme.rXs, Math.floor(dot / 2))
+    readonly property int pad: numbers ? Math.max(3, Math.ceil(endInset(capsuleH, dot, tileR)) + 1) : 8
+
+    // how far from the capsule's end a square (side s, corner radius r) has to sit
+    // so its corners stay inside the rounded end (radius h / 2)
+    function endInset(h, s, r) {
+        const R = h / 2, a = R - r, b = s / 2 - r;
+        return R - r - Math.sqrt(Math.max(0, a * a - b * b));
+    }
     readonly property bool vertical: Theme.barVertical
 
     readonly property real countSize: showCount ? (vertical ? count.implicitHeight : count.implicitWidth) + gap + 2 : 0
@@ -44,7 +52,7 @@ Rectangle {
         y: root.vertical ? row.y + (target?.y ?? 0) : (parent.height - height) / 2
         width: root.vertical ? root.dot : target?.width ?? 0
         height: root.vertical ? target?.height ?? 0 : root.dot
-        radius: root.numbers ? Theme.rXs : height / 2
+        radius: root.numbers ? root.tileR : height / 2
         color: Theme.accent
 
         Behavior on x { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
@@ -83,9 +91,10 @@ Rectangle {
                     anchors.centerIn: parent
                     width: root.vertical ? root.dot : parent.width
                     height: root.vertical ? parent.height : root.dot
-                    radius: root.numbers ? Theme.rXs : height / 2
-                    scale: hover.hovered && !ws.active ? 1.25 : 1
-                    color: ws.active ? "transparent" : root.numbers ? (ws.occupied ? Theme.alpha(Theme.text, 0.12) : "transparent") : ws.occupied ? Theme.alpha(Theme.text, 0.55) : Theme.alpha(Theme.text, 0.2)
+                    radius: root.numbers ? root.tileR : height / 2
+                    // squares fill the capsule's height, so they light up instead of growing past its ends
+                    scale: hover.hovered && !ws.active && !root.numbers ? 1.25 : 1
+                    color: ws.active ? "transparent" : root.numbers ? (hover.hovered ? Theme.alpha(Theme.text, 0.2) : ws.occupied ? Theme.alpha(Theme.text, 0.12) : "transparent") : ws.occupied ? Theme.alpha(Theme.text, 0.55) : Theme.alpha(Theme.text, 0.2)
 
                     Behavior on color { CAnim {} }
                     Behavior on scale { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }

@@ -55,7 +55,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.16.3"
+VERSION = "0.16.5"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -754,7 +754,8 @@ def nearest_gnome_accent(color: str) -> str:
 # `cursor { xcursor-theme … }` block in its config, so toolkit settings alone
 # don't change what you see.
 
-NIRI_CONFIG = XDG_CONFIG / "niri/config.kdl"
+# niri itself reads $NIRI_CONFIG first, so edit the same file it uses
+NIRI_CONFIG = Path(os.environ["NIRI_CONFIG"]).expanduser() if os.environ.get("NIRI_CONFIG") else XDG_CONFIG / "niri/config.kdl"
 CURSOR_MARK = "// flamenco: cursor theme (managed by Settings → App Theming)"
 
 
@@ -920,6 +921,30 @@ def set_cursor_lines(text: str, wanted: dict) -> str:
     return set_block_lines(text, kdl_block(text, "cursor"), wanted)
 
 
+def niri_tmp() -> Path:
+    """Scratch file next to the real config (through a symlink, for dotfiles), so
+    includes resolve the same way when it's validated."""
+    target = NIRI_CONFIG.resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    return target.with_name(target.name + ".flamenco-tmp")
+
+
+def niri_commit(tmp: Path) -> None:
+    """Put a validated scratch file in place and have niri load it right away."""
+    tmp.replace(NIRI_CONFIG.resolve())
+    niri_reload()
+
+
+def niri_reload() -> None:
+    """niri reloads when it notices the file changed, but not if it was started with
+    another config (-c). Ask it directly; niri before 25.08 lacks the action."""
+    if os.environ.get("NIRI_SOCKET") and shutil.which("niri"):
+        try:
+            subprocess.run(["niri", "msg", "action", "load-config-file"], capture_output=True, timeout=5)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+
 def niri_validate(path: Path) -> bool:
     if not shutil.which("niri"):
         return True
@@ -956,10 +981,10 @@ def apply_cursor(s: "Spec", m: dict) -> list[str]:
         else:
             new = set_cursor_lines(text, {"xcursor-theme": f"xcursor-theme {kdl_quote(theme)}", "xcursor-size": f"xcursor-size {size}"})
         if new != text:
-            tmp = NIRI_CONFIG.with_suffix(".kdl.flamenco-tmp")
+            tmp = niri_tmp()
             tmp.write_text(new)
             if niri_validate(tmp):
-                tmp.replace(NIRI_CONFIG)
+                niri_commit(tmp)
                 done.append("niri-cursor")
             else:
                 tmp.unlink()
@@ -991,7 +1016,9 @@ def restore_niri_cursor(m: dict):
         new = text[:start].rstrip("\n") + "\n" + text[end:].lstrip("\n")
     else:
         new = set_cursor_lines(text, {k: state.get(k) for k in ("xcursor-theme", "xcursor-size")})
-    NIRI_CONFIG.write_text(new)
+    tmp = niri_tmp()
+    tmp.write_text(new)
+    niri_commit(tmp)
 
 
 # ─────────────────────────────── displays ────────────────────────────────────
@@ -1121,12 +1148,14 @@ def display_save(spec: list[dict]) -> int:
     if new == text:
         print("displays: config already up to date")
         return 0
-    tmp = NIRI_CONFIG.with_suffix(".kdl.flamenco-tmp")
+    tmp = niri_tmp()
     tmp.write_text(new)
     if not niri_validate(tmp):
+        r = subprocess.run(["niri", "validate", "-c", str(tmp)], capture_output=True, text=True)
         tmp.unlink()
-        die("niri rejected the display settings; config.kdl left untouched")
-    tmp.replace(NIRI_CONFIG)
+        msg = (r.stderr or r.stdout).strip().splitlines()
+        die("niri rejected the display settings: " + (msg[-1] if msg else "invalid config") + " (config.kdl left untouched)")
+    niri_commit(tmp)
     print(f"displays: saved to {NIRI_CONFIG} (first-time backup: {backup})")
     return 0
 
@@ -1308,7 +1337,7 @@ def cmd_niri_config(args: list[str]) -> int:
         return 0
 
     NIRI_CONFIG.parent.mkdir(parents=True, exist_ok=True)
-    tmp = NIRI_CONFIG.with_suffix(".kdl.flamenco-tmp")
+    tmp = niri_tmp()
     tmp.write_text(new)
     if not niri_validate(tmp):
         r = subprocess.run(["niri", "validate", "-c", str(tmp)], capture_output=True, text=True)
@@ -1320,7 +1349,7 @@ def cmd_niri_config(args: list[str]) -> int:
         import time
         backup = NIRI_CONFIG.with_name(f"config.kdl.bak-{time.strftime('%Y%m%d-%H%M%S')}")
         backup.write_text(old)
-    tmp.replace(NIRI_CONFIG)
+    niri_commit(tmp)
     print(f"wrote {NIRI_CONFIG}")
     if backup:
         print(f"previous config saved as {backup}")
@@ -1891,7 +1920,7 @@ def cmd_launch(args: list[str]) -> int:
 def write_niri_config(new: str, old: str) -> None:
     if new == old:
         return
-    tmp = NIRI_CONFIG.with_suffix(".kdl.flamenco-tmp")
+    tmp = niri_tmp()
     tmp.write_text(new)
     if not niri_validate(tmp):
         r = subprocess.run(["niri", "validate", "-c", str(tmp)], capture_output=True, text=True)
@@ -1902,7 +1931,7 @@ def write_niri_config(new: str, old: str) -> None:
     if not backup.exists():
         backup.parent.mkdir(parents=True, exist_ok=True)
         backup.write_text(old)
-    tmp.replace(NIRI_CONFIG)
+    niri_commit(tmp)
 
 
 def cmd_keyboard(args: list[str]) -> int:

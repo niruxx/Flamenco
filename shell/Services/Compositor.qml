@@ -16,7 +16,10 @@ Singleton {
         "borderWidth", "activeColor", "inactiveColor", "cornerRadius", "shadows", "focusFollowsMouse", "warpMouse",
         "hideCursorTyping", "hideCursorAfter", "preferNoCsd", "hotCorners", "skipHotkeyOverlay", "workspaceBackForth"]
     property string status: ""
+    property bool failed: false
     readonly property bool busy: applier.running
+    // a change made before the compositor config was read in; applied right after
+    property bool pending: false
 
     function load() {
         if (!cfg.imported && !getter.running)
@@ -24,8 +27,13 @@ Singleton {
     }
 
     function queue() {
-        if (cfg.imported)
+        if (cfg.imported) {
             applyDelay.restart();
+        } else {
+            // reading the config first keeps settings this page doesn't show
+            pending = true;
+            load();
+        }
     }
 
     function hex(c) {
@@ -87,20 +95,45 @@ Singleton {
                     root.cfg.syncColors = d.activeColor === root.hex(Theme.palette.accent) || d.activeColor === "#ff5d73";
                     root.cfg.imported = true;
                     // Screen edges may already want other corners than niri's config has
-                    if (JSON.stringify(Edges.overviewCorners()) !== JSON.stringify(d.overviewCorners ?? []))
+                    if (root.pending || JSON.stringify(Edges.overviewCorners()) !== JSON.stringify(d.overviewCorners ?? []))
                         root.queue();
-                } catch (e) {}
+                } catch (e) {
+                    root.fail("couldn't read the compositor config");
+                }
+                root.pending = false;
             }
         }
     }
 
+    // a change that didn't reach the compositor shouldn't go unnoticed: say so
+    function fail(msg) {
+        status = msg;
+        if (failed && lastError === msg)
+            return;
+        failed = true;
+        lastError = msg;
+        Quickshell.execDetached(["notify-send", "-a", "Flamenco Settings", "-i", "dialog-warning", "Window settings weren't applied", msg]);
+    }
+    property string lastError: ""
+
     Process {
         id: applier
+        property string out: ""
         stdout: StdioCollector {
-            onStreamFinished: if (text.trim()) root.status = text.trim().split("\n").pop()
+            onStreamFinished: applier.out = text.trim()
         }
         stderr: StdioCollector {
             onStreamFinished: if (text.trim()) root.status = text.trim().split("\n").pop()
+        }
+        onExited: code => {
+            if (code !== 0) {
+                root.fail(root.status || "flamenco compositor apply failed");
+            } else {
+                root.failed = false;
+                root.lastError = "";
+                if (applier.out)
+                    root.status = applier.out.split("\n").pop();
+            }
         }
     }
 }
