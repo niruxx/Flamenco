@@ -24,6 +24,7 @@
   flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable
                                login screen: Flamenco Greeter and greetd
   flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   fingerprints (fprintd)
+  flamenco widgets [edit|done|toggle]   arrange desktop widgets (same as quick settings → Desktop widgets)
   flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC
                                Wi-Fi and wired connections (NetworkManager)
   flamenco portals get | apply --json SPEC   screen sharing / file chooser backends
@@ -57,7 +58,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.18.5"
+VERSION = "0.19.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -5670,7 +5671,7 @@ def cmd_screenshot(args: list[str]) -> int:
 
 
 PANELS = {"launcher": "launcher", "control": "control", "notifications": "notifications",
-          "calendar": "calendar", "wallpapers": "wallpapers", "power": "power"}
+          "calendar": "calendar", "wallpapers": "wallpapers", "power": "power", "widgets": "widgets"}
 
 
 def main(argv: list[str]) -> int:

@@ -10,7 +10,7 @@ BarChip {
     property int barLevel: 0
     property bool barVisible: barLevel < 2
     highlighted: Panels.current === "performance"
-    onClicked: Panels.toggle("performance", screenName)
+    onClicked: Panels.toggle("performance", screenName, root)
     onMiddleClicked: Quickshell.execDetached(Paths.term(["btop"]))
 
     component Stat: BarFlow {

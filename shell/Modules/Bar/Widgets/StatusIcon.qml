@@ -4,6 +4,7 @@ import qs.Services
 import qs.Widgets
 
 FIconButton {
+    id: root
     property string screenName
     property string tip
     property bool barVisible: true
@@ -15,5 +16,5 @@ FIconButton {
     size: Theme.barHeight - 10
     iconSize: 18
     active: panel ? Panels.current === panel : Panels.current === "control" && Panels.controlDetail === detail && detail !== ""
-    onClicked: panel ? Panels.toggle(panel, screenName) : Panels.openControl(detail, screenName)
+    onClicked: panel ? Panels.toggle(panel, screenName, root) : Panels.openControl(detail, screenName, root)
 }

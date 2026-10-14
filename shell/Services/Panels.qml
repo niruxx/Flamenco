@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.Commons
 
 // Which popout is open, and on which screen.
 Singleton {
@@ -18,12 +19,43 @@ Singleton {
 
     // control-center sub page: "" (main) | wifi | bluetooth | audio | mic
     property string controlDetail: ""
+    // desktop widget editing (sidebar + arranging), on Panels.screen
+    property bool widgetsEdit: false
+
+    function editWidgets(s) {
+        close();
+        screen = targetScreen(s);
+        widgetsEdit = true;
+    }
 
     function targetScreen(s) {
         return s || Niri.focusedOutput || (Quickshell.screens[0]?.name ?? "");
     }
 
-    function open(name, s) {
+    // Where the open panel came from: the bar section of the widget that opened
+    // it (start | center | end, "" = the panel's usual spot), and that widget's
+    // center along the bar, so a panel opens on the same side as its widget.
+    property string side: ""
+    property real anchor: -1
+
+    function noteOrigin(from) {
+        side = "";
+        anchor = -1;
+        if (!from)
+            return;
+        let p = from;
+        while (p && p.barSide === undefined)
+            p = p.parent;
+        if (!p || !p.barSide)
+            return;
+        side = p.barSide;
+        const c = from.mapToItem(null, from.width / 2, from.height / 2);
+        anchor = Theme.barVertical ? c.y : c.x;
+    }
+
+    function open(name, s, from) {
+        widgetsEdit = false;
+        noteOrigin(from);
         screen = targetScreen(s);
         current = name;
     }
@@ -32,38 +64,38 @@ Singleton {
         current = "";
     }
 
-    function toggle(name, s) {
+    function toggle(name, s, from) {
         const sc = targetScreen(s);
         if (current === name && screen === sc) {
             close();
         } else {
             if (name === "control")
                 controlDetail = "";
-            open(name, sc);
+            open(name, sc, from);
         }
     }
 
     // Open the dashboard on a tab; toggles shut if that tab is already showing.
-    function openDashboard(tab, s) {
+    function openDashboard(tab, s, from) {
         const sc = targetScreen(s);
         if (current === "calendar" && screen === sc && dashboardShown === tab) {
             close();
             return;
         }
         dashboardTab = tab;
-        open("calendar", sc);
+        open("calendar", sc, from);
     }
 
     // Open the control center straight on a sub page (or toggle it shut if
     // that exact page is already showing).
-    function openControl(detail, s) {
+    function openControl(detail, s, from) {
         const sc = targetScreen(s);
         if (current === "control" && screen === sc && controlDetail === detail) {
             close();
             return;
         }
         controlDetail = detail;
-        open("control", sc);
+        open("control", sc, from);
     }
 
     function openSettings(page) {

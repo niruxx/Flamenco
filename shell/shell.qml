@@ -9,6 +9,7 @@ import Quickshell.Io
 import qs.Commons
 import qs.Services
 import qs.Modules.Background
+import qs.Modules.Desktop
 import qs.Modules.Bar
 import qs.Modules.Dock
 import qs.Modules.Edges
@@ -47,6 +48,7 @@ ShellRoot {
     }
 
     Background {}
+    Desktop {}
     Bar {}
     Dock {}
     HotCorners {}
@@ -60,6 +62,7 @@ ShellRoot {
     PerformancePanel {}
     VolumePanel {}
     WallpaperPicker {}
+    WidgetEditor {}
     PowerMenu {}
     SessionOverlay {}
     SettingsWindow {}
@@ -84,6 +87,13 @@ ShellRoot {
     PanelIpc { target: "performance"; panel: "performance" }
     PanelIpc { target: "wallpapers"; panel: "wallpaper" }
     PanelIpc { target: "power"; panel: "power" }
+
+    IpcHandler {
+        target: "widgets"
+        function edit(): void { Panels.editWidgets(""); }
+        function done(): void { Panels.widgetsEdit = false; }
+        function toggle(): void { Panels.widgetsEdit ? Panels.widgetsEdit = false : Panels.editWidgets(""); }
+    }
 
     IpcHandler {
         target: "settings"

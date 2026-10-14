@@ -29,6 +29,7 @@ LazyLoader {
             { id: "windows", icon: "select_window", label: "Windows & Layout", comp: windowsC },
             { id: "workspaces", icon: "view_carousel", label: "Workspaces", comp: workspacesC },
             { id: "edges", icon: "select_all", label: "Screen edges", comp: edgesC },
+            { id: "desktop", icon: "widgets", label: "Desktop widgets", comp: desktopC },
             { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
             { id: "keyboard", icon: "keyboard", label: "Keyboard", comp: keyboardC },
             { id: "pointer", icon: "mouse", label: "Mouse & Touchpad", comp: pointerC },
@@ -57,6 +58,7 @@ LazyLoader {
         Component { id: appsC; AppThemingPage {} }
         Component { id: barC; BarPage {} }
         Component { id: dockC; DockPage {} }
+        Component { id: desktopC; DesktopPage {} }
         Component { id: displaysC; DisplaysPage {} }
         Component { id: keyboardC; KeyboardPage {} }
         Component { id: pointerC; PointerPage {} }

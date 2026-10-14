@@ -4,10 +4,11 @@ import qs.Services
 import qs.Widgets
 
 BarChip {
+    id: root
     property string screenName
     property int barLevel: 0
     property bool barVisible: Weather.ready && barLevel < 2
-    onClicked: Panels.toggle("calendar", screenName)
+    onClicked: Panels.toggle("calendar", screenName, root)
 
     BarFlow {
         spacing: Theme.barVertical ? 0 : 4

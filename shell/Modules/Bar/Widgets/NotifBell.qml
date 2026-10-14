@@ -14,7 +14,7 @@ Item {
         iconSize: 18
         icon: Notifs.dnd ? "notifications_off" : Notifs.unread > 0 ? "notifications_unread" : "notifications"
         active: Panels.current === "notifications"
-        onClicked: Panels.toggle("notifications", parent.screenName)
+        onClicked: Panels.toggle("notifications", parent.screenName, btn)
         onRightClicked: Notifs.setDnd(!Notifs.dnd)
     }
 

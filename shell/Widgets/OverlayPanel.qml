@@ -48,7 +48,13 @@ PanelWindow {
         }
     WlrLayershell.keyboardFocus: shouldShow ? (exclusiveKeyboard ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand) : WlrKeyboardFocus.None
 
+    // where it was opened from (see Panels.noteOrigin), kept while it closes
+    property string openedFrom: ""
+    property real openedAt: -1
+
     onShouldShowChanged: if (shouldShow) {
+        openedFrom = Panels.side;
+        openedAt = Panels.anchor;
         keys.forceActiveFocus();
         opened();
     }
@@ -77,7 +83,15 @@ PanelWindow {
         // which edge the card grows from: the bar's edge, or none when centered
         readonly property string edge: root.place === "bar" ? Theme.barPos : root.place === "center" ? "" : root.place.startsWith("bottom") ? "bottom" : "top"
         readonly property real travel: edge === "top" || edge === "left" ? -18 : 18
-        readonly property string hPos: root.place === "bar" ? (edge === "left" || edge === "right" ? edge : root.hAlign) : root.place.endsWith("left") ? "left" : root.place.endsWith("right") ? "right" : "center"
+        // opened from a bar widget: on that widget's side of the bar (Panels.side)
+        readonly property string from: root.place === "bar" ? root.openedFrom : ""
+        readonly property string fromAlign: from === "start" ? "left" : from === "end" ? "right" : from === "center" ? "anchor" : ""
+        readonly property string hPos: root.place === "bar" ? (edge === "left" || edge === "right" ? edge : fromAlign || root.hAlign) : root.place.endsWith("left") ? "left" : root.place.endsWith("right") ? "right" : "center"
+        // distance kept from the screen's sides
+        readonly property real side: blend ? inset : Theme.gap
+        function clampTo(v, size, room) {
+            return Math.max(side, Math.min(room - size - side, v));
+        }
 
         // Blend (Settings → Appearance): the card grows out of the bar as one
         // surface, flush against it in the bar's color, joined by concave corners
@@ -91,10 +105,17 @@ PanelWindow {
         // never taller than the screen (minus a gap); the content scrolls instead
         height: Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.gap * 2)
         x: blend && edge === "left" ? 0 : blend && edge === "right" ? parent.width - width
-            : hPos === "left" ? (blend ? inset : Theme.gap) : hPos === "right" ? parent.width - width - (blend ? inset : Theme.gap) : (parent.width - width) / 2
+            : edge === "left" ? Theme.gap : edge === "right" ? parent.width - width - Theme.gap
+            : hPos === "left" ? side : hPos === "right" ? parent.width - width - side
+            : hPos === "anchor" && root.openedAt >= 0 ? clampTo(root.openedAt - width / 2, width, parent.width)
+            : (parent.width - width) / 2
+        // on a side bar, along its length: top, bottom, or level with the widget
+        readonly property real alongY: from === "end" ? parent.height - height - side
+            : from === "center" && root.openedAt >= 0 ? clampTo(root.openedAt - height / 2, height, parent.height)
+            : side
         y: root.place === "center" ? (parent.height - height) / 2.6
             : blend && edge === "top" ? 0 : blend && edge === "bottom" ? parent.height - height
-            : blend ? inset
+            : edge === "left" || edge === "right" ? alongY
             : edge === "bottom" ? parent.height - height - Theme.gap : Theme.gap
 
         radius: Theme.rXl

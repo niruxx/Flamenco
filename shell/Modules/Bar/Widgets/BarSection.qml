@@ -9,6 +9,7 @@ Rectangle {
     id: sec
 
     property var ids: []
+    property string barSide: ""                // start | center | end: panels opened from here open on that side
     property var registry: ({})
     property bool islands: false
     property bool vertical: false

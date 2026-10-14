@@ -104,6 +104,17 @@ Singleton {
                 property bool labels: true           // app name on hover
             }
 
+            // Desktop widgets: on the desktop above the wallpaper, under windows.
+            // Added and arranged from quick settings → Desktop widgets.
+            property JsonObject desktop: JsonObject {
+                property bool enabled: true
+                property string style: "card"         // card | glass | bare
+                property real opacity: 0.8            // card background opacity
+                // [{ id, type, screen, x, y, size, text }]; x / y: the top-left corner as a
+                // share of the screen (0–1), size: s | m | l, text: a note's text
+                property var widgets: []
+            }
+
             property JsonObject launcher: JsonObject {
                 property int maxResults: 8
                 property string position: "center"    // center | top | bottom | top-left | top-right | bottom-left | bottom-right | bar

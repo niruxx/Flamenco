@@ -136,6 +136,17 @@ Variants {
                         }
                         FTile {
                             Layout.fillWidth: true
+                            icon: "widgets"
+                            title: "Desktop widgets"
+                            subtitle: Settings.data.desktop.enabled ? (Settings.data.desktop.widgets.length ? Settings.data.desktop.widgets.length + " on the desktop" : "Add some") : "Off"
+                            active: Settings.data.desktop.enabled && Settings.data.desktop.widgets.length > 0
+                            onClicked: {
+                                Settings.data.desktop.enabled = true;
+                                Panels.editWidgets(panel.modelData.name);
+                            }
+                        }
+                        FTile {
+                            Layout.fillWidth: true
                             icon: "wallpaper"
                             title: "Wallpaper"
                             subtitle: Paths.fileName(Wallpapers.current) || "None"

@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.18.5-E8466F?style=for-the-badge" alt="Version 0.18.5">
+  <img src="https://img.shields.io/badge/version-0.19.0-E8466F?style=for-the-badge" alt="Version 0.19.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -169,6 +169,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **🗓️ Dashboard** | Opens from the bar clock. Tabs: Overview (clock, calendar, user, weather and media cards), Media (full player), Wallpapers (picker and folder), Weather (configurable forecast), and a shortcut to Settings |
 | **📈 Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
 | **📌 Dock** | Optional. Bottom, left or right edge; pinned and running apps, magnification, auto-hide, app names on hover, running indicators, and its size, spacing, background and corners |
+| **🧩 Desktop widgets** | Clock, weather, system stats, now playing, calendar and notes on the desktop, under your windows. Drag them in from a sidebar opened from quick settings; move, resize or remove them; card, glass or bare style |
 | **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **🔒 Lock screen** | PAM auth with password or **fingerprint** (enroll fingers in Settings), blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
 | **🚪 Login screen** | Set up **Flamenco Greeter** (greetd) from Settings: wallpaper, blur and dim, fonts, the session picker, user list and power buttons, in the shell's palette. Edits greetd itself too: greeter, VT and auto-login |
@@ -585,6 +586,32 @@ The login screen at boot is separate from the lock screen. Flamenco uses [greetd
 
 What Settings writes for the greeter is described in [docs/greeter.md](docs/greeter.md).
 
+### 🧩 Desktop widgets
+
+Widgets sit on the desktop, above the wallpaper and under your windows.
+
+**Adding and arranging:** open **quick settings → Desktop widgets** (or `flamenco widgets`, or **Edit desktop** in **Settings → Desktop widgets**). A sidebar opens on that screen:
+- **Add:** drag a widget from the sidebar onto the desktop, or click it to drop it near the top left.
+- **Move:** drag a placed widget.
+- **Resize or remove:** hover a widget for **S / M / L** sizes and a remove button.
+- **Style:** pick **Card**, **Glass** or **Bare** (straight on the wallpaper, with a soft shadow) at the bottom of the sidebar. Opacity is on the Settings page.
+- **Done:** press **Done**, `Esc`, or click the empty desktop.
+
+**The widgets:**
+
+| Widget | Shows |
+|---|---|
+| Clock | the time, large, and the date |
+| Weather | now, and the next 3 days (5 when large); needs weather on in **Settings → Clock & Weather** |
+| System | processor, memory and temperature bars, and the uptime |
+| Now playing | cover art, title, artist, and play / previous / next |
+| Calendar | this month, with today marked |
+| Note | text you type right on the desktop; saved as you type |
+
+**Where they're kept:** in `desktop.widgets` in `~/.config/flamenco/settings.json`. Positions are stored as a share of the screen, so they survive resolution changes. Widgets saved for a screen that isn't connected show on the first screen.
+
+**Clicks:** only the widgets take clicks; the rest of the desktop is untouched.
+
 ### 📌 Dock
 
 The dock is off by default. Turn it on in **Settings → Dock**. That page also has:
@@ -990,7 +1017,7 @@ In **Settings → Appearance**:
   - *Classic*: a Windows-style taskbar at the bottom, with running apps
   - *Dock & menu bar*: a thin top bar and a dock, macOS-style
   - *Vertical*: a bar on the left side
-- **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels, and **Connect panels to the bar**. With that last one, quick settings, the calendar and the other panels grow out of the bar as one surface, with curved joins and no gap showing the wallpaper. It doesn't apply to the Islands bar style.
+- **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels, and **Connect panels to the bar**. With that last one, quick settings, the calendar and the other panels grow out of the bar as one surface, with curved joins and no gap showing the wallpaper. It doesn't apply to the Islands bar style. Panels opened from the bar open on the same side as the widget you clicked: a clock in the right section opens the calendar on the right, and one in the center opens it under the clock.
 - **Motion:** animation speed; 0% turns animations off.
 - **Typography:** interface and monospace fonts (Google Sans Flex and Google Sans Code by default), picked from dropdowns of installed fonts (system and `~/.local/share/fonts`) and shown in their own typeface, plus UI scale and a live preview.
 - **Icons:** filled (the Material 3 Expressive look, the default) or outlined, and how heavy the strokes are.
@@ -1110,6 +1137,7 @@ flamenco apps-theme --json SPEC | --restore
 flamenco pick folder|image [START]   # choose a folder or an image with the portal file chooser
 flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable   # login screen
 flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   # fprintd fingerprints
+flamenco widgets [edit|done|toggle]   # arrange desktop widgets
 flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC   # Wi-Fi and wired connections
 flamenco portals get | apply --json SPEC
 flamenco fonts [--json]

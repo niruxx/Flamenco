@@ -8,7 +8,7 @@ BarChip {
     property string screenName
     property int barLevel: 0
     property bool barVisible: Power.hasBattery
-    onClicked: Panels.toggle("control", screenName)
+    onClicked: Panels.toggle("control", screenName, root)
 
     BarFlow {
         spacing: Theme.barVertical ? 0 : 4

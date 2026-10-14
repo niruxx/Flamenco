@@ -9,7 +9,7 @@ BarChip {
     property string screenName
     property int barLevel: 0
     highlighted: Panels.current === "calendar"
-    onClicked: Panels.toggle("calendar", screenName)
+    onClicked: Panels.toggle("calendar", screenName, root)
 
     BarFlow {
         spacing: Theme.barVertical ? -2 : 8

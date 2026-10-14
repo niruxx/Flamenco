@@ -36,7 +36,17 @@ Variants {
         readonly property int labelRoom: cfg.labels ? (vertical ? 220 : 34) : 0
         // revealed while hovered, and for a moment after the pointer leaves
         readonly property bool revealed: !cfg.autoHide || hover.hovered || hideDelay.running || menu.visible
-        property real mouse: -1000                                // pointer along the dock
+        property real mouse: -1000                                // pointer along the dock (kept after it leaves)
+        // 0 → 1 while the pointer is over the dock. Only this eases in and out;
+        // icon sizes follow the pointer directly, since restarting an animation
+        // on every pointer move (faster than frames) made the icons stutter.
+        readonly property real hoverAmt: hoverAnim.v
+        // animated value lives on an Item: Behaviors on the window itself crash Qt 6.12
+        Item {
+            id: hoverAnim
+            property real v: hover.hovered && win.zoom > 0 ? 1 : 0
+            Behavior on v { Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+        }
 
         // App ids only, so the list (and its delegates) stays stable while
         // windows change titles. Pinned apps that aren't installed and aren't
@@ -67,7 +77,7 @@ Variants {
         }
         readonly property real restLength: ids.length ? restStarts[ids.length - 1] + (ids[ids.length - 1] === "|" ? sepSize : iconSize) : 0
         readonly property real restStart: ((vertical ? height : width) - restLength) / 2
-        readonly property bool magnifying: zoom > 0 && mouse > -1000
+        readonly property bool magnifying: hoverAmt > 0
 
         screen: modelData
         color: "transparent"
@@ -106,12 +116,8 @@ Variants {
         HoverHandler {
             id: hover
             onPointChanged: win.mouse = win.vertical ? point.position.y : point.position.x
-            onHoveredChanged: {
-                if (!hovered) {
-                    win.mouse = -1000;
-                    hideDelay.restart();
-                }
-            }
+            // the last position stays, so the icons shrink back from where the pointer was
+            onHoveredChanged: if (!hovered) hideDelay.restart()
         }
 
         // right-click menu: the same one as the bar's window title
@@ -184,14 +190,13 @@ Variants {
                         readonly property bool focused: windows.some(w => w.id === Niri.activeWindowId)
                         readonly property real center: win.restStart + (win.restStarts[index] ?? 0) + win.iconSize / 2
                         readonly property real mag: !sep && win.magnifying ? Math.max(0, 1 - Math.abs(win.mouse - center) / (win.iconSize * 2.2)) : 0
-                        readonly property real size: win.iconSize * (1 + win.zoom * mag)
+                        readonly property real size: win.iconSize * (1 + win.zoom * mag * win.hoverAmt)
                         property int cycle: 0
 
                         width: sep ? (win.vertical ? win.iconSize : win.sepSize) : size
                         height: sep ? (win.vertical ? win.sepSize : win.iconSize) : size
                         z: area.containsMouse ? 1 : 0
-                        Behavior on width { enabled: !app.sep; Anim { duration: Theme.durShort; easing.type: Easing.OutCubic } }
-                        Behavior on height { enabled: !app.sep; Anim { duration: Theme.durShort; easing.type: Easing.OutCubic } }
+                        // no Behavior on the size: it follows the pointer every frame
 
                         // separator between pinned and other running apps
                         Rectangle {

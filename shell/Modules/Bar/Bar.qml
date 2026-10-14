@@ -110,8 +110,8 @@ Variants {
         Component { id: batteryC; Battery { screenName: win.modelData.name } }
         Component { id: notifC; NotifBell { screenName: win.modelData.name } }
         Component { id: weatherC; WeatherChip { screenName: win.modelData.name } }
-        Component { id: quickC; FIconButton { icon: "menu"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name) } }
-        Component { id: powerC; FIconButton { icon: "power_settings_new"; size: Theme.barHeight - 10; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name) } }
+        Component { id: quickC; FIconButton { id: qsBtn; icon: "menu"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name, qsBtn) } }
+        Component { id: powerC; FIconButton { id: powerBtn; icon: "power_settings_new"; size: Theme.barHeight - 10; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name, powerBtn) } }
 
         Item {
             id: content
@@ -169,6 +169,7 @@ Variants {
             // start (left / top)
             BarSection {
                 id: startSec
+                barSide: "start"
                 registry: win.registry
                 islands: win.islands
                 vertical: win.vertical
@@ -181,6 +182,7 @@ Variants {
             // center: centered when there's room, otherwise kept between its neighbours
             BarSection {
                 id: centerSec
+                barSide: "center"
                 registry: win.registry
                 islands: win.islands
                 vertical: win.vertical
@@ -199,6 +201,7 @@ Variants {
             // end (right / bottom)
             BarSection {
                 id: endSec
+                barSide: "end"
                 registry: win.registry
                 islands: win.islands
                 vertical: win.vertical

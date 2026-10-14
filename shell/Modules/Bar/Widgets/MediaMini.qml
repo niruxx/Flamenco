@@ -11,7 +11,7 @@ BarChip {
     property bool barVisible: Media.active && barLevel < 3
     padding: 6
     highlighted: Panels.current === "calendar" && Panels.dashboardShown === "media"
-    onClicked: Panels.openDashboard("media", screenName)
+    onClicked: Panels.openDashboard("media", screenName, root)
     onMiddleClicked: Media.toggle()
     onRightClicked: Media.next()
 
