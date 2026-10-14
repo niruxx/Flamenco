@@ -22,6 +22,19 @@ Singleton {
     property int layoutIndex: 0
 
     readonly property var focusedWindow: windows.find(w => w.id === focusedWindowId) ?? null
+    // The window you're working in. When the shell's own panels (quick settings,
+    // the launcher…) take keyboard focus, niri reports no focused window; this
+    // keeps the last one as long as its workspace is still the focused one, so
+    // the bar doesn't drop it. On an empty workspace it's null.
+    property var lastFocusedId: null
+    onFocusedWindowIdChanged: if (focusedWindowId !== null) lastFocusedId = focusedWindowId
+    readonly property var activeWindow: {
+        if (focusedWindow)
+            return focusedWindow;
+        const last = windows.find(w => w.id === lastFocusedId);
+        return last && workspaces.some(ws => ws.id === last.workspace_id && ws.is_focused) ? last : null;
+    }
+    readonly property var activeWindowId: activeWindow?.id ?? null
     readonly property string focusedOutput: workspaces.find(w => w.is_focused)?.output ?? ""
     readonly property string currentLayout: layouts[layoutIndex] ?? ""
 

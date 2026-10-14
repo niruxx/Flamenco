@@ -173,14 +173,32 @@ PanelWindow {
             : Qt.point(edge === "left" ? r : 0, first ? 0 : r)
         onFillChanged: requestPaint()
         onHoleChanged: requestPaint()
+        onVisibleChanged: if (visible) requestPaint()
+        onRChanged: requestPaint()
+        // draw the curved shape itself (no erasing): from the square's corner next
+        // to the hole, across its far corner, to the other side, and back along
+        // the quarter circle around the hole
         onPaint: {
             const ctx = getContext("2d");
             ctx.reset();
+            const r = f.r, h = f.hole;
+            const a = Qt.point(r - h.x, h.y);          // beside the hole, along x
+            const o = Qt.point(r - h.x, r - h.y);      // the far corner
+            const b = Qt.point(h.x, r - h.y);          // beside the hole, along y
+            const angA = Math.atan2(a.y - h.y, a.x - h.x);
+            const angB = Math.atan2(b.y - h.y, b.x - h.x);
+            let sweep = angA - angB;
+            while (sweep > Math.PI)
+                sweep -= 2 * Math.PI;
+            while (sweep <= -Math.PI)
+                sweep += 2 * Math.PI;
             ctx.fillStyle = f.fill;
-            ctx.fillRect(0, 0, f.r, f.r);
-            ctx.globalCompositeOperation = "destination-out";
             ctx.beginPath();
-            ctx.arc(f.hole.x, f.hole.y, f.r, 0, Math.PI * 2);
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(o.x, o.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.arc(h.x, h.y, r, angB, angA, sweep < 0);
+            ctx.closePath();
             ctx.fill();
         }
     }

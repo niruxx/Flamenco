@@ -8,7 +8,7 @@ Page {
     title: "Bar"
     readonly property var b: Settings.data.bar
     readonly property var allWidgets: ({
-            launcher: "Launcher", workspaces: "Workspaces", window: "Active window", clock: "Clock", media: "Media",
+            launcher: "Launcher", workspaces: "Workspaces", window: "Active window", taskbar: "Taskbar (running apps)", clock: "Clock", media: "Media",
             tray: "System tray", sysstats: "CPU / RAM", keyboard: "Keyboard layout", network: "Network", bluetooth: "Bluetooth",
             audio: "Volume", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", power: "Power"
         })
@@ -35,6 +35,25 @@ Page {
         SwitchRow { title: "Hide passive icons"; subtitle: "Apps that mark themselves idle stay out of the bar"; icon: "visibility_off"; target: page.b; key: "trayHidePassive" }
         SliderRow { title: "Icons before overflow"; icon: "more_horiz"; target: page.b; key: "trayMaxVisible"; from: 2; to: 16; stepSize: 1 }
         SwitchRow { title: "Native Qt menus"; subtitle: "Use the app's own Qt menu instead of the themed one"; icon: "menu"; target: page.b; key: "trayNativeMenus" }
+    }
+
+    Group {
+        title: "Taskbar"
+        SettingRow {
+            visible: !page.used.includes("taskbar")
+            title: "Not in the bar yet"
+            subtitle: "Add \"Taskbar (running apps)\" to a section below. Right-click an app there for its window menu."
+            icon: "info"
+        }
+        ChoiceRow {
+            title: "Show apps from"
+            icon: "select_window"
+            target: page.b
+            key: "taskbarScope"
+            segWidth: 112
+            options: [{ value: "all", label: "Every screen" }, { value: "screen", label: "This screen" }, { value: "workspace", label: "Workspace" }]
+        }
+        SwitchRow { title: "Window titles"; subtitle: "Next to the icons, when there's room"; icon: "title"; target: page.b; key: "taskbarTitles" }
     }
 
     Repeater {

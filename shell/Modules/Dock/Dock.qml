@@ -181,7 +181,7 @@ Variants {
                         readonly property var entry: sep ? null : Apps.lookup(modelData)
                         readonly property bool pinned: win.cfg.pinned.includes(modelData)
                         readonly property var windows: sep ? [] : Niri.windows.filter(w => (w.app_id || "").toLowerCase() === modelData.toLowerCase())
-                        readonly property bool focused: windows.some(w => w.id === Niri.focusedWindowId)
+                        readonly property bool focused: windows.some(w => w.id === Niri.activeWindowId)
                         readonly property real center: win.restStart + (win.restStarts[index] ?? 0) + win.iconSize / 2
                         readonly property real mag: !sep && win.magnifying ? Math.max(0, 1 - Math.abs(win.mouse - center) / (win.iconSize * 2.2)) : 0
                         readonly property real size: win.iconSize * (1 + win.zoom * mag)
@@ -265,7 +265,7 @@ Variants {
                                 const wins = app.windows;
                                 if (mouse.button === Qt.RightButton) {
                                     // the app's focused window, else its first; none: Open / Unpin
-                                    const w = wins.find(x => x.id === Niri.focusedWindowId) ?? wins[0] ?? null;
+                                    const w = wins.find(x => x.id === Niri.activeWindowId) ?? wins[0] ?? null;
                                     const p = app.mapToItem(null, 0, 0);
                                     menu.open(w, Qt.rect(p.x, p.y, app.width, app.height), app.modelData);
                                 } else if (mouse.button === Qt.MiddleButton || wins.length === 0) {

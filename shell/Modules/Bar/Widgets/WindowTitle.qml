@@ -9,7 +9,7 @@ import qs.Widgets
 BarChip {
     id: root
     required property var window             // the bar window, for the menu popup
-    readonly property var win: Niri.focusedWindow
+    readonly property var win: Niri.activeWindow
     property int barLevel: 0
     property bool barVisible: win !== null && barLevel < 2
     highlighted: menu.visible

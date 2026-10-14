@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.18.2-E8466F?style=for-the-badge" alt="Version 0.18.2">
+  <img src="https://img.shields.io/badge/version-0.18.5-E8466F?style=for-the-badge" alt="Version 0.18.5">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -160,7 +160,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 
 | | |
 |---|---|
-| **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, brightness, battery, notifications, weather, power |
+| **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, brightness, battery, notifications, weather, power |
 | **🔔 App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
 | **🎛️ Control center** | Volume, mic, screen and keyboard brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, dark mode and wallpaper. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
 | **🔍 Launcher** | Fuzzy app search ranked by how often you use each app. `=` calculator, `>` run command, `;` clipboard history (cliphist) |
@@ -403,6 +403,7 @@ Every panel closes with `Esc` or a click outside it.
 | Launcher (apps icon) | open launcher | |
 | Workspaces | go to that workspace | scroll to switch workspaces |
 | Active window | window menu: move to another workspace or monitor, float/tile, fullscreen, maximize or center the column, new window, pin to dock, switch to another open window, close, force quit (click twice) | right-click opens the same menu, middle-click closes the window |
+| Taskbar | focus the app; click again to cycle through its windows | right-click opens the window menu (move to a workspace or monitor, float, fullscreen, pin, close all, force quit…), middle-click opens a new window |
 | Clock | dashboard (Overview, Media, Wallpapers, Weather) | |
 | Media | dashboard, Media tab (click again to close) | middle-click play/pause, right-click next track |
 | System tray | activate the app | right-click app menu, middle-click secondary action, scroll is passed to the app, hover for tooltip |
@@ -986,7 +987,7 @@ In **Settings → Appearance**:
 - **Layout presets:** one click sets up the bar, dock, launcher and notifications:
   - *Modern*: floating top bar, centered clock
   - *Minimal*: slim islands with just the essentials
-  - *Classic*: a Windows-style taskbar at the bottom
+  - *Classic*: a Windows-style taskbar at the bottom, with running apps
   - *Dock & menu bar*: a thin top bar and a dock, macOS-style
   - *Vertical*: a bar on the left side
 - **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels, and **Connect panels to the bar**. With that last one, quick settings, the calendar and the other panels grow out of the bar as one surface, with curved joins and no gap showing the wallpaper. It doesn't apply to the Islands bar style.

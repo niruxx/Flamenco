@@ -75,6 +75,8 @@ Singleton {
                 property bool trayHidePassive: false  // hide tray icons whose app reports "passive"
                 property bool trayNativeMenus: false  // use Qt's native menus instead of themed ones
                 property int trayMaxVisible: 6        // extra icons go into an overflow drawer
+                property string taskbarScope: "all"   // taskbar widget: all | screen | workspace
+                property bool taskbarTitles: false    // window titles next to the taskbar's icons
                 property var left: ["launcher", "workspaces", "window"]
                 property var center: ["clock", "media"]
                 property var right: ["tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings", "power"]

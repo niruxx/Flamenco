@@ -38,7 +38,7 @@ Page {
           dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-center" } },
         { id: "classic", label: "Classic", icon: "desktop_windows", hint: "Taskbar at the bottom, Windows-style",
           bar: { position: "bottom", style: "attached", height: 44, workspaceStyle: "numbers",
-                 left: ["launcher", "workspaces", "window"], center: [],
+                 left: ["launcher", "workspaces", "taskbar"], center: [],
                  right: ["tray", "keyboard", "network", "bluetooth", "audio", "battery", "clock", "notifications", "quicksettings"] },
           dock: { enabled: false }, launcher: { position: "bottom-left" }, notifications: { position: "bottom-right" } },
         { id: "mac", label: "Dock & menu bar", icon: "dock_to_bottom", hint: "Thin top bar and a dock, macOS-style",
