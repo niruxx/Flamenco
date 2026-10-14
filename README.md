@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.15.0-E8466F?style=for-the-badge" alt="Version 0.15.0">
+  <img src="https://img.shields.io/badge/version-0.16.0-E8466F?style=for-the-badge" alt="Version 0.16.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -170,7 +170,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **📈 Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
 | **📌 Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
 | **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
-| **🔒 Lock screen** | PAM auth, blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
+| **🔒 Lock screen** | PAM auth with password or **fingerprint** (enroll fingers in Settings), blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
 | **🚪 Login screen** | Set up **Flamenco Greeter** (greetd) from Settings: wallpaper, blur and dim, fonts, the session picker, user list and power buttons, in the shell's palette. Edits greetd itself too: greeter, VT and auto-login |
 | **⚡ Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; log out, restart and shut down must be held for 3 seconds |
 | **✨ Login & logout animations** | Bloom, Curtain, Blinds, Zoom or Fade over your blurred wallpaper with a greeting; separate choices for login and logout, with previews |
@@ -246,6 +246,7 @@ Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest
 | `qt6-imageformats` | `.webp` wallpapers |
 | `power-profiles-daemon`, `upower`, `bluez` | power profile tile, battery, Bluetooth |
 | `python-gobject` + `xdg-desktop-portal-gtk` (or `-gnome` / `-kde`) | the **Browse** folder picker (falls back to kdialog, zenity or yad) |
+| `fprintd` | fingerprints: enrolling, and unlocking the lock screen |
 
 On Arch:
 
@@ -544,6 +545,19 @@ The same page has a duration slider, a greeting on/off switch, and **Preview** b
 
 Use **Lock now** on the same page to preview your choice.
 
+<a id="fingerprint"></a>
+
+### 👆 Fingerprints
+
+With `fprintd` installed and a supported reader, go to **Settings → Lock & Login → Fingerprint**:
+- **Add a fingerprint:** pick a finger, click **Add**, then touch the reader until the bar fills. The page tells you when to lift your finger or move it a little.
+- **Remove:** each enrolled finger has its own **Remove** button.
+- **Unlock the lock screen with a fingerprint:** on by default once a finger is enrolled. The lock screen shows "Or touch the fingerprint reader" under the password field, and both work. This uses a PAM file inside the shell (`shell/assets/pam/fingerprint`), so nothing in `/etc/pam.d` changes. It works with the built-in lock and SDDM themes, not with a lock command.
+- **At the login screen:** turn on **Fingerprint login** in the Flamenco Greeter group. The check itself runs in greetd's PAM setup, which Flamenco doesn't edit. Settings shows the line to add to `/etc/pam.d/greetd` and copies it for you.
+
+> [!NOTE]
+> A fingerprint can't unlock your keyring (gnome-keyring, KWallet), which needs your password. If you log in with a finger, the keyring asks for your password the first time an app needs it. Unlocking the lock screen with a finger doesn't have this problem, because the keyring is already open.
+
 <a id="login-screen"></a>
 
 ### 🚪 Login screen (greetd)
@@ -555,6 +569,7 @@ The login screen at boot is separate from the lock screen. Flamenco uses [greetd
 - **Fonts:** the shell's fonts or others, plus a text size. Colors always follow the shell's palette.
 - **Sessions:** turn the session picker on or off, pick the default session (or the last one used), and hide sessions you never use.
 - **Users:** list users or type a name, remember the last user and session, and show or hide the power buttons.
+- **Fingerprint login:** see [Fingerprints](#fingerprint).
 - **Apply:** opens a terminal and asks for your password once. The greeter runs as its own user and can't read your home folder, so the settings, wallpaper and your avatar are copied to `/var/cache/flamenco-greeter`. Your clock format and palette go along too.
 
 **greetd section:**
@@ -1075,6 +1090,7 @@ flamenco theme PALETTE | dark | light | toggle | list | apply-apps
 flamenco apps-theme --json SPEC | --restore
 flamenco pick folder|image [START]   # choose a folder or an image with the portal file chooser
 flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable   # login screen
+flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   # fprintd fingerprints
 flamenco portals get | apply --json SPEC
 flamenco fonts [--json]
 flamenco sound themes | play EVENT | find EVENT

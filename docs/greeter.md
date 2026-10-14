@@ -57,7 +57,8 @@ Each Apply replaces `config.json`, `wallpaper.*` and `avatars/*`. Anything else 
   "clock": { "use24h": true, "showSeconds": false },
   "sessions": { "picker": true, "default": "niri.desktop", "hidden": ["gnome-classic.desktop"] },
   "users": { "list": true, "rememberLast": true, "default": "", "avatars": { "kyle": "avatars/kyle.png" } },
-  "power": { "buttons": true }
+  "power": { "buttons": true },
+  "auth": { "fingerprint": false }
 }
 ```
 
@@ -77,8 +78,27 @@ Each Apply replaces `config.json`, `wallpaper.*` and `avatars/*`. Anything else 
 | `users.rememberLast` | Preselect the last user and session. The greeter keeps these in its own state file. |
 | `users.avatars` | Login name → path relative to this folder. Users not listed fall back to AccountsService, then to an initial. |
 | `power.buttons` | Show suspend, restart and shut down. |
+| `auth.fingerprint` | The user wants fingerprint login. See [Fingerprints](#fingerprints). |
 
 If `config.json` is missing or unreadable, the greeter should use its own defaults.
+
+## Fingerprints
+
+The fingerprint check runs in greetd's PAM stack (`/etc/pam.d/greetd`), not in the greeter. The shell enrolls fingers (`flamenco fingerprint`, which wraps fprintd's tools), and `auth.fingerprint` says whether the user wants fingerprint login. Settings doesn't edit `/etc/pam.d/greetd`. When `pam_fprintd.so` isn't in that stack, it shows this line for the user to add as the first `auth` line:
+
+```
+auth       sufficient   pam_fprintd.so
+```
+
+With that line, greetd's `create_session` answers with an `auth_message` of type `info` from pam_fprintd before any password prompt (e.g. "Place your finger on the fingerprint reader"). A failed scan sends type `error`. Neither needs a response other than an empty `post_auth_message_response`. When the finger matches, the session can start. If the scan times out or runs out of tries, PAM moves on to the next module and a `secret` prompt (the password) follows.
+
+What the greeter should do:
+
+- When `auth.fingerprint` is `true` and an `info` or `error` message arrives while waiting for the user, show a fingerprint prompt and the message instead of the password field.
+- When `auth.fingerprint` is `false`, the user didn't ask for it. The greeter can still pass the messages through, because PAM decides either way.
+- `status --json` from the shell has `fingerprintPam` (whether greetd's stack loads pam_fprintd), if the greeter wants the same answer.
+
+A fingerprint login doesn't unlock the login keyring (gnome-keyring, KWallet), because that needs the password. The keyring asks for it the first time an app needs it.
 
 ## Commands (shell side)
 
@@ -88,6 +108,9 @@ flamenco greeter sessions               # id <TAB> name <TAB> Exec
 flamenco greeter apply --json SPEC      # write /var/cache/flamenco-greeter (needs root)
 flamenco greeter greetd --json SPEC     # edit /etc/greetd/config.toml (needs root, keeps backups)
 flamenco greeter enable                 # systemctl enable --force greetd.service (needs root)
+flamenco fingerprint status [--json]    # reader, enrolled fingers, whether login / greetd PAM load pam_fprintd
+flamenco fingerprint enroll FINGER      # one line per event: start|stage|retry|done|fail|info <TAB> detail
+flamenco fingerprint delete FINGER|all
 ```
 
 `greetd` keys:
@@ -103,4 +126,4 @@ flamenco greeter enable                 # systemctl enable --force greetd.servic
 
 Before writing `/etc/greetd/config.toml`, the previous version is saved as `config.toml.bak-<date>`. The very first version is also kept as `config.toml.orig`. Sections and keys the Settings app doesn't manage, like `[general]`, are kept as they are.
 
-For testing, `FLAMENCO_GREETD_CONFIG` and `FLAMENCO_GREETER_DIR` override the two paths.
+For testing, `FLAMENCO_GREETD_CONFIG`, `FLAMENCO_GREETER_DIR` and `FLAMENCO_PAM_DIR` override the paths.

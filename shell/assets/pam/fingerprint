@@ -1,0 +1,5 @@
+#%PAM-1.0
+# Fingerprint unlock for Flamenco's lock screen. It runs next to the password
+# check (/etc/pam.d/login), so it only asks fprintd. Quickshell reads this file
+# from here; nothing is installed into /etc/pam.d.
+auth required pam_fprintd.so max-tries=3 timeout=30

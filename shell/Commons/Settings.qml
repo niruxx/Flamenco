@@ -124,6 +124,7 @@ Singleton {
                 property string sddmTheme: ""         // theme folder (full path, or a name under /usr/share/sddm/themes)
                 property string sddmThemePath: ""     // or any folder containing an SDDM theme (overrides sddmTheme)
                 property string command: ""           // e.g. "hyprlock" or "swaylock -f"
+                property bool fingerprint: true       // also unlock with an enrolled finger (fprintd)
             }
 
             // Flamenco Greeter (the greetd login screen). Applied with `flamenco greeter apply`,
@@ -143,6 +144,7 @@ Singleton {
                 property bool userList: true
                 property bool rememberUser: true
                 property bool powerButtons: true
+                property bool fingerprint: false   // offer fingerprint login (needs pam_fprintd in /etc/pam.d/greetd)
             }
 
             property JsonObject weather: JsonObject {

@@ -73,6 +73,7 @@ ColumnLayout {
             sessions: { picker: g.sessionPicker, default: g.defaultSession, hidden: g.hiddenSessions },
             users: { list: g.userList, rememberLast: g.rememberUser },
             power: { buttons: g.powerButtons },
+            auth: { fingerprint: g.fingerprint },
             avatars: avatars
         };
         inTerminal("apply --json " + Paths.shellQuote(JSON.stringify(spec)));
@@ -232,6 +233,26 @@ ColumnLayout {
         SwitchRow { title: "List users"; subtitle: "Off: type a user name instead"; icon: "group"; target: root.g; key: "userList" }
         SwitchRow { title: "Remember the last user and session"; icon: "history"; target: root.g; key: "rememberUser" }
         SwitchRow { title: "Power buttons"; subtitle: "Suspend, restart and shut down on the login screen"; icon: "power_settings_new"; target: root.g; key: "powerButtons" }
+        SwitchRow {
+            title: "Fingerprint login"
+            subtitle: !Fingerprint.enrolled ? "Enroll a finger in the Fingerprint section above first"
+                : root.st.fingerprintPam ? "greetd's PAM setup asks fprintd, so the greeter can show a fingerprint prompt. Your keyring still needs your password the first time."
+                : "greetd doesn't ask for fingerprints yet. Add this as the first auth line of /etc/pam.d/greetd: auth sufficient pam_fprintd.so"
+            icon: "fingerprint"
+            target: root.g
+            key: "fingerprint"
+        }
+        SettingRow {
+            visible: root.g.fingerprint && root.loaded && !root.st.fingerprintPam
+            title: "Copy the PAM line"
+            subtitle: "Flamenco doesn't edit PAM files itself: a mistake there can lock you out. Keep a root shell open while you try it."
+            icon: "content_copy"
+            FButton {
+                text: "Copy"
+                variant: "tonal"
+                onClicked: Quickshell.execDetached(["wl-copy", "auth       sufficient   pam_fprintd.so"])
+            }
+        }
 
         SettingRow {
             title: "Apply to the login screen"

@@ -31,6 +31,7 @@ Scope {
         }
         if (locked)
             return;
+        Fingerprint.refresh();
         buffer = "";
         errorText = "";
         unlocking = false;
@@ -55,6 +56,11 @@ Scope {
         pam.start();
     }
 
+    function granted() {
+        root.unlocking = true;
+        unlockTimer.start();
+    }
+
     PamContext {
         id: pam
         config: "login"
@@ -65,8 +71,7 @@ Scope {
         onCompleted: result => {
             root.authenticating = false;
             if (result === PamResult.Success) {
-                root.unlocking = true;
-                unlockTimer.start();
+                root.granted();
             } else {
                 root.errorText = "Wrong password";
                 root.buffer = "";
@@ -76,6 +81,83 @@ Scope {
         onError: () => {
             root.authenticating = false;
             root.errorText = "Authentication error";
+        }
+    }
+
+    // ── fingerprint ──
+    // A second PAM check that waits for a finger the whole time the screen is
+    // locked, next to the password one. It uses the shell's own PAM file
+    // (assets/pam/fingerprint: pam_fprintd only), so /etc/pam.d isn't touched.
+    readonly property bool fpWanted: locked && !unlocking && cfg.fingerprint && Fingerprint.enrolled
+    property string fpText: ""
+    property bool fpError: false
+    property int fpQuickFails: 0
+    property real fpStartedAt: 0
+
+    onFpWantedChanged: fpWanted ? fpStart() : fpStop()
+
+    function fpStart() {
+        if (fprint.active)
+            return;
+        fpStartedAt = Date.now();
+        fprint.start();
+    }
+
+    function fpStop() {
+        fpRetry.stop();
+        if (fprint.active)
+            fprint.abort();
+        fpText = "";
+        fpError = false;
+        fpQuickFails = 0;
+    }
+
+    // after a timeout or too many misses, start again; stop if it keeps failing at once (no reader)
+    function fpAgain() {
+        fpQuickFails = Date.now() - fpStartedAt < 3000 ? fpQuickFails + 1 : 0;
+        if (fpWanted && fpQuickFails < 3)
+            fpRetry.restart();
+    }
+
+    PamContext {
+        id: fprint
+        configDirectory: Quickshell.shellDir + "/assets/pam"
+        config: "fingerprint"
+        onPamMessage: {
+            if (responseRequired) {
+                respond("");
+                return;
+            }
+            if (messageIsError && !/time/i.test(message)) {
+                root.fpError = true;
+                root.fpText = "Not recognized, try again";
+                fpClear.restart();
+            }
+        }
+        onCompleted: result => {
+            if (result === PamResult.Success) {
+                if (pam.active)
+                    pam.abort();
+                root.authenticating = false;
+                root.granted();
+            } else {
+                root.fpAgain();
+            }
+        }
+        onError: () => root.fpAgain()
+    }
+
+    Timer {
+        id: fpRetry
+        interval: 1500
+        onTriggered: if (root.fpWanted) root.fpStart()
+    }
+    Timer {
+        id: fpClear
+        interval: 2500
+        onTriggered: {
+            root.fpError = false;
+            root.fpText = "";
         }
     }
 

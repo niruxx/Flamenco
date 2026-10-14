@@ -201,6 +201,25 @@ Item {
                 onClicked: input.forceActiveFocus()
             }
         }
+
+        // fingerprint hint, while the reader is waiting
+        Row {
+            Layout.alignment: Qt.AlignHCenter
+            visible: root.ctx.fpWanted
+            spacing: 8
+            FIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                icon: "fingerprint"
+                size: 20
+                color: root.ctx.fpError ? Theme.error : Theme.accent
+            }
+            FText {
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.ctx.fpText || "Or touch the fingerprint reader"
+                color: root.ctx.fpError ? Theme.error : Theme.textDim
+                font.pixelSize: Theme.fsSm
+            }
+        }
     }
 
     // media + session

@@ -2,7 +2,7 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.15.0
+pkgver=0.16.0
 pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
@@ -16,6 +16,8 @@ optdepends=(
     'grim: screenshots on Hyprland'
     'libnotify: screenshot notifications on Hyprland'
     'flatpak: Flatpak permissions page'
+    'fprintd: fingerprint enrolling and unlock'
+    'greetd: login screen (with flamenco-greeter)'
     'pciutils: graphics card in Settings → About'
     'networkmanager: network status and Wi-Fi control'
     'brightnessctl: screen brightness'

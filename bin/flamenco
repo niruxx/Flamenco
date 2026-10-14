@@ -23,6 +23,7 @@
   flamenco pick folder|image [START]   choose a folder or an image (portal file chooser)
   flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable
                                login screen: Flamenco Greeter and greetd
+  flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   fingerprints (fprintd)
   flamenco portals get | apply --json SPEC   screen sharing / file chooser backends
   flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
   flamenco launch APP_ID       start a desktop app (used by app shortcuts)
@@ -54,7 +55,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.15.0"
+VERSION = "0.16.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -2203,6 +2204,7 @@ def greeter_status() -> dict:
         },
         "applied": applied,
         "appliedDir": str(GREETER_DIR),
+        "fingerprintPam": pam_uses("greetd", "pam_fprintd.so"),
         "sessions": login_sessions(),
         "users": login_users(),
         "me": os.environ.get("USER") or HOME.name,
@@ -2251,6 +2253,7 @@ def greeter_config(spec: dict) -> tuple[dict, dict]:
         "users": {"list": bool(u.get("list", True)), "rememberLast": bool(u.get("rememberLast", True)),
                   "default": str(u.get("default", "")), "avatars": avatars},
         "power": {"buttons": bool(spec.get("power", {}).get("buttons", True))},
+        "auth": {"fingerprint": bool(spec.get("auth", {}).get("fingerprint", False))},
     }
     return cfg, files
 
@@ -2372,6 +2375,144 @@ def cmd_greeter(args: list[str]) -> int:
         print("greetd: enabled; it replaces your current login manager from the next boot")
         return 0
     die("usage: flamenco greeter status [--json] | sessions | apply --json SPEC | greetd --json SPEC | enable")
+
+
+# ─────────────────────────────── fingerprints (fprintd) ──────────────────────
+# Enrolling goes through fprintd's own tools (fprintd-list / -enroll / -delete),
+# which talk to fprintd over D-Bus as you; polkit lets the active session manage
+# its own prints. Nothing here touches /etc/pam.d: the lock screen uses its own
+# PAM file (shell/assets/pam/fingerprint), and greetd's is only read.
+
+FINGERS = ("right-index-finger", "left-index-finger", "right-thumb", "left-thumb",
+           "right-middle-finger", "left-middle-finger", "right-ring-finger", "left-ring-finger",
+           "right-little-finger", "left-little-finger")
+ENROLL_FAIL = ("enroll-failed", "enroll-data-full", "enroll-disconnected", "enroll-unknown-error", "enroll-duplicate")
+PAM_DIR = Path(os.environ.get("FLAMENCO_PAM_DIR", "/etc/pam.d"))
+
+
+def pam_uses(service: str, module: str, depth: int = 0) -> bool:
+    """True if /etc/pam.d/SERVICE's auth stack loads MODULE, following include / substack."""
+    if depth > 6:
+        return False
+    try:
+        text = (PAM_DIR / service).read_text(errors="ignore")
+    except OSError:
+        return False
+    for line in text.splitlines():
+        words = line.split("#", 1)[0].split()
+        if not words:
+            continue
+        if words[0] == "@include" and len(words) > 1 and pam_uses(words[1], module, depth + 1):
+            return True
+        if words[0].lstrip("-") != "auth" or len(words) < 3:
+            continue
+        if words[1] in ("include", "substack"):
+            if pam_uses(words[2], module, depth + 1):
+                return True
+        elif any(os.path.basename(w) == module for w in words[2:]):
+            return True
+    return False
+
+
+def fprint_props(path: str) -> dict:
+    out = run_out(["gdbus", "introspect", "--system", "--dest", "net.reactivated.Fprint", "--object-path", path, "--only-properties"])
+    props = dict(re.findall(r"readonly \w+ ([\w-]+) = '?([^';]*)'?;", out))
+    try:
+        stages = int(props.get("num-enroll-stages", "0"))
+    except ValueError:
+        stages = 0
+    return {"device": props.get("name", ""), "stages": max(stages, 0), "scanType": props.get("scan-type", "")}
+
+
+def fprint_status() -> dict:
+    me = os.environ.get("USER") or HOME.name
+    st = {"installed": shutil.which("fprintd-list") is not None, "user": me, "device": "", "path": "", "stages": 0,
+          "scanType": "", "fingers": [], "error": "",
+          "pam": {"login": pam_uses("login", "pam_fprintd.so"), "greetd": pam_uses("greetd", "pam_fprintd.so")}}
+    if not st["installed"]:
+        return st
+    try:
+        p = subprocess.run(["fprintd-list", me], capture_output=True, text=True, timeout=15)
+        text = p.stdout + p.stderr
+    except (OSError, subprocess.TimeoutExpired) as e:
+        st["error"] = f"fprintd didn't answer: {e}"
+        return st
+    if re.search(r"No devices available", text):
+        st["error"] = "no reader"
+        return st
+    m = re.search(r"^Device at (\S+)", text, re.M)
+    if m:
+        st["path"] = m.group(1)
+        st.update(fprint_props(m.group(1)))
+    if not st["device"]:
+        d = re.search(r"Fingerprints for user \S+ on (.+?) \((\w+)\):", text) or re.search(r"has no fingers enrolled for (.+?)\.?\s*$", text, re.M)
+        if d:
+            st["device"] = d.group(1)
+            if d.lastindex and d.lastindex > 1:
+                st["scanType"] = d.group(2)
+    st["fingers"] = [f for f in re.findall(r"^\s*- #\d+: (\S+)", text, re.M) if f in FINGERS]
+    if not st["device"] and p.returncode != 0:
+        st["error"] = text.strip().splitlines()[-1] if text.strip() else f"fprintd-list exited with {p.returncode}"
+    return st
+
+
+def fprint_enroll(finger: str) -> int:
+    """Run fprintd-enroll, printing one line per event: KIND <TAB> DETAIL.
+    KIND is start | stage | retry | done | fail | info."""
+    import signal
+    me = os.environ.get("USER") or HOME.name
+    proc = subprocess.Popen(["fprintd-enroll", "-f", finger, me], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+
+    # cancelling (SIGTERM from the settings page) must release the reader too
+    def stop(*_):
+        proc.terminate()
+        sys.exit(130)
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+
+    result = ""
+    for line in proc.stdout:
+        line = line.strip()
+        m = re.search(r"Enroll result: (\S+)", line)
+        if m:
+            result = m.group(1)
+            kind = "done" if result == "enroll-completed" else "stage" if result == "enroll-stage-passed" \
+                else "fail" if result in ENROLL_FAIL else "retry"
+            print(f"{kind}\t{result}", flush=True)
+        elif line.startswith("Enrolling"):
+            print(f"start\t{finger}", flush=True)
+        elif line and not line.startswith(("Using device", "found ")):
+            print(f"info\t{line}", flush=True)
+    rc = proc.wait()
+    if result != "enroll-completed":
+        if not result:
+            print("fail\tno-result", flush=True)
+        return rc or 1
+    return 0
+
+
+def cmd_fingerprint(args: list[str]) -> int:
+    sub = args[0] if args else "status"
+    if sub == "status":
+        print(json.dumps(fprint_status(), indent=None if "--json" in args else 2))
+        return 0
+    if sub not in ("enroll", "delete"):
+        die("usage: flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all")
+    if not shutil.which("fprintd-list"):
+        die("fprintd isn't installed (sudo pacman -S fprintd)")
+    target = args[1] if len(args) > 1 else ""
+    if sub == "enroll":
+        if target not in FINGERS:
+            die("finger must be one of: " + ", ".join(FINGERS))
+        return fprint_enroll(target)
+    if target != "all" and target not in FINGERS:
+        die("finger must be 'all' or one of: " + ", ".join(FINGERS))
+    me = os.environ.get("USER") or HOME.name
+    cmd = ["fprintd-delete", me] + ([] if target == "all" else ["-f", target])
+    rc = subprocess.run(cmd).returncode
+    if rc != 0:
+        die("fprintd-delete failed" + ("" if target == "all" else " (fprintd older than 1.92 can only remove all fingers)"))
+    return 0
 
 
 # ─────────────────────────────── portals (screen sharing) ────────────────────
@@ -5192,6 +5333,8 @@ def main(argv: list[str]) -> int:
         return cmd_pick(rest)
     if cmd == "greeter":
         return cmd_greeter(rest)
+    if cmd == "fingerprint":
+        return cmd_fingerprint(rest)
     if cmd == "pointer":
         return cmd_pointer(rest)
     if cmd == "flatpak":
