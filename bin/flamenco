@@ -68,7 +68,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.25.0"
+VERSION = "0.25.1"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -5912,9 +5912,10 @@ def doctor_checks() -> list[dict]:
     """Everything Flamenco uses, grouped, with the Arch package that provides it."""
     checks = []
 
-    def add(category, name, purpose, ok, package="", required=False, aur=False, hint=""):
+    def add(category, name, purpose, ok, package="", required=False, aur=False, hint="", fix=""):
+        # fix: a command that sets it right when a package alone doesn't (e.g. joining a group)
         checks.append({"category": category, "name": name, "purpose": purpose, "ok": bool(ok),
-                       "package": package, "required": required, "aur": aur, "hint": hint})
+                       "package": package, "required": required, "aur": aur, "hint": hint, "fix": fix})
 
     have = lambda *bins: any(shutil.which(b) for b in bins)
     exists = lambda *paths: any(Path(p).exists() for p in paths)
@@ -6003,6 +6004,55 @@ def doctor_checks() -> list[dict]:
     add("Features", "Screenshots", "README screenshots script", have("grim"), "grim")
     add("Features", "Notifications CLI", "notify-send", have("notify-send"), "libnotify")
     add("Features", "btop", "Open btop from the performance popout", have("btop"), "btop")
+    add("Features", "Sounds", "event sounds (pw-play)", have("pw-play", "paplay"), "pipewire")
+    add("Features", "Firewall", "Settings → Firewall", have("ufw", "firewall-cmd"), "ufw")
+    add("Features", "Flatpak", "Settings → Flatpak permissions", have("flatpak"), "flatpak")
+    add("Features", "pciutils", "the graphics card in Settings → About", have("lspci"), "pciutils")
+    add("Features", "File chooser portal", "Browse buttons (wallpaper folder, images)",
+        bool({p["name"] for p in installed_portals()} & {"gtk", "gnome", "kde"}), "xdg-desktop-portal-gtk")
+    gi_ok = False
+    try:
+        import importlib.util
+        gi_ok = importlib.util.find_spec("gi") is not None
+    except Exception:
+        pass
+    add("Features", "python-gobject", "talks to the file chooser portal", gi_ok, "python-gobject")
+
+    # ── extras ──
+    add("Extras", "Screen recording", "record the screen or an area (or gpu-screen-recorder)", have("wf-recorder", "gpu-screen-recorder"), "wf-recorder")
+    add("Extras", "slurp", "picking an area to record (and screenshots on Hyprland)", have("slurp"), "slurp")
+    if compositor() == "hyprland":
+        add("Extras", "hyprpicker", "the color picker on Hyprland", have("hyprpicker"), "hyprpicker")
+        add("Extras", "jq", "window screenshots on Hyprland", have("jq"), "jq")
+    add("Extras", "Emoji font", "emoji in the launcher (:) and everywhere else", font_installed("Noto Color Emoji"), "noto-fonts-emoji")
+    add("Extras", "Package updates", "the updates widget (checkupdates)", have("checkupdates"), "pacman-contrib")
+    add("Extras", "AUR helper", "AUR updates in the updates widget, and installing AUR packages here", have("paru", "yay"), "",
+        hint="install paru or yay yourself: https://github.com/Morganamilo/paru#installation")
+    add("Extras", "cava", "the audio visualizer in the bar", have("cava"), "cava")
+    add("Extras", "Fingerprint reader", "enroll fingers and unlock with them", have("fprintd-list"), "fprintd")
+    add("Extras", "git", "installing plugins from a git address", have("git"), "git")
+    add("Extras", "Login screen", "greetd, for Flamenco Greeter (Settings → Lock & Login)", have("greetd") or exists("/usr/bin/greetd"), "greetd")
+    add("Extras", "CalDAV calendars", "vdirsyncer brings CalDAV calendars (Nextcloud, iCloud…) to a folder Flamenco reads", have("vdirsyncer"), "vdirsyncer")
+    ddc = have("ddcutil")
+    add("Extras", "ddcutil", "brightness of external monitors", ddc, "ddcutil")
+    if ddc:
+        import grp
+        try:
+            in_i2c = "i2c" in [grp.getgrgid(g).gr_name for g in os.getgroups()]
+        except KeyError:
+            in_i2c = False
+        add("Extras", "i2c access", "ddcutil needs the i2c group and the i2c-dev module", in_i2c and exists("/dev/i2c-0", "/dev/i2c-1", "/dev/i2c-2"), "",
+            hint="then log out and back in", fix='sudo usermod -aG i2c "$USER" && echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf >/dev/null && sudo modprobe i2c-dev')
+
+    # ── AI ──
+    anth = False
+    try:
+        import importlib.util
+        anth = importlib.util.find_spec("anthropic") is not None
+    except Exception:
+        pass
+    add("AI", "Anthropic SDK", "Claude in the AI assistant", anth, "python-anthropic", aur=True)
+    add("AI", "Keyring tool", "keeps AI API keys in your keyring (secret-tool)", have("secret-tool"), "libsecret")
 
     # ── theming ──
     add("Theming", "qt6ct", "theme Qt 6 apps", have("qt6ct"), "qt6ct")
@@ -6014,6 +6064,12 @@ def doctor_checks() -> list[dict]:
     add("Theming", "adw-gtk3", "GTK 3 apps that match libadwaita", exists("/usr/share/themes/adw-gtk3", str(XDG_DATA / "themes/adw-gtk3")), "adw-gtk-theme")
     add("Theming", "WebP wallpapers", "qt6-imageformats", exists("/usr/lib/qt6/plugins/imageformats/libqwebp.so"), "qt6-imageformats")
     add("Theming", "matugen", "colors from your wallpaper", have("matugen"), "matugen-bin", aur=True)
+    add("Theming", "Kvantum", "the Kvantum Qt style (App Theming)", have("kvantummanager"), "kvantum")
+    # only for apps you have
+    if have("firefox", "librewolf", "floorp"):
+        add("Theming", "pywalfox", "Firefox in your palette (App Theming → Other apps)", have("pywalfox"), "python-pywalfox", aur=True)
+    if have("spotify", "spotify-launcher"):
+        add("Theming", "spicetify", "Spotify in your palette (App Theming → Other apps)", have("spicetify"), "spicetify-cli", aur=True)
     return checks
 
 
@@ -6027,11 +6083,15 @@ def install_command(checks: list[dict]) -> str:
     missing = [c for c in checks if not c["ok"] and c["package"]]
     repo = sorted({c["package"] for c in missing if not c["aur"]})
     aur = sorted({c["package"] for c in missing if c["aur"]})
+    helper = next((h for h in ("paru", "yay") if shutil.which(h)), "")
     parts = []
     if repo:
         parts.append("sudo pacman -S --needed " + " ".join(repo))
-    if aur:
-        parts.append("paru -S --needed " + " ".join(aur))
+    # AUR packages need a helper; without one they're listed but left out (see the "AUR helper" check)
+    if aur and helper:
+        parts.append(f"{helper} -S --needed " + " ".join(aur))
+    # things a package doesn't fix (group membership…)
+    parts += [c["fix"] for c in checks if not c["ok"] and c.get("fix")]
     return " && ".join(parts)
 
 
