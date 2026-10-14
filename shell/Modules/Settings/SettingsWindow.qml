@@ -46,7 +46,7 @@ LazyLoader {
             { id: "defaults", icon: "open_in_new", label: "Default apps", comp: defaultsC },
             { id: "autostart", icon: "rocket_launch", label: "Auto-start", comp: autostartC },
             { id: "flatpak", icon: "inventory_2", label: "Flatpak permissions", comp: flatpakC },
-            { id: "lock", icon: "lock", label: "Lock & Idle", comp: lockC },
+            { id: "lock", icon: "lock", label: "Lock & Login", comp: lockC },
             { id: "clock", icon: "schedule", label: "Clock & Weather", comp: clockC },
             { id: "system", icon: "health_and_safety", label: "System check", comp: systemC },
             { id: "about", icon: "info", label: "About", comp: aboutC }

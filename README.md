@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.14.2-E8466F?style=for-the-badge" alt="Version 0.14.2">
+  <img src="https://img.shields.io/badge/version-0.15.0-E8466F?style=for-the-badge" alt="Version 0.15.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -171,6 +171,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **📌 Dock** | Optional. Pinned and running apps, magnification, auto-hide with an adjustable reveal edge, app picker for pinning |
 | **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **🔒 Lock screen** | PAM auth, blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
+| **🚪 Login screen** | Set up **Flamenco Greeter** (greetd) from Settings: wallpaper, blur and dim, fonts, the session picker, user list and power buttons, in the shell's palette. Edits greetd itself too: greeter, VT and auto-login |
 | **⚡ Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; log out, restart and shut down must be held for 3 seconds |
 | **✨ Login & logout animations** | Bloom, Curtain, Blinds, Zoom or Fade over your blurred wallpaper with a greeting; separate choices for login and logout, with previews |
 
@@ -499,7 +500,7 @@ Past notifications stay in the notification center (`Mod+N`). It also has button
 
 ### 🔒 Lock screen and power menu
 
-- **Lock** (`Super+Alt+L`, or automatically after the idle time in **Settings → Lock & Idle**): type your password and press `Enter`. `Esc` clears what you typed. See [Lock screen options](#lock-screen-options) to use an SDDM theme or another locker instead.
+- **Lock** (`Super+Alt+L`, or automatically after the idle time in **Settings → Lock & Login**): type your password and press `Enter`. `Esc` clears what you typed. See [Lock screen options](#lock-screen-options) to use an SDDM theme or another locker instead.
 - **Power menu** (`Mod+Escape`): choose with the arrow keys or `h`/`l` and press `Enter`.
   - **Lock and Suspend** act immediately. Suspend locks the screen first.
   - **Log out, Restart and Shut down** must be **held for 3 seconds** (mouse button, or `Enter`/`Space`). The button fills up and shows the seconds left, and the action runs when it's full. Let go early to cancel.
@@ -527,7 +528,7 @@ The same page has a duration slider, a greeting on/off switch, and **Preview** b
 
 ### 🔐 Lock screen options
 
-**Settings → Lock & Idle → Lock screen** picks what locks your session. This applies everywhere: the idle timeout, `Super+Alt+L`, `flamenco lock`, and the power menu.
+**Settings → Lock & Login → Lock screen** picks what locks your session. This applies everywhere: the idle timeout, `Super+Alt+L`, `flamenco lock`, and the power menu.
 
 | Option | What it does |
 |---|---|
@@ -542,6 +543,31 @@ The same page has a duration slider, a greeting on/off switch, and **Preview** b
 - **Safety net:** if a theme fails to load, the built-in lock takes over automatically. If a theme loads but won't let you in, press **Ctrl+Alt+Shift+L** on the lock screen to switch to the built-in lock.
 
 Use **Lock now** on the same page to preview your choice.
+
+<a id="login-screen"></a>
+
+### 🚪 Login screen (greetd)
+
+The login screen at boot is separate from the lock screen. Flamenco uses [greetd](https://sr.ht/~kennylevinsen/greetd/) with **[Flamenco Greeter](https://github.com/niruxx/flamenco-greeter)**, a login screen that looks like the shell. Both are set up in **Settings → Lock & Login**.
+
+**Flamenco Greeter section:**
+- **Wallpaper:** your desktop wallpaper, another image (with **Browse**) or a plain color. Blur and dim apply to images.
+- **Fonts:** the shell's fonts or others, plus a text size. Colors always follow the shell's palette.
+- **Sessions:** turn the session picker on or off, pick the default session (or the last one used), and hide sessions you never use.
+- **Users:** list users or type a name, remember the last user and session, and show or hide the power buttons.
+- **Apply:** opens a terminal and asks for your password once. The greeter runs as its own user and can't read your home folder, so the settings, wallpaper and your avatar are copied to `/var/cache/flamenco-greeter`. Your clock format and palette go along too.
+
+**greetd section:**
+- **Status:** whether greetd is installed and starts at boot, and which login manager starts now.
+- **Greeter:** Flamenco Greeter (inside niri or Hyprland), tuigreet or agreety when installed, or any command. Also the greeter user and the virtual terminal.
+- **Auto-login:** start a session for a user at boot without the login screen. Logging out still shows the greeter.
+- **Apply:** writes `/etc/greetd/config.toml` and keeps the previous version as `config.toml.bak-<date>` (the very first as `config.toml.orig`). Sections it doesn't manage are kept.
+- **Enable greetd:** makes greetd the login manager from the next boot, replacing SDDM, GDM, ly or whatever ran before.
+
+> [!WARNING]
+> Settings refuses to write a greeter that isn't installed, so greetd can't be left without a login screen. If a greeter still fails at boot, switch to another TTY (`Ctrl+Alt+F2`), log in, and run `sudo cp /etc/greetd/config.toml.orig /etc/greetd/config.toml`. Or go back to your old login manager with `sudo systemctl enable --force sddm` (or gdm, ly…).
+
+What Settings writes for the greeter is described in [docs/greeter.md](docs/greeter.md).
 
 ### 📌 Dock
 
@@ -1047,7 +1073,8 @@ flamenco media toggle|next|previous
 flamenco wallpaper [set PATH | random | next]
 flamenco theme PALETTE | dark | light | toggle | list | apply-apps
 flamenco apps-theme --json SPEC | --restore
-flamenco pick folder [START_DIR]   # choose a folder with the portal file chooser
+flamenco pick folder|image [START]   # choose a folder or an image with the portal file chooser
+flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable   # login screen
 flamenco portals get | apply --json SPEC
 flamenco fonts [--json]
 flamenco sound themes | play EVENT | find EVENT

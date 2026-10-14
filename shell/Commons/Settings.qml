@@ -126,6 +126,25 @@ Singleton {
                 property string command: ""           // e.g. "hyprlock" or "swaylock -f"
             }
 
+            // Flamenco Greeter (the greetd login screen). Applied with `flamenco greeter apply`,
+            // which copies it to /var/cache/flamenco-greeter for the greeter to read.
+            property JsonObject greeter: JsonObject {
+                property string wallpaperMode: "desktop"  // desktop | custom | color
+                property string wallpaper: ""             // image for "custom"
+                property string color: ""                 // background for "color" ("" = the palette's)
+                property real blur: 0.0                   // 0..1
+                property real dim: 0.25                   // 0..1
+                property string fontFamily: ""            // "" = the shell's font
+                property string monoFamily: ""
+                property real fontScale: 1.0
+                property bool sessionPicker: true
+                property string defaultSession: ""        // session file, e.g. "niri.desktop" ("" = the last one used)
+                property var hiddenSessions: []
+                property bool userList: true
+                property bool rememberUser: true
+                property bool powerButtons: true
+            }
+
             property JsonObject weather: JsonObject {
                 property bool enabled: true
                 property string city: ""

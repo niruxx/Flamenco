@@ -7,7 +7,8 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Lock & Idle"
+    title: "Lock & Login"
+    subtitle: "The lock screen, locking when idle, and the login screen you see at boot (greetd)."
     readonly property var l: Settings.data.lock
     readonly property var sddmOptions: [{ value: "", label: "Select a theme…" }].concat(AppTheming.installed.sddm.map(t => ({ value: t.path, label: t.label })))
 
@@ -81,6 +82,8 @@ Page {
         SwitchRow { title: "Media controls on lock screen"; icon: "music_note"; target: page.l; key: "showMedia" }
         TextRow { title: "Avatar image"; icon: "account_circle"; target: Settings.data.general; key: "avatar"; placeholder: "~/.face" }
     }
+
+    LoginSection {}
 
     Group {
         title: "Night light"

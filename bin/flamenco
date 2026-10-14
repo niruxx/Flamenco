@@ -20,7 +20,9 @@
   flamenco firewall status [--json] | apply --json SPEC | load
   flamenco fonts [--json]      installed font families (and monospace ones)
   flamenco sound themes | play EVENT | find EVENT
-  flamenco pick folder [START_DIR]   choose a folder (portal file chooser)
+  flamenco pick folder|image [START]   choose a folder or an image (portal file chooser)
+  flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable
+                               login screen: Flamenco Greeter and greetd
   flamenco portals get | apply --json SPEC   screen sharing / file chooser backends
   flamenco keyboard get | defaults | functions | layouts | apply --json SPEC
   flamenco launch APP_ID       start a desktop app (used by app shortcuts)
@@ -52,7 +54,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.14.2"
+VERSION = "0.15.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1973,7 +1975,7 @@ def cmd_keyboard(args: list[str]) -> int:
 # The xdg-desktop-portal FileChooser first, so the file chooser picked on the
 # portals page is the one that opens; kdialog / zenity / yad if there's no portal.
 
-def portal_pick_folder(start: str, title: str):
+def portal_pick(start: str, title: str, folder: bool):
     """Chosen path, "" if cancelled, None if the portal can't be used."""
     try:
         import gi
@@ -2001,8 +2003,11 @@ def portal_pick_folder(start: str, title: str):
 
     sub = bus.signal_subscribe("org.freedesktop.portal.Desktop", "org.freedesktop.portal.Request", "Response",
                                request, None, Gio.DBusSignalFlags.NONE, on_response)
-    opts = {"handle_token": GLib.Variant("s", token), "directory": GLib.Variant("b", True),
+    opts = {"handle_token": GLib.Variant("s", token), "directory": GLib.Variant("b", folder),
             "modal": GLib.Variant("b", True)}
+    if not folder:
+        # one filter, by MIME type (1 = MIME pattern)
+        opts["filters"] = GLib.Variant("a(sa(us))", [("Images", [(1, "image/*")])])
     if start and os.path.isdir(start):
         opts["current_folder"] = GLib.Variant.new_bytestring(os.fsencode(start))
     try:
@@ -2025,18 +2030,23 @@ def portal_pick_folder(start: str, title: str):
 
 
 def cmd_pick(args: list[str]) -> int:
-    if not args or args[0] != "folder":
-        die("usage: flamenco pick folder [START_DIR]")
-    start = str(Path(args[1]).expanduser()) if len(args) > 1 and args[1] else str(Path.home())
-    title = "Choose a folder"
-    picked = portal_pick_folder(start, title)
+    if not args or args[0] not in ("folder", "image"):
+        die("usage: flamenco pick folder|image [START]")
+    folder = args[0] == "folder"
+    start = Path(args[1]).expanduser() if len(args) > 1 and args[1] else Path.home()
+    if not folder and start.is_file():
+        start = start.parent
+    start = str(start)
+    title = "Choose a folder" if folder else "Choose an image"
+    picked = portal_pick(start, title, folder)
     if picked is None:
+        images = "*.jpg *.jpeg *.png *.webp *.bmp *.gif *.avif *.jxl"
         if shutil.which("kdialog"):
-            cmd = ["kdialog", "--title", title, "--getexistingdirectory", start]
+            cmd = ["kdialog", "--title", title] + (["--getexistingdirectory", start] if folder else ["--getopenfilename", start, f"Images ({images})"])
         elif shutil.which("zenity"):
-            cmd = ["zenity", "--file-selection", "--directory", "--title", title, f"--filename={start}/"]
+            cmd = ["zenity", "--file-selection", "--title", title, f"--filename={start}/"] + (["--directory"] if folder else [f"--file-filter=Images | {images}"])
         elif shutil.which("yad"):
-            cmd = ["yad", "--file", "--directory", "--title", title, f"--filename={start}/"]
+            cmd = ["yad", "--file", "--title", title, f"--filename={start}/"] + (["--directory"] if folder else [f"--file-filter=Images | {images}"])
         else:
             # the shell shows this; on a terminal it's the reason nothing opened
             print("@none")
@@ -2047,6 +2057,321 @@ def cmd_pick(args: list[str]) -> int:
     if picked:
         print(picked)
     return 0
+
+
+# ─────────────────────────────── login screen (greetd + Flamenco Greeter) ────
+# greetd runs a greeter as its own user before anyone logs in. Like dms-greeter,
+# Flamenco Greeter can't read your home folder, so `greeter apply` copies what it
+# needs (config.json, the wallpaper, avatars) into GREETER_DIR, which it reads.
+# The format of that folder is described in docs/greeter.md.
+
+GREETD_CONFIG = Path(os.environ.get("FLAMENCO_GREETD_CONFIG", "/etc/greetd/config.toml"))
+GREETER_DIR = Path(os.environ.get("FLAMENCO_GREETER_DIR", "/var/cache/flamenco-greeter"))
+GREETER_BIN = "flamenco-greeter"
+GREETER_SCHEMA = 1
+SESSION_DIRS = [("wayland", Path("/usr/share/wayland-sessions")), ("wayland", Path("/usr/local/share/wayland-sessions")),
+                ("x11", Path("/usr/share/xsessions")), ("x11", Path("/usr/local/share/xsessions"))]
+VT_WORDS = ("next", "current", "none")
+
+
+def login_sessions() -> list[dict]:
+    out, seen = [], set()
+    for kind, d in SESSION_DIRS:
+        for f in sorted(d.glob("*.desktop")) if d.is_dir() else []:
+            if f.name in seen:
+                continue
+            seen.add(f.name)
+            e = read_desktop(f)
+            if not e or e.get("Hidden", "").lower() == "true" or e.get("NoDisplay", "").lower() == "true":
+                continue
+            out.append({"id": f.name, "name": e.get("Name", f.stem), "exec": e.get("Exec", ""), "type": kind,
+                        "comment": e.get("Comment", "")})
+    return out
+
+
+def login_users() -> list[dict]:
+    import pwd
+    shells = set()
+    try:
+        shells = {l.strip() for l in Path("/etc/shells").read_text().splitlines() if l.strip() and not l.startswith("#")}
+    except OSError:
+        pass
+    users = []
+    for p in pwd.getpwall():
+        if 1000 <= p.pw_uid < 60000 and (not shells or p.pw_shell in shells):
+            users.append({"name": p.pw_name, "uid": p.pw_uid, "fullName": p.pw_gecos.split(",")[0] or p.pw_name})
+    return sorted(users, key=lambda u: u["uid"])
+
+
+def user_exists(name: str) -> bool:
+    import pwd
+    try:
+        pwd.getpwnam(name)
+        return True
+    except KeyError:
+        return False
+
+
+def read_greetd() -> dict:
+    """greetd's config as a dict ({} if missing); "error" if it doesn't parse."""
+    import tomllib
+    try:
+        return tomllib.loads(GREETD_CONFIG.read_text())
+    except FileNotFoundError:
+        return {}
+    except PermissionError:
+        return {"error": f"{GREETD_CONFIG} isn't readable"}
+    except tomllib.TOMLDecodeError as e:
+        return {"error": f"{GREETD_CONFIG}: {e}"}
+
+
+def toml_value(v) -> str:
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, (int, float)):
+        return str(v)
+    if isinstance(v, list):
+        return "[" + ", ".join(toml_value(x) for x in v) + "]"
+    return json.dumps(str(v), ensure_ascii=False)     # a JSON string is a valid TOML basic string
+
+
+def dump_greetd(cfg: dict) -> str:
+    out = ["# greetd configuration, written by Flamenco Settings (flamenco greeter greetd)",
+           "# The previous version is kept next to it as config.toml.bak-<date>, the very first as config.toml.orig.", ""]
+    order = ["terminal", "general", "default_session", "initial_session"]
+    for sec in order + [k for k in cfg if k not in order]:
+        body = cfg.get(sec)
+        if not isinstance(body, dict) or not body:
+            continue
+        out.append(f"[{sec}]")
+        out += [f"{k} = {toml_value(v)}" for k, v in body.items() if not isinstance(v, dict)]
+        out.append("")
+    return "\n".join(out)
+
+
+def command_exists(command: str) -> bool:
+    import shlex
+    try:
+        first = shlex.split(command)[0]
+    except (ValueError, IndexError):
+        return False
+    if "/" in first:
+        return os.access(first, os.X_OK)
+    return shutil.which(first) is not None or any(os.access(Path(d) / first, os.X_OK) for d in ("/usr/bin", "/usr/local/bin"))
+
+
+def greeter_command(compositor: str) -> str:
+    return f"{GREETER_BIN} --command {compositor}"
+
+
+def unit_enabled(unit: str) -> str:
+    return run_out(["systemctl", "is-enabled", unit]).strip() or "not-found"
+
+
+def greeter_status() -> dict:
+    cfg = read_greetd()
+    dm = ""
+    try:
+        dm = os.path.basename(os.readlink("/etc/systemd/system/display-manager.service")).removesuffix(".service")
+    except OSError:
+        pass
+    applied = {}
+    try:
+        applied = json.loads((GREETER_DIR / "config.json").read_text())
+    except (OSError, ValueError):
+        pass
+    default = cfg.get("default_session", {}) if isinstance(cfg.get("default_session"), dict) else {}
+    initial = cfg.get("initial_session", {}) if isinstance(cfg.get("initial_session"), dict) else {}
+    return {
+        "greetdInstalled": bool(shutil.which("greetd") or Path("/usr/bin/greetd").exists()),
+        "greetdEnabled": unit_enabled("greetd.service") == "enabled",
+        "greetdActive": run_out(["systemctl", "is-active", "greetd.service"]).strip() == "active",
+        "displayManager": dm,
+        "greeterInstalled": shutil.which(GREETER_BIN) is not None,
+        "greeterCommand": GREETER_BIN,
+        "greeters": [g for g in (GREETER_BIN, "tuigreet", "agreety", "gtkgreet", "regreet", "nwg-hello", "dms-greeter") if shutil.which(g)],
+        "config": {
+            "path": str(GREETD_CONFIG),
+            "exists": GREETD_CONFIG.exists(),
+            "error": cfg.get("error", ""),
+            "vt": cfg.get("terminal", {}).get("vt", 1) if isinstance(cfg.get("terminal"), dict) else 1,
+            "command": default.get("command", ""),
+            "user": default.get("user", "greeter"),
+            "autologin": bool(initial.get("command")),
+            "autologinCommand": initial.get("command", ""),
+            "autologinUser": initial.get("user", ""),
+        },
+        "applied": applied,
+        "appliedDir": str(GREETER_DIR),
+        "sessions": login_sessions(),
+        "users": login_users(),
+        "me": os.environ.get("USER") or HOME.name,
+    }
+
+
+def greeter_config(spec: dict) -> tuple[dict, dict]:
+    """(config.json for the greeter, {staged name: source file}) from the settings page's spec."""
+    files: dict[str, Path] = {}
+    wp = spec.get("wallpaper", {})
+    mode = wp.get("mode", "desktop")
+    wallpaper = {"mode": "color", "file": "", "fillMode": wp.get("fillMode", "crop"),
+                 "blur": max(0.0, min(1.0, float(wp.get("blur", 0)))), "dim": max(0.0, min(1.0, float(wp.get("dim", 0)))),
+                 "color": str(wp.get("color") or "#000000")}
+    src = Path(str(wp.get("path", ""))).expanduser() if mode in ("desktop", "custom") else None
+    if src is not None:
+        if not src.is_file():
+            die(f"wallpaper not found: {src}")
+        name = "wallpaper" + src.suffix.lower()
+        files[name] = src
+        wallpaper.update(mode="image", file=name)
+    avatars = {}
+    for user, path in (spec.get("avatars") or {}).items():
+        p = Path(str(path)).expanduser()
+        if p.is_file() and re.fullmatch(r"[a-z_][a-z0-9_.-]*", user):
+            name = f"avatars/{user}{p.suffix.lower() or '.png'}"
+            files[name] = p
+            avatars[user] = name
+    s, u, a = spec.get("sessions", {}), spec.get("users", {}), spec.get("appearance", {})
+    cfg = {
+        "version": GREETER_SCHEMA,
+        "generator": f"flamenco-shell {VERSION}",
+        "appearance": {
+            "dark": bool(a.get("dark", True)),
+            "colors": {k: str(v) for k, v in (a.get("colors") or {}).items()},
+            "fontFamily": a.get("fontFamily") or "Inter",
+            "monoFamily": a.get("monoFamily") or "monospace",
+            "fontScale": max(0.5, min(2.0, float(a.get("fontScale", 1.0)))),
+            "roundness": float(a.get("roundness", 1.0)),
+        },
+        "wallpaper": wallpaper,
+        "clock": {"use24h": bool(spec.get("clock", {}).get("use24h", True)),
+                  "showSeconds": bool(spec.get("clock", {}).get("showSeconds", False))},
+        "sessions": {"picker": bool(s.get("picker", True)), "default": str(s.get("default", "")),
+                     "hidden": [str(x) for x in s.get("hidden", [])]},
+        "users": {"list": bool(u.get("list", True)), "rememberLast": bool(u.get("rememberLast", True)),
+                  "default": str(u.get("default", "")), "avatars": avatars},
+        "power": {"buttons": bool(spec.get("power", {}).get("buttons", True))},
+    }
+    return cfg, files
+
+
+def greeter_install_files(cfg: dict, files: dict, owner: str) -> int:
+    """Stage config.json + files, then copy them into GREETER_DIR as root in one go."""
+    import tempfile
+    stage = Path(tempfile.mkdtemp(prefix="flamenco-greeter-"))
+    try:
+        (stage / "avatars").mkdir()
+        (stage / "config.json").write_text(json.dumps(cfg, indent=2) + "\n")
+        for name, src in files.items():
+            shutil.copyfile(src, stage / name)
+        os.chmod(stage, 0o755)
+        for p in stage.rglob("*"):
+            os.chmod(p, 0o755 if p.is_dir() else 0o644)
+        # the folder belongs to the greeter user so it can keep its own state
+        # (last user and session); what we put there is root's and read-only
+        script = r'''set -e
+stage=$1 dest=$2 owner=$3
+install -d -m 0755 "$dest" "$dest/avatars"
+if id -u "$owner" >/dev/null 2>&1; then chown "$owner:" "$dest"; fi
+rm -f "$dest"/wallpaper.* "$dest"/avatars/*
+cp -r --no-preserve=ownership "$stage"/. "$dest"/
+chown -R root:root "$dest/config.json" "$dest/avatars" $(ls "$dest"/wallpaper.* 2>/dev/null)
+chmod 0644 "$dest/config.json"
+'''
+        return privileged(["sh", "-c", script, "sh", str(stage), str(GREETER_DIR), owner])
+    finally:
+        shutil.rmtree(stage, ignore_errors=True)
+
+
+def greetd_merge(spec: dict) -> dict:
+    """The new greetd config: the current one with the page's changes, checked."""
+    cfg = read_greetd()
+    if cfg.get("error"):
+        die(cfg["error"] + " (fix it by hand first; nothing was changed)")
+    vt = spec.get("vt", cfg.get("terminal", {}).get("vt", 1))
+    if isinstance(vt, str) and vt.isdigit():
+        vt = int(vt)
+    if not (isinstance(vt, int) and 1 <= vt <= 63) and vt not in VT_WORDS:
+        die(f"vt must be a number 1-63 or one of {', '.join(VT_WORDS)}")
+    command = str(spec.get("command", cfg.get("default_session", {}).get("command", ""))).strip()
+    user = str(spec.get("user", cfg.get("default_session", {}).get("user", "greeter"))).strip() or "greeter"
+    if not command:
+        die("greetd needs a greeter command")
+    # a greeter that isn't installed would leave you without a login screen
+    if not command_exists(command):
+        die(f"'{command.split()[0]}' isn't installed; greetd would have no login screen. Nothing was changed.")
+    if not user_exists(user):
+        die(f"user '{user}' doesn't exist (greetd's package creates 'greeter')")
+    cfg.setdefault("terminal", {})["vt"] = vt
+    cfg["default_session"] = dict(cfg.get("default_session", {}), command=command, user=user)
+    if spec.get("autologin"):
+        auser = str(spec.get("autologinUser", "")).strip()
+        acmd = str(spec.get("autologinCommand", "")).strip()
+        if not auser or not user_exists(auser):
+            die(f"auto-login user '{auser}' doesn't exist")
+        if not acmd or not command_exists(acmd):
+            die(f"auto-login session command '{acmd}' isn't installed")
+        cfg["initial_session"] = {"command": acmd, "user": auser}
+    else:
+        cfg.pop("initial_session", None)
+    return cfg
+
+
+def greetd_write(cfg: dict) -> int:
+    import tempfile
+    from datetime import datetime
+    fd, tmp = tempfile.mkstemp(prefix="greetd-", suffix=".toml")
+    with os.fdopen(fd, "w") as f:
+        f.write(dump_greetd(cfg))
+    os.chmod(tmp, 0o644)
+    bak = f"{GREETD_CONFIG}.bak-{datetime.now():%Y%m%d-%H%M%S}"
+    script = 'set -e; install -d -m 0755 "$(dirname "$2")"; if [ -f "$2" ]; then cp -p "$2" "$3"; [ -e "$2.orig" ] || cp -p "$2" "$2.orig"; fi; install -m 0644 -o root -g root "$1" "$2"'
+    try:
+        return privileged(["sh", "-c", script, "sh", tmp, str(GREETD_CONFIG), bak])
+    finally:
+        os.unlink(tmp)
+
+
+def cmd_greeter(args: list[str]) -> int:
+    sub = args[0] if args else "status"
+    if sub == "status":
+        print(json.dumps(greeter_status(), indent=None if "--json" in args else 2))
+        return 0
+    if sub == "sessions":
+        for s in login_sessions():
+            print(f"{s['id']}\t{s['name']}\t{s['exec']}")
+        return 0
+    if sub in ("apply", "greetd") and len(args) >= 3 and args[1] == "--json":
+        try:
+            spec = json.loads(args[2])
+        except ValueError as e:
+            die(f"bad --json: {e}")
+        if sub == "apply":
+            cfg, files = greeter_config(spec)
+            owner = read_greetd().get("default_session", {}).get("user", "greeter") if GREETD_CONFIG.exists() else "greeter"
+            if greeter_install_files(cfg, files, str(owner)) != 0:
+                die("couldn't write the login screen settings")
+            print(f"greeter: wrote {GREETER_DIR}/config.json" + (f" and {len(files)} file(s)" if files else ""))
+            return 0
+        cfg = greetd_merge(spec)
+        if greetd_write(cfg) != 0:
+            die(f"couldn't write {GREETD_CONFIG}")
+        print(f"greetd: wrote {GREETD_CONFIG} (previous version kept as config.toml.bak-<date>, the original as config.toml.orig)")
+        print("        it's used from the next time greetd starts (next boot, or log out)")
+        return 0
+    if sub == "enable":
+        # make greetd the display manager at boot (replaces SDDM, GDM, ly…)
+        if not (shutil.which("greetd") or Path("/usr/bin/greetd").exists()):
+            die("greetd isn't installed (sudo pacman -S greetd)")
+        cfg = read_greetd()
+        command = cfg.get("default_session", {}).get("command", "") if not cfg.get("error") else ""
+        if not command or not command_exists(command):
+            die("set up a greeter that's installed first (greetd's default_session command); nothing was changed")
+        if privileged(["systemctl", "enable", "--force", "greetd.service"]) != 0:
+            die("couldn't enable greetd")
+        print("greetd: enabled; it replaces your current login manager from the next boot")
+        return 0
+    die("usage: flamenco greeter status [--json] | sessions | apply --json SPEC | greetd --json SPEC | enable")
 
 
 # ─────────────────────────────── portals (screen sharing) ────────────────────
@@ -4865,6 +5190,8 @@ def main(argv: list[str]) -> int:
         return cmd_portals(rest)
     if cmd == "pick":
         return cmd_pick(rest)
+    if cmd == "greeter":
+        return cmd_greeter(rest)
     if cmd == "pointer":
         return cmd_pointer(rest)
     if cmd == "flatpak":

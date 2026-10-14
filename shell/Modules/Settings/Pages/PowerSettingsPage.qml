@@ -227,7 +227,7 @@ Page {
         title: "Session"
         SettingRow {
             title: "Lock, idle and screen off"
-            subtitle: "Configured under Lock & Idle"
+            subtitle: "Configured under Lock & Login"
             icon: "lock_clock"
             FButton {
                 text: "Open"
