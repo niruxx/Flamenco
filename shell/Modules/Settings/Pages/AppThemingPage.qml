@@ -8,7 +8,7 @@ import qs.Widgets
 Page {
     id: page
     title: "App Theming"
-    subtitle: "Style Qt and GTK applications with the shell palette. Flamenco writes qt5ct/qt6ct color schemes and stylesheets, a KDE color scheme, and GTK 3/4 CSS. Your own files are backed up before the first change."
+    subtitle: "Style Qt and GTK applications, terminals and more with the shell palette. Flamenco writes qt5ct/qt6ct color schemes and stylesheets, a KDE color scheme, GTK 3/4 CSS, and color files for the other apps you pick. Your own files are backed up before the first change."
     readonly property var o: Settings.data.apps
     readonly property var inst: AppTheming.installed
     readonly property var keep: [{ value: "", label: "Leave unchanged" }]
@@ -111,6 +111,45 @@ Page {
             subtitle: page.inst.icons.length + " icon · " + page.inst.cursors.length + " cursor · " + page.inst.gtk.length + " GTK · " + page.inst.qtStyles.length + " Qt styles"
             icon: "inventory_2"
             FIconButton { icon: "refresh"; onClicked: AppTheming.refreshInstalled() }
+        }
+    }
+
+    Group {
+        title: "Other apps"
+        SettingRow {
+            title: "Terminals, launchers, browsers and more"
+            subtitle: "Each one gets a color file from your palette, plus one marked line in its own config to load it. Restore originals undoes both."
+            icon: "palette"
+        }
+        Repeater {
+            model: [
+                { id: "kitty", name: "kitty", icon: "terminal", note: "Reloads open windows" },
+                { id: "ghostty", name: "Ghostty", icon: "terminal", note: "Reloads open windows; replaces its theme line (kept as a comment)" },
+                { id: "alacritty", name: "Alacritty", icon: "terminal", note: "Imports flamenco.toml; reloads by itself" },
+                { id: "foot", name: "foot", icon: "terminal", note: "New windows" },
+                { id: "fuzzel", name: "fuzzel", icon: "search", note: "" },
+                { id: "pywalfox", name: "Firefox (pywalfox)", icon: "public", note: "Needs the pywalfox add-on and package; writes ~/.cache/wal/colors.json" },
+                { id: "vesktop", name: "Discord (Vesktop / Vencord)", icon: "forum", note: "Then turn on Flamenco under Vencord → Themes" },
+                { id: "spicetify", name: "Spotify (spicetify)", icon: "music_note", note: "Runs spicetify apply" },
+                { id: "vscode", name: "VS Code / VSCodium", icon: "code", note: "Then pick the Flamenco color theme" }
+            ]
+            SettingRow {
+                id: appRow
+                required property var modelData
+                readonly property bool here: !!(page.inst.apps ?? {})[modelData.id]
+                title: modelData.name
+                subtitle: (here ? "" : "Not installed. ") + modelData.note
+                icon: modelData.icon
+                opacity: here ? 1 : 0.6
+                FSwitch {
+                    checked: !!(page.o.extraApps ?? {})[appRow.modelData.id]
+                    onToggled: c => {
+                        const all = Object.assign({}, page.o.extraApps || {});
+                        all[appRow.modelData.id] = c;
+                        page.o.extraApps = all;
+                    }
+                }
+            }
         }
     }
 

@@ -23,9 +23,13 @@ Variants {
         property string query: ""
         readonly property var lc: Settings.data.launcher
         readonly property string mode: query.startsWith("=") && lc.calculator ? "calc" : query.startsWith(">") ? "run" : query.startsWith(";") && lc.clipboard ? "clip"
-            : query.startsWith(":") && lc.emoji ? "emoji" : query.startsWith("#") && lc.colors ? "color" : "apps"
+            : query.startsWith(":") && lc.emoji ? "emoji" : query.startsWith("#") && lc.colors ? "color" : plugin ? "plugin" : "apps"
+        // a plugin's launcher extension whose prefix starts the query (Settings → Plugins)
+        readonly property var plugin: Plugins.launchers.find(l => query.startsWith(l.prefix)) ?? null
+        property var pluginResults: []
         property var emojis: []                // [[glyph, name], …] from `flamenco emoji`
-        readonly property string term: mode === "apps" ? query : query.slice(1).trim()
+        readonly property string term: mode === "apps" ? query : mode === "plugin" ? query.slice(plugin.prefix.length).trim() : query.slice(1).trim()
+        onTermChanged: if (mode === "plugin") pluginTimer.restart()
         property var clips: []
 
         readonly property var results: {
@@ -35,6 +39,11 @@ Variants {
             }
             if (mode === "run")
                 return term ? [{ kind: "run", title: term, subtitle: "Run in shell", icon: "terminal" }, { kind: "runterm", title: term, subtitle: "Run in " + Settings.data.general.terminal, icon: "terminal" }] : [];
+            if (mode === "plugin") {
+                if (pluginResults.length === 0)
+                    return [{ kind: "hint", title: plugin.name, subtitle: plugin.hint || "Type to search", icon: "extension" }];
+                return pluginResults.slice(0, 50).map(r => ({ kind: "plugin", title: String(r.title ?? ""), subtitle: String(r.subtitle ?? ""), icon: String(r.icon || "extension"), exec: r.exec, copy: r.copy, open: r.open }));
+            }
             if (mode === "emoji") {
                 const words = term.toLowerCase().split(/\s+/).filter(Boolean);
                 const hits = words.length ? emojis.filter(e => words.every(w => e[1].includes(w)))
@@ -104,7 +113,16 @@ Variants {
                 Quickshell.execDetached(Paths.termHold(item.title));
             else if (item.kind === "clip")
                 Quickshell.execDetached(["sh", "-c", 'printf "%s" "$1" | cliphist decode | wl-copy', "sh", item.line]);
-            else if (item.kind === "emoji") {
+            else if (item.kind === "hint")
+                return;
+            else if (item.kind === "plugin") {
+                if (item.exec)
+                    Quickshell.execDetached(["sh", "-c", String(item.exec)]);
+                else if (item.copy !== undefined)
+                    Quickshell.execDetached(["wl-copy", String(item.copy)]);
+                else if (item.open)
+                    Quickshell.execDetached(["xdg-open", String(item.open)]);
+            } else if (item.kind === "emoji") {
                 Quickshell.execDetached(["wl-copy", item.glyph]);
                 lc.recentEmoji = [item.glyph].concat((lc.recentEmoji || []).filter(g => g !== item.glyph)).slice(0, 24);
             } else if (item.kind === "copy")
@@ -116,6 +134,10 @@ Variants {
         }
 
         onModeChanged: {
+            if (mode === "plugin")
+                pluginTimer.restart();
+            else
+                pluginResults = [];
             if (mode === "clip")
                 clipProc.running = true;
             else if (mode === "emoji" && emojis.length === 0 && !emojiProc.running)
@@ -130,6 +152,33 @@ Variants {
             field.focusInput();
         }
 
+        // a plugin's script, with what's typed after its prefix; one JSON result per line
+        Timer {
+            id: pluginTimer
+            interval: 150
+            onTriggered: {
+                if (panel.mode !== "plugin")
+                    return;
+                pluginProc.running = false;
+                pluginProc.command = [panel.plugin.script, panel.term];
+                pluginProc.running = true;
+            }
+        }
+        Process {
+            id: pluginProc
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const out = [];
+                    for (const line of text.split("\n")) {
+                        try {
+                            if (line.trim())
+                                out.push(JSON.parse(line));
+                        } catch (e) {}
+                    }
+                    panel.pluginResults = out;
+                }
+            }
+        }
         Process {
             id: emojiProc
             command: [Paths.bin, "emoji"]
@@ -222,7 +271,7 @@ Variants {
                         target: row
                         property: "opacity"
                         to: 1
-                        duration: Theme.durMed
+                        duration: Theme.durA("launcher", 280)
                     }
 
                     RowLayout {
@@ -239,7 +288,7 @@ Variants {
                                 visible: row.modelData.kind === "app"
                                 implicitSize: 34
                                 name: row.modelData.kind === "app" ? row.modelData.icon : ""
-                                scale: list.currentIndex === row.index ? 1.1 : 1
+                                scale: list.currentIndex === row.index && Theme.hoverZoom ? 1.1 : 1
                                 Behavior on scale { Anim { easing.bezierCurve: Theme.curves.springFast } }
                             }
                             FIcon {

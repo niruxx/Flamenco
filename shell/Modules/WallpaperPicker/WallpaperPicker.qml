@@ -14,6 +14,7 @@ Variants {
         name: "wallpaper"
         cardWidth: Math.min(980, modelData.width - 80)
         onOpened: Wallpapers.rescan()
+        property string source: "folder"        // folder | wallhaven
 
         ColumnLayout {
             width: parent.width
@@ -21,6 +22,13 @@ Variants {
 
             RowLayout {
                 Layout.fillWidth: true
+                FSegmented {
+                    implicitWidth: 220
+                    implicitHeight: 34
+                    options: [{ value: "folder", label: "Your folder" }, { value: "wallhaven", label: "Wallhaven" }]
+                    current: panel.source
+                    onSelected: v => panel.source = v
+                }
                 FText {
                     Layout.fillWidth: true
                     text: "Wallpapers"
@@ -43,9 +51,19 @@ Variants {
             }
 
             WallpaperGrid {
+                visible: panel.source === "folder"
                 Layout.fillWidth: true
                 implicitHeight: 460
                 screenName: panel.modelData.name
+            }
+            Loader {
+                Layout.fillWidth: true
+                active: panel.source === "wallhaven"
+                visible: active
+                sourceComponent: WallhavenGrid {
+                    screenName: panel.modelData.name
+                    minSize: Qt.size(panel.modelData.width, panel.modelData.height)
+                }
             }
         }
     }

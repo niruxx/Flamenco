@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -8,12 +9,36 @@ Page {
     id: page
     title: "Bar"
     readonly property var b: Settings.data.bar
-    readonly property var allWidgets: ({
+    // built-in widgets, plus the bar widgets of plugins that are turned on
+    readonly property var allWidgets: Object.assign({}, builtinWidgets, Object.fromEntries(Object.entries(Plugins.barWidgets).map(([k, v]) => [k, v.label + " (plugin)"])))
+    readonly property var builtinWidgets: ({
             launcher: "Launcher", workspaces: "Workspaces", window: "Active window", taskbar: "Taskbar (running apps)", clock: "Clock", media: "Media",
             tray: "System tray", sysstats: "CPU / RAM", keyboard: "Keyboard layout", network: "Network", bluetooth: "Bluetooth",
-            audio: "Volume", mic: "Microphone (while in use)", privacy: "Privacy (camera, screen sharing)", recording: "Screen recording (while recording)", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", assistant: "AI assistant", power: "Power"
+            audio: "Volume", mic: "Microphone (while in use)", privacy: "Privacy (camera, screen sharing)", recording: "Screen recording (while recording)", updates: "Package updates (when there are some)", notepad: "Notepad", visualizer: "Audio visualizer (cava, while playing)", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", assistant: "AI assistant", power: "Power"
         })
-    readonly property var used: b.left.concat(b.center, b.right)
+    // which layout is being edited: "" = the shared one, else a screen with its own
+    property string screenSel: ""
+    readonly property var own: (b.perScreen || {})[screenSel] ?? null
+    readonly property var lay: own ?? b
+    function list(key) {
+        return (lay[key] ?? b[key] ?? []).slice();
+    }
+    function setList(key, l) {
+        if (!own) {
+            b[key] = l;
+            return;
+        }
+        const all = Object.assign({}, b.perScreen || {});
+        all[screenSel] = Object.assign({}, all[screenSel]);
+        all[screenSel][key] = l;
+        b.perScreen = all;
+    }
+    function move(key, from, to) {
+        const l = list(key);
+        l.splice(to, 0, l.splice(from, 1)[0]);
+        setList(key, l);
+    }
+    readonly property var used: list("left").concat(list("center"), list("right"))
 
     Group {
         title: "Layout"
@@ -76,16 +101,58 @@ Page {
         SwitchRow { title: "Window titles"; subtitle: "Next to the icons, when there's room"; icon: "title"; target: page.b; key: "taskbarTitles" }
     }
 
+    Group {
+        visible: Quickshell.screens.length > 1
+        title: "Layout for"
+        SettingRow {
+            title: page.screenSel === "" ? "Every screen" : page.screenSel
+            subtitle: page.screenSel === "" ? "The shared layout, on every screen without its own" + (Object.keys(page.b.perScreen || {}).length ? " (" + Object.keys(page.b.perScreen).join(", ") + " have their own)" : "")
+                : page.own ? "This screen has its own widgets" : "This screen uses the shared layout"
+            icon: "monitor"
+            Row {
+                spacing: 8
+                FDropdown {
+                    implicitWidth: 200
+                    options: [{ value: "", label: "Every screen" }].concat(Quickshell.screens.map(x => ({ value: x.name, label: x.name + ((page.b.perScreen || {})[x.name] ? " (own)" : "") })))
+                    current: page.screenSel
+                    onSelected: v => page.screenSel = v
+                }
+                FButton {
+                    visible: page.screenSel !== "" && !page.own
+                    text: "Give it its own"
+                    variant: "tonal"
+                    onClicked: {
+                        const all = Object.assign({}, page.b.perScreen || {});
+                        all[page.screenSel] = { left: page.b.left.slice(), center: page.b.center.slice(), right: page.b.right.slice() };
+                        page.b.perScreen = all;
+                    }
+                }
+                FButton {
+                    visible: !!page.own
+                    text: "Use the shared one"
+                    variant: "text"
+                    onClicked: {
+                        const all = Object.assign({}, page.b.perScreen || {});
+                        delete all[page.screenSel];
+                        page.b.perScreen = all;
+                    }
+                }
+            }
+        }
+    }
+
     Repeater {
         model: [{ key: "left", label: Theme.barVertical ? "Top" : "Left" }, { key: "center", label: "Center" }, { key: "right", label: Theme.barVertical ? "Bottom" : "Right" }]
 
         Group {
             id: grp
             required property var modelData
-            title: modelData.label + " section"
+            title: modelData.label + " section" + (page.own ? " · " + page.screenSel : "")
+            // a screen using the shared layout isn't edited here: pick "Every screen", or give it its own
+            visible: page.screenSel === "" || !!page.own
 
             Repeater {
-                model: page.b[grp.modelData.key]
+                model: page.list(grp.modelData.key)
 
                 SettingRow {
                     required property string modelData
@@ -95,9 +162,9 @@ Page {
 
                     Row {
                         spacing: 2
-                        FIconButton { icon: "arrow_upward"; size: 30; disabled: index === 0; onClicked: Settings.listMove(page.b, grp.modelData.key, index, index - 1) }
-                        FIconButton { icon: "arrow_downward"; size: 30; disabled: index === page.b[grp.modelData.key].length - 1; onClicked: Settings.listMove(page.b, grp.modelData.key, index, index + 1) }
-                        FIconButton { icon: "close"; size: 30; iconColor: Theme.error; onClicked: Settings.listRemove(page.b, grp.modelData.key, modelData) }
+                        FIconButton { icon: "arrow_upward"; size: 30; disabled: index === 0; onClicked: page.move(grp.modelData.key, index, index - 1) }
+                        FIconButton { icon: "arrow_downward"; size: 30; disabled: index === page.list(grp.modelData.key).length - 1; onClicked: page.move(grp.modelData.key, index, index + 1) }
+                        FIconButton { icon: "close"; size: 30; iconColor: Theme.error; onClicked: page.setList(grp.modelData.key, page.list(grp.modelData.key).filter(x => x !== modelData)) }
                     }
                 }
             }
@@ -114,7 +181,7 @@ Page {
                         icon: "add"
                         variant: "tonal"
                         implicitHeight: 30
-                        onClicked: Settings.listAdd(page.b, grp.modelData.key, modelData)
+                        onClicked: page.setList(grp.modelData.key, page.list(grp.modelData.key).concat([modelData]))
                     }
                 }
             }

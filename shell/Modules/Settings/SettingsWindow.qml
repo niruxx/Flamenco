@@ -27,6 +27,7 @@ LazyLoader {
             { id: "apps", icon: "format_paint", label: "App Theming", comp: appsC },
             { id: "bar", icon: "toolbar", label: "Bar", comp: barC },
             { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
+            { id: "quicksettings", icon: "tune", label: "Quick settings", comp: quickC },
             { id: "windows", icon: "select_window", label: "Windows & Layout", comp: windowsC },
             { id: "workspaces", icon: "view_carousel", label: "Workspaces", comp: workspacesC },
             { id: "edges", icon: "select_all", label: "Screen edges", comp: edgesC },
@@ -36,6 +37,7 @@ LazyLoader {
             { id: "pointer", icon: "mouse", label: "Mouse & Touchpad", comp: pointerC },
             { id: "network", icon: "wifi", label: "Network", comp: networkC },
             { id: "ai", icon: "auto_awesome", label: "AI", comp: aiC },
+            { id: "plugins", icon: "extension", label: "Plugins", comp: pluginsC },
             { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
             { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
             { id: "screenshots", icon: "screenshot_monitor", label: "Screenshots", comp: screenshotC },
@@ -109,12 +111,14 @@ LazyLoader {
         Component { id: appsC; AppThemingPage {} }
         Component { id: barC; BarPage {} }
         Component { id: dockC; DockPage {} }
+        Component { id: quickC; QuickSettingsPage {} }
         Component { id: desktopC; DesktopPage {} }
         Component { id: displaysC; DisplaysPage {} }
         Component { id: keyboardC; KeyboardPage {} }
         Component { id: pointerC; PointerPage {} }
         Component { id: networkC; NetworkPage {} }
         Component { id: aiC; AiPage {} }
+        Component { id: pluginsC; PluginsPage {} }
         Component { id: sharingC; ScreenSharingPage {} }
         Component { id: soundC; SoundPage {} }
         Component { id: firewallC; FirewallPage {} }

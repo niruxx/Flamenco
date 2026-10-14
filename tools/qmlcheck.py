@@ -94,6 +94,23 @@ for f in files:
         if m.group(1) in RESERVED:
             report(f, f"{line(m.start())}: '{m.group(1)}' is a reserved word in QML and can't be used as a name")
 
+    # the same handler or property set twice in one object (QML refuses the file)
+    depth_keys = [set()]
+    for m in re.finditer(r'(?m)\{|\}|^[ \t]*(on[A-Z]\w*|[a-z]\w*(?:\.[a-z]\w*)*)\s*:(?!:)', code):
+        t = m.group(0)
+        if t == "{":
+            depth_keys.append(set())
+        elif t == "}":
+            if len(depth_keys) > 1:
+                depth_keys.pop()
+        else:
+            k = m.group(1)
+            if k in ("id",) or k.startswith("case") or k == "default":
+                continue
+            if k in depth_keys[-1] and k.startswith("on") and k[2:3].isupper():
+                report(f, f"{line(m.start())}: {k} set twice in the same object")
+            depth_keys[-1].add(k)
+
     readonly = set(re.findall(r'readonly property \S+ (\w+)', code))
     for m in re.finditer(r'Behavior on ([\w.]+)', code):
         if m.group(1) in readonly:

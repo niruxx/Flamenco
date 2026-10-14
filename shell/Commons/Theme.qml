@@ -145,23 +145,41 @@ Singleton {
 
     // ── Motion ──
     readonly property real speed: a.animSpeed
+    readonly property string motion: ["expressive", "smooth", "snappy", "minimal"].includes(a.motionStyle) ? a.motionStyle : "expressive"
+    // snappy and minimal also shorten everything a bit
+    readonly property real styleFactor: motion === "snappy" ? 0.7 : motion === "minimal" ? 0.85 : 1
     function dur(ms) {
-        return speed <= 0 ? 0 : Math.round(ms / speed);
+        return speed <= 0 ? 0 : Math.round(ms * styleFactor / speed);
     }
+    // an area's own speed on top (Settings → Appearance → Motion): panels, notifications, bar,
+    // workspaces, dock, launcher, lock. 0 turns that area's animations off.
+    function areaSpeed(area) {
+        const v = (a.motionAreas || {})[area];
+        return v === undefined ? 1 : Number(v);
+    }
+    function durA(area, ms) {
+        const m = areaSpeed(area);
+        return m <= 0 ? 0 : Math.round(dur(ms) / m);
+    }
+    readonly property bool hoverZoom: a.hoverZoom !== false && motion !== "minimal"
+    readonly property bool ripple: a.ripple !== false
     readonly property int durShort: dur(150)
     readonly property int durMed: dur(280)
     readonly property int durLong: dur(450)
     readonly property int durXl: dur(650)
 
     // Bezier splines, from the Material 3 expressive motion spec.
+    // The motion style swaps these, so every animation follows it: expressive keeps the
+    // springs' overshoot, smooth and minimal drop it, snappy uses quick decelerations.
     readonly property QtObject curves: QtObject {
+        readonly property string m: root.motion
         readonly property list<real> standard: [0.2, 0, 0, 1, 1, 1]
         readonly property list<real> standardAccel: [0.3, 0, 1, 1, 1, 1]
         readonly property list<real> standardDecel: [0, 0, 0, 1, 1, 1]
-        readonly property list<real> emphasized: [0.05, 0, 2 / 15, 0.06, 1 / 6, 0.4, 5 / 24, 0.82, 0.25, 1, 1, 1]
+        readonly property list<real> emphasized: m === "snappy" || m === "minimal" ? [0.2, 0, 0, 1, 1, 1] : [0.05, 0, 2 / 15, 0.06, 1 / 6, 0.4, 5 / 24, 0.82, 0.25, 1, 1, 1]
         readonly property list<real> emphasizedAccel: [0.3, 0, 0.8, 0.15, 1, 1]
-        readonly property list<real> emphasizedDecel: [0.05, 0.7, 0.1, 1, 1, 1]
-        readonly property list<real> spring: [0.38, 1.21, 0.22, 1, 1, 1]
-        readonly property list<real> springFast: [0.42, 1.67, 0.21, 0.9, 1, 1]
+        readonly property list<real> emphasizedDecel: m === "snappy" ? [0, 0, 0, 1, 1, 1] : [0.05, 0.7, 0.1, 1, 1, 1]
+        readonly property list<real> spring: m === "expressive" ? [0.38, 1.21, 0.22, 1, 1, 1] : m === "snappy" ? [0.1, 0.6, 0.2, 1, 1, 1] : [0.05, 0.7, 0.1, 1, 1, 1]
+        readonly property list<real> springFast: m === "expressive" ? [0.42, 1.67, 0.21, 0.9, 1, 1] : m === "snappy" ? [0.1, 0.6, 0.2, 1, 1, 1] : [0.05, 0.7, 0.1, 1, 1, 1]
     }
 }

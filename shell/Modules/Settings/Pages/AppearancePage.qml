@@ -30,26 +30,26 @@ Page {
         { id: "modern", label: "Modern", icon: "auto_awesome", hint: "Floating top bar, centered clock",
           bar: { position: "top", style: "floating", height: 40, workspaceStyle: "pills",
                  left: ["launcher", "workspaces", "window"], center: ["clock", "media"],
-                 right: ["recording", "privacy", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"] },
+                 right: ["recording", "privacy", "updates", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"] },
           dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-right" } },
         { id: "minimal", label: "Minimal", icon: "remove", hint: "Slim islands, just the essentials",
           bar: { position: "top", style: "islands", height: 34, workspaceStyle: "dots",
-                 left: ["workspaces"], center: ["clock"], right: ["recording", "privacy", "tray", "network", "audio", "mic", "battery", "quicksettings"] },
+                 left: ["workspaces"], center: ["clock"], right: ["recording", "privacy", "updates", "tray", "network", "audio", "mic", "battery", "quicksettings"] },
           dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-center" } },
         { id: "classic", label: "Classic", icon: "desktop_windows", hint: "Taskbar at the bottom, Windows-style",
           bar: { position: "bottom", style: "attached", height: 44, workspaceStyle: "numbers",
                  left: ["launcher", "workspaces", "taskbar"], center: [],
-                 right: ["recording", "privacy", "tray", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "clock", "notifications", "quicksettings"] },
+                 right: ["recording", "privacy", "updates", "tray", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "clock", "notifications", "quicksettings"] },
           dock: { enabled: false }, launcher: { position: "bottom-left" }, notifications: { position: "bottom-right" } },
         { id: "mac", label: "Dock & menu bar", icon: "dock_to_bottom", hint: "Thin top bar and a dock, macOS-style",
           bar: { position: "top", style: "attached", height: 32, workspaceStyle: "pills",
                  left: ["launcher", "window"], center: [],
-                 right: ["recording", "privacy", "tray", "network", "bluetooth", "audio", "mic", "battery", "quicksettings", "clock", "notifications"] },
+                 right: ["recording", "privacy", "updates", "tray", "network", "bluetooth", "audio", "mic", "battery", "quicksettings", "clock", "notifications"] },
           dock: { enabled: true, autoHide: false, magnify: true }, launcher: { position: "center" }, notifications: { position: "top-right" } },
         { id: "vertical", label: "Vertical", icon: "side_navigation", hint: "Side bar, more room for windows",
           bar: { position: "left", style: "floating", height: 44, workspaceStyle: "pills",
                  left: ["launcher", "workspaces"], center: [],
-                 right: ["recording", "privacy", "tray", "network", "audio", "mic", "battery", "clock", "notifications", "quicksettings", "power"] },
+                 right: ["recording", "privacy", "updates", "tray", "network", "audio", "mic", "battery", "clock", "notifications", "quicksettings", "power"] },
           dock: { enabled: false }, launcher: { position: "bar" }, notifications: { position: "top-right" } }
     ]
 
@@ -301,6 +301,72 @@ Page {
     Group {
         title: "Motion"
         SliderRow { title: "Animation speed"; subtitle: "0% turns animations off"; icon: "animation"; target: page.a; key: "animSpeed"; from: 0; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
+        ChoiceRow {
+            title: "Style"
+            subtitle: page.a.motionStyle === "smooth" ? "Gentle easing, nothing overshoots" : page.a.motionStyle === "snappy" ? "Quick and crisp" : page.a.motionStyle === "minimal" ? "Short and plain, no hover zoom" : "Springy, with a little bounce (Material 3 Expressive)"
+            icon: "motion_mode"
+            target: page.a
+            key: "motionStyle"
+            options: [{ value: "expressive", label: "Expressive" }, { value: "smooth", label: "Smooth" }, { value: "snappy", label: "Snappy" }, { value: "minimal", label: "Minimal" }]
+        }
+        ChoiceRow {
+            title: "Panels open with"
+            subtitle: "Quick settings, the calendar, the launcher and the other panels"
+            icon: "open_in_full"
+            target: page.a
+            key: "panelEffect"
+            options: [{ value: "rise", label: "Rise" }, { value: "fade", label: "Fade" }, { value: "slide", label: "Slide" }, { value: "zoom", label: "Zoom" }, { value: "none", label: "None" }]
+        }
+        ChoiceRow {
+            title: "Notifications arrive with"
+            icon: "notifications"
+            target: page.a
+            key: "notifEffect"
+            options: [{ value: "slide", label: "Slide" }, { value: "fade", label: "Fade" }, { value: "pop", label: "Pop" }]
+        }
+        SwitchRow { title: "Ripple where you click"; icon: "touch_app"; target: page.a; key: "ripple" }
+        SwitchRow { title: "Grow under the pointer"; subtitle: "Workspace dots, launcher icons…"; icon: "zoom_in"; target: page.a; key: "hoverZoom" }
+        SettingRow {
+            title: "Speed of each part"
+            subtitle: "On top of the overall speed. Off removes that part's animations."
+            icon: "speed"
+        }
+        Repeater {
+            model: [{ k: "panels", label: "Panels", icon: "dashboard" }, { k: "notifications", label: "Notifications", icon: "notifications" },
+                { k: "bar", label: "Bar (appearing at login)", icon: "toolbar" }, { k: "workspaces", label: "Workspace indicator", icon: "view_week" },
+                { k: "dock", label: "Dock (showing and hiding)", icon: "dock_to_bottom" }, { k: "launcher", label: "Launcher results", icon: "apps" },
+                { k: "lock", label: "Lock screen", icon: "lock" }]
+            SettingRow {
+                id: ar
+                required property var modelData
+                readonly property real v: Theme.areaSpeed(modelData.k)
+                title: modelData.label
+                subtitle: v <= 0 ? "Off" : v === 1 ? "Normal" : Math.round(v * 100) + "%"
+                icon: modelData.icon
+                FSlider {
+                    width: 220
+                    from: 0
+                    to: 2
+                    stepSize: 0.1
+                    value: ar.v
+                    onMoved: val => {
+                        const all = Object.assign({}, page.a.motionAreas || {});
+                        all[ar.modelData.k] = Math.round(val * 10) / 10;
+                        page.a.motionAreas = all;
+                    }
+                }
+            }
+        }
+        SettingRow {
+            title: "Try it"
+            subtitle: "Opens quick settings with these settings"
+            icon: "play_circle"
+            FButton {
+                text: "Preview"
+                variant: "tonal"
+                onClicked: Panels.toggle("control", "")
+            }
+        }
     }
 
     Group {

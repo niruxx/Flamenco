@@ -41,8 +41,8 @@ Rectangle {
     color: Theme.alpha(Theme.text, 0.06)
     property bool barVisible: list.length > 0
 
-    Behavior on implicitWidth { enabled: !root.vertical; Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
-    Behavior on implicitHeight { enabled: root.vertical; Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+    Behavior on implicitWidth { enabled: !root.vertical; Anim { duration: Theme.durA("workspaces", 450); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+    Behavior on implicitHeight { enabled: root.vertical; Anim { duration: Theme.durA("workspaces", 450); easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
     // the gliding highlight
     Rectangle {
@@ -55,10 +55,10 @@ Rectangle {
         radius: root.numbers ? root.tileR : height / 2
         color: Theme.accent
 
-        Behavior on x { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
-        Behavior on width { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
-        Behavior on y { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
-        Behavior on height { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
+        Behavior on x { Anim { duration: Theme.durA("workspaces", 450); easing.bezierCurve: Theme.curves.spring } }
+        Behavior on width { Anim { duration: Theme.durA("workspaces", 450); easing.bezierCurve: Theme.curves.spring } }
+        Behavior on y { Anim { duration: Theme.durA("workspaces", 450); easing.bezierCurve: Theme.curves.spring } }
+        Behavior on height { Anim { duration: Theme.durA("workspaces", 450); easing.bezierCurve: Theme.curves.spring } }
     }
 
     Grid {
@@ -84,8 +84,8 @@ Rectangle {
                 width: root.vertical ? root.capsuleH : main
                 height: root.vertical ? main : root.capsuleH
 
-                Behavior on width { enabled: !root.vertical; Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
-                Behavior on height { enabled: root.vertical; Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
+                Behavior on width { enabled: !root.vertical; Anim { duration: Theme.durA("workspaces", 450); easing.bezierCurve: Theme.curves.spring } }
+                Behavior on height { enabled: root.vertical; Anim { duration: Theme.durA("workspaces", 450); easing.bezierCurve: Theme.curves.spring } }
 
                 Rectangle {
                     anchors.centerIn: parent
@@ -93,7 +93,7 @@ Rectangle {
                     height: root.vertical ? parent.height : root.dot
                     radius: root.numbers ? root.tileR : height / 2
                     // squares fill the capsule's height, so they light up instead of growing past its ends
-                    scale: hover.hovered && !ws.active && !root.numbers ? 1.25 : 1
+                    scale: hover.hovered && !ws.active && !root.numbers && Theme.hoverZoom ? 1.25 : 1
                     color: ws.active ? "transparent" : root.numbers ? (hover.hovered ? Theme.alpha(Theme.text, 0.2) : ws.occupied ? Theme.alpha(Theme.text, 0.12) : "transparent") : ws.occupied ? Theme.alpha(Theme.text, 0.55) : Theme.alpha(Theme.text, 0.2)
 
                     Behavior on color { CAnim {} }

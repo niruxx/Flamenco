@@ -26,6 +26,9 @@
   flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   fingerprints (fprintd)
   flamenco ai providers | models P | test P [MODEL] | ask TEXT… | key set|delete P   AI assistant (Settings → AI)
   flamenco assistant           open the AI assistant
+  flamenco plugins list | new ID | install GIT_URL|FOLDER | remove ID   bar widgets and launcher extensions
+  flamenco notepad              open the notepad
+  flamenco updates [--json]     waiting package updates (repo, AUR, Flatpak)
   flamenco pick-color           pick a color on screen (copied as #rrggbb)
   flamenco emoji               every emoji, as JSON (the launcher's ":" search)
   flamenco keys [show | --json]  every key binding (show: the cheat sheet)
@@ -65,7 +68,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.21.8"
+VERSION = "0.25.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1499,6 +1502,7 @@ SHELL_FUNCTIONS = {
     "wallpapers": ("Wallpaper picker", ["wallpapers"]),
     "assistant": ("AI assistant", ["assistant"]),
     "keys": ("Keyboard shortcuts cheat sheet", ["keys", "show"]),
+    "notepad": ("Notepad", ["notepad"]),
     "color-picker": ("Pick a color on screen", ["pick-color"]),
     "emoji": ("Emoji picker", ["launcher", "openWith", ":"]),
     "record-screen": ("Record the screen (again to stop)", ["record", "toggle", "screen"]),
@@ -3859,6 +3863,246 @@ def cmd_calendar(args: list[str]) -> int:
     return ipc("calendar", args[0] if args else "toggle")
 
 
+# ─────────────────────────────── package updates ─────────────────────────────
+# Repo updates through checkupdates (pacman-contrib: its own copy of the sync
+# database, no root), AUR updates through paru or yay, and Flatpak updates.
+
+def updates_list() -> dict:
+    out = {"repo": [], "aur": [], "flatpak": [], "tools": {}, "upgrade": ""}
+    if shutil.which("checkupdates"):
+        r = subprocess.run(["checkupdates"], capture_output=True, text=True, timeout=180)
+        for line in r.stdout.splitlines():
+            parts = line.split()
+            if len(parts) >= 4:
+                out["repo"].append({"name": parts[0], "from": parts[1], "to": parts[3]})
+        out["tools"]["checkupdates"] = True
+    aur = next((h for h in ("paru", "yay") if shutil.which(h)), "")
+    if aur:
+        r = subprocess.run([aur, "-Qua"], capture_output=True, text=True, timeout=180)
+        for line in r.stdout.splitlines():
+            parts = line.split()
+            if len(parts) >= 4 and parts[2] == "->":
+                out["aur"].append({"name": parts[0], "from": parts[1], "to": parts[3]})
+        out["tools"]["aur"] = aur
+    if shutil.which("flatpak"):
+        r = subprocess.run(["flatpak", "remote-ls", "--updates", "--columns=application,version"], capture_output=True, text=True, timeout=120)
+        for line in r.stdout.splitlines():
+            parts = line.split("\t")
+            if parts and parts[0]:
+                out["flatpak"].append({"name": parts[0], "from": "", "to": parts[1] if len(parts) > 1 else ""})
+        out["tools"]["flatpak"] = True
+    steps = [f"{aur} -Syu" if aur else "sudo pacman -Syu"]
+    if out["flatpak"]:
+        steps.append("flatpak update")
+    out["upgrade"] = " && ".join(steps)
+    out["count"] = len(out["repo"]) + len(out["aur"]) + len(out["flatpak"])
+    return out
+
+
+def cmd_updates(args: list[str]) -> int:
+    u = updates_list()
+    if "--json" in args:
+        print(json.dumps(u))
+    else:
+        for k in ("repo", "aur", "flatpak"):
+            for p in u[k]:
+                print(f"{k:<8} {p['name']} {p['from']} -> {p['to']}")
+        print(f"{u['count']} update(s). Upgrade with: {u['upgrade']}")
+    return 0
+
+
+# ─────────────────────────────── wallhaven ───────────────────────────────────
+# The wallpaper picker's online tab: download a Wallhaven image into
+# <wallpaper folder>/wallhaven and print its path.
+
+def cmd_wallhaven(args: list[str]) -> int:
+    import urllib.request
+    if args[:1] != ["get"] or len(args) < 2:
+        die("usage: flamenco wallhaven get IMAGE_URL")
+    url = args[1]
+    if not re.fullmatch(r"https://w\.wallhaven\.cc/full/[0-9a-z]{2}/wallhaven-[0-9a-z]+\.(jpg|jpeg|png|webp)", url):
+        die("not a Wallhaven image address")
+    try:
+        wp = json.loads((CONFIG_DIR / "settings.json").read_text()).get("wallpaper", {}).get("dir") or "~/Pictures/Wallpapers"
+    except (OSError, ValueError):
+        wp = "~/Pictures/Wallpapers"
+    folder = Path(os.path.expanduser(wp)) / "wallhaven"
+    folder.mkdir(parents=True, exist_ok=True)
+    dest = folder / url.rsplit("/", 1)[1]
+    if not dest.exists():
+        tmp = dest.with_suffix(dest.suffix + ".part")
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "flamenco-shell"})
+            with urllib.request.urlopen(req, timeout=60) as r, open(tmp, "wb") as f:
+                shutil.copyfileobj(r, f)
+            tmp.replace(dest)
+        except Exception as e:
+            tmp.unlink(missing_ok=True)
+            die(f"download failed: {ai_http_error(e)}")
+    print(dest)
+    return 0
+
+
+# ─────────────────────────────── plugins ─────────────────────────────────────
+# Third-party bar widgets and launcher extensions in ~/.config/flamenco/plugins/<id>/,
+# described by manifest.json (see docs/plugins.md). New plugins start disabled;
+# they're turned on in Settings → Plugins.
+
+PLUGIN_DIR = CONFIG_DIR / "plugins"
+PLUGIN_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+
+
+def plugin_read(d: Path) -> dict:
+    p = {"id": d.name, "dir": str(d), "ok": False, "error": ""}
+    try:
+        m = json.loads((d / "manifest.json").read_text())
+    except (OSError, ValueError) as e:
+        p["error"] = f"manifest.json: {e}"
+        return p
+    if not PLUGIN_ID.match(d.name):
+        p["error"] = "folder name must be lowercase letters, digits, . _ -"
+        return p
+    p.update(name=str(m.get("name") or d.name), version=str(m.get("version", "")), author=str(m.get("author", "")),
+             description=str(m.get("description", "")), homepage=str(m.get("homepage", "")))
+    bar = m.get("bar")
+    if bar:
+        f = (d / str(bar)).resolve()
+        if not f.is_relative_to(d.resolve()) or not f.is_file() or f.suffix != ".qml":
+            p["error"] = f"bar widget not found: {bar}"
+            return p
+        p["bar"] = str(f)
+        p["barLabel"] = str(m.get("barLabel") or p["name"])
+    la = m.get("launcher")
+    if la:
+        f = (d / str(la.get("script", ""))).resolve()
+        prefix = str(la.get("prefix", ""))
+        if not prefix or len(prefix) > 3 or prefix in ("=", ">", ";", ":", "#"):
+            p["error"] = "launcher prefix must be 1–3 characters and not one of = > ; : #"
+            return p
+        if not f.is_relative_to(d.resolve()) or not f.is_file():
+            p["error"] = f"launcher script not found: {la.get('script')}"
+            return p
+        if not os.access(f, os.X_OK):
+            p["error"] = f"launcher script isn't executable: chmod +x {f}"
+            return p
+        p["launcher"] = {"prefix": prefix, "script": str(f), "hint": str(la.get("hint", ""))}
+    if not bar and not la:
+        p["error"] = "the manifest has neither a bar widget nor a launcher extension"
+        return p
+    p["ok"] = True
+    return p
+
+
+def plugins_list() -> list[dict]:
+    if not PLUGIN_DIR.is_dir():
+        return []
+    return [plugin_read(d) for d in sorted(PLUGIN_DIR.iterdir()) if d.is_dir() and not d.name.startswith(".")]
+
+
+PLUGIN_EXAMPLE = {
+    "manifest.json": json.dumps({
+        "name": "Hello", "version": "1.0", "author": "you", "description": "An example: a bar widget and a launcher extension",
+        "bar": "BarWidget.qml", "barLabel": "Hello (example)",
+        "launcher": {"prefix": "!", "script": "launcher.py", "hint": "! something to search"}}, indent=2) + "\n",
+    "BarWidget.qml": """import QtQuick
+
+// A Flamenco bar widget. `api` is set by Flamenco (see docs/plugins.md):
+// api.theme (colors, fonts, sizes), api.media / api.audio / api.niri / api.time…,
+// api.run([...]), api.exec([...], callback), api.notify(title, body), api.settings.
+Rectangle {
+    id: root
+    property var api
+    property string screenName
+    property int barLevel: 0
+
+    implicitWidth: label.implicitWidth + 20
+    implicitHeight: api ? api.theme.barHeight - 10 : 30
+    radius: height / 2
+    color: hover.hovered && api ? Qt.rgba(api.theme.accent.r, api.theme.accent.g, api.theme.accent.b, 0.18) : "transparent"
+
+    Text {
+        id: label
+        anchors.centerIn: parent
+        text: "👋 " + (api ? api.time.time : "")
+        color: api ? api.theme.text : "white"
+        font.family: api ? api.theme.fontFamily : ""
+        font.pixelSize: api ? api.theme.fsSm : 12
+    }
+    HoverHandler { id: hover }
+    TapHandler { onTapped: api.notify("Hello from a plugin", "Edit BarWidget.qml to make it yours") }
+}
+""",
+    "launcher.py": """#!/usr/bin/env python3
+# A Flamenco launcher extension: called with what's typed after the prefix,
+# prints one JSON result per line: title, subtitle, icon (Material Symbols name)
+# and one action: exec (a shell command), copy (text) or open (a URL or file).
+import json, sys
+q = " ".join(sys.argv[1:])
+print(json.dumps({"title": f"Search the web for “{q}”", "subtitle": "Opens your browser", "icon": "travel_explore",
+                  "open": "https://duckduckgo.com/?q=" + q.replace(" ", "+")}))
+print(json.dumps({"title": q.upper() or "Type something", "subtitle": "Copy in capitals", "icon": "text_fields", "copy": q.upper()}))
+""",
+}
+
+
+def cmd_plugins(args: list[str]) -> int:
+    sub = args[0] if args else "list"
+    if sub == "list":
+        pl = plugins_list()
+        if "--json" in args:
+            print(json.dumps({"dir": str(PLUGIN_DIR), "plugins": pl}))
+        else:
+            for p in pl:
+                print(f"{p['id']:<20} {'ok ' if p['ok'] else 'ERR'} {p.get('name', '')} {p.get('version', '')}  {p['error']}")
+            print(f"({PLUGIN_DIR})")
+        return 0
+    if sub == "new" and len(args) > 1:
+        pid = args[1].lower()
+        if not PLUGIN_ID.match(pid):
+            die("plugin id: lowercase letters, digits, . _ -")
+        d = PLUGIN_DIR / pid
+        if d.exists():
+            die(f"{d} already exists")
+        d.mkdir(parents=True)
+        for name, text in PLUGIN_EXAMPLE.items():
+            (d / name).write_text(text.replace('"Hello"', json.dumps(pid.capitalize())))
+        (d / "launcher.py").chmod(0o755)
+        print(f"plugins: created {d}. Turn it on in Settings → Plugins.")
+        return 0
+    if sub == "install" and len(args) > 1:
+        src = args[1]
+        if re.match(r"^(https://|git@)", src):
+            name = re.sub(r"\.git$", "", src.rstrip("/").rsplit("/", 1)[-1]).lower()
+            name = re.sub(r"^flamenco[-_]", "", name)
+            if not PLUGIN_ID.match(name):
+                die(f"can't make a plugin id from {src}")
+            d = PLUGIN_DIR / name
+            if d.exists():
+                die(f"{d} already exists (remove it first, or `git -C {d} pull` to update)")
+            PLUGIN_DIR.mkdir(parents=True, exist_ok=True)
+            if subprocess.run(["git", "clone", "--depth", "1", src, str(d)]).returncode != 0:
+                die("git clone failed")
+        else:
+            srcp = Path(os.path.expanduser(src)).resolve()
+            if not (srcp / "manifest.json").is_file():
+                die("not a plugin folder (no manifest.json)")
+            d = PLUGIN_DIR / srcp.name.lower()
+            if d.exists():
+                die(f"{d} already exists")
+            shutil.copytree(srcp, d)
+        p = plugin_read(d)
+        print(f"plugins: installed {p['id']}" + (f" (problem: {p['error']})" if p["error"] else "") + ". It's off until you turn it on in Settings → Plugins.")
+        return 0
+    if sub == "remove" and len(args) > 1:
+        d = PLUGIN_DIR / args[1]
+        if not PLUGIN_ID.match(args[1]) or not d.is_dir():
+            die(f"no plugin {args[1]}")
+        shutil.rmtree(d)
+        print(f"plugins: removed {args[1]}")
+        return 0
+    die("usage: flamenco plugins list [--json] | new ID | install GIT_URL|FOLDER | remove ID")
+
+
 # ─────────────────────────────── fingerprints (fprintd) ──────────────────────
 # Enrolling goes through fprintd's own tools (fprintd-list / -enroll / -delete),
 # which talk to fprintd over D-Bus as you; polkit lets the active session manage
@@ -4267,6 +4511,241 @@ def cmd_sound(args: list[str]) -> int:
                 return 0
         die("no audio player found (pw-play, paplay or aplay)")
     die("usage: flamenco sound themes | play EVENT | find EVENT")
+
+
+# ─────────────────────────────── more apps: terminals, launchers, browsers… ──
+# Opt-in per app (Settings → App Theming → Other apps). Each gets a color file
+# Flamenco owns, plus at most one marked line in the app's own config to load
+# it; both are undone by "Restore originals" (the config is backed up first).
+
+EXTRA_APPS = {
+    "kitty": "kitty", "ghostty": "ghostty", "alacritty": "alacritty", "foot": "foot", "fuzzel": "fuzzel",
+    "pywalfox": "pywalfox", "vesktop": "vesktop", "spicetify": "spicetify", "vscode": "code",
+}
+
+
+def ansi_palette(s: "Spec") -> dict:
+    """16 terminal colors in the palette's spirit: red/green/yellow from error/success/warning,
+    blue/magenta/cyan nudged towards the accent's hue."""
+    import colorsys
+    c, dark = s.c, s.dark
+
+    def hls(h):
+        r, g, b = (x / 255 for x in hex_to_rgb(h))
+        return colorsys.rgb_to_hls(r, g, b)
+
+    ah, al, asat = hls(c["accent"])
+    sat = max(0.45, min(0.8, asat))
+    light = 0.68 if dark else 0.40
+
+    def hue(deg):
+        d = ((ah * 360 - deg + 540) % 360) - 180        # shortest way to the accent's hue
+        r, g, b = colorsys.hls_to_rgb(((deg + d * 0.15) % 360) / 360, light, sat)
+        return rgb_to_hex((r * 255, g * 255, b * 255))
+
+    normal = [c["surfaceHigh"] if dark else c["text"], c["error"], c["success"], c["warning"],
+              hue(215), hue(300), hue(185), mix(c["text"], c["bg"], 0.2) if dark else c["surfaceHighest"]]
+    bright = [c["textDim"]] + [shade(x, 0.18 if dark else -0.18) for x in normal[1:7]] + [c["text"] if dark else c["surface"]]
+    return {"fg": c["text"], "bg": c["bg"], "cursor": c["accent"], "selBg": mix(c["bg"], c["accent"], 0.35),
+            "selFg": c["text"], "colors": normal + bright}
+
+
+def ensure_line(path: Path, line: str, m: dict, at_top: bool = False, replace: str | None = None):
+    """Make a config load our file: add `line` once (marked), or put it in place of a
+    line matching `replace` (kept as a comment). The config is backed up first."""
+    text = path.read_text() if path.exists() else ""
+    if line in text.splitlines():
+        return
+    backup_once(path, m)
+    lines = text.splitlines()
+    if replace:
+        for i, l in enumerate(lines):
+            if re.match(replace, l):
+                lines[i:i + 1] = [f"# {MARKER}: was: {l}", line]
+                break
+        else:
+            lines = ([f"# {MARKER}: palette", line] + lines) if at_top else (lines + [f"# {MARKER}: palette", line])
+    else:
+        lines = ([f"# {MARKER}: palette", line] + lines) if at_top else (lines + [f"# {MARKER}: palette", line])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n")
+
+
+def apply_extra_apps(s: "Spec", m: dict) -> list[str]:
+    want = s.o.get("apps") or {}
+    p = ansi_palette(s)
+    col, c = p["colors"], s.c
+    bare = lambda h: h.lstrip("#")
+    done = []
+    head = f"# {MARKER}: Flamenco palette ({s.name}, {'dark' if s.dark else 'light'}). Rewritten on palette changes.\n"
+
+    if want.get("kitty"):
+        d = XDG_CONFIG / "kitty"
+        body = head + f"foreground {p['fg']}\nbackground {p['bg']}\ncursor {p['cursor']}\nselection_background {p['selBg']}\n" \
+            f"selection_foreground {p['selFg']}\nactive_border_color {c['accent']}\ninactive_border_color {c['border']}\n" \
+            f"active_tab_background {c['accent']}\nactive_tab_foreground {c['onAccent']}\n" \
+            f"inactive_tab_background {c['surfaceHigh']}\ninactive_tab_foreground {c['textDim']}\nurl_color {c['accent']}\n" \
+            + "".join(f"color{i} {x}\n" for i, x in enumerate(col))
+        write(d / "flamenco-theme.conf", body, m)
+        ensure_line(d / "kitty.conf", "include flamenco-theme.conf", m)
+        subprocess.run(["pkill", "-USR1", "-x", "kitty"], capture_output=True)      # kitty reloads its config
+        done.append("kitty")
+
+    if want.get("ghostty"):
+        d = XDG_CONFIG / "ghostty"
+        body = head + f"background = {p['bg']}\nforeground = {p['fg']}\ncursor-color = {p['cursor']}\n" \
+            f"selection-background = {p['selBg']}\nselection-foreground = {p['selFg']}\n" \
+            + "".join(f"palette = {i}={x}\n" for i, x in enumerate(col))
+        write(d / "themes/flamenco", body, m)
+        ensure_line(d / "config", "theme = flamenco", m, replace=r"^\s*theme\s*=")
+        subprocess.run(["pkill", "-USR2", "-x", "ghostty"], capture_output=True)    # ghostty reloads its config
+        done.append("ghostty")
+
+    if want.get("alacritty"):
+        d = XDG_CONFIG / "alacritty"
+        names = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
+        body = head + f"[colors.primary]\nbackground = \"{p['bg']}\"\nforeground = \"{p['fg']}\"\n\n" \
+            f"[colors.cursor]\ncursor = \"{p['cursor']}\"\ntext = \"{p['bg']}\"\n\n" \
+            f"[colors.selection]\nbackground = \"{p['selBg']}\"\ntext = \"{p['selFg']}\"\n\n[colors.normal]\n" \
+            + "".join(f"{n} = \"{col[i]}\"\n" for i, n in enumerate(names)) + "\n[colors.bright]\n" \
+            + "".join(f"{n} = \"{col[i + 8]}\"\n" for i, n in enumerate(names))
+        write(d / "flamenco.toml", body, m)
+        conf = d / "alacritty.toml"
+        text = conf.read_text() if conf.exists() else ""
+        imp = f'import = ["{d / "flamenco.toml"}"]'
+        if "flamenco.toml" not in text:
+            backup_once(conf, m)
+            if re.search(r"(?m)^\[general\]", text):
+                if re.search(r"(?ms)^\[general\][^\[]*^\s*import\s*=", text):
+                    done.append("alacritty (add flamenco.toml to general.import yourself)")
+                    imp = ""
+                else:
+                    text = re.sub(r"(?m)^\[general\]\s*$", f"[general]\n# {MARKER}: palette\n{imp}", text, count=1)
+            else:
+                text = f"# {MARKER}: palette\n[general]\n{imp}\n\n" + text
+            if imp:
+                conf.parent.mkdir(parents=True, exist_ok=True)
+                conf.write_text(text)
+        if not done or not done[-1].startswith("alacritty"):
+            done.append("alacritty")                # it reloads by itself
+
+    if want.get("foot"):
+        d = XDG_CONFIG / "foot"
+        ver = re.search(r"(\d+)\.(\d+)", run_out(["foot", "--version"]) if shutil.which("foot") else "")
+        section = "colors-dark" if ver and (int(ver.group(1)), int(ver.group(2))) >= (1, 20) else "colors"
+        body = head + f"[{section}]\nforeground={bare(p['fg'])}\nbackground={bare(p['bg'])}\n" \
+            f"selection-foreground={bare(p['selFg'])}\nselection-background={bare(p['selBg'])}\n" \
+            + "".join(f"regular{i}={bare(x)}\n" for i, x in enumerate(col[:8])) \
+            + "".join(f"bright{i}={bare(x)}\n" for i, x in enumerate(col[8:])) \
+            + f"\n[cursor]\ncolor={bare(p['bg'])} {bare(p['cursor'])}\n"
+        write(d / "flamenco.ini", body, m)
+        ensure_line(d / "foot.ini", f"include={d / 'flamenco.ini'}", m, at_top=True)
+        done.append("foot (new windows)")
+
+    if want.get("fuzzel"):
+        d = XDG_CONFIG / "fuzzel"
+        a = lambda h, alpha="ff": bare(h) + alpha
+        body = head + f"[colors]\nbackground={a(c['surface'], 'f2')}\ntext={a(c['text'])}\nprompt={a(c['textDim'])}\n" \
+            f"placeholder={a(c['textDim'])}\ninput={a(c['text'])}\nmatch={a(c['accent'])}\nselection={a(c['accent'])}\n" \
+            f"selection-text={a(c['onAccent'])}\nselection-match={a(c['onAccent'])}\nborder={a(c['accent'])}\n"
+        write(d / "flamenco.ini", body, m)
+        ensure_line(d / "fuzzel.ini", f"include={d / 'flamenco.ini'}", m, at_top=True)
+        done.append("fuzzel")
+
+    if want.get("pywalfox"):
+        wal = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "wal/colors.json"
+        data = {"wallpaper": "", "alpha": "100",
+                "special": {"background": p["bg"], "foreground": p["fg"], "cursor": p["cursor"]},
+                "colors": {f"color{i}": x for i, x in enumerate(col)}}
+        # pywalfox reads color1–7 as accents: lead with the palette's own
+        data["colors"]["color1"], data["colors"]["color2"] = c["accent"], c.get("accent2", c["accent"])
+        write(wal, json.dumps(data, indent=2), m)
+        if shutil.which("pywalfox"):
+            subprocess.run(["pywalfox", "update"], capture_output=True, timeout=20)
+        done.append("Firefox (pywalfox)")
+
+    if want.get("vesktop"):
+        css = "/**\n * @name Flamenco\n * @author flamenco-shell\n * @description Colors from your Flamenco palette (" + MARKER + ")\n */\n" \
+            ":root, .theme-dark, .theme-light, .visual-refresh {\n" \
+            f"  --background-primary: {c['bg']};\n  --background-secondary: {c['surface']};\n" \
+            f"  --background-secondary-alt: {c['surfaceHigh']};\n  --background-tertiary: {shade(c['bg'], -0.15 if s.dark else 0.0)};\n" \
+            f"  --background-floating: {c['surfaceHigh']};\n  --background-base-lowest: {shade(c['bg'], -0.15 if s.dark else 0.0)};\n" \
+            f"  --background-base-lower: {c['bg']};\n  --background-base-low: {c['surface']};\n" \
+            f"  --background-surface-high: {c['surfaceHigh']};\n  --background-surface-higher: {c['surfaceHighest']};\n" \
+            f"  --chat-background-default: {c['bg']};\n  --channeltextarea-background: {c['surfaceHigh']};\n" \
+            f"  --background-modifier-hover: {rgba(c['text'], 0.06)};\n  --background-modifier-selected: {rgba(c['accent'], 0.18)};\n" \
+            f"  --brand-500: {c['accent']};\n  --brand-560: {shade(c['accent'], -0.1)};\n  --brand-experiment: {c['accent']};\n" \
+            f"  --text-normal: {c['text']};\n  --text-default: {c['text']};\n  --text-muted: {c['textDim']};\n" \
+            f"  --header-primary: {c['text']};\n  --header-secondary: {c['textDim']};\n" \
+            f"  --interactive-normal: {c['textDim']};\n  --interactive-hover: {c['text']};\n  --interactive-active: {c['text']};\n" \
+            f"  --text-link: {c['accent']};\n  --border-subtle: {c['border']};\n}}\n"
+        wrote = False
+        for base in (XDG_CONFIG / "vesktop", XDG_CONFIG / "Vencord", XDG_CONFIG / "equibop"):
+            if base.is_dir():
+                write(base / "themes/flamenco.theme.css", css, m)
+                wrote = True
+        done.append("Discord (turn on the Flamenco theme in Vencord → Themes)" if wrote else "Discord (no Vesktop / Vencord folder found)")
+
+    if want.get("spicetify"):
+        d = XDG_CONFIG / "spicetify/Themes/Flamenco"
+        body = head.replace("#", ";") + "[flamenco]\n" + "".join(f"{k:<16}= {bare(v)}\n" for k, v in (
+            ("text", c["text"]), ("subtext", c["textDim"]), ("main", c["bg"]), ("sidebar", c["surface"]),
+            ("player", c["surface"]), ("card", c["surfaceHigh"]), ("shadow", c["bg"]), ("selected-row", c["textDim"]),
+            ("button", c["accent"]), ("button-active", c["accent"]), ("button-disabled", c["border"]),
+            ("tab-active", c["surfaceHighest"]), ("notification", c["accent"]), ("notification-error", c["error"]),
+            ("misc", c["border"])))
+        write(d / "color.ini", body, m)
+        write(d / "user.css", f"/* {MARKER}: Flamenco */\n", m)
+        if shutil.which("spicetify"):
+            cur = run_out(["spicetify", "config", "current_theme"]).strip()
+            if cur == "Flamenco":
+                r = subprocess.run(["spicetify", "refresh", "-q"], capture_output=True, text=True, timeout=60)
+            else:
+                subprocess.run(["spicetify", "config", "current_theme", "Flamenco", "color_scheme", "flamenco"], capture_output=True, timeout=30)
+                r = subprocess.run(["spicetify", "apply", "-q"], capture_output=True, text=True, timeout=120)
+            done.append("Spotify" if r.returncode == 0 else "Spotify (spicetify failed: run `spicetify apply` in a terminal)")
+        else:
+            done.append("Spotify (theme written; install spicetify to apply it)")
+
+    if want.get("vscode"):
+        ui = "vs-dark" if s.dark else "vs"
+        theme = {"name": "Flamenco", "type": "dark" if s.dark else "light", "colors": {
+            "editor.background": c["bg"], "editor.foreground": c["text"], "editorCursor.foreground": c["accent"],
+            "editor.selectionBackground": p["selBg"], "editor.lineHighlightBackground": c["surface"],
+            "editorLineNumber.foreground": c["textDim"], "editorLineNumber.activeForeground": c["text"],
+            "sideBar.background": c["surface"], "sideBar.foreground": c["text"], "activityBar.background": c["surface"],
+            "activityBar.foreground": c["accent"], "activityBarBadge.background": c["accent"], "activityBarBadge.foreground": c["onAccent"],
+            "titleBar.activeBackground": c["surface"], "titleBar.activeForeground": c["text"], "statusBar.background": c["surface"],
+            "statusBar.foreground": c["textDim"], "tab.activeBackground": c["bg"], "tab.inactiveBackground": c["surface"],
+            "tab.activeBorderTop": c["accent"], "editorGroupHeader.tabsBackground": c["surface"], "panel.background": c["surface"],
+            "terminal.background": c["bg"], "terminal.foreground": c["text"], "focusBorder": c["accent"],
+            "button.background": c["accent"], "button.foreground": c["onAccent"], "input.background": c["surfaceHigh"],
+            "dropdown.background": c["surfaceHigh"], "list.activeSelectionBackground": rgba(c["accent"], 0.25),
+            "list.hoverBackground": rgba(c["text"], 0.06), "textLink.foreground": c["accent"], "badge.background": c["accent"],
+            "badge.foreground": c["onAccent"], "progressBar.background": c["accent"], "editorWidget.background": c["surfaceHigh"],
+            **{f"terminal.ansi{n}": col[i] for i, n in enumerate(["Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"])},
+            **{f"terminal.ansiBright{n}": col[i + 8] for i, n in enumerate(["Black", "Red", "Green", "Yellow", "Blue", "Magenta", "Cyan", "White"])}},
+            "tokenColors": [
+                {"scope": ["comment"], "settings": {"foreground": c["textDim"], "fontStyle": "italic"}},
+                {"scope": ["keyword", "storage", "storage.type"], "settings": {"foreground": c["accent"]}},
+                {"scope": ["string"], "settings": {"foreground": col[2]}},
+                {"scope": ["constant.numeric", "constant.language"], "settings": {"foreground": col[3]}},
+                {"scope": ["entity.name.function", "support.function"], "settings": {"foreground": col[4]}},
+                {"scope": ["entity.name.type", "entity.name.class", "support.type"], "settings": {"foreground": col[6]}},
+                {"scope": ["variable.parameter"], "settings": {"foreground": col[5]}},
+                {"scope": ["invalid"], "settings": {"foreground": c["error"]}}]}
+        pkg = {"name": "flamenco-theme", "displayName": "Flamenco", "publisher": "flamenco-shell", "version": "1.0.0",
+               "engines": {"vscode": "^1.60.0"}, "categories": ["Themes"],
+               "contributes": {"themes": [{"label": "Flamenco", "uiTheme": ui, "path": "./themes/flamenco.json"}]}}
+        found = False
+        for base in (HOME / ".vscode/extensions", HOME / ".vscode-oss/extensions", HOME / ".cursor/extensions"):
+            if base.parent.is_dir():
+                ext = base / "flamenco-shell.flamenco-theme-1.0.0"
+                write(ext / "package.json", json.dumps(pkg, indent=2), m)
+                write(ext / "themes/flamenco.json", json.dumps(theme, indent=2), m)
+                found = True
+        done.append("VS Code (pick the Flamenco color theme once)" if found else "VS Code (no ~/.vscode or ~/.vscode-oss found)")
+    return done
 
 
 def apply_sound(s: "Spec", m: dict) -> list[str]:
@@ -5256,6 +5735,7 @@ def cmd_apps_theme(args: list[str]) -> int:
             done += apply_gtk(spec, m)
         done += apply_cursor(spec, m)
         done += apply_sound(spec, m)
+        done += apply_extra_apps(spec, m)
     finally:
         save_manifest(m)
     print("themed: " + (", ".join(done) or "nothing (Qt and GTK disabled)"))
@@ -5405,6 +5885,11 @@ def cmd_list_themes(args: list[str]) -> int:
     icons, cursors = icon_and_cursor_themes()
     out = {"icons": icons, "cursors": cursors, "gtk": gtk_themes(), "qtStyles": qt_styles(), "kvantum": kvantum_themes(),
            "sddm": sddm_themes()}
+    if "--json" in args:
+        # the other apps Flamenco can theme, and whether they're here
+        out["apps"] = {k: bool(shutil.which(b) or (k == "vesktop" and any((XDG_CONFIG / d).is_dir() for d in ("vesktop", "Vencord", "equibop")))
+                               or (k == "vscode" and any((HOME / d).is_dir() for d in (".vscode", ".vscode-oss", ".cursor"))))
+                       for k, b in EXTRA_APPS.items()}
     if "--json" in args:
         print(json.dumps(out))
     else:
@@ -6789,7 +7274,7 @@ def cmd_screenshot(args: list[str]) -> int:
 
 PANELS = {"launcher": "launcher", "control": "control", "notifications": "notifications",
           "calendar": "calendar", "wallpapers": "wallpapers", "power": "power", "widgets": "widgets",
-          "assistant": "assistant"}
+          "assistant": "assistant", "notepad": "notepad"}
 
 
 def main(argv: list[str]) -> int:
@@ -6902,6 +7387,12 @@ def main(argv: list[str]) -> int:
         return cmd_ddc(rest)
     if cmd == "keys":
         return cmd_keys(rest)
+    if cmd == "plugins":
+        return cmd_plugins(rest)
+    if cmd == "wallhaven":
+        return cmd_wallhaven(rest)
+    if cmd == "updates":
+        return cmd_updates(rest)
     if cmd == "emoji":
         return cmd_emoji(rest)
     if cmd == "pick-color":

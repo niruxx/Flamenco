@@ -55,6 +55,14 @@ Singleton {
                 property real roundness: 1.0          // corner radius multiplier
                 property real panelOpacity: 0.94
                 property real animSpeed: 1.0          // 0 disables animations
+                // motion style for every animation: expressive (springy) | smooth (no overshoot) | snappy | minimal
+                property string motionStyle: "expressive"
+                // speed per area (1 = normal, 2 = twice as fast, 0 = no animation)
+                property var motionAreas: ({ panels: 1, notifications: 1, bar: 1, workspaces: 1, dock: 1, launcher: 1, lock: 1 })
+                property string panelEffect: "rise"     // how panels open: rise | fade | slide | zoom | none
+                property string notifEffect: "slide"    // how notifications arrive: slide | fade | pop
+                property bool ripple: true              // ripple where you click
+                property bool hoverZoom: true           // things grow a little under the pointer
                 property real uiScale: 1.0
                 property string fontFamily: "Google Sans Flex"
                 property string monoFamily: "Google Sans Code"
@@ -81,10 +89,11 @@ Singleton {
                 property int trayMaxVisible: 6        // extra icons go into an overflow drawer
                 property string taskbarScope: "all"   // taskbar widget: all | screen | workspace
                 property string micIndicator: "inuse" // microphone widget: inuse (while recording or muted) | always
+                property var perScreen: ({})          // screens with their own widgets: { "DP-1": { left, center, right } }
                 property bool taskbarTitles: false    // window titles next to the taskbar's icons
                 property var left: ["launcher", "workspaces", "window"]
                 property var center: ["clock", "media"]
-                property var right: ["recording", "privacy", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"]
+                property var right: ["recording", "privacy", "updates", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"]
             }
 
             property JsonObject dock: JsonObject {
@@ -128,6 +137,26 @@ Singleton {
                 property var providers: ({})           // per provider: { baseUrl, model }
                 property string systemPrompt: "You are a helpful assistant built into the Flamenco desktop shell on Linux (niri or Hyprland). Answer clearly and concisely."
                 property string effort: "low"          // Claude: low | medium | high
+            }
+
+            // Quick settings (the control center): where it opens and what's in it
+            property JsonObject control: JsonObject {
+                property string align: "auto"         // auto (next to its bar button) | left | center | right
+                property int width: 440
+                property int columns: 2
+                property var sections: ({ header: true, sliders: true, tiles: true, media: true })
+                property var tiles: []                // shown tiles in order; [] = all, in the default order
+            }
+
+            // Plugins (~/.config/flamenco/plugins): the ones turned on, and each one's own settings
+            property JsonObject plugins: JsonObject {
+                property var enabled: []
+                property var config: ({})
+            }
+
+            // Package updates in the bar (`flamenco updates`)
+            property JsonObject updates: JsonObject {
+                property int interval: 60             // minutes between checks
             }
 
             // Calendars shown in the calendar panel (`flamenco calendar events`):
@@ -396,6 +425,7 @@ Singleton {
                 property bool gtk4: true              // libadwaita apps
                 property bool gtkExtras: true         // extra styling beyond color overrides
                 property string customGtkCss: ""
+                property var extraApps: ({})          // other apps themed from the palette: { kitty: true, … }
             }
         }
     }
@@ -407,7 +437,7 @@ Singleton {
         onTriggered: file.writeAdapter()
     }
 
-    readonly property int currentVersion: 6
+    readonly property int currentVersion: 7
 
     // One-time upgrades for settings files written by older versions.
     function migrate() {
@@ -468,6 +498,18 @@ Singleton {
                 const l = (b[side] || []).slice();
                 const i = l.indexOf("privacy");
                 l.splice(Math.max(0, i), 0, "recording");
+                b[side] = l;
+            }
+        }
+        if (v < 7) {
+            // 0.23.1: package updates (only shows when there are some), before the tray
+            const b = adapter.bar;
+            const used = (b.left || []).concat(b.center || [], b.right || []);
+            if (!used.includes("updates")) {
+                const side = ["right", "center", "left"].find(k => (b[k] || []).includes("tray")) ?? "right";
+                const l = (b[side] || []).slice();
+                const i = l.indexOf("tray");
+                l.splice(Math.max(0, i), 0, "updates");
                 b[side] = l;
             }
         }

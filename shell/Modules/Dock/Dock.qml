@@ -45,7 +45,7 @@ Variants {
         Item {
             id: hoverAnim
             property real v: hover.hovered && win.zoom > 0 ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { duration: Theme.durA("dock", 280); easing.bezierCurve: Theme.curves.emphasizedDecel } }
         }
 
         // App ids only, so the list (and its delegates) stays stable while
@@ -136,7 +136,7 @@ Variants {
             id: dock
 
             property real shift: win.revealed ? 0 : win.thickness + win.margin * 2
-            Behavior on shift { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on shift { Anim { duration: Theme.durA("dock", 450); easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
             anchors.bottom: win.edge === "bottom" ? parent.bottom : undefined
             anchors.left: win.edge === "left" ? parent.left : undefined

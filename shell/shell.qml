@@ -11,6 +11,7 @@ import qs.Services
 import qs.Modules.Assistant
 import qs.Modules.Background
 import qs.Modules.Keys
+import qs.Modules.Notepad
 import qs.Modules.Desktop
 import qs.Modules.Bar
 import qs.Modules.Dock
@@ -68,6 +69,7 @@ ShellRoot {
     WidgetEditor {}
     AssistantPanel {}
     KeysPanel {}
+    NotepadPanel {}
     PowerMenu {}
     SessionOverlay {}
     SettingsWindow {}
@@ -99,6 +101,7 @@ ShellRoot {
     PanelIpc { target: "power"; panel: "power" }
     PanelIpc { target: "assistant"; panel: "assistant" }
     PanelIpc { target: "keys"; panel: "keys" }
+    PanelIpc { target: "notepad"; panel: "notepad" }
 
     IpcHandler {
         target: "widgets"

@@ -18,6 +18,8 @@ Variants {
         readonly property var cfg: Settings.data.bar
         readonly property bool islands: cfg.style === "islands"
         readonly property bool attached: cfg.style === "attached"
+        // this screen's own widgets (Settings → Bar → Layout for), else the shared layout
+        readonly property var layout: (cfg.perScreen || {})[modelData.name] ?? cfg
 
         screen: modelData
         color: "transparent"
@@ -40,6 +42,7 @@ Variants {
             function onLeftChanged() { win.refit(); }
             function onCenterChanged() { win.refit(); }
             function onRightChanged() { win.refit(); }
+            function onPerScreenChanged() { win.refit(); }
             function onHeightChanged() { win.refit(); }
             function onPositionChanged() { win.refit(); }
         }
@@ -70,7 +73,7 @@ Variants {
             id: enterAnim
             property real v: 0
             Component.onCompleted: v = 1
-            Behavior on v { Anim { duration: Theme.durXl; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { duration: Theme.durA("bar", 650); easing.bezierCurve: Theme.curves.emphasizedDecel } }
         }
 
         readonly property var registry: ({
@@ -90,6 +93,10 @@ Variants {
                 mic: micC,
                 privacy: privacyC,
                 recording: recordC,
+                updates: updatesC,
+                notepad: notepadC,
+                visualizer: visualizerC,
+                plugin: pluginC,
                 brightness: brightnessC,
                 battery: batteryC,
                 notifications: notifC,
@@ -111,6 +118,10 @@ Variants {
         Component { id: bluetoothC; StatusIcon { screenName: win.modelData.name; icon: BluetoothState.icon; barVisible: BluetoothState.available && barLevel < 3; detail: "bluetooth" } }
         Component { id: audioC; AudioIcon { screenName: win.modelData.name } }
         Component { id: micC; MicIndicator { screenName: win.modelData.name } }
+        Component { id: pluginC; PluginBarWidget { screenName: win.modelData.name } }
+        Component { id: visualizerC; Visualizer { screenName: win.modelData.name } }
+        Component { id: notepadC; FIconButton { id: noteBtn; icon: "sticky_note_2"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "notepad"; onClicked: Panels.toggle("notepad", win.modelData.name, noteBtn) } }
+        Component { id: updatesC; UpdatesIndicator { window: win; screenName: win.modelData.name } }
         Component { id: recordC; RecordIndicator { screenName: win.modelData.name } }
         Component { id: privacyC; PrivacyIndicator { window: win; screenName: win.modelData.name } }
         Component { id: brightnessC; BrightnessIcon { screenName: win.modelData.name } }
@@ -182,7 +193,7 @@ Variants {
                 islands: win.islands
                 vertical: win.vertical
                 level: win.level
-                ids: win.cfg.left
+                ids: win.layout.left ?? win.cfg.left
                 x: win.vertical ? (parent.width - width) / 2 : (win.islands ? 0 : 6)
                 y: win.vertical ? (win.islands ? 0 : 6) : (parent.height - height) / 2
             }
@@ -195,7 +206,7 @@ Variants {
                 islands: win.islands
                 vertical: win.vertical
                 level: win.level
-                ids: win.cfg.center
+                ids: win.layout.center ?? win.cfg.center
 
                 readonly property real lo: startSec.visible ? (win.vertical ? startSec.y + startSec.height : startSec.x + startSec.width) + win.sectionGap : 0
                 readonly property real hi: (endSec.visible ? (win.vertical ? endSec.y : endSec.x) - win.sectionGap : (win.vertical ? parent.height : parent.width)) - size
@@ -214,7 +225,7 @@ Variants {
                 islands: win.islands
                 vertical: win.vertical
                 level: win.level
-                ids: win.cfg.right
+                ids: win.layout.right ?? win.cfg.right
                 x: win.vertical ? (parent.width - width) / 2 : parent.width - width - (win.islands ? 0 : 6)
                 y: win.vertical ? parent.height - height - (win.islands ? 0 : 6) : (parent.height - height) / 2
             }

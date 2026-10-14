@@ -21,6 +21,10 @@ PanelWindow {
     property string placement: ""
     readonly property string place: placement !== "" ? placement : centered ? "center" : "bar"
     property bool exclusiveKeyboard: false
+    // how it opens (Settings → Appearance → Motion): rise | fade | slide | zoom | none
+    readonly property string effect: Settings.data.appearance.panelEffect || "rise"
+    // open on the side of the bar widget that opened it (false: always at hAlign)
+    property bool followOrigin: true
     property int cardWidth: 420
     property int cardPadding: Theme.sp4
     property alias card: card
@@ -44,7 +48,7 @@ PanelWindow {
         Item {
             id: progressAnim
             property real v: shouldShow ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { duration: root.effect === "none" ? 0 : Theme.durA("panels", 450); easing.bezierCurve: Theme.curves.emphasizedDecel } }
         }
     WlrLayershell.keyboardFocus: shouldShow ? (exclusiveKeyboard ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand) : WlrKeyboardFocus.None
 
@@ -82,9 +86,9 @@ PanelWindow {
 
         // which edge the card grows from: the bar's edge, or none when centered
         readonly property string edge: root.place === "bar" ? Theme.barPos : root.place === "center" ? "" : root.place.startsWith("bottom") ? "bottom" : "top"
-        readonly property real travel: edge === "top" || edge === "left" ? -18 : 18
+        readonly property real travel: (edge === "top" || edge === "left" ? -1 : 1) * (root.effect === "slide" ? 70 : root.effect === "rise" ? 18 : 0)
         // opened from a bar widget: on that widget's side of the bar (Panels.side)
-        readonly property string from: root.place === "bar" ? root.openedFrom : ""
+        readonly property string from: root.place === "bar" && root.followOrigin ? root.openedFrom : ""
         readonly property string fromAlign: from === "start" ? "left" : from === "end" ? "right" : from === "center" ? "anchor" : ""
         readonly property string hPos: root.place === "bar" ? (edge === "left" || edge === "right" ? edge : fromAlign || root.hAlign) : root.place.endsWith("left") ? "left" : root.place.endsWith("right") ? "right" : "center"
         // distance kept from the screen's sides
@@ -128,9 +132,9 @@ PanelWindow {
         border.width: blend ? 0 : 1
         border.color: Theme.alpha(Theme.border, 0.7)
 
-        opacity: card.blend ? Math.min(1, root.progress * 1.6) : root.progress
+        opacity: card.blend || root.effect === "slide" ? Math.min(1, root.progress * 1.6) : root.progress
         // blended cards slide out from under the bar instead of zooming
-        scale: card.blend ? 1 : 0.94 + 0.06 * root.progress
+        scale: card.blend ? 1 : root.effect === "zoom" ? 0.8 + 0.2 * root.progress : root.effect === "rise" ? 0.94 + 0.06 * root.progress : 1
         transformOrigin: card.edge === "top" ? Item.Top : card.edge === "bottom" ? Item.Bottom : card.edge === "left" ? Item.TopLeft : card.edge === "right" ? Item.TopRight : Item.Center
         transform: Translate {
             readonly property bool sideways: card.edge === "left" || card.edge === "right"

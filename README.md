@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.21.8-E8466F?style=for-the-badge" alt="Version 0.21.8">
+  <img src="https://img.shields.io/badge/version-0.25.0-E8466F?style=for-the-badge" alt="Version 0.25.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -162,7 +162,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 |---|---|
 | **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, a microphone indicator (shows while an app records; click to mute), brightness, battery, notifications, weather, power |
 | **🔔 App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
-| **🎛️ Control center** | Volume, mic, screen and keyboard brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, dark mode and wallpaper. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
+| **🎛️ Control center** | Volume, mic, screen, external-monitor and keyboard brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, VPN, dark mode, screen recording, desktop widgets and wallpaper: pick, reorder and lay them out in **Settings → Quick settings**, which also sets where the panel opens and its width. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
 | **🔍 Launcher** | Fuzzy app search ranked by how often you use each app. `=` calculator, `>` run command, `;` clipboard history (cliphist) |
 | **💬 Notifications** | Built-in daemon: popups with timeout bar, swipe to dismiss, actions, DND. History persists across restarts |
 | **📢 OSD** | Volume, screen brightness, keyboard backlight and mic popups |
@@ -171,6 +171,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **📌 Dock** | Optional. Bottom, left or right edge; pinned and running apps, magnification, auto-hide, app names on hover, running indicators, and its size, spacing, background and corners |
 | **🧩 Desktop widgets** | Clock, weather, system stats, now playing, calendar and notes on the desktop, under your windows. Drag them in from a sidebar opened from quick settings; move, resize or remove them; card, glass or bare style |
 | **✨ AI assistant** | A chat panel for Claude, OpenAI, Gemini, OpenRouter, or a local model in LM Studio or Ollama. Set up in **Settings → AI**; keys stay in your keyring |
+| **🧩 Plugins** | Bar widgets and launcher extensions from others or yourself, in `~/.config/flamenco/plugins`. Install from a git link, turn on in **Settings → Plugins**. See [docs/plugins.md](docs/plugins.md) |
 | **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **🔒 Lock screen** | PAM auth with password or **fingerprint** (enroll fingers in Settings), blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
 | **🚪 Login screen** | Set up **Flamenco Greeter** (greetd) from Settings: wallpaper, blur and dim, fonts, the session picker, user list and power buttons, in the shell's palette. Edits greetd itself too: greeter, VT and auto-login |
@@ -408,6 +409,9 @@ Every panel closes with `Esc` or a click outside it.
 | Taskbar | focus the app; click again to cycle through its windows | right-click opens the window menu (move to a workspace or monitor, float, fullscreen, pin, close all, force quit…), middle-click opens a new window |
 | Microphone | mute or unmute the mic. It appears while an app is recording (with a pulsing red dot) or while the mic is muted (crossed out, in red) | right-click opens the microphone page in quick settings; middle-click also mutes; scroll changes the mic volume |
 | Privacy | appears while the camera or screen sharing is in use (and the mic, if the Microphone widget isn't in the bar): a green camera, a red screen-share icon. Click to see which apps, and to mute the mic | camera use is read from which of your programs have `/dev/video*` open; screen sharing from the screencast stream in PipeWire |
+| Package updates | appears when updates are waiting, with the count. Click for the list (repo, AUR, Flatpak) and **Update now**, which runs `paru -Syu` / `yay -Syu` / `sudo pacman -Syu` in a terminal | checks every hour (Settings file: `updates.interval`); needs `pacman-contrib` |
+| Notepad | opens the notepad | |
+| Audio visualizer | little bars that move with what's playing | needs `cava`; only runs while something plays |
 | Clock | dashboard (Overview, Media, Wallpapers, Weather) | |
 | Media | dashboard, Media tab (click again to close) | middle-click play/pause, right-click next track |
 | System tray | activate the app | right-click app menu, middle-click secondary action, scroll is passed to the app, hover for tooltip |
@@ -422,6 +426,8 @@ Every panel closes with `Esc` or a click outside it.
 | Weather | calendar and weather | |
 | Quick settings (menu icon) | control center | |
 | Power | power menu | |
+
+**Different widgets on each screen:** in **Settings → Bar → Layout for**, pick a screen and press **Give it its own**. It starts as a copy of the shared layout, and its sections are then edited separately. **Use the shared one** switches it back. Screens without their own layout keep using the shared one.
 
 **Fits any screen.** Each screen's bar measures itself. On narrow or heavily scaled screens, a rotated monitor for example, it compacts step by step until everything fits:
 1. Text labels go: the window title and media become icons, the clock drops its date, the stats show CPU only, and the tray shows up to 3 icons.
@@ -455,6 +461,12 @@ Move with `↑`/`↓` (or `Ctrl+N`/`Ctrl+P`), launch with `Enter`, close with `E
 - **Power tile:** click to cycle power profiles. Its `›` arrow opens a page with Power saver, Balanced and Performance, plus battery details.
 - **Header:** your name and uptime on the left; settings, lock and power buttons in the top-right corner.
 - **Media card:** appears while something is playing. Drag the seek bar to move through the track (a bubble shows where you'll land), or click it to jump. Use the swap button to switch between players.
+
+**Customizing it:** in **Settings → Quick settings**:
+- **Where it opens:** next to its bar button (the default), or always left, center or right.
+- **Size:** its width, and how many tile columns there are.
+- **Sections:** show or hide the user card, the sliders, the tiles and the media card.
+- **Tiles:** which ones appear, in what order. **Reset** brings back the defaults.
 
 ### 🔈 Volume
 
@@ -662,6 +674,31 @@ Widgets sit on the desktop, above the wallpaper and under your windows.
 **Where they're kept:** in `desktop.widgets` in `~/.config/flamenco/settings.json`. Positions are stored as a share of the screen, so they survive resolution changes. Widgets saved for a screen that isn't connected show on the first screen.
 
 **Clicks:** only the widgets take clicks; the rest of the desktop is untouched.
+
+### 📝 Notepad
+
+Quick notes that save as you type, in `~/.local/share/flamenco/notes.json`.
+
+**Opening it:** the bar's Notepad button (add it in **Settings → Bar**), the Flamenco function *Notepad*, or `flamenco notepad`.
+
+**In the panel:** keep several notes, show the Markdown preview, copy a note, or delete it.
+
+### 🧩 Plugins
+
+Plugins add **bar widgets** and **launcher extensions** (a prefix, like `!`, that runs your script with what you type).
+
+**Managing them:** **Settings → Plugins** installs one from a git address or a folder, turns it on or off, opens its folder, and removes it.
+- **Off by default:** a new plugin starts turned off, because a plugin runs with your permissions.
+- **Bar widgets:** once a plugin is on, its widget appears in **Settings → Bar** with "(plugin)" after its name.
+
+**Making one:** `flamenco plugins new my-plugin`, or **Create a plugin** on the same page, makes a working example to edit. [docs/plugins.md](docs/plugins.md) describes the manifest, the `api` object bar widgets get, and the launcher's JSON results.
+
+```sh
+flamenco plugins list
+flamenco plugins install https://github.com/someone/flamenco-some-plugin
+flamenco plugins new my-plugin
+flamenco plugins remove my-plugin
+```
 
 ### 📌 Dock
 
@@ -1098,6 +1135,10 @@ flamenco flatpak reset org.mozilla.firefox
 
 Each wallpaper is drawn twice: once on your workspaces, and once blurred and dimmed in niri's *backdrop*, which you see behind the workspaces in the overview and between them while switching. The niri config's `layer-rule` puts that second copy in the backdrop. It also appears blurred on the lock screen.
 
+**Wallhaven:** the picker's **Wallhaven** tab browses [wallhaven.cc](https://wallhaven.cc).
+- **Searching:** search and sort by top, latest, random or relevant. Results are safe-for-work only, and at least as large as the screen.
+- **Picking:** click an image to download it into `wallhaven/` in your wallpaper folder and set it.
+
 **Colors from your wallpaper:** pick *From wallpaper* in **Settings → Appearance → Palette**. This needs `matugen`. The palette is regenerated whenever the wallpaper changes, and it flows through to your Qt and GTK apps too.
 
 ### 🎨 Themes
@@ -1118,7 +1159,13 @@ In **Settings → Appearance**:
   - *Dock & menu bar*: a thin top bar and a dock, macOS-style
   - *Vertical*: a bar on the left side
 - **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels, and **Connect panels to the bar**. With that last one, quick settings, the calendar and the other panels grow out of the bar as one surface, with curved joins and no gap showing the wallpaper. It doesn't apply to the Islands bar style. Panels opened from the bar open on the same side as the widget you clicked: a clock in the right section opens the calendar on the right, and one in the center opens it under the clock.
-- **Motion:** animation speed; 0% turns animations off.
+- **Motion:**
+  - **Speed:** for everything; 0% turns animations off.
+  - **Style:** *Expressive* (springy, the default), *Smooth* (nothing overshoots), *Snappy* (quick and crisp) or *Minimal*. It changes every animation's easing at once.
+  - **How panels open:** rise, fade, slide, zoom or none.
+  - **How notifications arrive:** slide, fade or pop.
+  - **Small effects:** the ripple where you click, and things growing under the pointer.
+  - **Separate speeds** (including off) for panels, notifications, the bar, the workspace indicator, the dock, launcher results and the lock screen.
 - **Typography:** interface and monospace fonts (Google Sans Flex and Google Sans Code by default), picked from dropdowns of installed fonts (system and `~/.local/share/fonts`) and shown in their own typeface, plus UI scale and a live preview.
 - **Icons:** filled (the Material 3 Expressive look, the default) or outlined, and how heavy the strokes are.
 
@@ -1148,6 +1195,22 @@ Options on that page:
 | Stylesheet (Qt + GTK) | corner radius (match the shell or set your own), button style (soft / flat / outlined), scrollbars (thin / overlay / classic), accent selections and focus rings, surface contrast |
 | Qt | on/off, **widget style**, **Kvantum theme** (when the style is Kvantum), generated stylesheet, KDE color scheme, custom QSS |
 | GTK | on/off, **base GTK theme**, GTK 3, GTK 4 / libadwaita, extra styling, custom CSS |
+
+**Other apps:** turn any of these on in **App Theming → Other apps**:
+
+| App | What Flamenco writes | In the app's own config |
+|---|---|---|
+| kitty | `~/.config/kitty/flamenco-theme.conf` | `include flamenco-theme.conf`; open windows reload |
+| Ghostty | `~/.config/ghostty/themes/flamenco` | `theme = flamenco` (your previous theme line is kept as a comment); open windows reload |
+| Alacritty | `~/.config/alacritty/flamenco.toml` | added to `[general] import`; reloads by itself |
+| foot | `~/.config/foot/flamenco.ini` | `include=…` at the top; new windows |
+| fuzzel | `~/.config/fuzzel/flamenco.ini` | `include=…` at the top |
+| Firefox | `~/.cache/wal/colors.json`, then `pywalfox update` | needs the pywalfox add-on and package |
+| Discord | `flamenco.theme.css` in Vesktop's / Vencord's themes folder | turn it on in Vencord → Themes |
+| Spotify | a `Flamenco` spicetify theme | `spicetify config` + `spicetify apply` |
+| VS Code / VSCodium | a small `Flamenco` color theme extension | pick it once under Color Theme |
+
+Terminals get a 16-color palette built from yours: red, green and yellow are the palette's error, success and warning colors; blue, magenta and cyan lean towards your accent. Each app's config is backed up before its first change, and **Restore originals** removes the line and the files again.
 
 The bold options are dropdowns listing what's installed on your system. Press the refresh button on that page after installing new themes, or check from a terminal:
 
@@ -1198,7 +1261,7 @@ Files written:
 | niri says `duplicate node binds` | Move the Flamenco key lines into your existing `binds { }` block |
 | Qt apps ignore the theme | `QT_QPA_PLATFORMTHEME` isn't `qt6ct`. Set it (the niri snippet does), log in again, and restart the app |
 | Cursor theme doesn't change | Press **Apply now** in **Settings → App Theming** and check `~/.config/niri/config.kdl` for the `cursor { }` block. Restart apps that were already open |
-| Bar widgets overlap or disappear on one screen | That screen's bar is compacting to fit. Remove widgets you don't need in **Settings → Bar**, lower **Thickness**/**Scale**, or move the bar to a longer edge |
+| Bar widgets overlap or disappear on one screen | That screen's bar is compacting to fit. Remove widgets you don't need in **Settings → Bar** (or give that screen its own, shorter layout), lower **Thickness**/**Scale**, or move the bar to a longer edge |
 | Dock never appears | Check **Show dock** in **Settings → Dock**. With auto-hide on, push the pointer against the bottom edge, or raise **Reveal edge**; on some VM displays the pointer can't reach the last few pixels |
 | Display change left a blank screen | Wait 15 seconds; it reverts on its own. If you already kept it, restore `~/.local/state/flamenco/backup/niri-config.before-displays.kdl` |
 | Screen sharing shows nothing to pick, or fails | Open **Settings → Screen sharing**: screen sharing must use **wlr** or **gnome** (kde and cosmic can't capture on niri). With wlr and **Ask each time**, install `slurp`. Restart the app afterwards |
@@ -1243,6 +1306,9 @@ flamenco record start|toggle [screen|region] | stop | status   # screen recordin
 flamenco ddc list | set BUS PERCENT   # external monitor brightness
 flamenco keys [show | --json]         # every key binding; show: the cheat sheet
 flamenco pick-color                   # pick a color on screen, copied as #rrggbb
+flamenco updates [--json]             # waiting package updates
+flamenco notepad                      # the notepad
+flamenco plugins list | new ID | install URL|FOLDER | remove ID   # plugins
 flamenco calendar events [--refresh]  # calendar events as JSON
 flamenco ai providers | models P | test P | ask TEXT… | key set|delete P   # AI connections
 flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC   # Wi-Fi and wired connections

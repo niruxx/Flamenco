@@ -44,7 +44,8 @@ Singleton {
                 gtk3: cfg.gtk3,
                 gtk4: cfg.gtk4,
                 gtkExtras: cfg.gtkExtras,
-                customGtkCss: cfg.customGtkCss
+                customGtkCss: cfg.customGtkCss,
+                apps: cfg.extraApps
             }
         })
 

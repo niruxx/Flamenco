@@ -16,7 +16,10 @@ MouseArea {
     enabled: !disabled
     cursorShape: disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
 
-    onPressed: event => ripple.burst(event.x, event.y)
+    onPressed: event => {
+        if (Theme.ripple)
+            ripple.burst(event.x, event.y);
+    }
 
     ClippingRectangle {
         anchors.fill: parent

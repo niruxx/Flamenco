@@ -2,7 +2,7 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.21.8
+pkgver=0.25.0
 pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
@@ -24,6 +24,8 @@ optdepends=(
     'slurp: recording an area'
     'ddcutil: brightness of external monitors (DDC/CI)'
     'hyprpicker: the color picker on Hyprland'
+    'pacman-contrib: checkupdates, for the package updates widget'
+    'cava: the audio visualizer'
     'greetd: login screen (with flamenco-greeter)'
     'pciutils: graphics card in Settings → About'
     'networkmanager: network status and Wi-Fi control'
