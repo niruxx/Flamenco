@@ -10,7 +10,7 @@ Page {
     readonly property var allWidgets: ({
             launcher: "Launcher", workspaces: "Workspaces", window: "Active window", taskbar: "Taskbar (running apps)", clock: "Clock", media: "Media",
             tray: "System tray", sysstats: "CPU / RAM", keyboard: "Keyboard layout", network: "Network", bluetooth: "Bluetooth",
-            audio: "Volume", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", power: "Power"
+            audio: "Volume", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", assistant: "AI assistant", power: "Power"
         })
     readonly property var used: b.left.concat(b.center, b.right)
 

@@ -24,6 +24,8 @@
   flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable
                                login screen: Flamenco Greeter and greetd
   flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   fingerprints (fprintd)
+  flamenco ai providers | models P | test P [MODEL] | ask TEXT… | key set|delete P   AI assistant (Settings → AI)
+  flamenco assistant           open the AI assistant
   flamenco widgets [edit|done|toggle]   arrange desktop widgets (same as quick settings → Desktop widgets)
   flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC
                                Wi-Fi and wired connections (NetworkManager)
@@ -58,7 +60,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.19.0"
+VERSION = "0.20.1"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1490,6 +1492,7 @@ SHELL_FUNCTIONS = {
     "dashboard": ("Dashboard (clock)", ["calendar"]),
     "performance": ("Performance", ["performance"]),
     "wallpapers": ("Wallpaper picker", ["wallpapers"]),
+    "assistant": ("AI assistant", ["assistant"]),
     "settings": ("Settings", ["settings"]),
     "power": ("Power menu", ["power"]),
     "lock": ("Lock the screen", ["lock"]),
@@ -1525,6 +1528,7 @@ DEFAULT_SHORTCUTS = [
     {"key": "Mod+Comma", "type": "flamenco", "value": "settings", "title": "Settings"},
     {"key": "Mod+W", "type": "flamenco", "value": "wallpapers", "title": "Wallpapers"},
     {"key": "Mod+Escape", "type": "flamenco", "value": "power", "title": "Power menu"},
+    {"key": "Mod+L", "type": "flamenco", "value": "lock", "title": "Lock the screen"},
     {"key": "Super+Alt+L", "type": "flamenco", "value": "lock", "title": "Lock the screen"},
 ]
 
@@ -2762,6 +2766,344 @@ def cmd_net(args: list[str]) -> int:
             net_fail(r, f"couldn't connect to {ssid}")
         return 0
     die("usage: flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet [NAME [IFACE]] | add-wifi --json SPEC  [--sudo]")
+
+
+# ─────────────────────────────── AI assistant ────────────────────────────────
+# Connections to language models for the Assistant panel (Settings → AI).
+# Anthropic goes through the official `anthropic` SDK (optional dependency);
+# every other provider speaks the OpenAI-compatible chat API, which needs no
+# extra packages: OpenAI, Google Gemini, OpenRouter, LM Studio, Ollama, or any
+# compatible server. API keys live in the keyring (secret-tool), or a 0600 file
+# when there's no keyring, and are passed over stdin, never on a command line.
+
+AI_PROVIDERS = {
+    "anthropic": {"name": "Anthropic (Claude)", "kind": "anthropic", "base": "", "model": "claude-opus-5-5",
+                  "env": "ANTHROPIC_API_KEY", "key": "optional"},
+    "openai": {"name": "OpenAI", "kind": "openai", "base": "https://api.openai.com/v1", "model": "",
+               "env": "OPENAI_API_KEY", "key": "required"},
+    "gemini": {"name": "Google Gemini", "kind": "openai", "base": "https://generativelanguage.googleapis.com/v1beta/openai",
+               "model": "", "env": "GEMINI_API_KEY", "key": "required"},
+    "openrouter": {"name": "OpenRouter", "kind": "openai", "base": "https://openrouter.ai/api/v1", "model": "",
+                   "env": "OPENROUTER_API_KEY", "key": "required"},
+    "lmstudio": {"name": "LM Studio (local)", "kind": "openai", "base": "http://localhost:1234/v1", "model": "",
+                 "env": "", "key": "none"},
+    "ollama": {"name": "Ollama (local)", "kind": "openai", "base": "http://localhost:11434/v1", "model": "",
+               "env": "", "key": "none"},
+    "custom": {"name": "Other OpenAI-compatible server", "kind": "openai", "base": "", "model": "",
+               "env": "", "key": "optional"},
+}
+AI_KEY_FILE = CONFIG_DIR / "ai-keys.json"
+# Claude models that take an effort level, and those with server-side refusal fallback
+AI_EFFORT_MODELS = ("claude-fable-5-1", "claude-fable-5", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5",
+                    "claude-sonnet-5", "claude-haiku-5-5", "claude-opus-4-8", "claude-opus-4-7", "claude-opus-4-6")
+AI_FALLBACK_MODELS = ("claude-fable-5-1", "claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5")
+
+
+def ai_settings() -> dict:
+    try:
+        return json.loads((CONFIG_DIR / "settings.json").read_text()).get("ai", {}) or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def ai_provider(pid: str) -> dict:
+    """A provider preset merged with what Settings → AI saved for it (base URL, model)."""
+    if pid not in AI_PROVIDERS:
+        die(f"unknown provider '{pid}' (one of: {', '.join(AI_PROVIDERS)})")
+    saved = (ai_settings().get("providers") or {}).get(pid) or {}
+    p = dict(AI_PROVIDERS[pid], id=pid)
+    if saved.get("baseUrl"):
+        p["base"] = str(saved["baseUrl"]).rstrip("/")
+    if saved.get("model"):
+        p["model"] = str(saved["model"])
+    return p
+
+
+def ai_keyring() -> bool:
+    # FLAMENCO_AI_NO_KEYRING=1 keeps keys in the file (tests, or a keyring you don't want used)
+    return shutil.which("secret-tool") is not None and not os.environ.get("FLAMENCO_AI_NO_KEYRING")
+
+
+def ai_key_get(pid: str) -> tuple[str, str]:
+    """(key, where it came from): keyring | file | env | ""."""
+    if ai_keyring():
+        r = subprocess.run(["secret-tool", "lookup", "service", "flamenco-ai", "provider", pid],
+                           capture_output=True, text=True, timeout=10)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip(), "keyring"
+    try:
+        k = json.loads(AI_KEY_FILE.read_text()).get(pid, "")
+        if k:
+            return k, "file"
+    except (OSError, ValueError):
+        pass
+    env = AI_PROVIDERS.get(pid, {}).get("env")
+    if env and os.environ.get(env):
+        return os.environ[env], "env"
+    return "", ""
+
+
+def ai_key_set(pid: str, key: str) -> str:
+    if ai_keyring():
+        r = subprocess.run(["secret-tool", "store", "--label", f"Flamenco AI: {AI_PROVIDERS[pid]['name']}",
+                            "service", "flamenco-ai", "provider", pid], input=key, text=True,
+                           capture_output=True, timeout=30)
+        if r.returncode == 0:
+            ai_key_file_drop(pid)
+            return "keyring"
+    # no keyring (or it's locked / missing): a file only you can read
+    data = {}
+    try:
+        data = json.loads(AI_KEY_FILE.read_text())
+    except (OSError, ValueError):
+        pass
+    data[pid] = key
+    AI_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(AI_KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(data, f)
+    os.chmod(AI_KEY_FILE, 0o600)
+    return "file"
+
+
+def ai_key_file_drop(pid: str) -> None:
+    try:
+        data = json.loads(AI_KEY_FILE.read_text())
+    except (OSError, ValueError):
+        return
+    if data.pop(pid, None) is not None:
+        fd = os.open(AI_KEY_FILE, os.O_WRONLY | os.O_TRUNC)
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f)
+
+
+def ai_key_delete(pid: str) -> None:
+    if ai_keyring():
+        subprocess.run(["secret-tool", "clear", "service", "flamenco-ai", "provider", pid], capture_output=True, timeout=10)
+    ai_key_file_drop(pid)
+
+
+def ai_http(url: str, key: str, body: dict | None = None, timeout: float = 30):
+    import urllib.request
+    headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST" if body is not None else "GET")
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
+def ai_http_error(e) -> str:
+    import urllib.error
+    if isinstance(e, urllib.error.HTTPError):
+        detail = ""
+        try:
+            j = json.loads(e.read().decode(errors="replace"))
+            err = j.get("error", j)
+            detail = err.get("message") if isinstance(err, dict) else str(err)
+        except Exception:
+            pass
+        hint = {401: "the API key was refused", 403: "the API key isn't allowed to do this",
+                404: "not found (check the server address and model)", 429: "rate limited or out of credit"}.get(e.code, "")
+        return f"HTTP {e.code}" + (f": {hint}" if hint else "") + (f" ({detail})" if detail else "")
+    if isinstance(e, urllib.error.URLError):
+        return f"couldn't reach the server ({e.reason}). Is it running?"
+    return str(e)
+
+
+AI_NO_SDK = "the Anthropic provider needs the official SDK: install python-anthropic (AUR), or pick another provider"
+
+
+def ai_anthropic_client(key: str):
+    try:
+        import anthropic
+    except ImportError:
+        raise RuntimeError(AI_NO_SDK)
+    # no saved key: the SDK finds ANTHROPIC_API_KEY or an `ant auth login` profile itself
+    return anthropic, (anthropic.Anthropic(api_key=key) if key else anthropic.Anthropic())
+
+
+def ai_models(p: dict) -> list[str]:
+    key, _ = ai_key_get(p["id"])
+    if p["kind"] == "anthropic":
+        _, client = ai_anthropic_client(key)
+        return [m.id for m in client.models.list()]
+    if not p["base"]:
+        die("set the server address first")
+    with ai_http(p["base"] + "/models", key, timeout=15) as r:
+        data = json.loads(r.read().decode())
+    items = data.get("data", data.get("models", [])) if isinstance(data, dict) else data
+    out = []
+    for m in items:
+        mid = m.get("id") or m.get("name") if isinstance(m, dict) else str(m)
+        if mid:
+            out.append(str(mid).removeprefix("models/"))
+    return sorted(set(out))
+
+
+def ai_emit(kind: str, **kw) -> None:
+    print(json.dumps(dict(t=kind, **kw)), flush=True)
+
+
+def ai_chat(spec: dict) -> int:
+    """Stream one reply. Prints JSON lines: {t: delta, text} … then {t: done} or {t: error, message}."""
+    p = ai_provider(str(spec.get("provider") or ai_settings().get("provider") or "anthropic"))
+    model = str(spec.get("model") or p["model"])
+    if not model:
+        ai_emit("error", message=f"choose a model for {p['name']} in Settings → AI")
+        return 1
+    system = str(spec.get("system") or "")
+    msgs = [{"role": m["role"], "content": str(m["content"])} for m in spec.get("messages", [])
+            if isinstance(m, dict) and m.get("role") in ("user", "assistant") and str(m.get("content", "")).strip()]
+    if not msgs or msgs[-1]["role"] != "user":
+        ai_emit("error", message="nothing to answer")
+        return 1
+    key, _ = ai_key_get(p["id"])
+    if p["key"] == "required" and not key:
+        ai_emit("error", message=f"add your {p['name']} API key in Settings → AI")
+        return 1
+
+    if p["kind"] == "anthropic":
+        try:
+            anthropic, client = ai_anthropic_client(key)
+        except RuntimeError as e:
+            ai_emit("error", message=str(e))
+            return 1
+        kwargs = dict(model=model, max_tokens=64000, messages=msgs)
+        if system:
+            kwargs["system"] = system
+        effort = spec.get("effort") or ai_settings().get("effort") or "low"
+        if model in AI_EFFORT_MODELS and effort in ("low", "medium", "high", "xhigh", "max"):
+            kwargs["output_config"] = {"effort": effort}
+        try:
+            if model in AI_FALLBACK_MODELS:
+                # a policy decline is re-run on another model inside the same call
+                stream_cm = client.beta.messages.stream(betas=["server-side-fallback-2026-07-01"], fallbacks="default", **kwargs)
+            else:
+                stream_cm = client.messages.stream(**kwargs)
+            with stream_cm as stream:
+                for text in stream.text_stream:
+                    ai_emit("delta", text=text)
+                final = stream.get_final_message()
+            if final.stop_reason == "refusal":
+                ai_emit("error", message="Claude declined to answer this one.")
+                return 1
+            ai_emit("done", stop=final.stop_reason, model=final.model)
+            return 0
+        except anthropic.NotFoundError:
+            ai_emit("error", message=f"model not found: {model}")
+        except anthropic.RateLimitError:
+            ai_emit("error", message="rate limited; try again in a moment")
+        except anthropic.APIStatusError as e:
+            ai_emit("error", message=f"Anthropic API error {e.status_code}: {getattr(e, 'message', '') or e}")
+        except anthropic.APIConnectionError:
+            ai_emit("error", message="couldn't reach the Anthropic API")
+        except Exception as e:  # missing credentials and the like
+            ai_emit("error", message=str(e))
+        return 1
+
+    if not p["base"]:
+        ai_emit("error", message="set the server address in Settings → AI")
+        return 1
+    body = {"model": model, "stream": True,
+            "messages": ([{"role": "system", "content": system}] if system else []) + msgs}
+    try:
+        with ai_http(p["base"] + "/chat/completions", key, body, timeout=300) as r:
+            for raw in r:
+                line = raw.decode(errors="replace").strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                except ValueError:
+                    continue
+                if chunk.get("error"):
+                    err = chunk["error"]
+                    ai_emit("error", message=err.get("message", str(err)) if isinstance(err, dict) else str(err))
+                    return 1
+                for ch in chunk.get("choices", []):
+                    text = (ch.get("delta") or {}).get("content")
+                    if text:
+                        ai_emit("delta", text=text)
+        ai_emit("done", stop="end", model=model)
+        return 0
+    except Exception as e:
+        ai_emit("error", message=ai_http_error(e))
+        return 1
+
+
+def cmd_ai(args: list[str]) -> int:
+    sub = args[0] if args else "providers"
+    if sub == "providers":
+        out = []
+        for pid in AI_PROVIDERS:
+            p = ai_provider(pid)
+            _, where = ai_key_get(pid)
+            out.append({"id": pid, "name": p["name"], "kind": p["kind"], "baseUrl": p["base"], "model": p["model"],
+                        "defaultBase": AI_PROVIDERS[pid]["base"], "key": p["key"], "keyFrom": where, "env": p["env"]})
+        sdk = True
+        try:
+            import importlib.util
+            sdk = importlib.util.find_spec("anthropic") is not None
+        except Exception:
+            sdk = False
+        print(json.dumps({"providers": out, "keyring": ai_keyring(), "anthropicSdk": sdk}))
+        return 0
+    if sub == "models" and len(args) > 1:
+        try:
+            print(json.dumps({"models": ai_models(ai_provider(args[1]))}))
+        except SystemExit:
+            raise
+        except Exception as e:
+            print(json.dumps({"models": [], "error": ai_http_error(e)}))
+            return 1
+        return 0
+    if sub == "test" and len(args) > 1:
+        p = ai_provider(args[1])
+        spec = {"provider": p["id"], "model": args[2] if len(args) > 2 else p["model"], "effort": "low",
+                "messages": [{"role": "user", "content": "Reply with just the word: ok"}]}
+        return ai_chat(spec)
+    if sub == "chat":
+        # the conversation comes on stdin (one JSON line), so it never shows up in `ps`
+        line = sys.stdin.readline()
+        try:
+            spec = json.loads(line)
+        except ValueError as e:
+            ai_emit("error", message=f"bad request: {e}")
+            return 1
+        return ai_chat(spec)
+    if sub == "ask" and len(args) > 1:
+        rc = 0
+        spec = {"messages": [{"role": "user", "content": " ".join(args[1:])}], "system": ai_settings().get("systemPrompt", "")}
+        import io, contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = ai_chat(spec)
+        for line in buf.getvalue().splitlines():
+            ev = json.loads(line)
+            if ev["t"] == "delta":
+                print(ev["text"], end="")
+            elif ev["t"] == "error":
+                print(f"\nflamenco: {ev['message']}", file=sys.stderr)
+        print()
+        return rc
+    if sub == "key" and len(args) > 2 and args[2] in AI_PROVIDERS:
+        pid = args[2]
+        if args[1] == "set":
+            key = sys.stdin.readline().strip()
+            if not key:
+                die("no key given (it's read from stdin)")
+            where = ai_key_set(pid, key)
+            print(f"ai: saved the {AI_PROVIDERS[pid]['name']} key " + ("in your keyring" if where == "keyring" else f"in {AI_KEY_FILE} (only you can read it)"))
+            return 0
+        if args[1] == "delete":
+            ai_key_delete(pid)
+            print(f"ai: removed the {AI_PROVIDERS[pid]['name']} key")
+            return 0
+    die("usage: flamenco ai providers | models PROVIDER | test PROVIDER [MODEL] | chat (JSON on stdin) | ask TEXT… | key set|delete PROVIDER (key on stdin)")
 
 
 # ─────────────────────────────── fingerprints (fprintd) ──────────────────────
@@ -4509,6 +4851,7 @@ window-rule {
     Mod+Comma        hotkey-overlay-title="Settings"       { spawn "flamenco" "settings"; }
     Mod+W            hotkey-overlay-title="Wallpapers"     { spawn "flamenco" "wallpapers"; }
     Mod+Escape       hotkey-overlay-title="Power menu"     { spawn "flamenco" "power"; }
+    Mod+L            hotkey-overlay-title="Lock"           { spawn "flamenco" "lock"; }
     Super+Alt+L      hotkey-overlay-title="Lock"           { spawn "flamenco" "lock"; }
 
 // Optional: media keys through flamenco (only if you don't already bind them).
@@ -5671,7 +6014,8 @@ def cmd_screenshot(args: list[str]) -> int:
 
 
 PANELS = {"launcher": "launcher", "control": "control", "notifications": "notifications",
-          "calendar": "calendar", "wallpapers": "wallpapers", "power": "power", "widgets": "widgets"}
+          "calendar": "calendar", "wallpapers": "wallpapers", "power": "power", "widgets": "widgets",
+          "assistant": "assistant"}
 
 
 def main(argv: list[str]) -> int:
@@ -5763,6 +6107,8 @@ def main(argv: list[str]) -> int:
         return cmd_fingerprint(rest)
     if cmd == "net":
         return cmd_net(rest)
+    if cmd == "ai":
+        return cmd_ai(rest)
     if cmd == "pointer":
         return cmd_pointer(rest)
     if cmd == "flatpak":

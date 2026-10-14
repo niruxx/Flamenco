@@ -24,7 +24,9 @@ Variants {
         visible: shown
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
-        exclusionMode: ExclusionMode.Ignore
+        // inside the space the bar and dock leave free, so it never covers them
+        exclusionMode: ExclusionMode.Normal
+        exclusiveZone: 0
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.namespace: "flamenco-widget-editor"
         WlrLayershell.keyboardFocus: shown ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
@@ -47,7 +49,7 @@ Variants {
 
         FText {
             anchors.top: parent.top
-            anchors.topMargin: Theme.barHeight + Theme.gap * 3
+            anchors.topMargin: Theme.gap * 4
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.horizontalCenterOffset: -side.width / 2
             visible: Desk.on(ed.screenName).length === 0

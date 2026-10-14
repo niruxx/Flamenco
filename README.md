@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.19.0-E8466F?style=for-the-badge" alt="Version 0.19.0">
+  <img src="https://img.shields.io/badge/version-0.20.1-E8466F?style=for-the-badge" alt="Version 0.20.1">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -170,6 +170,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **📈 Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
 | **📌 Dock** | Optional. Bottom, left or right edge; pinned and running apps, magnification, auto-hide, app names on hover, running indicators, and its size, spacing, background and corners |
 | **🧩 Desktop widgets** | Clock, weather, system stats, now playing, calendar and notes on the desktop, under your windows. Drag them in from a sidebar opened from quick settings; move, resize or remove them; card, glass or bare style |
+| **✨ AI assistant** | A chat panel for Claude, OpenAI, Gemini, OpenRouter, or a local model in LM Studio or Ollama. Set up in **Settings → AI**; keys stay in your keyring |
 | **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **🔒 Lock screen** | PAM auth with password or **fingerprint** (enroll fingers in Settings), blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
 | **🚪 Login screen** | Set up **Flamenco Greeter** (greetd) from Settings: wallpaper, blur and dim, fonts, the session picker, user list and power buttons, in the shell's palette. Edits greetd itself too: greeter, VT and auto-login |
@@ -387,7 +388,7 @@ Change the Flamenco shortcuts in **Settings → Keyboard** (see [Keyboard & shor
 | `Mod+W` | Wallpaper picker |
 | `Mod+Comma` | Settings |
 | `Mod+Escape` | Power menu |
-| `Super+Alt+L` | Lock screen |
+| `Mod+L` or `Super+Alt+L` | Lock screen |
 | `Mod+T` / `Mod+Return` | Terminal |
 | `Mod+O` | niri overview |
 | `Mod+Q` | Close window |
@@ -503,10 +504,14 @@ Past notifications stay in the notification center (`Mod+N`). It also has button
 
 ### 🔒 Lock screen and power menu
 
-- **Lock** (`Super+Alt+L`, or automatically after the idle time in **Settings → Lock & Login**): type your password and press `Enter`. `Esc` clears what you typed. See [Lock screen options](#lock-screen-options) to use an SDDM theme or another locker instead.
+- **Lock** (`Mod+L` or `Super+Alt+L`, or automatically after the idle time in **Settings → Lock & Login**): type your password and press `Enter`. `Esc` clears what you typed. See [Lock screen options](#lock-screen-options) to use an SDDM theme or another locker instead.
 - **Power menu** (`Mod+Escape`): choose with the arrow keys or `h`/`l` and press `Enter`.
   - **Lock and Suspend** act immediately. Suspend locks the screen first.
-  - **Log out, Restart and Shut down** must be **held for 3 seconds** (mouse button, or `Enter`/`Space`). The button fills up and shows the seconds left, and the action runs when it's full. Let go early to cancel.
+  - **Log out, Restart and Shut down** must be **held for 3 seconds** by default (mouse button, or `Enter`/`Space`). The button fills up and shows the seconds left, and the action runs when it's full. Let go early to cancel.
+  - **Changing the hold time:** set each one from 0 to 10 seconds in **Settings → Power → Power menu**. At 0 s the action runs on a click; **All instant** sets all three at once.
+
+> [!NOTE]
+> `Mod+L` used to be niri's "focus the column to the right" (and Hyprland's "move focus right"). Flamenco now uses it to lock the screen; `Mod+Right` still moves focus right. To change it back, remove the shortcut in **Settings → Keyboard → Shortcuts**.
 
 ### ✨ Login & logout animations
 
@@ -531,7 +536,7 @@ The same page has a duration slider, a greeting on/off switch, and **Preview** b
 
 ### 🔐 Lock screen options
 
-**Settings → Lock & Login → Lock screen** picks what locks your session. This applies everywhere: the idle timeout, `Super+Alt+L`, `flamenco lock`, and the power menu.
+**Settings → Lock & Login → Lock screen** picks what locks your session. This applies everywhere: the idle timeout, `Mod+L`, `Super+Alt+L`, `flamenco lock`, and the power menu.
 
 | Option | What it does |
 |---|---|
@@ -585,6 +590,41 @@ The login screen at boot is separate from the lock screen. Flamenco uses [greetd
 > Settings refuses to write a greeter that isn't installed, so greetd can't be left without a login screen. If a greeter still fails at boot, switch to another TTY (`Ctrl+Alt+F2`), log in, and run `sudo cp /etc/greetd/config.toml.orig /etc/greetd/config.toml`. Or go back to your old login manager with `sudo systemctl enable --force sddm` (or gdm, ly…).
 
 What Settings writes for the greeter is described in [docs/greeter.md](docs/greeter.md).
+
+### ✨ AI assistant
+
+niri has no AI features of its own; this is Flamenco's. **Settings → AI** connects a language model, and the **Assistant** panel chats with it.
+
+**Turning it on:** open it from the bar's ✨ button (add **AI assistant** in **Settings → Bar**), from a shortcut (**Settings → Keyboard**, Flamenco function *AI assistant*), or with `flamenco assistant`.
+
+**Providers:**
+
+| Provider | Needs |
+|---|---|
+| Anthropic (Claude) | `python-anthropic` (AUR). A key saved here, or `$ANTHROPIC_API_KEY`, or an `ant auth login` profile. Defaults to Claude Opus 5.5 |
+| OpenAI, Google Gemini, OpenRouter | an API key |
+| LM Studio | its local server running (Developer → Start Server, port 1234) with a model loaded |
+| Ollama | `ollama serve` and a pulled model (port 11434) |
+| Other | any OpenAI-compatible server address |
+
+**Setting it up:** pick a provider, then:
+1. Paste its key, if it needs one.
+2. Press refresh to list its models, and pick one (or type a model name).
+3. Press **Test**.
+
+**Optional:** under **Behavior**, change the instructions sent before every chat, and for Claude, how hard it thinks.
+
+**Keys:** stored in your keyring through `secret-tool`. Without a keyring, they go in `~/.config/flamenco/ai-keys.json`, readable only by you. They're never written to `settings.json` or passed on a command line.
+
+**Privacy:** what you type goes to the provider you picked; with LM Studio or Ollama, it stays on your computer. Conversations aren't saved.
+
+```sh
+flamenco ai providers                 # status of each provider
+flamenco ai models lmstudio           # the models a provider offers
+flamenco ai test anthropic            # one short test message
+flamenco ai ask "what's a good tiling layout for a 4K screen?"
+echo "sk-…" | flamenco ai key set openai   # the key is read from stdin
+```
 
 ### 🧩 Desktop widgets
 
@@ -1138,6 +1178,8 @@ flamenco pick folder|image [START]   # choose a folder or an image with the port
 flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | enable   # login screen
 flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   # fprintd fingerprints
 flamenco widgets [edit|done|toggle]   # arrange desktop widgets
+flamenco assistant                    # the AI assistant
+flamenco ai providers | models P | test P | ask TEXT… | key set|delete P   # AI connections
 flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC   # Wi-Fi and wired connections
 flamenco portals get | apply --json SPEC
 flamenco fonts [--json]

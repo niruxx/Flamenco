@@ -78,6 +78,7 @@ Variants {
                 workspaces: workspacesC,
                 window: windowC,
                 taskbar: taskbarC,
+                assistant: assistantC,
                 clock: clockC,
                 media: mediaC,
                 tray: trayC,
@@ -111,6 +112,7 @@ Variants {
         Component { id: notifC; NotifBell { screenName: win.modelData.name } }
         Component { id: weatherC; WeatherChip { screenName: win.modelData.name } }
         Component { id: quickC; FIconButton { id: qsBtn; icon: "menu"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name, qsBtn) } }
+        Component { id: assistantC; FIconButton { id: aiBtn; property bool barVisible: Settings.data.ai.enabled; icon: "auto_awesome"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "assistant"; onClicked: Panels.toggle("assistant", win.modelData.name, aiBtn) } }
         Component { id: powerC; FIconButton { id: powerBtn; icon: "power_settings_new"; size: Theme.barHeight - 10; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name, powerBtn) } }
 
         Item {

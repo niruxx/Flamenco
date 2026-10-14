@@ -8,6 +8,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Services
+import qs.Modules.Assistant
 import qs.Modules.Background
 import qs.Modules.Desktop
 import qs.Modules.Bar
@@ -63,6 +64,7 @@ ShellRoot {
     VolumePanel {}
     WallpaperPicker {}
     WidgetEditor {}
+    AssistantPanel {}
     PowerMenu {}
     SessionOverlay {}
     SettingsWindow {}
@@ -87,6 +89,7 @@ ShellRoot {
     PanelIpc { target: "performance"; panel: "performance" }
     PanelIpc { target: "wallpapers"; panel: "wallpaper" }
     PanelIpc { target: "power"; panel: "power" }
+    PanelIpc { target: "assistant"; panel: "assistant" }
 
     IpcHandler {
         target: "widgets"

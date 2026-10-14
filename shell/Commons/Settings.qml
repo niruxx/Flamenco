@@ -115,6 +115,16 @@ Singleton {
                 property var widgets: []
             }
 
+            // AI assistant (Settings → AI). API keys aren't kept here: they're in the
+            // keyring (or ~/.config/flamenco/ai-keys.json), set through `flamenco ai key`.
+            property JsonObject ai: JsonObject {
+                property bool enabled: false
+                property string provider: "anthropic"  // anthropic | openai | gemini | openrouter | lmstudio | ollama | custom
+                property var providers: ({})           // per provider: { baseUrl, model }
+                property string systemPrompt: "You are a helpful assistant built into the Flamenco desktop shell on Linux (niri or Hyprland). Answer clearly and concisely."
+                property string effort: "low"          // Claude: low | medium | high
+            }
+
             property JsonObject launcher: JsonObject {
                 property int maxResults: 8
                 property string position: "center"    // center | top | bottom | top-left | top-right | bottom-left | bottom-right | bar
@@ -202,6 +212,7 @@ Singleton {
                 property bool numlock: true
                 property string trackLayout: "global" // global | window
                 property var shortcuts: []            // [{ key, type: flamenco|app|command|niri, value, title, locked }]
+                property bool lockKeyAdded: false     // Super+L → lock was added once (0.20.1); removing it sticks
             }
 
             // Mouse & touchpad, written into the compositor config by `flamenco pointer apply`
@@ -286,6 +297,10 @@ Singleton {
             property JsonObject power: JsonObject {
                 property bool allowSleep: true        // false: hold a systemd sleep inhibitor (lid, idle, menu)
                 property bool lockOnSleep: true       // lock before any suspend/hibernate
+                // power menu: seconds to hold each action before it runs (0 = runs on click)
+                property real holdLogout: 3
+                property real holdReboot: 3
+                property real holdShutdown: 3
                 property int idleSuspendBattery: 15   // minutes idle before suspending on battery (0 = never)
                 property int idleSuspendAC: 0         // … when plugged in
             }

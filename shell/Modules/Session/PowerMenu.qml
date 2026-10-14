@@ -18,11 +18,30 @@ Variants {
         readonly property bool shouldShow: Panels.current === "power" && Panels.screen === modelData.name
         readonly property real p: pAnim.v
         property int sel: 0
-        // destructive actions run only after being held down for holdMs
-        readonly property int holdMs: 3000
+        // destructive actions run only after being held down for their hold time
+        // (Settings → Power → Power menu); 0 runs them on a click
+        readonly property var pcfg: Settings.data.power
+        function holdFor(a) {
+            if (!a || !a.verb)
+                return 0;
+            const s = a.id === "logout" ? pcfg.holdLogout : a.id === "reboot" ? pcfg.holdReboot : pcfg.holdShutdown;
+            return Math.max(0, Math.round((Number(s) || 0) * 1000));
+        }
+        readonly property int holdMs: Math.max(1, holdFor(pendingAction))
         property string pending: ""
         property real charge: 0          // 0 → 1 while held
         readonly property int remaining: Math.max(1, Math.ceil(holdMs / 1000 * (1 - charge)))
+        // the hint under the title: which actions need holding, and for how long
+        readonly property string hint: {
+            const held = actions.filter(a => holdFor(a) > 0);
+            if (held.length === 0)
+                return "Click an action";
+            const secs = s => (s % 1000 === 0 ? s / 1000 : (s / 1000).toFixed(1)) + (s === 1000 ? " second" : " seconds");
+            const same = held.every(a => holdFor(a) === holdFor(held[0]));
+            const names = held.map(a => a.label);
+            const list = names.length > 1 ? names.slice(0, -1).join(", ") + " or " + names[names.length - 1] : names[0];
+            return same ? "Hold " + list + " for " + secs(holdFor(held[0])) : "Hold " + held.map(a => a.label + " (" + secs(holdFor(a)) + ")").join(", ");
+        }
         readonly property var pendingAction: actions.find(a => a.id === pending) ?? null
 
         readonly property var actions: [
@@ -40,25 +59,28 @@ Variants {
             charge = 0;
         }
 
-        // click (or Enter) on a harmless action runs it at once
+        // click (or Enter) on a harmless action, or one set to run instantly, runs it at once
         function trigger(i) {
             const a = actions[i];
-            if (a.verb)
+            if (a.verb && holdFor(a) > 0)
                 return;
             cancel();
             Panels.close();
-            a.run();
+            if (a.verb)
+                SessionFx.playOutro(a.verb + "…", a.run, false);
+            else
+                a.run();
         }
 
         // press on a destructive action starts filling it; letting go early drains it
         function holdStart(i) {
             const a = actions[i];
-            if (!a.verb)
+            if (!a.verb || holdFor(a) === 0)
                 return;
             release.stop();
             pending = a.id;
             countdown.from = charge;
-            countdown.duration = Math.max(1, holdMs * (1 - charge));
+            countdown.duration = Math.max(1, holdFor(a) * (1 - charge));
             countdown.restart();
         }
 
@@ -69,7 +91,7 @@ Variants {
             release.restart();
         }
 
-        // real 3 s regardless of the animation speed setting
+        // the real hold time, regardless of the animation speed setting
         NumberAnimation {
             id: countdown
             target: win
@@ -168,7 +190,7 @@ Variants {
             FText {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: -Theme.sp5
-                text: win.pending ? "Let go to cancel" : "Hold Log out, Restart or Shut down for 3 seconds"
+                text: win.pending ? "Let go to cancel" : win.hint
                 dim: true
             }
 

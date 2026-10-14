@@ -87,6 +87,25 @@ Singleton {
         setShortcuts(defaults.map(d => Object.assign({}, d)));
     }
 
+    // 0.20.1: Super+L locks the screen. Added once to existing setups; if you remove
+    // it afterwards it stays removed. Skipped when Super+L is already a Flamenco shortcut.
+    function addLockKey() {
+        if (cfg.lockKeyAdded || !cfg.imported)
+            return;
+        const list = (cfg.shortcuts || []).slice();
+        if (!list.some(s => norm(s.key) === norm("Mod+L")))
+            list.push({ key: "Mod+L", type: "flamenco", value: "lock", title: "Lock the screen" });
+        // written either way, so it reaches the compositor config on fresh setups too
+        setShortcuts(list);
+        cfg.lockKeyAdded = true;
+    }
+
+    Timer {
+        running: Settings.ready && !root.cfg.lockKeyAdded
+        interval: 3000
+        onTriggered: root.cfg.imported ? root.addLockKey() : root.load()
+    }
+
     function applyNow() {
         const spec = {};
         if (pendingInput)
@@ -131,6 +150,7 @@ Singleton {
                         root.cfg.shortcuts = root.defaults.map(x => Object.assign({}, x));
                     root.cfg.imported = true;
                 }
+                root.addLockKey();
             }
         }
     }

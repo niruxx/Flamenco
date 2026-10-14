@@ -22,7 +22,9 @@ Variants {
         visible: list.length > 0
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
-        exclusionMode: ExclusionMode.Ignore
+        // inside the space the bar and dock leave free, so it never covers them
+        exclusionMode: ExclusionMode.Normal
+        exclusiveZone: 0
         WlrLayershell.layer: WlrLayer.Bottom
         WlrLayershell.namespace: "flamenco-widgets"
         // notes take typing when clicked

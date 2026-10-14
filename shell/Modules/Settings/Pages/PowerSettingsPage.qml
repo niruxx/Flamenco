@@ -157,6 +157,41 @@ Page {
     }
 
     Group {
+        title: "Power menu"
+        SettingRow {
+            title: "Hold to confirm"
+            subtitle: "How long to hold each button before it acts, so a stray click can't log you out. 0 s acts on a click."
+            icon: "touch_app"
+            FButton {
+                text: page.pw.holdLogout === 0 && page.pw.holdReboot === 0 && page.pw.holdShutdown === 0 ? "Back to 3 s" : "All instant"
+                variant: "tonal"
+                onClicked: {
+                    const v = page.pw.holdLogout === 0 && page.pw.holdReboot === 0 && page.pw.holdShutdown === 0 ? 3 : 0;
+                    page.pw.holdLogout = v;
+                    page.pw.holdReboot = v;
+                    page.pw.holdShutdown = v;
+                }
+            }
+        }
+        SliderRow { title: "Log out"; subtitle: page.pw.holdLogout === 0 ? "Instant" : ""; icon: "logout"; target: page.pw; key: "holdLogout"; from: 0; to: 10; stepSize: 0.5; decimals: 1; suffix: " s" }
+        SliderRow { title: "Restart"; subtitle: page.pw.holdReboot === 0 ? "Instant" : ""; icon: "restart_alt"; target: page.pw; key: "holdReboot"; from: 0; to: 10; stepSize: 0.5; decimals: 1; suffix: " s" }
+        SliderRow { title: "Shut down"; subtitle: page.pw.holdShutdown === 0 ? "Instant" : ""; icon: "power_settings_new"; target: page.pw; key: "holdShutdown"; from: 0; to: 10; stepSize: 0.5; decimals: 1; suffix: " s" }
+        SettingRow {
+            title: "Open the power menu"
+            subtitle: "Mod+Escape, or the power button in the bar"
+            icon: "power_settings_new"
+            FButton {
+                text: "Try it"
+                variant: "text"
+                onClicked: {
+                    Panels.settingsOpen = false;
+                    Panels.open("power", "");
+                }
+            }
+        }
+    }
+
+    Group {
         title: "Laptop lid"
         SettingRow {
             visible: page.loaded && !page.logind.hasLid

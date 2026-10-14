@@ -26,6 +26,7 @@ window-rule {
     Mod+Comma        hotkey-overlay-title="Settings"       { spawn "flamenco" "settings"; }
     Mod+W            hotkey-overlay-title="Wallpapers"     { spawn "flamenco" "wallpapers"; }
     Mod+Escape       hotkey-overlay-title="Power menu"     { spawn "flamenco" "power"; }
+    Mod+L            hotkey-overlay-title="Lock"           { spawn "flamenco" "lock"; }
     Super+Alt+L      hotkey-overlay-title="Lock"           { spawn "flamenco" "lock"; }
 
 // Optional: media keys through flamenco (only if you don't already bind them).
