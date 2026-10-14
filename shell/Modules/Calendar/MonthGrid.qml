@@ -9,6 +9,8 @@ ColumnLayout {
     id: root
 
     property int monthOffset: 0
+    // the day clicked (events for it show under the grid); today by default
+    property date selected: Time.now
     property int slideDir: 0
     property int cellHeight: 34
     readonly property date shown: {
@@ -73,11 +75,13 @@ ColumnLayout {
                 readonly property date day: new Date(root.shown.getFullYear(), root.shown.getMonth(), index - lead + 1)
                 readonly property bool inMonth: day.getMonth() === root.shown.getMonth()
                 readonly property bool today: day.toDateString() === Time.now.toDateString()
+                readonly property bool picked: day.toDateString() === root.selected.toDateString()
+                readonly property bool busy: !!Events.busyDays[Events.key(day)]
 
                 Layout.fillWidth: true
                 Layout.preferredHeight: root.cellHeight
                 radius: today ? Theme.rMd : height / 2
-                color: today ? Theme.accent : hover.hovered ? Theme.surfaceHighest : "transparent"
+                color: today ? Theme.accent : picked ? Theme.alpha(Theme.accent, 0.22) : hover.hovered ? Theme.surfaceHighest : "transparent"
 
                 Behavior on color { CAnim { duration: Theme.durShort } }
 
@@ -89,7 +93,19 @@ ColumnLayout {
                     font.weight: cell.today ? Font.Bold : Font.Normal
                     font.pixelSize: Theme.fsSm
                 }
-                HoverHandler { id: hover }
+                // a dot under days with events
+                Rectangle {
+                    visible: cell.busy
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 3
+                    width: 4
+                    height: 4
+                    radius: 2
+                    color: cell.today ? Theme.onAccent : Theme.accent
+                }
+                HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: root.selected = cell.day }
             }
         }
     }

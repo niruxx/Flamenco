@@ -64,6 +64,20 @@ FCard {
             onMoved: v => Brightness.set(v)
         }
 
+        // external monitors (DDC/CI)
+        Repeater {
+            model: Brightness.ddc
+            FSlider {
+                required property var modelData
+                Layout.fillWidth: true
+                showValue: true
+                icon: "desktop_windows"
+                value: modelData.value / modelData.max
+                accent: Theme.accent3
+                onMoved: v => Brightness.setDdc(modelData.bus, v)
+            }
+        }
+
         FSlider {
             Layout.fillWidth: true
             visible: Brightness.kbdAvailable

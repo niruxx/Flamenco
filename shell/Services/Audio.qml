@@ -19,6 +19,18 @@ Singleton {
     // apps currently playing audio (playback streams)
     readonly property var streams: Pipewire.nodes.values.filter(n => n.isStream && !n.isSink && n.audio)
 
+    // Apps recording audio: capture streams, minus ones that only listen to an
+    // output's monitor (volume meters, visualizers like cava) and the shell itself.
+    readonly property var captures: Pipewire.nodes.values.filter(n => n.isStream && n.isSink && n.audio)
+    readonly property var recorders: captures.filter(n => {
+        const p = n.properties ?? {};
+        if (p["stream.monitor"] === "true" || p["stream.capture.sink"] === "true")
+            return false;
+        return !/quickshell/i.test(p["application.name"] ?? "") && !/quickshell/i.test(p["application.process.binary"] ?? "");
+    })
+    readonly property bool micInUse: recorders.length > 0
+    readonly property string micUsers: [...new Set(recorders.map(n => streamName(n)))].join(", ")
+
     function streamName(n) {
         const p = n?.properties ?? {};
         return p["application.name"] || p["media.name"] || n?.description || n?.name || "App";
@@ -77,5 +89,9 @@ Singleton {
     // bind app streams too, so their volume can be read and changed
     PwObjectTracker {
         objects: root.streams
+    }
+    // and capture streams, so their properties (who's recording) can be read
+    PwObjectTracker {
+        objects: root.captures
     }
 }

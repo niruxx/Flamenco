@@ -136,6 +136,22 @@ Variants {
                         }
                         FTile {
                             Layout.fillWidth: true
+                            icon: Recorder.recording ? "stop_circle" : "screen_record"
+                            title: Recorder.recording ? "Stop recording" : "Record screen"
+                            subtitle: Recorder.recording ? Recorder.clock : "This screen · ⋯ for an area"
+                            active: Recorder.recording
+                            hasDetails: !Recorder.recording
+                            onClicked: {
+                                Panels.close();
+                                Recorder.toggle("screen", panel.modelData.name);
+                            }
+                            onDetailsClicked: {
+                                Panels.close();
+                                Recorder.start("region", "");
+                            }
+                        }
+                        FTile {
+                            Layout.fillWidth: true
                             icon: "widgets"
                             title: "Desktop widgets"
                             subtitle: Settings.data.desktop.enabled ? (Settings.data.desktop.widgets.length ? Settings.data.desktop.widgets.length + " on the desktop" : "Add some") : "Off"

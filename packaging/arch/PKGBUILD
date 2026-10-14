@@ -2,7 +2,7 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.20.1
+pkgver=0.21.8
 pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
@@ -19,6 +19,11 @@ optdepends=(
     'fprintd: fingerprint enrolling and unlock'
     'python-anthropic: Claude in the AI assistant (AUR)'
     'libsecret: keep AI API keys in the keyring (secret-tool)'
+    'wf-recorder: screen recording'
+    'gpu-screen-recorder: screen recording (alternative)'
+    'slurp: recording an area'
+    'ddcutil: brightness of external monitors (DDC/CI)'
+    'hyprpicker: the color picker on Hyprland'
     'greetd: login screen (with flamenco-greeter)'
     'pciutils: graphics card in Settings → About'
     'networkmanager: network status and Wi-Fi control'

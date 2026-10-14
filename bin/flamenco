@@ -26,6 +26,11 @@
   flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   fingerprints (fprintd)
   flamenco ai providers | models P | test P [MODEL] | ask TEXT… | key set|delete P   AI assistant (Settings → AI)
   flamenco assistant           open the AI assistant
+  flamenco pick-color           pick a color on screen (copied as #rrggbb)
+  flamenco emoji               every emoji, as JSON (the launcher's ":" search)
+  flamenco keys [show | --json]  every key binding (show: the cheat sheet)
+  flamenco ddc list | set BUS PERCENT   external monitor brightness (DDC/CI, ddcutil)
+  flamenco record start|toggle [screen|region] [OUTPUT] | stop | status   screen recording
   flamenco widgets [edit|done|toggle]   arrange desktop widgets (same as quick settings → Desktop widgets)
   flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC
                                Wi-Fi and wired connections (NetworkManager)
@@ -60,7 +65,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.20.1"
+VERSION = "0.21.8"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1493,6 +1498,11 @@ SHELL_FUNCTIONS = {
     "performance": ("Performance", ["performance"]),
     "wallpapers": ("Wallpaper picker", ["wallpapers"]),
     "assistant": ("AI assistant", ["assistant"]),
+    "keys": ("Keyboard shortcuts cheat sheet", ["keys", "show"]),
+    "color-picker": ("Pick a color on screen", ["pick-color"]),
+    "emoji": ("Emoji picker", ["launcher", "openWith", ":"]),
+    "record-screen": ("Record the screen (again to stop)", ["record", "toggle", "screen"]),
+    "record-region": ("Record an area (again to stop)", ["record", "toggle", "region"]),
     "settings": ("Settings", ["settings"]),
     "power": ("Power menu", ["power"]),
     "lock": ("Lock the screen", ["lock"]),
@@ -3104,6 +3114,749 @@ def cmd_ai(args: list[str]) -> int:
             print(f"ai: removed the {AI_PROVIDERS[pid]['name']} key")
             return 0
     die("usage: flamenco ai providers | models PROVIDER | test PROVIDER [MODEL] | chat (JSON on stdin) | ask TEXT… | key set|delete PROVIDER (key on stdin)")
+
+
+# ─────────────────────────────── settings search ─────────────────────────────
+# The Settings app's search box: every page, section and setting with a fixed
+# label, read from the page files themselves so the index can't drift.
+
+def qml_mask(text: str) -> str:
+    """Same-length copy with string contents and comments blanked (for brace matching)."""
+    out, i, n = list(text), 0, len(text)
+    while i < n:
+        c = text[i]
+        if c in "\"'":
+            j = i + 1
+            while j < n and text[j] != c:
+                j += 2 if text[j] == "\\" else 1
+            for k in range(i + 1, min(j, n)):
+                out[k] = " "
+            i = j + 1
+        elif text.startswith("//", i):
+            j = text.find("\n", i)
+            j = n if j < 0 else j
+            for k in range(i, j):
+                out[k] = " "
+            i = j
+        elif text.startswith("/*", i):
+            j = text.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            for k in range(i, j):
+                if out[k] != "\n":
+                    out[k] = " "
+            i = j
+        else:
+            i += 1
+    return "".join(out)
+
+
+def qml_objects(masked: str, pos: int):
+    """Enclosing objects of `pos`, innermost first: (type, open brace, close brace)."""
+    found, depth, i = [], 0, pos
+    while i > 0:
+        i -= 1
+        ch = masked[i]
+        if ch == "}":
+            depth += 1
+        elif ch == "{":
+            if depth:
+                depth -= 1
+                continue
+            m = re.search(r"(\w+)\s*(?:on\s+[\w.]+\s*)?$", masked[max(0, i - 80):i])
+            d, j = 1, i + 1
+            while j < len(masked) and d:
+                d += {"{": 1, "}": -1}.get(masked[j], 0)
+                j += 1
+            found.append((m.group(1) if m else "", i, j))
+    return found
+
+
+def qml_literal(text: str, obj: tuple, prop: str) -> str:
+    """A property's plain string value, directly in this object; "" when it's computed."""
+    _, a, b = obj
+    body, masked = text[a + 1:b - 1], qml_mask(text[a + 1:b - 1])
+    for m in re.finditer(r"(?<![\w.])" + prop + r"\s*:\s*\"", masked):
+        # only at this object's own level
+        if masked[:m.start()].count("{") != masked[:m.start()].count("}"):
+            continue
+        sm = re.match(r'"((?:[^"\\]|\\.)*)"\s*(?=[;\n}]|$)', body[m.end() - 1:])
+        if sm:
+            return json.loads('"' + sm.group(1) + '"')
+    return ""
+
+
+def settings_index() -> list[dict]:
+    pages_dir = shell_dir() / "Modules/Settings/Pages"
+    win = (shell_dir() / "Modules/Settings/SettingsWindow.qml").read_text()
+    comps = dict(re.findall(r"Component\s*\{\s*id:\s*(\w+);\s*(\w+)\s*\{", win))
+    out = []
+    for pid, icon, label, comp in re.findall(r'\{\s*id:\s*"([\w-]+)",\s*icon:\s*"([^"]+)",\s*label:\s*"([^"]+)",\s*comp:\s*(\w+)\s*\}', win):
+        out.append({"page": pid, "icon": icon, "label": label, "kind": "page", "title": label, "subtitle": "", "group": ""})
+        files, seen = [comps.get(comp, "")], set()
+        while files:
+            name = files.pop(0)
+            f = pages_dir / f"{name}.qml"
+            if not name or name in seen or not f.is_file():
+                continue
+            seen.add(name)
+            text = f.read_text()
+            masked = qml_mask(text)
+            # sections defined in their own file (LoginSection, FingerprintSection…)
+            files += [m for m in re.findall(r"(?<![\w.])(\w+Section)\s*\{", masked) if m != name]
+            for m in re.finditer(r"(?<![\w.])title\s*:", masked):
+                objs = qml_objects(masked, m.start())
+                if not objs:
+                    continue
+                kind = objs[0][0]
+                if not (kind.endswith("Row") or kind == "Group"):
+                    continue
+                title = qml_literal(text, objs[0], "title")
+                if not title:
+                    continue
+                grp = next((o for o in objs[1:] if o[0] == "Group"), None)
+                out.append({"page": pid, "icon": icon, "label": label, "kind": "group" if kind == "Group" else "row",
+                            "title": title, "subtitle": qml_literal(text, objs[0], "subtitle"),
+                            "group": qml_literal(text, grp, "title") if grp else ""})
+    seen, uniq = set(), []
+    for e in out:
+        k = (e["page"], e["kind"], e["title"])
+        if k not in seen:
+            seen.add(k)
+            uniq.append(e)
+    return uniq
+
+
+def cmd_settings_index(args: list[str]) -> int:
+    idx = settings_index()
+    if "--json" in args:
+        print(json.dumps(idx))
+    else:
+        for e in idx:
+            print(f"{e['label']:<24} {e['kind']:<5} {e['group'] + ' › ' if e['group'] else ''}{e['title']}")
+    return 0
+
+
+# ─────────────────────────────── privacy (camera) ────────────────────────────
+# Which of your programs have a camera open. Most apps open /dev/video* directly
+# instead of going through PipeWire, so this looks at open files; the bar's
+# privacy indicator runs `flamenco privacy watch`, which prints only on change.
+
+def camera_users() -> list[str]:
+    names = set()
+    me = os.getpid()
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit() or int(pid) == me:
+            continue
+        try:
+            for fd in os.scandir(f"/proc/{pid}/fd"):
+                try:
+                    if os.readlink(fd.path).startswith("/dev/video"):
+                        names.add(Path(f"/proc/{pid}/comm").read_text().strip() or pid)
+                        break
+                except OSError:
+                    continue
+        except OSError:
+            continue        # gone, or not yours
+    return sorted(names)
+
+
+def cmd_privacy(args: list[str]) -> int:
+    import time
+    if args[:1] == ["watch"]:
+        last = None
+        while True:
+            now = camera_users()
+            if now != last:
+                print(json.dumps({"camera": now}), flush=True)
+                last = now
+            time.sleep(3)
+    print(json.dumps({"camera": camera_users()}))
+    return 0
+
+
+# ─────────────────────────────── screen recording ────────────────────────────
+# wf-recorder (wlr-screencopy: niri and Hyprland, no prompts) or gpu-screen-recorder.
+# The recorder runs on its own; RECORD_STATE says what's recording, so the bar
+# finds it again after a shell restart, and `stop` sends it SIGINT so the file
+# is finished properly.
+
+RECORD_STATE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "flamenco-record.json"
+RECORD_LOG = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "flamenco-record.log"
+
+
+def record_settings() -> dict:
+    try:
+        r = json.loads((CONFIG_DIR / "settings.json").read_text()).get("record", {}) or {}
+    except (OSError, ValueError):
+        r = {}
+    return {"backend": r.get("backend", "auto"), "audio": r.get("audio", "none"),
+            "fps": max(10, min(240, int(r.get("fps", 60) or 60))),
+            "dir": str(r.get("dir") or "~/Videos/Recordings")}
+
+
+def record_backend(pref: str) -> str:
+    order = [pref] if pref in ("wf-recorder", "gpu-screen-recorder") else ["wf-recorder", "gpu-screen-recorder"]
+    for b in order:
+        if shutil.which(b):
+            return b
+    die("no screen recorder installed: install wf-recorder or gpu-screen-recorder")
+
+
+def record_state() -> dict | None:
+    try:
+        st = json.loads(RECORD_STATE.read_text())
+        os.kill(int(st["pid"]), 0)
+        return st
+    except (OSError, ValueError, KeyError, ProcessLookupError):
+        RECORD_STATE.unlink(missing_ok=True)
+        return None
+
+
+def focused_output() -> str:
+    if compositor() == "hyprland":
+        try:
+            mons = json.loads(run_out(["hyprctl", "monitors", "-j"]) or "[]")
+            return next((m["name"] for m in mons if m.get("focused")), mons[0]["name"] if mons else "")
+        except (ValueError, KeyError, IndexError):
+            return ""
+    try:
+        return json.loads(run_out(["niri", "msg", "--json", "focused-output"]) or "{}").get("name", "")
+    except ValueError:
+        return ""
+
+
+def record_start(mode: str, output: str = "") -> int:
+    import time
+    if record_state():
+        die("already recording (flamenco record stop)")
+    cfg = record_settings()
+    backend = record_backend(cfg["backend"])
+    geom = ""
+    if mode == "region":
+        if not shutil.which("slurp"):
+            die("recording an area needs slurp")
+        r = subprocess.run(["slurp", "-d"], capture_output=True, text=True)
+        geom = r.stdout.strip()
+        if r.returncode != 0 or not geom:
+            return 0                    # cancelled
+    else:
+        output = output or focused_output()
+    folder = Path(os.path.expanduser(cfg["dir"]))
+    folder.mkdir(parents=True, exist_ok=True)
+    out = folder / time.strftime("Recording %Y-%m-%d %H-%M-%S.mp4")
+    audio = cfg["audio"]
+    if backend == "wf-recorder":
+        cmd = ["wf-recorder", "-y", "-f", str(out), "-r", str(cfg["fps"])]
+        if geom:
+            cmd += ["-g", geom]
+        elif output:
+            cmd += ["-o", output]
+        if audio == "desktop":
+            sink = run_out(["pactl", "get-default-sink"]).strip()
+            cmd.append(f"--audio={sink}.monitor" if sink else "--audio")
+        elif audio in ("mic", "both"):
+            cmd.append("--audio")       # wf-recorder records one source: the default input
+    else:
+        if geom:
+            m = re.match(r"(-?\d+),(-?\d+) (\d+)x(\d+)", geom)
+            target = ["-w", "region", "-region", f"{m.group(3)}x{m.group(4)}+{m.group(1)}+{m.group(2)}"] if m else ["-w", "portal"]
+        else:
+            target = ["-w", output or "portal"]
+        cmd = ["gpu-screen-recorder"] + target + ["-f", str(cfg["fps"]), "-o", str(out)]
+        a = {"desktop": "default_output", "mic": "default_input", "both": "default_output|default_input"}.get(audio)
+        if a:
+            cmd += ["-a", a]
+    log = open(RECORD_LOG, "w")
+    proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
+    time.sleep(0.8)
+    if proc.poll() is not None:
+        lines = RECORD_LOG.read_text(errors="replace").strip().splitlines()
+        die(f"{backend} stopped right away: " + (lines[-1] if lines else f"exit {proc.returncode}"))
+    RECORD_STATE.write_text(json.dumps({"pid": proc.pid, "file": str(out), "started": time.time(),
+                                        "backend": backend, "mode": "region" if geom else "screen", "output": output}))
+    print(f"record: recording to {out}")
+    return 0
+
+
+def record_stop() -> int:
+    import signal, time
+    st = record_state()
+    if not st:
+        print("record: nothing is recording")
+        return 0
+    pid = int(st["pid"])
+    try:
+        os.kill(pid, signal.SIGINT)
+    except ProcessLookupError:
+        pass
+    for _ in range(100):            # up to 10 s to finish writing
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            break
+        time.sleep(0.1)
+    RECORD_STATE.unlink(missing_ok=True)
+    f = Path(st["file"])
+    if f.exists() and f.stat().st_size > 0:
+        print(f"record: saved {f}")
+        if shutil.which("notify-send"):
+            subprocess.Popen(["notify-send", "-a", "Screen recording", "-i", "video-x-generic",
+                              "Recording saved", str(f)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        print("record: stopped (no file was written)")
+    return 0
+
+
+def cmd_record(args: list[str]) -> int:
+    sub = args[0] if args else "status"
+    if sub == "status":
+        st = record_state()
+        print(json.dumps({"recording": bool(st), **(st or {})}))
+        return 0
+    if sub == "stop":
+        return record_stop()
+    if sub in ("start", "toggle"):
+        if sub == "toggle" and record_state():
+            return record_stop()
+        mode = args[1] if len(args) > 1 else "screen"
+        if mode not in ("screen", "region"):
+            die("usage: flamenco record start|toggle [screen|region] [OUTPUT]")
+        return record_start(mode, args[2] if len(args) > 2 else "")
+    die("usage: flamenco record start|toggle [screen|region] [OUTPUT] | stop | status")
+
+
+# ─────────────────────────────── external monitor brightness (DDC/CI) ───────
+# ddcutil talks to monitors over the video cable (VCP feature 0x10 = brightness).
+# It needs the i2c-dev module and access to /dev/i2c-* (the i2c group).
+
+def ddc_list() -> dict:
+    if not shutil.which("ddcutil"):
+        return {"installed": False, "displays": [], "error": ""}
+    r = subprocess.run(["ddcutil", "detect", "--brief"], capture_output=True, text=True, timeout=30)
+    displays, cur = [], None
+    for line in r.stdout.splitlines():
+        if re.match(r"^Display \d+", line):
+            cur = {"bus": "", "connector": "", "name": ""}
+            displays.append(cur)
+        elif line.startswith("Invalid display"):
+            cur = None
+        elif cur is not None:
+            m = re.match(r"\s*I2C bus:\s*/dev/i2c-(\d+)", line)
+            if m:
+                cur["bus"] = m.group(1)
+            m = re.match(r"\s*DRM connector:\s*card\d+-(.+)", line)
+            if m:
+                cur["connector"] = m.group(1).strip()
+            m = re.match(r"\s*Monitor:\s*(.+)", line)
+            if m:
+                parts = m.group(1).split(":")
+                cur["name"] = (parts[1] if len(parts) > 1 else parts[0]).strip()
+    out = []
+    for d in displays:
+        if not d["bus"]:
+            continue
+        g = subprocess.run(["ddcutil", "--bus", d["bus"], "getvcp", "10", "--brief"], capture_output=True, text=True, timeout=15)
+        m = re.search(r"VCP 10 \w+ (\d+) (\d+)", g.stdout)
+        if m:
+            out.append(dict(d, value=int(m.group(1)), max=int(m.group(2)) or 100))
+    err = ""
+    if not out and r.returncode != 0:
+        msg = (r.stderr or r.stdout).strip().splitlines()
+        err = msg[-1] if msg else "ddcutil failed"
+        if re.search(r"(?i)permission|i2c", err):
+            err = "no access to /dev/i2c-*: add yourself to the i2c group and load i2c-dev"
+    return {"installed": True, "displays": out, "error": err}
+
+
+def cmd_ddc(args: list[str]) -> int:
+    sub = args[0] if args else "list"
+    if sub == "list":
+        print(json.dumps(ddc_list()))
+        return 0
+    if sub == "set" and len(args) > 2 and args[1].isdigit():
+        try:
+            pct = max(0, min(100, int(float(args[2]))))
+        except ValueError:
+            die("usage: flamenco ddc set BUS PERCENT")
+        mx = int(args[3]) if len(args) > 3 and args[3].isdigit() else 100
+        r = subprocess.run(["ddcutil", "--bus", args[1], "--noverify", "setvcp", "10", str(round(pct * mx / 100))],
+                           capture_output=True, text=True, timeout=15)
+        if r.returncode != 0:
+            die((r.stderr or r.stdout).strip().splitlines()[-1] if (r.stderr or r.stdout).strip() else "ddcutil failed")
+        return 0
+    die("usage: flamenco ddc list | set BUS PERCENT [MAX]")
+
+
+# ─────────────────────────────── keyboard cheat sheet ────────────────────────
+# Every key binding, named and grouped, for the cheat sheet (`flamenco keys`):
+# niri's binds block (hotkey-overlay-title, else the action), or `hyprctl binds`.
+
+KEY_GROUPS = (("Flamenco", ("flamenco",)), ("Screenshots", ("screenshot",)),
+              ("Workspaces", ("workspace",)), ("Monitors", ("monitor",)),
+              ("Windows & columns", ("window", "column", "focus", "move", "consume", "expel", "fullscreen", "maximize",
+                                     "center", "width", "height", "float", "tab", "close", "resize", "swap", "pin", "group")),
+              ("Media & hardware", ("xf86", "volume", "brightness", "media", "play")),
+              ("Apps", ("spawn", "exec", "run")),
+              ("Session", ("quit", "lock", "power", "overview", "hotkey", "exit", "dpms", "suspend")))
+
+
+def key_group(key: str, action: str) -> str:
+    hay = (key + " " + action).lower()
+    if key.lower().startswith("xf86"):
+        return "Media & hardware"
+    if "flamenco" in hay:
+        return "Flamenco"
+    for name, words in KEY_GROUPS[1:]:
+        if any(w in hay for w in words):
+            return name
+    return "Other"
+
+
+def key_title(action: str, args: list[str]) -> str:
+    if action == "spawn-sh" and args:
+        # "flamenco volume up || wpctl …": named by the Flamenco part
+        args = args[0].split("||")[0].split()
+        action = "spawn"
+    if action in ("spawn", "spawn-sh"):
+        if args[:1] == ["flamenco"]:
+            fn = next((v[0] for v in SHELL_FUNCTIONS.values() if v[1] == args[1:]), "")
+            return fn or "Flamenco: " + " ".join(args[1:])
+        prog = (args[0] if args else "").split("/")[-1]
+        return "Run " + (" ".join(args) if action == "spawn-sh" else prog)
+    words = action.replace("-", " ").strip()
+    return (words[:1].upper() + words[1:] + (" " + " ".join(args) if args else "")).strip()
+
+
+def niri_keys(text: str) -> list[dict]:
+    block = kdl_block(text, "binds")
+    if not block:
+        return []
+    _, o, c = block
+    masked = kdl_mask(text)
+    out = []
+    for m in re.finditer(r"(?m)^[ \t]*([A-Za-z0-9_+]+)(?=[\s{])", masked[o + 1:c]):
+        start = o + 1 + m.start()
+        brace = masked.find("{", start, c)
+        close = masked.find("}", brace, c) if brace >= 0 else -1
+        if brace < 0 or close < 0 or "\n" in masked[start:brace].strip("\n"):
+            continue
+        head, body = text[start:brace], text[brace + 1:close]
+        key = m.group(1)
+        t = re.search(r'hotkey-overlay-title=(null|"((?:[^"\\]|\\.)*)")', head)
+        if t and t.group(1) == "null":
+            continue            # hidden from niri's overlay on purpose
+        first = body.strip().split(";")[0].strip()
+        if not first:
+            continue
+        parts = re.findall(r'"((?:[^"\\]|\\.)*)"|(\S+)', first)
+        action = parts[0][0] or parts[0][1]
+        # quoted arguments, and bare ones that aren't name=value properties
+        args = [kdl_unquote(q) if q else b for q, b in parts[1:] if q or "=" not in b]
+        title = kdl_unquote(t.group(2)) if t and t.group(2) else key_title(action, args)
+        out.append({"key": key, "title": title, "group": key_group(key, action + " " + " ".join(args))})
+    return out
+
+
+def hypr_keys() -> list[dict]:
+    try:
+        binds = json.loads(run_out(["hyprctl", "binds", "-j"]) or "[]")
+    except ValueError:
+        return []
+    bits = ((64, "Super"), (4, "Ctrl"), (8, "Alt"), (1, "Shift"))
+    out = []
+    for b in binds:
+        mods = [n for bit, n in bits if b.get("modmask", 0) & bit]
+        key = "+".join(mods + [str(b.get("key", "")).capitalize() if len(str(b.get("key", ""))) == 1 else str(b.get("key", ""))])
+        action = f"{b.get('dispatcher', '')} {b.get('arg', '')}".strip()
+        args = b.get("arg", "").split()
+        title = b.get("description") or (key_title("spawn", args) if b.get("dispatcher") == "exec" else action)
+        out.append({"key": key, "title": title, "group": key_group(key, action)})
+    return out
+
+
+def cmd_keys(args: list[str]) -> int:
+    if compositor() == "hyprland":
+        keys = hypr_keys()
+    else:
+        keys = niri_keys(NIRI_CONFIG.read_text() if NIRI_CONFIG.is_file() else "")
+    if "--json" in args:
+        print(json.dumps(keys))
+        return 0
+    if args[:1] == ["show"]:
+        return ipc("keys", "toggle")
+    for k in keys:
+        print(f"{k['group']:<20} {k['key']:<24} {k['title']}")
+    return 0
+
+
+# ─────────────────────────────── emoji & color picker ────────────────────────
+
+EMOJI_RANGES = ((0x1F300, 0x1F5FF), (0x1F600, 0x1F64F), (0x1F680, 0x1F6FF), (0x1F900, 0x1F9FF),
+                (0x1FA70, 0x1FAFF), (0x2600, 0x26FF), (0x2700, 0x27BF), (0x1F170, 0x1F1FF), (0x2B00, 0x2BFF))
+
+
+def emoji_list() -> list[list[str]]:
+    """[emoji, name] for every emoji in Python's Unicode database (no data file needed)."""
+    import unicodedata
+    out = []
+    for a, b in EMOJI_RANGES:
+        for cp in range(a, b + 1):
+            ch = chr(cp)
+            if unicodedata.category(ch) != "So":
+                continue
+            name = unicodedata.name(ch, "")
+            if not name or name.startswith("REGIONAL INDICATOR"):
+                continue
+            # text-style symbols get the emoji presentation selector
+            glyph = ch + ("️" if cp < 0x1F000 else "")
+            out.append([glyph, name.lower()])
+    return out
+
+
+def cmd_emoji(args: list[str]) -> int:
+    print(json.dumps(emoji_list(), ensure_ascii=False))
+    return 0
+
+
+def cmd_pick_color(args: list[str]) -> int:
+    """Pick a color on screen: copied to the clipboard as #rrggbb (and printed)."""
+    hexv = ""
+    if compositor() == "hyprland":
+        if not shutil.which("hyprpicker"):
+            die("picking a color on Hyprland needs hyprpicker")
+        hexv = run_out(["hyprpicker", "-f", "hex"]).strip()
+    else:
+        out = run_out(["niri", "msg", "--json", "pick-color"]).strip()
+        try:
+            rgb = json.loads(out).get("rgb") if out else None
+        except ValueError:
+            rgb = None
+        if rgb:
+            hexv = "#" + "".join(f"{max(0, min(255, round(c * 255))):02x}" for c in rgb[:3])
+    if not hexv:
+        return 1                    # cancelled
+    print(hexv)
+    if shutil.which("wl-copy"):
+        subprocess.run(["wl-copy", hexv])
+    if "--quiet" not in args and shutil.which("notify-send"):
+        subprocess.Popen(["notify-send", "-a", "Color picker", "-i", "color-select", f"Copied {hexv}", "Paste it anywhere"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return 0
+
+
+# ─────────────────────────────── calendar events ─────────────────────────────
+# Events for the calendar panel from ICS links (Google / Outlook "secret iCal
+# address", any webcal:// feed), .ics files, or vdir folders (what vdirsyncer
+# keeps CalDAV calendars in, and khal reads). A small ICS reader, stdlib only:
+# time zones, all-day events, and the usual repeat rules.
+
+CAL_CACHE = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "flamenco/calendars"
+WEEKDAYS = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+
+
+def ics_lines(text: str) -> list[str]:
+    out = []
+    for raw in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if raw[:1] in (" ", "\t") and out:
+            out[-1] += raw[1:]
+        elif raw:
+            out.append(raw)
+    return out
+
+
+def ics_unescape(v: str) -> str:
+    return re.sub(r"\\([\;,nN])", lambda m: "\n" if m.group(1) in "nN" else m.group(1), v)
+
+
+def ics_time(value: str, params: dict):
+    """(local datetime, all-day?) from a DTSTART/DTEND-style value."""
+    from datetime import datetime, date
+    from zoneinfo import ZoneInfo
+    value = value.strip()
+    if params.get("VALUE") == "DATE" or re.fullmatch(r"\d{8}", value):
+        d = datetime.strptime(value[:8], "%Y%m%d")
+        return d, True
+    utc = value.endswith("Z")
+    dt = datetime.strptime(value.rstrip("Z")[:15], "%Y%m%dT%H%M%S")
+    if utc:
+        from datetime import timezone
+        return dt.replace(tzinfo=timezone.utc).astimezone().replace(tzinfo=None), False
+    tz = params.get("TZID")
+    if tz:
+        try:
+            return dt.replace(tzinfo=ZoneInfo(tz.strip('"'))).astimezone().replace(tzinfo=None), False
+        except Exception:
+            pass                    # Windows zone names and the like: take it as local time
+    return dt, False
+
+
+def ics_duration(v: str):
+    from datetime import timedelta
+    m = re.fullmatch(r"([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?", v.strip())
+    if not m:
+        return None
+    sign = -1 if m.group(1) == "-" else 1
+    w, d, h, mi, sec = (int(x or 0) for x in m.groups()[1:])
+    return sign * timedelta(weeks=w, days=d, hours=h, minutes=mi, seconds=sec)
+
+
+def ics_events(text: str, lo, hi, cal: str, color: str) -> list[dict]:
+    from datetime import timedelta
+    events, cur, cancelled, overrides = [], None, set(), set()
+    raw_events = []
+    for line in ics_lines(text):
+        if line == "BEGIN:VEVENT":
+            cur = {}
+        elif line == "END:VEVENT" and cur is not None:
+            raw_events.append(cur)
+            cur = None
+        elif cur is not None and ":" in line:
+            head, val = line.split(":", 1)
+            name, *ps = head.split(";")
+            params = dict(p.split("=", 1) for p in ps if "=" in p)
+            cur.setdefault(name.upper(), []).append((val, params))
+    # single occurrences edited on their own replace that occurrence of the series
+    for ev in raw_events:
+        if "RECURRENCE-ID" in ev and "UID" in ev:
+            v, p = ev["RECURRENCE-ID"][0]
+            overrides.add((ev["UID"][0][0], ics_time(v, p)[0]))
+    for ev in raw_events:
+        if ev.get("STATUS", [("", {})])[0][0].upper() == "CANCELLED" or "DTSTART" not in ev:
+            continue
+        start, allday = ics_time(*ev["DTSTART"][0])
+        if "DTEND" in ev:
+            end = ics_time(*ev["DTEND"][0])[0]
+        elif "DURATION" in ev and ics_duration(ev["DURATION"][0][0]) is not None:
+            end = start + ics_duration(ev["DURATION"][0][0])
+        else:
+            end = start + (timedelta(days=1) if allday else timedelta(0))
+        length = end - start
+        uid = ev.get("UID", [("", {})])[0][0]
+        exdates = set()
+        for v, p in ev.get("EXDATE", []):
+            for part in v.split(","):
+                try:
+                    exdates.add(ics_time(part, p)[0])
+                except ValueError:
+                    pass
+        starts = [start]
+        if "RRULE" in ev and "RECURRENCE-ID" not in ev:
+            starts = ics_expand(start, dict(kv.split("=", 1) for kv in ev["RRULE"][0][0].split(";") if "=" in kv), hi)
+        base = {"title": ics_unescape(ev.get("SUMMARY", [("(no title)", {})])[0][0]),
+                "location": ics_unescape(ev.get("LOCATION", [("", {})])[0][0]),
+                "allDay": allday, "calendar": cal, "color": color}
+        for st in starts:
+            if st in exdates or ("RECURRENCE-ID" not in ev and (uid, st) in overrides):
+                continue
+            en = st + length
+            if en < lo or st > hi:
+                continue
+            events.append(dict(base, start=st.isoformat(timespec="minutes"), end=en.isoformat(timespec="minutes")))
+    return events
+
+
+def ics_expand(start, rule: dict, hi) -> list:
+    """Occurrences of a repeat rule (FREQ DAILY/WEEKLY/MONTHLY/YEARLY, INTERVAL, COUNT, UNTIL, BYDAY for weekly)."""
+    from datetime import timedelta
+    freq = rule.get("FREQ", "").upper()
+    step = max(1, int(rule.get("INTERVAL", "1") or 1))
+    count = int(rule["COUNT"]) if rule.get("COUNT", "").isdigit() else None
+    until = None
+    if rule.get("UNTIL"):
+        try:
+            until = ics_time(rule["UNTIL"], {})[0]
+        except ValueError:
+            until = None
+    end = min(hi, until) if until else hi
+    days = [WEEKDAYS.index(d[-2:]) for d in rule.get("BYDAY", "").split(",") if d[-2:] in WEEKDAYS]
+    out, n, i = [], 0, 0
+    while i < 3000:
+        if freq == "DAILY":
+            cands = [start + timedelta(days=i * step)]
+        elif freq == "WEEKLY":
+            week = start + timedelta(weeks=i * step)
+            monday = week - timedelta(days=week.weekday())
+            cands = sorted(monday + timedelta(days=d) for d in (days or [start.weekday()]))
+            cands = [c.replace(hour=start.hour, minute=start.minute, second=start.second) for c in cands if c >= start]
+        elif freq == "MONTHLY":
+            m = start.month - 1 + i * step
+            y, mo = start.year + m // 12, m % 12 + 1
+            try:
+                cands = [start.replace(year=y, month=mo)]
+            except ValueError:
+                cands = []          # e.g. the 31st in a short month
+        elif freq == "YEARLY":
+            try:
+                cands = [start.replace(year=start.year + i * step)]
+            except ValueError:
+                cands = []          # 29 February
+        else:
+            return [start]
+        for c in cands:
+            if c > end or (count is not None and n >= count):
+                return out
+            out.append(c)
+            n += 1
+        i += 1
+    return out
+
+
+def cal_fetch(src: dict, refresh: bool) -> tuple[list[str], str]:
+    """(ICS texts, error) for one source: a URL (cached), a file, or a vdir folder."""
+    import hashlib, time, urllib.request
+    url = str(src.get("url", "")).strip()
+    if not url:
+        return [], "no address"
+    if re.match(r"(?i)^(https?|webcal)://", url):
+        url = re.sub(r"(?i)^webcal://", "https://", url)
+        CAL_CACHE.mkdir(parents=True, exist_ok=True)
+        f = CAL_CACHE / (hashlib.sha1(url.encode()).hexdigest() + ".ics")
+        if refresh or not f.exists() or time.time() - f.stat().st_mtime > 900:
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "flamenco-shell"})
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    f.write_bytes(r.read())
+            except Exception as e:
+                if not f.exists():
+                    return [], ai_http_error(e)
+        return [f.read_text(errors="replace")], ""
+    path = Path(os.path.expanduser(url))
+    if path.is_dir():
+        return [p.read_text(errors="replace") for p in sorted(path.rglob("*.ics"))], ""
+    if path.is_file():
+        return [path.read_text(errors="replace")], ""
+    return [], f"not found: {path}"
+
+
+def calendar_events(days_before: int = 7, days_after: int = 62, refresh: bool = False) -> dict:
+    from datetime import datetime, timedelta
+    try:
+        cfg = json.loads((CONFIG_DIR / "settings.json").read_text()).get("calendar", {}) or {}
+    except (OSError, ValueError):
+        cfg = {}
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    lo, hi = today - timedelta(days=days_before), today + timedelta(days=days_after)
+    events, errors = [], {}
+    for src in cfg.get("sources", []) or []:
+        if not src.get("enabled", True):
+            continue
+        texts, err = cal_fetch(src, refresh)
+        if err:
+            errors[src.get("name") or src.get("url", "")] = err
+        for t in texts:
+            try:
+                events += ics_events(t, lo, hi, src.get("name", ""), src.get("color", ""))
+            except Exception as e:
+                errors[src.get("name") or src.get("url", "")] = f"couldn't read it: {e}"
+    events.sort(key=lambda e: (e["start"], not e["allDay"]))
+    return {"events": events, "errors": errors}
+
+
+def cmd_calendar(args: list[str]) -> int:
+    if args[:1] == ["events"]:
+        print(json.dumps(calendar_events(refresh="--refresh" in args)))
+        return 0
+    return ipc("calendar", args[0] if args else "toggle")
 
 
 # ─────────────────────────────── fingerprints (fprintd) ──────────────────────
@@ -5514,6 +6267,8 @@ WINDOW_DEFAULTS = {
     "gaps": 12, "struts": 0, "centerColumn": "never", "defaultWidth": 0.5,
     "focusRing": True, "focusRingWidth": 2, "border": False, "borderWidth": 2,
     "activeColor": "#ff5d73", "inactiveColor": "#46343a", "cornerRadius": 12, "shadows": True,
+    # the border's own colors ("" = the focus ring's), and a gradient on the focused window
+    "borderActiveColor": "", "borderInactiveColor": "", "gradient": False, "gradientTo": "", "gradientAngle": 45,
     "focusFollowsMouse": False, "warpMouse": False, "hideCursorTyping": False, "hideCursorAfter": 0,
     "preferNoCsd": True, "hotCorners": True, "skipHotkeyOverlay": True, "screenshotPath": SHOT_PATH,
     "workspaceBackForth": False, "workspaces": [], "overviewCorners": ["top-left"],
@@ -5559,6 +6314,10 @@ def window_norm(w: dict) -> dict:
     for k in ("activeColor", "inactiveColor"):
         if not HEX_RE.match(out[k]):
             out[k] = WINDOW_DEFAULTS[k]
+    for k in ("borderActiveColor", "borderInactiveColor", "gradientTo"):
+        if out[k] and not HEX_RE.match(out[k]):
+            out[k] = ""
+    out["gradientAngle"] = max(0, min(360, out["gradientAngle"]))
     out["screenshotPath"] = out["screenshotPath"].replace("\n", "").strip()
     ws = []
     for item in out["workspaces"]:
@@ -5775,18 +6534,25 @@ def niri_windows_apply(text: str, w: dict) -> str:
     text = kdl_replace_child(text, ["layout"], "default-column-width",
                              f"default-column-width {{ proportion {w['defaultWidth']:.5g}; }}" if w["defaultWidth"] > 0
                              else "default-column-width {}")
+    def grad(start: str):
+        # niri draws the gradient instead of active-color when both are set
+        if not (w["gradient"] and w["gradientTo"]):
+            return None
+        return f"active-gradient from={kdl_quote(start)} to={kdl_quote(w['gradientTo'])} angle={w['gradientAngle']}"
+    bord_a = w["borderActiveColor"] or w["activeColor"]
+    bord_i = w["borderInactiveColor"] or w["inactiveColor"]
     text, fr = kdl_ensure(text, ["layout", "focus-ring"])
     text = set_block_lines(text, fr, {"off": flag(not w["focusRing"], "off"), "on": None,
                                       "width": f"width {w['focusRingWidth']}",
                                       "active-color": f"active-color {kdl_quote(w['activeColor'])}",
                                       "inactive-color": f"inactive-color {kdl_quote(w['inactiveColor'])}",
-                                      "active-gradient": None, "inactive-gradient": None})
+                                      "active-gradient": grad(w["activeColor"]), "inactive-gradient": None})
     text, bd = kdl_ensure(text, ["layout", "border"])
     text = set_block_lines(text, bd, {"off": flag(not w["border"], "off"), "on": None,
                                       "width": f"width {w['borderWidth']}",
-                                      "active-color": f"active-color {kdl_quote(w['activeColor'])}",
-                                      "inactive-color": f"inactive-color {kdl_quote(w['inactiveColor'])}",
-                                      "active-gradient": None, "inactive-gradient": None})
+                                      "active-color": f"active-color {kdl_quote(bord_a)}",
+                                      "inactive-color": f"inactive-color {kdl_quote(bord_i)}",
+                                      "active-gradient": grad(bord_a), "inactive-gradient": None})
     text, sh = kdl_ensure(text, ["layout", "shadow"])
     text = set_block_lines(text, sh, {"on": flag(w["shadows"], "on"), "off": None})
     # top-level flags
@@ -5838,13 +6604,21 @@ def hypr_rgb(c: str) -> str:
     return f"rgba({c[:6]}{c[6:8] or 'ff'})"
 
 
+def hypr_border_colors(w: dict) -> tuple[str, str]:
+    """Hyprland has one border: the border's colors when it's on, else the ring's; a gradient as `a b 45deg`."""
+    a = (w["borderActiveColor"] or w["activeColor"]) if w["border"] else w["activeColor"]
+    i = (w["borderInactiveColor"] or w["inactiveColor"]) if w["border"] else w["inactiveColor"]
+    active = hypr_rgb(a) + (f" {hypr_rgb(w['gradientTo'])} {w['gradientAngle']}deg" if w["gradient"] and w["gradientTo"] else "")
+    return active, hypr_rgb(i)
+
+
 def hypr_layout_lines(w: dict) -> list[str]:
     on = w["focusRing"] or w["border"]
     bw = max(w["focusRingWidth"] if w["focusRing"] else 0, w["borderWidth"] if w["border"] else 0)
     b = lambda v: "true" if v else "false"
     lines = ["general {", f"    gaps_in = {max(0, w['gaps'] // 2)}", f"    gaps_out = {w['gaps']}",
-             f"    border_size = {bw if on else 0}", f"    col.active_border = {hypr_rgb(w['activeColor'])}",
-             f"    col.inactive_border = {hypr_rgb(w['inactiveColor'])}", "}",
+             f"    border_size = {bw if on else 0}", f"    col.active_border = {hypr_border_colors(w)[0]}",
+             f"    col.inactive_border = {hypr_border_colors(w)[1]}", "}",
              "decoration {", f"    rounding = {w['cornerRadius']}", "    shadow {", f"        enabled = {b(w['shadows'])}",
              "    }", "}",
              "cursor {", f"    hide_on_key_press = {b(w['hideCursorTyping'])}",
@@ -5866,7 +6640,7 @@ def lua_layout_lines(w: dict) -> list[str]:
     lines = ["hl.config({",
              "    general = {", f"        gaps_in = {max(0, w['gaps'] // 2)},", f"        gaps_out = {w['gaps']},",
              f"        border_size = {bw if on else 0},",
-             f"        col = {{ active_border = {lua_str(hypr_rgb(w['activeColor']))}, inactive_border = {lua_str(hypr_rgb(w['inactiveColor']))} }},",
+             f"        col = {{ active_border = {lua_str(hypr_border_colors(w)[0])}, inactive_border = {lua_str(hypr_border_colors(w)[1])} }},",
              "    },",
              "    decoration = {", f"        rounding = {w['cornerRadius']},", f"        shadow = {{ enabled = {b(w['shadows'])} }},", "    },",
              "    cursor = {", f"        hide_on_key_press = {b(w['hideCursorTyping'])},",
@@ -6040,8 +6814,10 @@ def main(argv: list[str]) -> int:
         return ipc(*rest)
     if cmd == "power" and rest[:1] == ["logind"]:
         return cmd_power(rest)          # `flamenco power` alone still opens the power menu
+    if cmd == "calendar" and rest[:1] == ["events"]:
+        return cmd_calendar(rest)
     if cmd in PANELS:
-        return ipc(PANELS[cmd], rest[0] if rest else "toggle")
+        return ipc(PANELS[cmd], *(rest or ["toggle"]))
     if cmd == "setup":
         ensure_running()
         return ipc("setup", "open")
@@ -6065,10 +6841,17 @@ def main(argv: list[str]) -> int:
     if cmd == "media":
         return ipc("media", rest[0] if rest else "toggle")
     if cmd == "wallpaper":
+        # --screen NAME: just that screen (turns on per-screen wallpapers in Settings to take effect)
+        screen = ""
+        if "--screen" in rest:
+            i = rest.index("--screen")
+            screen = rest[i + 1] if i + 1 < len(rest) else ""
+            rest = rest[:i] + rest[i + 2:]
         if not rest:
-            return ipc("wallpaper", "get")
+            return ipc("wallpaper", "getFor", screen) if screen else ipc("wallpaper", "get")
         if rest[0] == "set" and len(rest) > 1:
-            return ipc("wallpaper", "set", str(Path(rest[1]).expanduser().resolve()))
+            path = str(Path(rest[1]).expanduser().resolve())
+            return ipc("wallpaper", "setFor", screen, path) if screen else ipc("wallpaper", "set", path)
         return ipc("wallpaper", rest[0])
     if cmd == "theme":
         if not rest:
@@ -6109,6 +6892,20 @@ def main(argv: list[str]) -> int:
         return cmd_net(rest)
     if cmd == "ai":
         return cmd_ai(rest)
+    if cmd == "settings-index":
+        return cmd_settings_index(rest)
+    if cmd == "privacy":
+        return cmd_privacy(rest)
+    if cmd == "record":
+        return cmd_record(rest)
+    if cmd == "ddc":
+        return cmd_ddc(rest)
+    if cmd == "keys":
+        return cmd_keys(rest)
+    if cmd == "emoji":
+        return cmd_emoji(rest)
+    if cmd == "pick-color":
+        return cmd_pick_color(rest)
     if cmd == "pointer":
         return cmd_pointer(rest)
     if cmd == "flatpak":

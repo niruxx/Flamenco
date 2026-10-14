@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -54,6 +55,55 @@ LazyLoader {
             { id: "about", icon: "info", label: "About", comp: aboutC }
         ]
         readonly property int index: Math.max(0, pages.findIndex(p => p.id === Panels.settingsPage))
+
+        // ── search: every page, section and setting (`flamenco settings-index`) ──
+        property var searchIndex: []
+        property string query: ""
+        readonly property var results: {
+            const q = query.trim().toLowerCase();
+            if (q === "")
+                return [];
+            const words = q.split(/\s+/);
+            const order = pages.map(p => p.id);
+            const hits = [];
+            for (const e of searchIndex) {
+                const t = e.title.toLowerCase();
+                const hay = t + " " + e.subtitle.toLowerCase() + " " + e.group.toLowerCase() + " " + e.label.toLowerCase();
+                if (!words.every(w => hay.includes(w)))
+                    continue;
+                // titles that start with it first, then titles containing it, then the rest
+                const score = (t.startsWith(q) ? 0 : t.includes(q) ? 1 : words.every(w => t.includes(w)) ? 2 : 3) + (e.kind === "page" ? -0.5 : e.kind === "group" ? -0.2 : 0);
+                hits.push({ e, score, page: order.indexOf(e.page) });
+            }
+            hits.sort((a, b) => a.score - b.score || a.page - b.page);
+            return hits.slice(0, 60).map(h => h.e);
+        }
+
+        function go(e) {
+            if (!e)
+                return;
+            if (e.kind === "page")
+                Panels.settingsPage = e.page;
+            else
+                Panels.findSetting(e.page, e.title);
+        }
+
+        Process {
+            running: true
+            command: [Paths.bin, "settings-index", "--json"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    try {
+                        win.searchIndex = JSON.parse(text);
+                    } catch (e) {}
+                }
+            }
+        }
+
+        Shortcut {
+            sequences: [StandardKey.Find, "Ctrl+K"]
+            onActivated: search.input.forceActiveFocus()
+        }
 
         Component { id: appearanceC; AppearancePage {} }
         Component { id: appsC; AppThemingPage {} }
@@ -193,8 +243,100 @@ LazyLoader {
                         anchors.rightMargin: Theme.sp2
                         spacing: 4
 
+                        FTextField {
+                            id: search
+                            Layout.fillWidth: true
+                            Layout.rightMargin: Theme.sp2
+                            Layout.bottomMargin: Theme.sp2
+                            implicitHeight: 40
+                            icon: "search"
+                            placeholder: "Search settings"
+                            onEdited: t => win.query = t
+                            onTextChanged: win.query = text
+                            onAccepted: win.go(win.results[0])
+                            Keys.onEscapePressed: text = ""
+                        }
+
+                        // search results, in place of the page list while there's a query
+                        FScroll {
+                            id: resultScroll
+                            visible: win.query.trim() !== ""
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            contentHeight: resultCol.implicitHeight
+
+                            Column {
+                                id: resultCol
+                                width: resultScroll.width - resultScroll.gutter
+                                spacing: 2
+
+                                FText {
+                                    visible: win.results.length === 0
+                                    width: parent.width
+                                    leftPadding: 8
+                                    topPadding: 8
+                                    text: win.searchIndex.length ? "Nothing matches “" + win.query.trim() + "”" : "Loading…"
+                                    dim: true
+                                    wrapMode: Text.Wrap
+                                }
+
+                                Repeater {
+                                    model: win.results
+                                    Item {
+                                        id: hit
+                                        required property var modelData
+                                        required property int index
+                                        width: resultCol.width
+                                        height: hitCol.implicitHeight + 14
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: Theme.rMd
+                                            color: Theme.alpha(Theme.accent, 0.14)
+                                            visible: hit.index === 0
+                                        }
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 10
+                                            anchors.rightMargin: 8
+                                            spacing: 10
+                                            FIcon {
+                                                icon: hit.modelData.kind === "page" ? hit.modelData.icon : hit.modelData.kind === "group" ? "segment" : hit.modelData.icon
+                                                size: 18
+                                                color: hit.modelData.kind === "page" ? Theme.accent : Theme.textDim
+                                            }
+                                            ColumnLayout {
+                                                id: hitCol
+                                                Layout.fillWidth: true
+                                                spacing: 0
+                                                FText {
+                                                    Layout.fillWidth: true
+                                                    text: hit.modelData.title
+                                                    font.weight: hit.modelData.kind === "row" ? Font.Normal : Font.DemiBold
+                                                    elide: Text.ElideRight
+                                                }
+                                                FText {
+                                                    Layout.fillWidth: true
+                                                    visible: hit.modelData.kind !== "page"
+                                                    text: hit.modelData.label + (hit.modelData.group && hit.modelData.kind === "row" ? " › " + hit.modelData.group : "")
+                                                    dim: true
+                                                    font.pixelSize: Theme.fsXs
+                                                    elide: Text.ElideRight
+                                                }
+                                            }
+                                        }
+                                        StateLayer {
+                                            radius: Theme.rMd
+                                            onClicked: win.go(hit.modelData)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         FScroll {
                             id: navScroll
+                            visible: win.query.trim() === ""
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             contentHeight: nav.implicitHeight

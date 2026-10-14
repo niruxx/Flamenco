@@ -13,6 +13,23 @@ Singleton {
     property bool settingsOpen: false
     property bool setupOpen: false
     property string settingsPage: "appearance"
+    // Settings search: the row or section to scroll to and flash on the page
+    // just opened (matched by its title); findSeq makes the same one re-trigger
+    property string settingsFind: ""
+    property int findSeq: 0
+
+    function findSetting(page, title) {
+        settingsPage = page;
+        settingsFind = title;
+        findSeq++;
+        findClear.restart();
+    }
+
+    Timer {
+        id: findClear
+        interval: 3000
+        onTriggered: root.settingsFind = ""
+    }
     // dashboard (clock popout): tab requested by the next open, and the tab showing now
     property string dashboardTab: ""
     property string dashboardShown: ""
@@ -21,6 +38,8 @@ Singleton {
     property string controlDetail: ""
     // desktop widget editing (sidebar + arranging), on Panels.screen
     property bool widgetsEdit: false
+    // text the launcher opens with (`flamenco launcher openWith ":"`)
+    property string launcherQuery: ""
 
     function editWidgets(s) {
         close();

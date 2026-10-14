@@ -7,6 +7,7 @@ import qs.Modules.WallpaperPicker
 
 ColumnLayout {
     id: root
+    property string screenName: ""          // the screen a pick applies to (per-screen mode)
     signal openSettings(string page)
     spacing: Theme.sp3
 
@@ -20,7 +21,7 @@ ColumnLayout {
             busy: Wallpapers.scanning
             onChanged: p => Wallpapers.setDir(p)
         }
-        FIconButton { icon: "shuffle"; flat: false; onClicked: Wallpapers.random() }
+        FIconButton { icon: "shuffle"; flat: false; onClicked: Wallpapers.random(root.screenName) }
         FIconButton { icon: "refresh"; flat: false; onClicked: Wallpapers.rescan() }
         FIconButton { icon: "tune"; flat: false; onClicked: root.openSettings("wallpaper") }
     }
@@ -28,7 +29,7 @@ ColumnLayout {
     FText {
         text: Wallpapers.status === "missing" ? "Folder not found: " + Wallpapers.dir
             : Wallpapers.scanning ? "Scanning " + Wallpapers.dir + "…"
-            : Wallpapers.files.length + " images in " + Wallpapers.dir + " · current: " + (Paths.fileName(Wallpapers.current) || "none")
+            : Wallpapers.files.length + " images in " + Wallpapers.dir + " · current: " + (Paths.fileName(Wallpapers.forScreen(root.screenName)) || "none")
         dim: true
         font.pixelSize: Theme.fsSm
         Layout.fillWidth: true
@@ -38,5 +39,6 @@ ColumnLayout {
     WallpaperGrid {
         Layout.fillWidth: true
         implicitHeight: 360
+        screenName: root.screenName
     }
 }

@@ -28,7 +28,16 @@ Variants {
                     font.weight: Font.Bold
                 }
                 FText { text: Wallpapers.files.length + " images"; dim: true }
-                FIconButton { icon: "shuffle"; onClicked: Wallpapers.random() }
+                // per screen, or every screen at once
+                FSegmented {
+                    visible: Quickshell.screens.length > 1
+                    implicitWidth: 260
+                    implicitHeight: 34
+                    options: [{ value: false, label: "All screens" }, { value: true, label: "This screen (" + panel.modelData.name + ")" }]
+                    current: Settings.data.wallpaper.perScreen
+                    onSelected: v => Settings.data.wallpaper.perScreen = v
+                }
+                FIconButton { icon: "shuffle"; onClicked: Wallpapers.random(panel.modelData.name) }
                 FIconButton { icon: "refresh"; onClicked: Wallpapers.rescan() }
                 FIconButton { icon: "tune"; onClicked: Panels.openSettings("wallpaper") }
             }
@@ -36,6 +45,7 @@ Variants {
             WallpaperGrid {
                 Layout.fillWidth: true
                 implicitHeight: 460
+                screenName: panel.modelData.name
             }
         }
     }

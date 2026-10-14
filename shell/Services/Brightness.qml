@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // Screen and keyboard backlight via brightnessctl.
 Singleton {
@@ -63,7 +64,86 @@ Singleton {
     }
 
     function step(delta) {
+        // no built-in screen (a desktop): the brightness keys change the focused monitor
+        if (!available && ddc.length) {
+            const d = ddc.find(x => x.connector === Niri.focusedOutput) ?? ddc[0];
+            setDdc(d.bus, d.value / d.max + delta);
+            changedByUser();
+            return;
+        }
         set(value + delta);
+    }
+
+    // ── external monitors over DDC/CI (ddcutil) ──
+    property var ddc: []                 // [{ bus, connector, name, value, max }]
+    property bool ddcInstalled: false
+    property string ddcError: ""
+    property bool ddcLoading: ddcLister.running
+    property var ddcPending: ({})        // bus → value waiting to be written
+
+    function refreshDdc() {
+        if (!ddcLister.running)
+            ddcLister.running = true;
+    }
+
+    // v: 0–1. Shown at once; written a moment later (DDC is slow), one monitor at a time
+    function setDdc(bus, v) {
+        v = Math.max(0, Math.min(1, v));
+        ddc = ddc.map(d => d.bus === bus ? Object.assign({}, d, { value: Math.round(v * d.max) }) : d);
+        const p = Object.assign({}, ddcPending);
+        p[bus] = v;
+        ddcPending = p;
+        ddcTimer.restart();
+    }
+
+    Timer {
+        id: ddcTimer
+        interval: 300
+        onTriggered: {
+            if (ddcWriter.running) {
+                restart();
+                return;
+            }
+            const buses = Object.keys(root.ddcPending);
+            if (!buses.length)
+                return;
+            const bus = buses[0];
+            const d = root.ddc.find(x => x.bus === bus);
+            const p = Object.assign({}, root.ddcPending);
+            delete p[bus];
+            root.ddcPending = p;
+            if (!d)
+                return;
+            ddcWriter.command = [Paths.bin, "ddc", "set", bus, String(Math.round(d.value / d.max * 100)), String(d.max)];
+            ddcWriter.running = true;
+            if (Object.keys(p).length)
+                restart();
+        }
+    }
+    Process { id: ddcWriter }
+    Process {
+        id: ddcLister
+        command: [Paths.bin, "ddc", "list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const d = JSON.parse(text);
+                    root.ddcInstalled = d.installed;
+                    root.ddc = d.displays ?? [];
+                    root.ddcError = d.error ?? "";
+                } catch (e) {}
+            }
+        }
+    }
+    // monitors come and go
+    Connections {
+        target: Quickshell
+        function onScreensChanged() { ddcRescan.restart(); }
+    }
+    Timer {
+        id: ddcRescan
+        interval: 3000
+        onTriggered: root.refreshDdc()
     }
 
     function refresh() {
@@ -71,6 +151,7 @@ Singleton {
             reader.running = true;
         if (!kbdReader.running)
             kbdReader.running = true;
+        refreshDdc();
     }
 
     Process {

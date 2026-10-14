@@ -30,26 +30,26 @@ Page {
         { id: "modern", label: "Modern", icon: "auto_awesome", hint: "Floating top bar, centered clock",
           bar: { position: "top", style: "floating", height: 40, workspaceStyle: "pills",
                  left: ["launcher", "workspaces", "window"], center: ["clock", "media"],
-                 right: ["tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings", "power"] },
+                 right: ["recording", "privacy", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"] },
           dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-right" } },
         { id: "minimal", label: "Minimal", icon: "remove", hint: "Slim islands, just the essentials",
           bar: { position: "top", style: "islands", height: 34, workspaceStyle: "dots",
-                 left: ["workspaces"], center: ["clock"], right: ["tray", "network", "audio", "battery", "quicksettings"] },
+                 left: ["workspaces"], center: ["clock"], right: ["recording", "privacy", "tray", "network", "audio", "mic", "battery", "quicksettings"] },
           dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-center" } },
         { id: "classic", label: "Classic", icon: "desktop_windows", hint: "Taskbar at the bottom, Windows-style",
           bar: { position: "bottom", style: "attached", height: 44, workspaceStyle: "numbers",
                  left: ["launcher", "workspaces", "taskbar"], center: [],
-                 right: ["tray", "keyboard", "network", "bluetooth", "audio", "battery", "clock", "notifications", "quicksettings"] },
+                 right: ["recording", "privacy", "tray", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "clock", "notifications", "quicksettings"] },
           dock: { enabled: false }, launcher: { position: "bottom-left" }, notifications: { position: "bottom-right" } },
         { id: "mac", label: "Dock & menu bar", icon: "dock_to_bottom", hint: "Thin top bar and a dock, macOS-style",
           bar: { position: "top", style: "attached", height: 32, workspaceStyle: "pills",
                  left: ["launcher", "window"], center: [],
-                 right: ["tray", "network", "bluetooth", "audio", "battery", "quicksettings", "clock", "notifications"] },
+                 right: ["recording", "privacy", "tray", "network", "bluetooth", "audio", "mic", "battery", "quicksettings", "clock", "notifications"] },
           dock: { enabled: true, autoHide: false, magnify: true }, launcher: { position: "center" }, notifications: { position: "top-right" } },
         { id: "vertical", label: "Vertical", icon: "side_navigation", hint: "Side bar, more room for windows",
           bar: { position: "left", style: "floating", height: 44, workspaceStyle: "pills",
                  left: ["launcher", "workspaces"], center: [],
-                 right: ["tray", "network", "audio", "battery", "clock", "notifications", "quicksettings", "power"] },
+                 right: ["recording", "privacy", "tray", "network", "audio", "mic", "battery", "clock", "notifications", "quicksettings", "power"] },
           dock: { enabled: false }, launcher: { position: "bar" }, notifications: { position: "top-right" } }
     ]
 
@@ -71,6 +71,18 @@ Page {
             options: [{ value: "dark", label: "Dark", icon: "dark_mode" }, { value: "light", label: "Light", icon: "light_mode" }]
             segWidth: 110
         }
+        ChoiceRow {
+            title: "Switch automatically"
+            subtitle: !AutoMode.on ? "" : page.a.autoMode === "sun" && !AutoMode.sunKnown ? "Sunset and sunrise need weather on (it knows your location); using the times below until then. " + AutoMode.nextSwitch
+                : AutoMode.nextSwitch + (AutoMode.usingSun ? " (sunset / sunrise)" : "") + ". Changing the mode by hand lasts until then."
+            icon: "routine"
+            target: page.a
+            key: "autoMode"
+            segWidth: 130
+            options: [{ value: "off", label: "Off" }, { value: "sun", label: "Sun" }, { value: "schedule", label: "Schedule" }]
+        }
+        TextRow { visible: page.a.autoMode === "schedule" || (page.a.autoMode === "sun" && !AutoMode.sunKnown); title: "Light from"; subtitle: "24-hour time"; icon: "light_mode"; target: page.a; key: "lightAt"; placeholder: "07:00" }
+        TextRow { visible: page.a.autoMode === "schedule" || (page.a.autoMode === "sun" && !AutoMode.sunKnown); title: "Dark from"; subtitle: "24-hour time"; icon: "dark_mode"; target: page.a; key: "darkAt"; placeholder: "20:00" }
     }
 
     Group {

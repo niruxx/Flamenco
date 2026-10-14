@@ -380,4 +380,50 @@ Page {
             onEdited: if (Settings.data.displays.fallback) Displays.checkFallback()
         }
     }
+
+    Group {
+        title: "Brightness (external monitors)"
+        SettingRow {
+            title: !Brightness.ddcInstalled ? "ddcutil isn't installed"
+                : Brightness.ddcLoading ? "Looking for monitors…"
+                : Brightness.ddc.length ? Brightness.ddc.length + (Brightness.ddc.length === 1 ? " monitor" : " monitors") + " with brightness control"
+                : "No monitor answered"
+            subtitle: !Brightness.ddcInstalled ? "External monitors' brightness is set over the cable (DDC/CI) with ddcutil."
+                : Brightness.ddcError ? Brightness.ddcError
+                : Brightness.ddc.length ? "Also in quick settings. On a desktop, the brightness keys change the focused monitor."
+                : "Turn on DDC/CI in the monitor's own menu, and check you can use /dev/i2c-* (the i2c group, module i2c-dev)."
+            icon: "desktop_windows"
+            Row {
+                spacing: 8
+                FButton {
+                    visible: !Brightness.ddcInstalled
+                    text: "Install"
+                    variant: "tonal"
+                    onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed ddcutil && sudo usermod -aG i2c \"$USER\" && echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf && sudo modprobe i2c-dev && echo 'Log out and back in for the i2c group.'"))
+                }
+                FIconButton {
+                    icon: "refresh"
+                    size: 32
+                    onClicked: Brightness.refreshDdc()
+                }
+            }
+        }
+        Repeater {
+            model: Brightness.ddc
+            SliderRow {
+                required property var modelData
+                readonly property var proxy: ({ v: modelData.value / modelData.max })
+                title: modelData.connector + (modelData.name ? " · " + modelData.name : "")
+                icon: "brightness_6"
+                target: proxy
+                key: "v"
+                from: 0
+                to: 1
+                stepSize: 0.01
+                factor: 100
+                suffix: "%"
+                onEdited: Brightness.setDdc(modelData.bus, proxy.v)
+            }
+        }
+    }
 }

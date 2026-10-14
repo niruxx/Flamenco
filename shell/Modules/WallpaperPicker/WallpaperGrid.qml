@@ -7,6 +7,9 @@ import qs.Widgets
 GridView {
     id: grid
 
+    // the screen a click sets (per-screen mode); "" sets every screen
+    property string screenName: ""
+
     readonly property int cols: Math.max(2, Math.floor(width / 220))
     cellWidth: width / cols
     cellHeight: cellWidth * 0.62
@@ -30,7 +33,7 @@ GridView {
         id: cell
         required property string modelData
         required property int index
-        readonly property bool current: modelData === Wallpapers.current
+        readonly property bool current: modelData === Wallpapers.forScreen(grid.screenName)
         width: grid.cellWidth
         height: grid.cellHeight
 
@@ -80,7 +83,7 @@ GridView {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: Wallpapers.set(cell.modelData)
+            onClicked: Wallpapers.set(cell.modelData, grid.screenName)
         }
     }
 }

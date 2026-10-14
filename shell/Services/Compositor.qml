@@ -13,7 +13,8 @@ Singleton {
 
     readonly property var cfg: Settings.data.windows
     readonly property var keys: ["gaps", "struts", "centerColumn", "defaultWidth", "focusRing", "focusRingWidth", "border",
-        "borderWidth", "activeColor", "inactiveColor", "cornerRadius", "shadows", "focusFollowsMouse", "warpMouse",
+        "borderWidth", "activeColor", "inactiveColor", "borderActiveColor", "borderInactiveColor", "gradient", "gradientTo",
+        "gradientAngle", "cornerRadius", "shadows", "focusFollowsMouse", "warpMouse",
         "hideCursorTyping", "hideCursorAfter", "preferNoCsd", "hotCorners", "skipHotkeyOverlay", "workspaceBackForth"]
     property string status: ""
     property bool failed: false
@@ -44,6 +45,8 @@ Singleton {
         const s = {};
         for (const k of keys)
             s[k] = cfg[k];
+        if (cfg.gradient && !cfg.gradientTo)
+            s.gradientTo = hex(Theme.palette.accent2);
         if (cfg.syncColors) {
             s.activeColor = hex(Theme.palette.accent);
             s.inactiveColor = hex(Theme.palette.border);

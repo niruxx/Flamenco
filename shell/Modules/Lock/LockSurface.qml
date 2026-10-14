@@ -10,6 +10,7 @@ Item {
     id: root
 
     required property var ctx
+    property string screenName: ""
     // 0 → 1 on lock, back to 0 while unlocking
     property real p: 0
     Component.onCompleted: p = 1
@@ -31,7 +32,7 @@ Item {
     Image {
         id: wall
         anchors.fill: parent
-        source: Paths.toUrl(Wallpapers.current)
+        source: Paths.toUrl(Wallpapers.forScreen(root.screenName))
         fillMode: Image.PreserveAspectCrop
         asynchronous: false
         visible: false

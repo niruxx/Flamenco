@@ -187,7 +187,7 @@ Scope {
 
             Component {
                 id: builtinC
-                LockSurface { ctx: root }
+                LockSurface { ctx: root; screenName: surface.screen?.name ?? "" }
             }
 
             Component {

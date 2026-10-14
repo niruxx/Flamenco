@@ -60,6 +60,10 @@ Singleton {
                 property string monoFamily: "Google Sans Code"
                 property string iconStyle: "filled"     // filled | outlined
                 property bool blendPanels: false        // panels connect to the bar, no gap (like DMS)
+                // switch dark ↔ light by itself: off | sun (sunset / sunrise) | schedule
+                property string autoMode: "off"
+                property string darkAt: "20:00"
+                property string lightAt: "07:00"
                 property int iconWeight: 500            // 300 (light) … 700 (bold)
                 property bool shadows: true
                 property bool dimBehindPanels: true
@@ -76,10 +80,11 @@ Singleton {
                 property bool trayNativeMenus: false  // use Qt's native menus instead of themed ones
                 property int trayMaxVisible: 6        // extra icons go into an overflow drawer
                 property string taskbarScope: "all"   // taskbar widget: all | screen | workspace
+                property string micIndicator: "inuse" // microphone widget: inuse (while recording or muted) | always
                 property bool taskbarTitles: false    // window titles next to the taskbar's icons
                 property var left: ["launcher", "workspaces", "window"]
                 property var center: ["clock", "media"]
-                property var right: ["tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings", "power"]
+                property var right: ["recording", "privacy", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"]
             }
 
             property JsonObject dock: JsonObject {
@@ -125,12 +130,29 @@ Singleton {
                 property string effort: "low"          // Claude: low | medium | high
             }
 
+            // Calendars shown in the calendar panel (`flamenco calendar events`):
+            // [{ name, url, color, enabled }]; url: an ICS link, an .ics file or a vdir folder
+            property JsonObject calendar: JsonObject {
+                property var sources: []
+            }
+
+            // Screen recording (`flamenco record`)
+            property JsonObject record: JsonObject {
+                property string backend: "auto"       // auto | wf-recorder | gpu-screen-recorder
+                property string audio: "none"         // none | desktop | mic | both
+                property int fps: 60
+                property string dir: "~/Videos/Recordings"
+            }
+
             property JsonObject launcher: JsonObject {
                 property int maxResults: 8
                 property string position: "center"    // center | top | bottom | top-left | top-right | bottom-left | bottom-right | bar
                 property int width: 600
                 property bool calculator: true
                 property bool clipboard: true
+                property bool emoji: true             // ":" searches emoji
+                property bool colors: true            // "#" color tools and the screen color picker
+                property var recentEmoji: []
             }
 
             property JsonObject notifications: JsonObject {
@@ -153,6 +175,10 @@ Singleton {
                 property string fillMode: "crop"      // crop | fit | stretch
                 property bool cycle: false
                 property int cycleMinutes: 30
+                // a different wallpaper on each screen: output name → image. A screen
+                // without one shows `current`, which also drives "colors from wallpaper".
+                property bool perScreen: false
+                property var screens: ({})
             }
 
             property JsonObject lock: JsonObject {
@@ -246,6 +272,11 @@ Singleton {
                 property bool syncColors: true        // ring / border colors follow the shell palette
                 property string activeColor: "#ff5d73"
                 property string inactiveColor: "#46343a"
+                property string borderActiveColor: ""   // the border's own colors ("" = the focus ring's)
+                property string borderInactiveColor: ""
+                property bool gradient: false            // the focused window's ring / border as a gradient
+                property string gradientTo: ""           // "" = the palette's second accent
+                property int gradientAngle: 45
                 property int cornerRadius: 12
                 property bool shadows: true
                 property bool focusFollowsMouse: false
@@ -376,7 +407,7 @@ Singleton {
         onTriggered: file.writeAdapter()
     }
 
-    readonly property int currentVersion: 3
+    readonly property int currentVersion: 6
 
     // One-time upgrades for settings files written by older versions.
     function migrate() {
@@ -401,6 +432,44 @@ Singleton {
                 a.fontFamily = "Google Sans Flex";
             if (a.monoFamily === "JetBrains Mono")
                 a.monoFamily = "Google Sans Code";
+        }
+        if (v < 4) {
+            // 0.20.3: the microphone widget (shows only while recording or muted), after the volume
+            const b = adapter.bar;
+            const used = (b.left || []).concat(b.center || [], b.right || []);
+            if (!used.includes("mic")) {
+                for (const side of ["right", "center", "left"]) {
+                    const l = (b[side] || []).slice();
+                    const i = l.indexOf("audio");
+                    if (i >= 0) {
+                        l.splice(i + 1, 0, "mic");
+                        b[side] = l;
+                        break;
+                    }
+                }
+            }
+        }
+        if (v < 5) {
+            // 0.21.1: the privacy indicator (camera, screen sharing), at the start of the
+            // section with the system icons; it only shows while something is in use
+            const b = adapter.bar;
+            const used = (b.left || []).concat(b.center || [], b.right || []);
+            if (!used.includes("privacy")) {
+                const side = ["right", "center", "left"].find(k => (b[k] || []).some(x => ["tray", "audio", "network", "mic"].includes(x))) ?? "right";
+                b[side] = ["privacy"].concat(b[side] || []);
+            }
+        }
+        if (v < 6) {
+            // 0.21.2: the recording indicator (only while recording), next to the privacy one
+            const b = adapter.bar;
+            const used = (b.left || []).concat(b.center || [], b.right || []);
+            if (!used.includes("recording")) {
+                const side = ["right", "center", "left"].find(k => (b[k] || []).includes("privacy")) ?? "right";
+                const l = (b[side] || []).slice();
+                const i = l.indexOf("privacy");
+                l.splice(Math.max(0, i), 0, "recording");
+                b[side] = l;
+            }
         }
         adapter.configVersion = currentVersion;
     }

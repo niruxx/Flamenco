@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.20.1-E8466F?style=for-the-badge" alt="Version 0.20.1">
+  <img src="https://img.shields.io/badge/version-0.21.8-E8466F?style=for-the-badge" alt="Version 0.21.8">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -160,7 +160,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 
 | | |
 |---|---|
-| **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, brightness, battery, notifications, weather, power |
+| **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, a microphone indicator (shows while an app records; click to mute), brightness, battery, notifications, weather, power |
 | **🔔 App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
 | **🎛️ Control center** | Volume, mic, screen and keyboard brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, dark mode and wallpaper. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
 | **🔍 Launcher** | Fuzzy app search ranked by how often you use each app. `=` calculator, `>` run command, `;` clipboard history (cliphist) |
@@ -207,7 +207,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 
 | | |
 |---|---|
-| **⚙️ Settings app** | Its own window (`flamenco settings`) with a page for every module. Every change applies live |
+| **⚙️ Settings app** | Its own window (`flamenco settings`) with a page for every module, and a search box (`Ctrl+F`) that finds any setting, opens its page and points it out. Every change applies live |
 | **🎨 App theming** | Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
 | **📦 Default apps** | Browser, file manager, email, text editor, images, video, music, PDF, archives and terminal, written to `mimeapps.list` |
 | **🚀 Auto-start** | XDG autostart entries: turn them on or off, add apps or plain commands; Flamenco runs them at login unless systemd already does |
@@ -406,6 +406,8 @@ Every panel closes with `Esc` or a click outside it.
 | Workspaces | go to that workspace | scroll to switch workspaces |
 | Active window | window menu: move to another workspace or monitor, float/tile, fullscreen, maximize or center the column, new window, pin to dock, switch to another open window, close, force quit (click twice) | right-click opens the same menu, middle-click closes the window |
 | Taskbar | focus the app; click again to cycle through its windows | right-click opens the window menu (move to a workspace or monitor, float, fullscreen, pin, close all, force quit…), middle-click opens a new window |
+| Microphone | mute or unmute the mic. It appears while an app is recording (with a pulsing red dot) or while the mic is muted (crossed out, in red) | right-click opens the microphone page in quick settings; middle-click also mutes; scroll changes the mic volume |
+| Privacy | appears while the camera or screen sharing is in use (and the mic, if the Microphone widget isn't in the bar): a green camera, a red screen-share icon. Click to see which apps, and to mute the mic | camera use is read from which of your programs have `/dev/video*` open; screen sharing from the screencast stream in PipeWire |
 | Clock | dashboard (Overview, Media, Wallpapers, Weather) | |
 | Media | dashboard, Media tab (click again to close) | middle-click play/pause, right-click next track |
 | System tray | activate the app | right-click app menu, middle-click secondary action, scroll is passed to the app, hover for tooltip |
@@ -440,6 +442,8 @@ Start typing to search apps. **Settings → Launcher** sets where it opens: cent
 | `=` | calculator, e.g. `= 2^10 / 3`; `Enter` copies the result |
 | `>` | run a shell command; the second result runs it in your terminal |
 | `;` | search clipboard history; `Enter` copies the entry back |
+| `:` | emoji: type a name, `Enter` copies it (recently used first) |
+| `#` | colors: **Pick a color on screen** (niri's color picker, or `hyprpicker` on Hyprland) copies its hex; `#` and a hex code shows it with its RGB and HSL to copy |
 
 Move with `↑`/`↓` (or `Ctrl+N`/`Ctrl+P`), launch with `Enter`, close with `Esc`.
 
@@ -469,11 +473,18 @@ Click the clock in the bar to open the dashboard. It opens on the tab chosen in 
 
 | Tab | Shows |
 |---|---|
-| **Overview** | Big clock, month calendar, your user card, and summary cards for the weather and the current track (click them for the full tab) |
+| **Overview** | Big clock, month calendar (days with events get a dot; click a day for its events), your user card, and summary cards for the weather and the current track (click them for the full tab) |
 | **Media** | The current track with large cover art, a seek bar you can drag or click, previous/play/next, and shuffle/repeat where the player supports them. With several players, chips let you switch between them. Shows "No media playing" otherwise |
 | **Wallpapers** | The wallpaper folder (edit it right there), the picker grid, shuffle and rescan |
 | **Weather** | Now (temperature, feels like, wind, humidity, sunrise and sunset), the next 12 hours, and a 1–7 day forecast with rain chance and temperature range |
 | **Settings** | Opens the Settings app |
+
+**Calendar events:** add calendars in **Settings → Clock & Weather → Calendars**. Any of these work:
+- **An ICS link:** Google's *Secret address in iCal format* or Outlook's *Publish calendar → ICS*. Links are re-read every 15 minutes.
+- **An `.ics` file.**
+- **A folder of `.ics` files:** a vdir from `vdirsyncer`, which is how CalDAV calendars (Nextcloud, iCloud, Fastmail…) get to your computer, and what khal reads. Folders are read each time.
+
+Repeating events, time zones, all-day events, cancelled events and single edited occurrences are handled. `flamenco calendar events` prints them as JSON.
 
 What the Overview and Weather tabs show is set in **Settings → Clock & Weather**:
 - the weather location and units
@@ -862,6 +873,11 @@ flamenco keyboard apply --json '{"shortcuts":[{"key":"Mod+B","type":"app","value
 flamenco launch firefox            # what app shortcuts run
 ```
 
+**Cheat sheet:** **Settings → Keyboard → Cheat sheet → Show**, `flamenco keys show`, or the Flamenco function *Keyboard shortcuts cheat sheet* (bind it to a key) shows every binding in your compositor config, grouped and searchable.
+- **Names:** each binding is named from niri's `hotkey-overlay-title`, or from its action ("Focus column left", "Run kitty", "Volume up"). Bindings marked `hotkey-overlay-title=null` stay hidden.
+- **Hyprland:** the list comes from `hyprctl binds`.
+- **Plain list:** `flamenco keys` prints it in a terminal.
+
 ### 🖱️ Mouse & touchpad
 
 **Settings → Mouse & Touchpad** sets, separately for mice and touchpads:
@@ -894,6 +910,17 @@ flamenco pointer apply --json '{"mouseSpeed":-0.3,"mouseAccel":"flat","tap":true
 
 **Identify** shows each display's name on its screen.
 
+**Brightness of external monitors:** monitors that support DDC/CI get a brightness slider in quick settings and under **Settings → Displays → Brightness (external monitors)**. On a desktop with no built-in screen, the brightness keys change the focused monitor.
+
+**Setting it up** (the page's **Install** button does all of this):
+1. Install `ddcutil`.
+2. Join the `i2c` group.
+3. Load the `i2c-dev` module.
+4. Log out and back in.
+
+Some monitors also need DDC/CI switched on in their own menu.
+
+
 **Where it's saved:** keeping changes writes `output "NAME" { mode …; scale …; transform …; position …; }` blocks into `~/.config/niri/config.kdl`.
 - Existing `output` blocks are edited in place. Only those lines change; your other lines and comments are kept.
 - A display that's switched off gets just `off`, so its other settings survive for next time.
@@ -922,7 +949,10 @@ flamenco display fallback      # turn a screen on if none is on
 
 **Settings → Windows & Layout** controls how windows look and behave:
 - **Layout:** gaps, an extra margin along the left and right edges, the width of new columns, when to center the focused column, and asking apps not to draw their own title bars.
-- **Look:** corner radius, focus ring and border (on/off and width), shadows. The ring and border colors follow your palette's accent, or you can turn that off and type your own hex colors.
+- **Look:** corner radius, focus ring and border (on/off and width), shadows.
+  - **Colors:** the ring and border follow your palette's accent, or turn that off and pick your own: click a palette swatch or type a hex color.
+  - **Border:** can have colors of its own, separate from the focus ring.
+  - **Gradient:** the focused window can blend into a second color at an angle you choose. That's niri's `active-gradient`, or Hyprland's gradient border.
 - **Focus & pointer:** focus follows the mouse, move the pointer to a window focused from the keyboard, hide the pointer while typing or after some idle seconds, and skipping niri's shortcut cheat sheet at login.
 
 The first time you open the page, it reads what your config already has. On niri, changes are written into `layout { … }`, `cursor`, `input`, `gestures` and `hotkey-overlay` in `~/.config/niri/config.kdl`. Window corners and named workspaces go into a marked block at the end of the file. On Hyprland they go into `flamenco-layout.conf` (or `flamenco/layout.lua`), which the config sources. Run `niri validate` if you've edited the config by hand too.
@@ -943,6 +973,29 @@ On niri, this page also controls niri's own hot corners:
 ```sh
 flamenco compositor get
 flamenco compositor apply --json '{"gaps":16,"cornerRadius":10,"workspaces":[{"name":"web","output":""}]}'
+```
+
+### 🎥 Recording the screen
+
+**Ways to start:**
+- **Quick settings → Record screen** records the screen it's on. Its ⋯ button records an area you select with `slurp`.
+- **Settings → Screenshots → Screen recording** has **Screen** and **Area** buttons.
+- **Keyboard:** the Flamenco functions *Record the screen* and *Record an area* (press again to stop).
+- **Command line:** `flamenco record toggle [screen|region]`.
+
+**While recording:** the bar shows a red timer; click it to stop.
+
+**The file:** saved to `~/Videos/Recordings`, and a notification says where.
+
+**Settings:**
+- **Recorder:** `wf-recorder`, which works on niri and Hyprland without prompts, or `gpu-screen-recorder`.
+- **Sound:** none, desktop, mic, or both. Both needs gpu-screen-recorder.
+- **Frame rate** and **folder**.
+
+```sh
+flamenco record start region
+flamenco record status
+flamenco record stop
 ```
 
 ### 📷 Taking screenshots
@@ -1036,7 +1089,14 @@ flamenco flatpak reset org.mozilla.firefox
   ```
 - **Settings file:** `wallpaper.current` in `~/.config/flamenco/settings.json`.
 
-The same wallpaper is used on every screen. Flamenco draws it twice: once on your workspaces, and once blurred and dimmed in niri's *backdrop*, which you see behind the workspaces in the overview and between them while switching. The niri config's `layer-rule` puts that second copy in the backdrop. It also appears blurred on the lock screen.
+**A different wallpaper on each screen:** turn on **Settings → Wallpaper → Screens → A different wallpaper on each screen**.
+- **Picking:** the picker (`Mod+W`) then sets the wallpaper of the screen it's open on, and its **All screens / This screen** switch flips the mode.
+- **Settings page:** shows each screen's wallpaper, with **Pick below** to choose one from the library and **Use main** to go back to the shared one.
+- **Shuffle and cycling** give every screen a different image.
+- **Colors from your wallpaper** follow the first screen's.
+- **Command line:** `flamenco wallpaper set PATH --screen DP-1`.
+
+Each wallpaper is drawn twice: once on your workspaces, and once blurred and dimmed in niri's *backdrop*, which you see behind the workspaces in the overview and between them while switching. The niri config's `layer-rule` puts that second copy in the backdrop. It also appears blurred on the lock screen.
 
 **Colors from your wallpaper:** pick *From wallpaper* in **Settings → Appearance → Palette**. This needs `matugen`. The palette is regenerated whenever the wallpaper changes, and it flows through to your Qt and GTK apps too.
 
@@ -1048,7 +1108,7 @@ Theming has two layers: the **shell palette**, which colors the shell itself, an
 
 In **Settings → Appearance**:
 
-- **Color mode:** dark or light.
+- **Color mode:** dark or light. **Switch automatically** changes it at sunset and sunrise (needs weather on, which knows your location) or on a schedule. Flipping it by hand lasts until the next switch.
 - **Palette:** Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, Dracula, Kanagawa, Solarized, One Dark, Monochrome, or *From wallpaper*.
 - **Accent:** keep the palette's accent, pick a swatch, or type any hex color. It recolors the whole shell, the window focus ring and your themed apps.
 - **Layout presets:** one click sets up the bar, dock, launcher and notifications:
@@ -1171,7 +1231,7 @@ flamenco volume up|down|mute|mic-mute|set N
 flamenco brightness up|down|set N
 flamenco brightness kbd up|down|set N|toggle   # keyboard backlight; no argument prints it
 flamenco media toggle|next|previous
-flamenco wallpaper [set PATH | random | next]
+flamenco wallpaper [set PATH | random | next] [--screen NAME]
 flamenco theme PALETTE | dark | light | toggle | list | apply-apps
 flamenco apps-theme --json SPEC | --restore
 flamenco pick folder|image [START]   # choose a folder or an image with the portal file chooser
@@ -1179,6 +1239,11 @@ flamenco greeter status | sessions | apply --json SPEC | greetd --json SPEC | en
 flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   # fprintd fingerprints
 flamenco widgets [edit|done|toggle]   # arrange desktop widgets
 flamenco assistant                    # the AI assistant
+flamenco record start|toggle [screen|region] | stop | status   # screen recording
+flamenco ddc list | set BUS PERCENT   # external monitor brightness
+flamenco keys [show | --json]         # every key binding; show: the cheat sheet
+flamenco pick-color                   # pick a color on screen, copied as #rrggbb
+flamenco calendar events [--refresh]  # calendar events as JSON
 flamenco ai providers | models P | test P | ask TEXT… | key set|delete P   # AI connections
 flamenco net list | get UUID | set UUID --json SPEC | up|down|delete UUID | add-ethernet | add-wifi --json SPEC   # Wi-Fi and wired connections
 flamenco portals get | apply --json SPEC

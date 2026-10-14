@@ -47,20 +47,61 @@ Singleton {
         scanner.running = true;
     }
 
-    function set(path) {
-        cfg.current = path;
+    // the first screen's wallpaper is the main one (`current`, used for colors)
+    readonly property string primary: Quickshell.screens[0]?.name ?? ""
+
+    // what a screen shows: its own wallpaper in per-screen mode, else the main one
+    function forScreen(name) {
+        const own = cfg.perScreen && name ? (cfg.screens || {})[name] : "";
+        return own ? Paths.expand(own) : current;
     }
 
-    function random() {
-        const pool = files.filter(f => f !== current);
-        if (pool.length > 0)
-            set(pool[Math.floor(Math.random() * pool.length)]);
+    // screen "" (or per-screen mode off) sets it everywhere
+    function set(path, screen) {
+        if (cfg.perScreen && screen) {
+            const all = Object.assign({}, cfg.screens || {});
+            all[screen] = path;
+            cfg.screens = all;
+            if (screen === primary)
+                cfg.current = path;
+        } else {
+            cfg.current = path;
+            if (cfg.perScreen)
+                cfg.screens = {};
+        }
     }
 
-    function next() {
+    function pick(exclude) {
+        const pool = files.filter(f => !exclude.includes(f));
+        return pool.length ? pool[Math.floor(Math.random() * pool.length)] : (files[0] ?? "");
+    }
+
+    // a random wallpaper; in per-screen mode without a screen, a different one on each
+    function random(screen) {
         if (files.length === 0)
             return;
-        set(files[(files.indexOf(current) + 1) % files.length]);
+        if (cfg.perScreen && !screen) {
+            const used = [];
+            for (const s of Quickshell.screens) {
+                const f = pick(used.concat([forScreen(s.name)]));
+                used.push(f);
+                set(f, s.name);
+            }
+            return;
+        }
+        set(pick([forScreen(screen)]), screen);
+    }
+
+    function next(screen) {
+        if (files.length === 0)
+            return;
+        const step = s => files[(files.indexOf(forScreen(s)) + 1) % files.length];
+        if (cfg.perScreen && !screen) {
+            for (const s of Quickshell.screens)
+                set(step(s.name), s.name);
+            return;
+        }
+        set(step(screen), screen);
     }
 
     Process {

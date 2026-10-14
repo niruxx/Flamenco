@@ -66,6 +66,23 @@ Page {
 
     // ── backlight (only on keyboards that have one) ──
     Group {
+        title: "Cheat sheet"
+        SettingRow {
+            title: "See every shortcut"
+            subtitle: "All the key bindings in your compositor config, grouped. Bind the Flamenco function \"Keyboard shortcuts cheat sheet\" below to open it from the keyboard, or run flamenco keys show."
+            icon: "keyboard_keys"
+            FButton {
+                text: "Show"
+                variant: "tonal"
+                onClicked: {
+                    Panels.settingsOpen = false;
+                    Panels.open("keys", "");
+                }
+            }
+        }
+    }
+
+    Group {
         visible: Brightness.kbdAvailable
         title: "Backlight"
 

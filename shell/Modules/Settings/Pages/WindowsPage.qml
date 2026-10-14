@@ -40,6 +40,25 @@ Page {
         SwitchRow { title: "Colors follow the theme"; subtitle: "Accent for the focused window, the border color for the rest"; icon: "format_color_fill"; target: page.w; key: "syncColors"; onEdited: Compositor.queue() }
         ColorRow { title: "Focused color"; icon: "colorize"; visible: !page.w.syncColors; target: page.w; key: "activeColor" }
         ColorRow { title: "Unfocused color"; icon: "colorize"; visible: !page.w.syncColors; target: page.w; key: "inactiveColor" }
+        SettingRow {
+            visible: page.w.border
+            title: "Border colors of its own"
+            subtitle: page.w.borderActiveColor ? "Different from the focus ring" : "Off: the border uses the focus ring's colors"
+            icon: "border_color"
+            FSwitch {
+                checked: page.w.borderActiveColor !== ""
+                onToggled: c => {
+                    page.w.borderActiveColor = c ? (page.w.syncColors ? Compositor.hex(Theme.palette.accent2) : page.w.activeColor) : "";
+                    page.w.borderInactiveColor = c ? (page.w.syncColors ? Compositor.hex(Theme.palette.border) : page.w.inactiveColor) : "";
+                    Compositor.queue();
+                }
+            }
+        }
+        ColorRow { title: "Border, focused"; icon: "colorize"; visible: page.w.border && page.w.borderActiveColor !== ""; target: page.w; key: "borderActiveColor" }
+        ColorRow { title: "Border, unfocused"; icon: "colorize"; visible: page.w.border && page.w.borderActiveColor !== ""; target: page.w; key: "borderInactiveColor" }
+        SwitchRow { title: "Gradient on the focused window"; subtitle: "Blends the focused color into a second one"; icon: "gradient"; visible: page.w.focusRing || page.w.border; target: page.w; key: "gradient"; onEdited: Compositor.queue() }
+        ColorRow { title: "Gradient to"; subtitle: page.w.gradientTo ? "" : "Following the palette's second accent"; icon: "colorize"; visible: page.w.gradient && (page.w.focusRing || page.w.border); target: page.w; key: "gradientTo" }
+        SliderRow { title: "Gradient angle"; icon: "rotate_right"; visible: page.w.gradient && (page.w.focusRing || page.w.border); target: page.w; key: "gradientAngle"; from: 0; to: 360; stepSize: 15; suffix: "°"; onEdited: Compositor.queue() }
         SwitchRow { title: "Shadows"; icon: "shadow"; target: page.w; key: "shadows"; onEdited: Compositor.queue() }
     }
 
@@ -68,6 +87,25 @@ Page {
         property string key
         RowLayout {
             spacing: 10
+            // one click on a palette color
+            Row {
+                spacing: 4
+                Repeater {
+                    model: ["accent", "accent2", "accent3", "success", "warning", "error", "text", "border"]
+                    Rectangle {
+                        required property string modelData
+                        width: 18; height: 18; radius: 9
+                        color: Theme.palette[modelData]
+                        border.width: Compositor.hex(Theme.palette[modelData]) === cr.target[cr.key] ? 2 : 1
+                        border.color: Compositor.hex(Theme.palette[modelData]) === cr.target[cr.key] ? Theme.text : Theme.border
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: cr.commit(Compositor.hex(Theme.palette[parent.modelData]))
+                        }
+                    }
+                }
+            }
             Rectangle {
                 width: 28; height: 28; radius: 14
                 color: /^#[0-9a-fA-F]{6}$/.test(cr.target[cr.key]) ? cr.target[cr.key] : "transparent"

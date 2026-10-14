@@ -87,6 +87,9 @@ Variants {
                 network: networkC,
                 bluetooth: bluetoothC,
                 audio: audioC,
+                mic: micC,
+                privacy: privacyC,
+                recording: recordC,
                 brightness: brightnessC,
                 battery: batteryC,
                 notifications: notifC,
@@ -107,6 +110,9 @@ Variants {
         Component { id: networkC; StatusIcon { screenName: win.modelData.name; icon: Network.icon; tip: Network.label; detail: "wifi" } }
         Component { id: bluetoothC; StatusIcon { screenName: win.modelData.name; icon: BluetoothState.icon; barVisible: BluetoothState.available && barLevel < 3; detail: "bluetooth" } }
         Component { id: audioC; AudioIcon { screenName: win.modelData.name } }
+        Component { id: micC; MicIndicator { screenName: win.modelData.name } }
+        Component { id: recordC; RecordIndicator { screenName: win.modelData.name } }
+        Component { id: privacyC; PrivacyIndicator { window: win; screenName: win.modelData.name } }
         Component { id: brightnessC; BrightnessIcon { screenName: win.modelData.name } }
         Component { id: batteryC; Battery { screenName: win.modelData.name } }
         Component { id: notifC; NotifBell { screenName: win.modelData.name } }

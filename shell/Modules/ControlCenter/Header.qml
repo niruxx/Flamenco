@@ -36,12 +36,18 @@ RowLayout {
     ColumnLayout {
         Layout.fillWidth: true
         spacing: 0
+        // the labels fill the column so it really takes the spare width; otherwise
+        // the leftover space is spread out and the buttons drift to the middle
         FText {
+            Layout.fillWidth: true
             text: Paths.user
             font.pixelSize: Theme.fsLg
             font.weight: Font.Bold
+            elide: Text.ElideRight
         }
         FText {
+            Layout.fillWidth: true
+            elide: Text.ElideRight
             text: "up " + SystemStats.uptimeText + (Power.hasBattery ? "  ·  " + Power.percent + "%" + (Power.timeLeft ? " · " + Power.timeLeft : "") : "")
             dim: true
             font.pixelSize: Theme.fsSm

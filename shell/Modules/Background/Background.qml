@@ -33,7 +33,7 @@ Scope {
             id: win
 
             required property ShellScreen modelData
-            readonly property string wanted: Wallpapers.current
+            readonly property string wanted: Wallpapers.forScreen(modelData.name)
             readonly property real diag: Math.hypot(width, height)
             property string kind: "fade"
             property real p: 0          // 0 → 1, linear; effects apply their own easing
@@ -396,7 +396,7 @@ Scope {
             id: backdrop
 
             required property ShellScreen modelData
-            readonly property string url: Paths.toUrl(Wallpapers.current)
+            readonly property string url: Paths.toUrl(Wallpapers.forScreen(modelData.name))
             property bool useA: true
 
             screen: modelData

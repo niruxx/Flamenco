@@ -27,6 +27,7 @@ Variants {
         property int lastIndex: 0
 
         onOpened: {
+            Events.refresh(false);
             tab = Panels.dashboardTab || Settings.data.dashboard.defaultTab || "overview";
             Panels.dashboardTab = "";
         }
@@ -162,6 +163,7 @@ Variants {
                     index: 2
                     WallpapersTab {
                         width: pages.width
+                        screenName: panel.modelData.name
                         onOpenSettings: p => panel.openSettings(p)
                     }
                 }

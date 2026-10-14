@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Widgets
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -58,12 +60,82 @@ Page {
         SliderRow { visible: page.w.cycle; title: "Every"; icon: "schedule"; target: page.w; key: "cycleMinutes"; from: 1; to: 240; stepSize: 1; suffix: " min" }
     }
 
+    // which screen the library below sets, in per-screen mode
+    property string target: ""
+
     Group {
-        title: "Library"
+        title: "Screens"
+        SwitchRow {
+            title: "A different wallpaper on each screen"
+            subtitle: page.w.perScreen ? "Colors from the wallpaper follow the first screen's" : "Off: every screen shows the same one"
+            icon: "monitor"
+            target: page.w
+            key: "perScreen"
+        }
+        Repeater {
+            model: page.w.perScreen ? Quickshell.screens : []
+            SettingRow {
+                id: srow
+                required property var modelData
+                readonly property bool own: !!(page.w.screens || {})[modelData.name]
+                title: modelData.name + (modelData.model ? " · " + modelData.model : "")
+                subtitle: (own ? Paths.fileName(Wallpapers.forScreen(modelData.name)) : "The main wallpaper") + (modelData.name === Wallpapers.primary ? " (first screen)" : "")
+                icon: "wallpaper"
+                Row {
+                    spacing: 8
+                    ClippingRectangle {
+                        width: 96
+                        height: 56
+                        radius: Theme.rSm
+                        color: Theme.surfaceHigh
+                        Image {
+                            anchors.fill: parent
+                            source: Paths.toUrl(Wallpapers.forScreen(srow.modelData.name))
+                            sourceSize: Qt.size(192, 112)
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+                    }
+                    FButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Pick below"
+                        variant: page.target === srow.modelData.name ? "filled" : "tonal"
+                        onClicked: page.target = srow.modelData.name
+                    }
+                    FButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: srow.own && srow.modelData.name !== Wallpapers.primary
+                        text: "Use main"
+                        variant: "text"
+                        onClicked: {
+                            const all = Object.assign({}, page.w.screens || {});
+                            delete all[srow.modelData.name];
+                            page.w.screens = all;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Group {
+        title: page.w.perScreen ? "Library · " + (page.target ? "for " + page.target : "for every screen") : "Library"
+        SettingRow {
+            visible: page.w.perScreen
+            title: "Click a wallpaper to set it for"
+            icon: "ads_click"
+            FDropdown {
+                implicitWidth: 240
+                options: [{ value: "", label: "Every screen" }].concat(Quickshell.screens.map(x => ({ value: x.name, label: x.name })))
+                current: page.target
+                onSelected: v => page.target = v
+            }
+        }
         WallpaperGrid {
             Layout.fillWidth: true
             Layout.margins: 8
             implicitHeight: 420
+            screenName: page.w.perScreen ? page.target : ""
         }
     }
 }

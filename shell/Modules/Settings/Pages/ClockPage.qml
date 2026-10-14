@@ -18,6 +18,75 @@ Page {
     }
 
     Group {
+        id: cals
+        title: "Calendars"
+        readonly property var list: Settings.data.calendar.sources || []
+        function setAt(i, changes) {
+            Settings.data.calendar.sources = list.map((c, j) => j === i ? Object.assign({}, c, changes) : c);
+        }
+
+        SettingRow {
+            title: cals.list.length ? cals.list.length + (cals.list.length === 1 ? " calendar" : " calendars") + " in the calendar panel" : "Events in the calendar panel"
+            subtitle: "An ICS link (Google: Settings → your calendar → Secret address in iCal format; Outlook: Publish calendar → ICS), an .ics file, or a folder of .ics files (vdirsyncer / khal, for CalDAV)."
+            icon: "event"
+            FIconButton {
+                icon: Events.loading ? "progress_activity" : "refresh"
+                size: 32
+                onClicked: Events.refresh(true)
+            }
+        }
+        Repeater {
+            model: cals.list
+            SettingRow {
+                required property var modelData
+                required property int index
+                title: modelData.name || "Calendar"
+                subtitle: (Events.errors[modelData.name || modelData.url] ? "⚠ " + Events.errors[modelData.name || modelData.url] + " · " : "") + modelData.url
+                icon: "calendar_month"
+                Row {
+                    spacing: 8
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16; height: 16; radius: 8
+                        color: modelData.color || Theme.accent
+                    }
+                    FSwitch {
+                        anchors.verticalCenter: parent.verticalCenter
+                        checked: modelData.enabled !== false
+                        onToggled: c => cals.setAt(index, { enabled: c })
+                    }
+                    FIconButton {
+                        icon: "delete"
+                        size: 32
+                        iconColor: Theme.error
+                        onClicked: Settings.data.calendar.sources = cals.list.filter((_, j) => j !== index)
+                    }
+                }
+            }
+        }
+        SettingRow {
+            title: "Add a calendar"
+            icon: "add"
+            Row {
+                spacing: 8
+                FTextField { id: calName; implicitWidth: 130; placeholder: "Name" }
+                FTextField { id: calUrl; implicitWidth: 260; placeholder: "https://…/basic.ics  or  ~/.calendars/work" }
+                FButton {
+                    text: "Add"
+                    disabled: calUrl.text.trim() === ""
+                    onClicked: {
+                        const colors = [Theme.palette.accent, Theme.palette.accent2, Theme.palette.accent3, Theme.palette.success, Theme.palette.warning];
+                        const c = colors[cals.list.length % colors.length];
+                        Settings.data.calendar.sources = cals.list.concat([{ name: calName.text.trim() || "Calendar " + (cals.list.length + 1), url: calUrl.text.trim(), color: String(c).slice(0, 7), enabled: true }]);
+                        calName.text = "";
+                        calUrl.text = "";
+                    }
+                }
+            }
+        }
+    }
+
+    Group {
         title: "Dashboard"
         DropdownRow {
             title: "Opens on"

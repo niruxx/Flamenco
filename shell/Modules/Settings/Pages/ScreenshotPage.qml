@@ -77,4 +77,65 @@ Page {
             icon: "terminal"
         }
     }
+
+    Group {
+        title: "Screen recording"
+        SettingRow {
+            title: Recorder.recording ? "Recording · " + Recorder.clock : "Record"
+            subtitle: Recorder.recording ? Paths.fileName(Recorder.file) : "The bar shows a red timer while recording; click it to stop. Needs wf-recorder or gpu-screen-recorder."
+            icon: Recorder.recording ? "stop_circle" : "screen_record"
+            Row {
+                spacing: 8
+                FButton {
+                    visible: !Recorder.recording
+                    text: "Screen"
+                    icon: "screen_record"
+                    variant: "tonal"
+                    onClicked: {
+                        Panels.settingsOpen = false;
+                        Recorder.start("screen", "");
+                    }
+                }
+                FButton {
+                    visible: !Recorder.recording
+                    text: "Area"
+                    icon: "crop"
+                    variant: "tonal"
+                    onClicked: {
+                        Panels.settingsOpen = false;
+                        Recorder.start("region", "");
+                    }
+                }
+                FButton {
+                    visible: Recorder.recording
+                    text: "Stop"
+                    icon: "stop"
+                    onClicked: Recorder.stop()
+                }
+            }
+        }
+        DropdownRow {
+            title: "Recorder"
+            subtitle: "wf-recorder works on niri and Hyprland without prompts; gpu-screen-recorder is lighter on the CPU"
+            icon: "videocam"
+            target: Settings.data.record
+            key: "backend"
+            options: [{ value: "auto", label: "Automatic" }, { value: "wf-recorder", label: "wf-recorder" }, { value: "gpu-screen-recorder", label: "gpu-screen-recorder" }]
+        }
+        ChoiceRow {
+            title: "Sound"
+            subtitle: Settings.data.record.audio === "both" ? "Both need gpu-screen-recorder; wf-recorder records the microphone only" : ""
+            icon: "graphic_eq"
+            target: Settings.data.record
+            key: "audio"
+            options: [{ value: "none", label: "None" }, { value: "desktop", label: "Desktop" }, { value: "mic", label: "Mic" }, { value: "both", label: "Both" }]
+        }
+        SliderRow { title: "Frame rate"; icon: "speed"; target: Settings.data.record; key: "fps"; from: 15; to: 144; stepSize: 1; suffix: " fps" }
+        TextRow { title: "Save to"; icon: "folder"; target: Settings.data.record; key: "dir"; placeholder: "~/Videos/Recordings" }
+        SettingRow {
+            title: "Shortcuts"
+            subtitle: "Flamenco functions \"Record the screen\" and \"Record an area\" (press again to stop), under Keyboard → Shortcuts. Or: flamenco record toggle [screen|region]"
+            icon: "keyboard"
+        }
+    }
 }

@@ -91,6 +91,74 @@ ColumnLayout {
         }
     }
 
+    // events on the selected day (Settings → Clock & Weather → Calendars)
+    FCard {
+        visible: Events.sources.length > 0
+        Layout.fillWidth: true
+        implicitHeight: evCol.implicitHeight + Theme.sp4 * 2
+        ColumnLayout {
+            id: evCol
+            anchors.fill: parent
+            anchors.margins: Theme.sp4
+            spacing: Theme.sp2
+            readonly property var dayEvents: Events.on(month.selected)
+            RowLayout {
+                Layout.fillWidth: true
+                FText {
+                    Layout.fillWidth: true
+                    text: month.selected.toDateString() === Time.now.toDateString() ? "Today" : Qt.formatDate(month.selected, "dddd, d MMMM")
+                    font.weight: Font.Bold
+                }
+                FIconButton {
+                    icon: Events.loading ? "progress_activity" : "refresh"
+                    size: 28
+                    iconSize: 16
+                    onClicked: Events.refresh(true)
+                }
+            }
+            FText {
+                visible: evCol.dayEvents.length === 0
+                text: Events.loading ? "Loading…" : "Nothing planned"
+                dim: true
+                font.pixelSize: Theme.fsSm
+            }
+            Repeater {
+                model: evCol.dayEvents
+                RowLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: Theme.sp3
+                    Rectangle {
+                        Layout.preferredWidth: 4
+                        Layout.fillHeight: true
+                        radius: 2
+                        color: modelData.color || Theme.accent
+                    }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 0
+                        FText { Layout.fillWidth: true; text: modelData.title; font.weight: Font.Medium; elide: Text.ElideRight }
+                        FText {
+                            Layout.fillWidth: true
+                            text: Events.timeOf(modelData) + (modelData.location ? " · " + modelData.location : "") + (modelData.calendar ? " · " + modelData.calendar : "")
+                            dim: true
+                            font.pixelSize: Theme.fsXs
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+            }
+            FText {
+                visible: Object.keys(Events.errors).length > 0
+                Layout.fillWidth: true
+                text: Object.keys(Events.errors).map(k => k + ": " + Events.errors[k]).join("\n")
+                color: Theme.error
+                font.pixelSize: Theme.fsXs
+                wrapMode: Text.Wrap
+            }
+        }
+    }
+
     // weather + media summaries
     RowLayout {
         Layout.fillWidth: true

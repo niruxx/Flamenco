@@ -10,6 +10,7 @@ import qs.Commons
 import qs.Services
 import qs.Modules.Assistant
 import qs.Modules.Background
+import qs.Modules.Keys
 import qs.Modules.Desktop
 import qs.Modules.Bar
 import qs.Modules.Dock
@@ -39,6 +40,7 @@ ShellRoot {
         Toggles.nightLight;
         SessionFx.startup();
         Displays.screenCount;
+        AutoMode.on;
     }
 
     // first run: open setup once settings are loaded (after the login animation)
@@ -65,6 +67,7 @@ ShellRoot {
     WallpaperPicker {}
     WidgetEditor {}
     AssistantPanel {}
+    KeysPanel {}
     PowerMenu {}
     SessionOverlay {}
     SettingsWindow {}
@@ -80,6 +83,11 @@ ShellRoot {
         function toggle(): void { Panels.toggle(panel, ""); }
         function open(): void { Panels.open(panel, ""); }
         function close(): void { Panels.close(); }
+        // open with text already typed, e.g. ":" for emoji
+        function openWith(text: string): void {
+            Panels.launcherQuery = text;
+            Panels.open(panel, "");
+        }
     }
 
     PanelIpc { target: "launcher"; panel: "launcher" }
@@ -90,6 +98,7 @@ ShellRoot {
     PanelIpc { target: "wallpapers"; panel: "wallpaper" }
     PanelIpc { target: "power"; panel: "power" }
     PanelIpc { target: "assistant"; panel: "assistant" }
+    PanelIpc { target: "keys"; panel: "keys" }
 
     IpcHandler {
         target: "widgets"
@@ -138,10 +147,12 @@ ShellRoot {
 
     IpcHandler {
         target: "wallpaper"
-        function set(path: string): void { Wallpapers.set(path); }
-        function random(): void { Wallpapers.random(); }
-        function next(): void { Wallpapers.next(); }
+        function set(path: string): void { Wallpapers.set(path, ""); }
+        function setFor(screen: string, path: string): void { Wallpapers.set(path, screen); }
+        function random(): void { Wallpapers.random(""); }
+        function next(): void { Wallpapers.next(""); }
         function get(): string { return Wallpapers.current; }
+        function getFor(screen: string): string { return Wallpapers.forScreen(screen); }
     }
 
     IpcHandler {
