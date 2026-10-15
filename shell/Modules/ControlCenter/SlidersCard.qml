@@ -7,6 +7,7 @@ import qs.Widgets
 FCard {
     id: root
     signal openDetail(string name)
+    readonly property bool cards: (Settings.data.control.style || "cards") === "cards"
 
     implicitHeight: col.implicitHeight + Theme.sp4 * 2
 
@@ -19,7 +20,19 @@ FCard {
         RowLayout {
             Layout.fillWidth: true
             spacing: Theme.gap
+            FPillSlider {
+                visible: root.cards
+                Layout.fillWidth: true
+                icon: Audio.icon
+                value: Audio.volume
+                muted: Audio.muted
+                from: Theme.accent3
+                to: Theme.accent2
+                onMoved: v => Audio.setVolume(v)
+                onIconClicked: Audio.toggleMute()
+            }
             FSlider {
+                visible: !root.cards
                 Layout.fillWidth: true
                 showValue: true
                 icon: Audio.icon
@@ -38,7 +51,19 @@ FCard {
             Layout.fillWidth: true
             visible: Audio.source !== null
             spacing: Theme.gap
+            FPillSlider {
+                visible: root.cards
+                Layout.fillWidth: true
+                icon: Audio.micMuted ? "mic_off" : "mic"
+                value: Audio.micVolume
+                muted: Audio.micMuted
+                from: Theme.warning
+                to: Theme.accent
+                onMoved: v => Audio.setMicVolume(v)
+                onIconClicked: Audio.toggleMicMute()
+            }
             FSlider {
+                visible: !root.cards
                 Layout.fillWidth: true
                 showValue: true
                 icon: Audio.micMuted ? "mic_off" : "mic"
@@ -54,9 +79,18 @@ FCard {
             }
         }
 
+        FPillSlider {
+            Layout.fillWidth: true
+            visible: Brightness.available && root.cards
+            icon: "brightness_6"
+            value: Brightness.value
+            from: Theme.accent
+            to: Theme.warning
+            onMoved: v => Brightness.set(v)
+        }
         FSlider {
             Layout.fillWidth: true
-            visible: Brightness.available
+            visible: Brightness.available && !root.cards
             showValue: true
             icon: "brightness_6"
             value: Brightness.value

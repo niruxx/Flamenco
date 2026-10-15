@@ -12,6 +12,8 @@ import qs.Modules.Assistant
 import qs.Modules.Background
 import qs.Modules.Keys
 import qs.Modules.Notepad
+import qs.Modules.Clipboard
+import qs.Modules.Switcher
 import qs.Modules.Overview
 import qs.Modules.ThirdParty
 // registers the compatibility modules Noctalia and DMS plugins import (see Compat/CompatModules.qml)
@@ -48,6 +50,7 @@ ShellRoot {
         AutoMode.on;
         SuperKey.status;
         ThirdParty.plugins;
+        Clipboard.available;
     }
 
     // first run: open setup once settings are loaded (after the login animation)
@@ -72,10 +75,13 @@ ShellRoot {
     PerformancePanel {}
     VolumePanel {}
     WallpaperPicker {}
+    WallpaperCarousel {}
     WidgetEditor {}
     AssistantPanel {}
     KeysPanel {}
     NotepadPanel {}
+    ClipboardPanel {}
+    Switcher {}
     Overview {}
     ThirdPartyPanel {}
     PowerMenu {}
@@ -112,6 +118,16 @@ ShellRoot {
     PanelIpc { target: "keys" }
     PanelIpc { target: "notepad" }
     PanelIpc { target: "overview" }
+    PanelIpc { target: "clipboard" }
+
+    // the app switcher: `flamenco switcher next|prev` (Alt+Tab, Alt+Shift+Tab)
+    IpcHandler {
+        target: "switcher"
+        function next(): void { Switcher.step(1); }
+        function prev(): void { Switcher.step(-1); }
+        function go(): void { Switcher.activate(); }
+        function cancel(): void { Switcher.cancel(); }
+    }
 
     // Super tapped on its own (Settings → Overview)
     Connections {

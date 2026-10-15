@@ -153,7 +153,17 @@ Page {
 
     Group {
         title: "Dashboard"
+        ChoiceRow {
+            title: "Dashboard layout"
+            subtitle: page.d.style === "tabs" ? "Compact, with tabs along the top" : "Wide, with a rail on the left: Home (toggles, sliders, media, weather, system), Media, Calendar, Weather, Wallpaper"
+            icon: "space_dashboard"
+            target: page.d
+            key: "style"
+            segWidth: 110
+            options: [{ value: "hub", label: "Hub", icon: "view_quilt" }, { value: "tabs", label: "Tabs", icon: "tab" }]
+        }
         DropdownRow {
+            visible: page.d.style === "tabs"
             title: "Opens on"
             subtitle: "Tab shown when you click the bar clock"
             icon: "dashboard"
@@ -161,9 +171,9 @@ Page {
             key: "defaultTab"
             options: [{ value: "overview", label: "Overview" }, { value: "media", label: "Media" }, { value: "wallpapers", label: "Wallpapers" }, { value: "weather", label: "Weather" }]
         }
-        SwitchRow { title: "User card"; subtitle: "Avatar, name and uptime on the Overview tab"; icon: "account_circle"; target: page.d; key: "showUser" }
-        SwitchRow { title: "Media card"; subtitle: "Now playing on the Overview tab"; icon: "music_note"; target: page.d; key: "showMedia" }
-        SwitchRow { title: "Weather card"; subtitle: "Current weather on the Overview tab"; icon: "partly_cloudy_day"; target: page.w; key: "showInOverview" }
+        SwitchRow { visible: page.d.style === "tabs"; title: "User card"; subtitle: "Avatar, name and uptime on the Overview tab"; icon: "account_circle"; target: page.d; key: "showUser" }
+        SwitchRow { visible: page.d.style === "tabs"; title: "Media card"; subtitle: "Now playing on the Overview tab"; icon: "music_note"; target: page.d; key: "showMedia" }
+        SwitchRow { visible: page.d.style === "tabs"; title: "Weather card"; subtitle: "Current weather on the Overview tab"; icon: "partly_cloudy_day"; target: page.w; key: "showInOverview" }
     }
 
     Group {

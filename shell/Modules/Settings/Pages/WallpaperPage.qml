@@ -13,6 +13,31 @@ Page {
     readonly property var w: Settings.data.wallpaper
 
     Group {
+        title: "Switcher"
+        ChoiceRow {
+            title: "Style"
+            subtitle: page.w.picker === "grid" ? "A grid of thumbnails in a panel" : "A 3D cover flow over the screen, with the picture's colors. ← → browse, Enter applies."
+            icon: "view_carousel"
+            target: page.w
+            key: "picker"
+            segWidth: 120
+            options: [{ value: "carousel", label: "Carousel", icon: "view_carousel" }, { value: "grid", label: "Grid", icon: "grid_view" }]
+        }
+        SettingRow {
+            title: "Open the switcher"
+            icon: "wallpaper"
+            FButton {
+                text: "Open"
+                variant: "tonal"
+                onClicked: {
+                    Panels.settingsOpen = false;
+                    Panels.open("wallpaper", "");
+                }
+            }
+        }
+    }
+
+    Group {
         SettingRow {
             title: "Folder"
             subtitle: Wallpapers.status === "missing" ? "Folder not found" : Wallpapers.scanning ? "Scanning…" : Wallpapers.files.length + " images (including subfolders)"

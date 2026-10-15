@@ -27,7 +27,18 @@ Singleton {
     // keeps the last one as long as its workspace is still the focused one, so
     // the bar doesn't drop it. On an empty workspace it's null.
     property var lastFocusedId: null
-    onFocusedWindowIdChanged: if (focusedWindowId !== null) lastFocusedId = focusedWindowId
+    onFocusedWindowIdChanged: {
+        if (focusedWindowId === null)
+            return;
+        lastFocusedId = focusedWindowId;
+        mruIds = [focusedWindowId].concat(mruIds.filter(id => id !== focusedWindowId)).slice(0, 200);
+    }
+    // windows, most recently focused first (the app switcher's order)
+    property var mruIds: []
+    readonly property var mru: {
+        const seen = mruIds.map(id => windows.find(w => w.id === id)).filter(w => !!w);
+        return seen.concat(windows.filter(w => !mruIds.includes(w.id)));
+    }
     readonly property var activeWindow: {
         if (focusedWindow)
             return focusedWindow;

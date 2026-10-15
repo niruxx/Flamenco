@@ -11,7 +11,8 @@ Variants {
 
     OverlayPanel {
         id: panel
-        name: "wallpaper"
+        // the grid switcher; the carousel one is WallpaperCarousel (Settings → Wallpaper → Switcher)
+        name: Settings.data.wallpaper.picker === "grid" ? "wallpaper" : "wallpaper-grid"
         cardWidth: Math.min(980, modelData.width - 80)
         onOpened: Wallpapers.rescan()
         property string source: "folder"        // folder | wallhaven

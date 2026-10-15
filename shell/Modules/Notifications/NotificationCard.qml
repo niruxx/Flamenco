@@ -36,10 +36,11 @@ Item {
 
         width: parent.width
         height: content.height + root.pad * 2
-        radius: Theme.rLg
-        color: root.popup ? Theme.panelBg : Theme.surfaceHigh
+        radius: Theme.rXl
+        // in the center: soft cards like the dashboard's; urgent ones tinted
+        color: root.popup ? Theme.panelBg : root.critical ? Theme.alpha(Theme.error, 0.1) : Theme.alpha(Theme.text, 0.05)
         border.width: root.critical ? 2 : 1
-        border.color: root.critical ? Theme.error : Theme.alpha(Theme.border, 0.6)
+        border.color: root.critical ? Theme.error : root.popup ? Theme.alpha(Theme.border, 0.6) : Theme.alpha(Theme.text, 0.08)
         opacity: 1 - Math.min(1, Math.abs(x) / width * 1.4)
 
         Behavior on x {
@@ -57,15 +58,23 @@ Item {
             // header: icon · app name · time · close
             Item {
                 width: parent.width
-                height: 24
+                height: 30
 
-                AppIcon {
+                // the app's icon in a tinted bubble
+                Rectangle {
                     id: appIco
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    implicitSize: 16
-                    name: root.appIcon || root.appName.toLowerCase()
-                    fallback: "dialog-information"
+                    width: 30
+                    height: 30
+                    radius: 15
+                    color: Theme.alpha(root.critical ? Theme.error : Theme.accent, 0.16)
+                    AppIcon {
+                        anchors.centerIn: parent
+                        implicitSize: 18
+                        name: root.appIcon || root.appName.toLowerCase()
+                        fallback: "dialog-information"
+                    }
                 }
                 FText {
                     anchors.left: appIco.right
@@ -74,9 +83,9 @@ Item {
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.appName || "Notification"
-                    dim: true
+                    color: root.critical ? Theme.error : Theme.accent
                     font.pixelSize: Theme.fsXs
-                    font.weight: Font.DemiBold
+                    font.weight: Font.Bold
                     elide: Text.ElideRight
                 }
                 FText {

@@ -100,10 +100,31 @@ Singleton {
         cfg.lockKeyAdded = true;
     }
 
+    // 0.31.0: Alt+Tab / Alt+Shift+Tab open the app switcher. Added once, like Super+L,
+    // and only on keys no Flamenco shortcut uses yet.
+    function addSwitcherKeys() {
+        if (cfg.switcherKeysAdded || !cfg.imported)
+            return;
+        const list = (cfg.shortcuts || []).slice();
+        if (!list.some(s => norm(s.key) === norm("Alt+Tab")))
+            list.push({ key: "Alt+Tab", type: "flamenco", value: "switcher-next", title: "App switcher" });
+        if (!list.some(s => norm(s.key) === norm("Alt+Shift+Tab")))
+            list.push({ key: "Alt+Shift+Tab", type: "flamenco", value: "switcher-prev", title: "App switcher (back)" });
+        setShortcuts(list);
+        cfg.switcherKeysAdded = true;
+    }
+
     Timer {
-        running: Settings.ready && !root.cfg.lockKeyAdded
+        running: Settings.ready && (!root.cfg.lockKeyAdded || !root.cfg.switcherKeysAdded)
         interval: 3000
-        onTriggered: root.cfg.imported ? root.addLockKey() : root.load()
+        onTriggered: {
+            if (!root.cfg.imported) {
+                root.load();
+                return;
+            }
+            root.addLockKey();
+            root.addSwitcherKeys();
+        }
     }
 
     function applyNow() {
@@ -151,6 +172,7 @@ Singleton {
                     root.cfg.imported = true;
                 }
                 root.addLockKey();
+                root.addSwitcherKeys();
             }
         }
     }

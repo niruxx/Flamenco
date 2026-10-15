@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.28.2-E8466F?style=for-the-badge" alt="Version 0.28.2">
+  <img src="https://img.shields.io/badge/version-0.31.0-E8466F?style=for-the-badge" alt="Version 0.31.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -160,21 +160,22 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 
 | | |
 |---|---|
-| **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widget styles: workspaces as pills, numbers, dots or each workspace's app icons; CPU/RAM/temperature as numbers or ring gauges; the battery as an icon or a battery shape; the clock inline, stacked (time over date) or time only, aligned and placed where you like; separators between groups. The **Islands** layout preset sets all of that up in one click. Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, a microphone indicator (shows while an app records; click to mute), brightness, battery, notifications, weather, power |
+| **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widget styles: workspaces as pills, numbers, dots or each workspace's app icons; CPU/RAM/temperature as numbers or ring gauges; the battery as an icon or a battery shape; the clock inline, stacked (time over date) or time only, aligned and placed where you like; separators between groups. The **Islands** layout preset sets all of that up in one click. Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, a microphone indicator (shows while an app records; click to mute), brightness, battery, notifications, weather, a clipboard history button (search, copy again, delete entries or clear it all; Flamenco records text and images with cliphist), power |
 | **🔔 App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
-| **🎛️ Control center** | Volume, mic, screen, external-monitor and keyboard brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, VPN, dark mode, screen recording, desktop widgets and wallpaper: pick, reorder and lay them out in **Settings → Quick settings**, which also sets where the panel opens and its width. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
+| **🎛️ Control center** | Volume, mic, screen, external-monitor and keyboard brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, VPN, dark mode, screen recording, desktop widgets and wallpaper: pick, reorder and lay them out in **Settings → Quick settings**, which also sets where the panel opens and its width. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art. Two looks: **cards** (icon on top, tinted when on, big gradient sliders, matching the dashboard) or **classic** |
+| **🔀 App switcher** | Alt+Tab: your windows as cards, most recently used first, with their workspace. Hold Alt and press Tab to move (Shift+Tab back), let go to switch; arrows, Enter, Esc and clicks work too. `flamenco switcher next\|prev` from scripts |
 | **🔭 Overview** | Optional GNOME-style overview (**Settings → Overview**): search apps, this screen's workspaces along the top (drop a window on one to move it), its windows in a grid, and a dash. Opens from the start button, a hot corner, a shortcut, or by tapping Super on its own |
 | **🔍 Launcher** | Fuzzy app search ranked by how often you use each app. `=` calculator, `>` run command, `;` clipboard history (cliphist) |
 | **💬 Notifications** | Built-in daemon: popups with timeout bar, swipe to dismiss, actions, DND. History persists across restarts |
 | **📢 OSD** | Volume, screen brightness, keyboard backlight and mic popups |
-| **🗓️ Dashboard** | Opens from the bar clock. Tabs: Overview (clock, calendar, user, weather and media cards), Media (full player), Wallpapers (picker and folder), Weather (configurable forecast), and a shortcut to Settings |
+| **🗓️ Dashboard** | Opens from the bar clock. **Hub** layout (default): a wide dashboard with a rail on the left. Home has a greeting over your blurred wallpaper with status chips and a big clock, Flamenco's toggles as tiles, big volume/mic/brightness sliders, now playing with the visualizer, what's next from your calendars, the weather forecast and CPU/RAM/temperature/disk rings; then Media, Calendar, Weather and Wallpaper pages (Ctrl+Tab). The compact **Tabs** layout is still there |
 | **📈 Performance** | Opens from the CPU/RAM widget: CPU history, load and frequency, temperatures from every sensor, memory and swap, disks, network speed, top processes |
 | **📌 Dock** | Optional. Bottom, left or right edge; pinned and running apps, magnification, auto-hide, app names on hover, running indicators, and its size, spacing, background and corners |
 | **🧩 Desktop widgets** | Clock, weather, system stats, now playing, calendar and notes on the desktop, under your windows. Drag them in from a sidebar opened from quick settings; move, resize or remove them; card, glass or bare style |
 | **✨ AI assistant** | A chat panel for Claude, OpenAI, Gemini, OpenRouter, or a local model in LM Studio or Ollama. Set up in **Settings → AI**; keys stay in your keyring |
 | **🧩 Plugins** | Bar widgets and launcher extensions from others or yourself, in `~/.config/flamenco/plugins`. Install from a git link, turn on in **Settings → Plugins**. See [docs/plugins.md](docs/plugins.md) |
 | **🔌 Noctalia & DMS plugins** | Run plugins made for Noctalia Shell 4 and DankMaterialShell: their bar widgets, panels, settings and background parts, in Flamenco's look. Browse both catalogs and install in **Settings → Plugins (3rd party)**, which checks each plugin and says what won't work. See [docs/third-party-plugins.md](docs/third-party-plugins.md) |
-| **🖼️ Wallpaper** | Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
+| **🖼️ Wallpaper** | A cover-flow switcher (3D carousel over the blurred picture, with its colors, search, shuffle and Wallhaven; or the classic grid). Animated transitions (Mosaic, Ripple, Sweep, Blinds, Circle, Wipe, Focus, Fade, or Mix) with soft edges and an accent glow, a blurred copy behind niri's overview, picker grid, auto-cycle, colors from wallpaper (matugen) |
 | **🔒 Lock screen** | PAM auth with password or **fingerprint** (enroll fingers in Settings), blurred wallpaper that clears as you unlock, media controls, auto-lock on idle, screen-off timer. Can run any **SDDM greeter theme** as the lock screen, or hand off to a command such as `hyprlock` |
 | **🚪 Login screen** | Set up **Flamenco Greeter** (greetd) from Settings: wallpaper, blur and dim, fonts, the session picker, user list and power buttons, in the shell's palette. Edits greetd itself too: greeter, VT and auto-login |
 | **⚡ Power menu** | Lock, suspend, log out, restart, shut down. Keyboard navigation; log out, restart and shut down must be held for 3 seconds |
@@ -394,6 +395,7 @@ Change the Flamenco shortcuts in **Settings → Keyboard** (see [Keyboard & shor
 | `Mod+L` or `Super+Alt+L` | Lock screen |
 | `Mod+T` / `Mod+Return` | Terminal |
 | `Mod+O` | niri overview |
+| `Alt+Tab` / `Alt+Shift+Tab` | App switcher |
 | `Super` (tap) | Flamenco overview, once it's on in **Settings → Overview** |
 | `Mod+Q` | Close window |
 | `Mod+Shift+E` | Quit niri |

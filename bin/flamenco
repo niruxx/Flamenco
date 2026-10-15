@@ -27,6 +27,8 @@
   flamenco ai providers | models P | test P [MODEL] | ask TEXT… | key set|delete P   AI assistant (Settings → AI)
   flamenco assistant           open the AI assistant
   flamenco overview            open Flamenco's overview (Settings → Overview)
+  flamenco clipboard           open the clipboard history
+  flamenco switcher next|prev  the app switcher (Alt+Tab)
   flamenco super-watch         print "tap" when Super is pressed on its own (used by the overview)
   flamenco plugins list | new ID | install GIT_URL|FOLDER | remove ID   bar widgets and launcher extensions
   flamenco compat list | catalog noctalia|dms | install noctalia:ID|dms:ID|GIT_URL|FOLDER | update KEY|all | remove KEY
@@ -72,7 +74,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.28.2"
+VERSION = "0.31.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1500,6 +1502,9 @@ REPLACED = "// flamenco: replaced by a Flamenco shortcut: "
 SHELL_FUNCTIONS = {
     "launcher": ("App launcher", ["launcher"]),
     "overview": ("Overview (Flamenco)", ["overview"]),
+    "clipboard": ("Clipboard history", ["clipboard"]),
+    "switcher-next": ("App switcher", ["switcher", "next"]),
+    "switcher-prev": ("App switcher (back)", ["switcher", "prev"]),
     "control": ("Control center", ["control"]),
     "notifications": ("Notification center", ["notifications"]),
     "dashboard": ("Dashboard (clock)", ["calendar"]),
@@ -1549,6 +1554,8 @@ DEFAULT_SHORTCUTS = [
     {"key": "Mod+Escape", "type": "flamenco", "value": "power", "title": "Power menu"},
     {"key": "Mod+L", "type": "flamenco", "value": "lock", "title": "Lock the screen"},
     {"key": "Super+Alt+L", "type": "flamenco", "value": "lock", "title": "Lock the screen"},
+    {"key": "Alt+Tab", "type": "flamenco", "value": "switcher-next", "title": "App switcher"},
+    {"key": "Alt+Shift+Tab", "type": "flamenco", "value": "switcher-prev", "title": "App switcher (back)"},
 ]
 
 
@@ -7910,7 +7917,7 @@ def cmd_screenshot(args: list[str]) -> int:
 
 PANELS = {"launcher": "launcher", "control": "control", "notifications": "notifications",
           "calendar": "calendar", "wallpapers": "wallpapers", "power": "power", "widgets": "widgets",
-          "assistant": "assistant", "notepad": "notepad", "overview": "overview"}
+          "assistant": "assistant", "notepad": "notepad", "overview": "overview", "clipboard": "clipboard"}
 
 
 def main(argv: list[str]) -> int:
@@ -7937,6 +7944,8 @@ def main(argv: list[str]) -> int:
         return cmd_power(rest)          # `flamenco power` alone still opens the power menu
     if cmd == "calendar" and rest[:1] == ["events"]:
         return cmd_calendar(rest)
+    if cmd == "switcher":
+        return ipc("switcher", rest[0] if rest and rest[0] in ("next", "prev", "go", "cancel") else "next")
     if cmd in PANELS:
         return ipc(PANELS[cmd], *(rest or ["toggle"]))
     if cmd == "setup":

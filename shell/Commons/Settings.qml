@@ -164,6 +164,7 @@ Singleton {
             // Quick settings (the control center): where it opens and what's in it
             property JsonObject control: JsonObject {
                 property string align: "auto"         // auto (next to its bar button) | left | center | right
+                property string style: "cards"        // tiles and sliders: cards (icon on top, big sliders) | classic
                 property int width: 440
                 property int columns: 2
                 property var sections: ({ header: true, sliders: true, tiles: true, media: true })
@@ -174,6 +175,12 @@ Singleton {
             property JsonObject plugins: JsonObject {
                 property var enabled: []
                 property var config: ({})
+            }
+
+            // Clipboard history (cliphist): the bar's clipboard button and the launcher's ";"
+            property JsonObject clipboard: JsonObject {
+                property bool watch: true             // Flamenco records the history (wl-paste --watch cliphist store)
+                property int maxItems: 500            // entries cliphist keeps
             }
 
             // Noctalia and DMS plugins turned on (Settings → Plugins (3rd party)): "noctalia/<id>", "dms/<id>"
@@ -235,6 +242,7 @@ Singleton {
                 // without one shows `current`, which also drives "colors from wallpaper".
                 property bool perScreen: false
                 property var screens: ({})
+                property string picker: "carousel"   // the switcher: carousel (3D cover flow) | grid
             }
 
             property JsonObject lock: JsonObject {
@@ -295,6 +303,7 @@ Singleton {
                 property string trackLayout: "global" // global | window
                 property var shortcuts: []            // [{ key, type: flamenco|app|command|niri, value, title, locked }]
                 property bool lockKeyAdded: false     // Super+L → lock was added once (0.20.1); removing it sticks
+                property bool switcherKeysAdded: false // Alt+Tab → app switcher was added once (0.31.0); removing it sticks
             }
 
             // Mouse & touchpad, written into the compositor config by `flamenco pointer apply`
@@ -411,7 +420,8 @@ Singleton {
 
             // Dashboard: the clock/calendar popout
             property JsonObject dashboard: JsonObject {
-                property string defaultTab: "overview" // overview | media | wallpapers | weather
+                property string style: "hub"          // hub (wide, a rail on the left, Home first) | tabs (compact)
+                property string defaultTab: "overview" // tabs layout: overview | media | wallpapers | weather
                 property bool showUser: true
                 property bool showMedia: true
             }

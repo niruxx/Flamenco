@@ -92,6 +92,7 @@ Variants {
             id: tile_wifi
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent
                         icon: Network.icon
                         title: "Wi-Fi"
                         subtitle: Network.label
@@ -109,6 +110,7 @@ Variants {
             id: tile_bluetooth
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent2
                         icon: BluetoothState.icon
                         title: "Bluetooth"
                         subtitle: BluetoothState.label
@@ -123,6 +125,7 @@ Variants {
             id: tile_dnd
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent3
                         icon: "do_not_disturb_on"
                         title: "Do not disturb"
                         subtitle: Notifs.dnd ? "On" : "Off"
@@ -135,6 +138,7 @@ Variants {
             id: tile_night
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.warning
                         icon: "nightlight"
                         title: "Night light"
                         subtitle: Toggles.nightLight ? Settings.data.night.temperature + "K" : "Off"
@@ -147,6 +151,7 @@ Variants {
             id: tile_caffeine
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent2
                         icon: "coffee"
                         title: "Caffeine"
                         subtitle: Toggles.caffeine ? "Staying awake" : "Off"
@@ -159,6 +164,7 @@ Variants {
             id: tile_power
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent
                         icon: Power.profileIcon
                         title: "Power"
                         subtitle: Power.profileName
@@ -173,6 +179,7 @@ Variants {
             id: tile_vpn
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent3
                         icon: Network.vpnActive ? "vpn_lock" : "vpn_key"
                         title: "VPN"
                         subtitle: Network.vpnActive ? Network.activeVpns.map(v => v.name).join(", ") : Network.vpns.length ? "Off" : "Not set up"
@@ -194,6 +201,7 @@ Variants {
             id: tile_dark
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent2
                         icon: Theme.dark ? "dark_mode" : "light_mode"
                         title: "Dark mode"
                         subtitle: Theme.dark ? "On" : "Off"
@@ -206,6 +214,7 @@ Variants {
             id: tile_record
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.error
                         icon: Recorder.recording ? "stop_circle" : "screen_record"
                         title: Recorder.recording ? "Stop recording" : "Record screen"
                         subtitle: Recorder.recording ? Recorder.clock : "This screen · ⋯ for an area"
@@ -226,6 +235,7 @@ Variants {
             id: tile_widgets
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent3
                         icon: "widgets"
                         title: "Desktop widgets"
                         subtitle: Settings.data.desktop.enabled ? (Settings.data.desktop.widgets.length ? Settings.data.desktop.widgets.length + " on the desktop" : "Add some") : "Off"
@@ -241,6 +251,7 @@ Variants {
             id: tile_wallpaper
                     FTile {
                         Layout.fillWidth: true
+                        tint: Theme.accent
                         icon: "wallpaper"
                         title: "Wallpaper"
                         subtitle: Paths.fileName(Wallpapers.current) || "None"

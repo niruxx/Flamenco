@@ -27,6 +27,19 @@ Page {
     }
 
     Group {
+        title: "Look"
+        ChoiceRow {
+            title: "Style"
+            subtitle: page.q.style === "classic" ? "Icon beside the text, slim sliders" : "Icon on top, tinted when on, big sliders (like the dashboard)"
+            icon: "view_module"
+            target: page.q
+            key: "style"
+            segWidth: 120
+            options: [{ value: "cards", label: "Cards", icon: "grid_view" }, { value: "classic", label: "Classic", icon: "view_list" }]
+        }
+    }
+
+    Group {
         title: "Placement"
         ChoiceRow {
             title: "Opens"
