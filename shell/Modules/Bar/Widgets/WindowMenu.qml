@@ -82,7 +82,8 @@ PopupWindow {
     }
 
     readonly property int gap: 8
-    anchor.window: window
+    // only a real window (a QML window object), never a plain value
+    anchor.window: window && window.contentItem !== undefined ? window : null
     anchor.rect.x: side === "right" ? at.x - gap : side === "left" ? at.x + at.width + gap : at.x + at.width / 2
     anchor.rect.y: side === "bottom" ? at.y - gap : sideVertical ? at.y : at.y + at.height + gap
     anchor.rect.width: 1

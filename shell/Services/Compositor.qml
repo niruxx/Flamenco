@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import qs.Services as S
 import Quickshell.Io
 import qs.Commons
 
@@ -51,7 +52,7 @@ Singleton {
             s.activeColor = hex(Theme.palette.accent);
             s.inactiveColor = hex(Theme.palette.border);
         }
-        s.overviewCorners = Edges.overviewCorners();
+        s.overviewCorners = S.Edges.overviewCorners();
         s.hotCorners = s.overviewCorners.length > 0;
         s.workspaces = Settings.data.workspaces.named || [];
         s.screenshotPath = Settings.data.screenshot.path;
@@ -98,7 +99,7 @@ Singleton {
                     root.cfg.syncColors = d.activeColor === root.hex(Theme.palette.accent) || d.activeColor === "#ff5d73";
                     root.cfg.imported = true;
                     // Screen edges may already want other corners than niri's config has
-                    if (root.pending || JSON.stringify(Edges.overviewCorners()) !== JSON.stringify(d.overviewCorners ?? []))
+                    if (root.pending || JSON.stringify(S.Edges.overviewCorners()) !== JSON.stringify(d.overviewCorners ?? []))
                         root.queue();
                 } catch (e) {
                     root.fail("couldn't read the compositor config");

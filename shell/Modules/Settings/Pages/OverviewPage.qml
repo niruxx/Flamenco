@@ -87,7 +87,7 @@ Page {
             segWidth: 140
             options: [{ value: "auto", label: "When no dock" }, { value: "always", label: "Always" }, { value: "never", label: "Never" }]
         }
-        SwitchRow { title: "Window pictures"; subtitle: "Where the compositor lets Flamenco capture windows; app icons otherwise"; icon: "picture_in_picture"; target: page.o; key: "previews" }
+        SwitchRow { title: "Window pictures"; subtitle: "Where the compositor lets Flamenco capture windows (not in a nested niri window); app icons otherwise"; icon: "picture_in_picture"; target: page.o; key: "previews" }
         SwitchRow { title: "Blurred wallpaper"; subtitle: "Off: a plain dimmed background"; icon: "blur_on"; target: page.o; key: "blur" }
     }
 

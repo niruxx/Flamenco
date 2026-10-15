@@ -14,6 +14,8 @@ import qs.Modules.Keys
 import qs.Modules.Notepad
 import qs.Modules.Overview
 import qs.Modules.ThirdParty
+// registers the compatibility modules Noctalia and DMS plugins import (see Compat/CompatModules.qml)
+import qs.Compat
 import qs.Modules.Desktop
 import qs.Modules.Bar
 import qs.Modules.Dock
@@ -86,29 +88,30 @@ ShellRoot {
 
     // ── IPC: `flamenco ipc <target> <function> [args]` / `qs -p … ipc call …` ──
 
+    // the panel is named after the IPC target (no property: IpcHandler warns about those)
     component PanelIpc: IpcHandler {
-        required property string panel
-        function toggle(): void { Panels.toggle(panel, ""); }
-        function open(): void { Panels.open(panel, ""); }
+        function panelName(): string { return target === "wallpapers" ? "wallpaper" : target; }
+        function toggle(): void { Panels.toggle(panelName(), ""); }
+        function open(): void { Panels.open(panelName(), ""); }
         function close(): void { Panels.close(); }
         // open with text already typed, e.g. ":" for emoji
         function openWith(text: string): void {
             Panels.launcherQuery = text;
-            Panels.open(panel, "");
+            Panels.open(panelName(), "");
         }
     }
 
-    PanelIpc { target: "launcher"; panel: "launcher" }
-    PanelIpc { target: "control"; panel: "control" }
-    PanelIpc { target: "notifications"; panel: "notifications" }
-    PanelIpc { target: "calendar"; panel: "calendar" }
-    PanelIpc { target: "performance"; panel: "performance" }
-    PanelIpc { target: "wallpapers"; panel: "wallpaper" }
-    PanelIpc { target: "power"; panel: "power" }
-    PanelIpc { target: "assistant"; panel: "assistant" }
-    PanelIpc { target: "keys"; panel: "keys" }
-    PanelIpc { target: "notepad"; panel: "notepad" }
-    PanelIpc { target: "overview"; panel: "overview" }
+    PanelIpc { target: "launcher" }
+    PanelIpc { target: "control" }
+    PanelIpc { target: "notifications" }
+    PanelIpc { target: "calendar" }
+    PanelIpc { target: "performance" }
+    PanelIpc { target: "wallpapers" }
+    PanelIpc { target: "power" }
+    PanelIpc { target: "assistant" }
+    PanelIpc { target: "keys" }
+    PanelIpc { target: "notepad" }
+    PanelIpc { target: "overview" }
 
     // Super tapped on its own (Settings → Overview)
     Connections {

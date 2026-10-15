@@ -61,7 +61,7 @@ GridView {
             Rectangle {
                 anchors.fill: parent
                 color: "transparent"
-                radius: parent.radius
+                radius: cell.current ? Theme.rXl : Theme.rMd
                 border.width: cell.current ? 3 : 0
                 border.color: Theme.accent
                 Behavior on border.width { Anim {} }

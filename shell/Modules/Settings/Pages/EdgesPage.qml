@@ -1,4 +1,5 @@
 import QtQuick
+import qs.Services as S
 import QtQuick.Layouts
 import qs.Commons
 import qs.Services
@@ -9,7 +10,7 @@ Page {
     title: "Screen edges"
     subtitle: "Push the pointer into a corner of the screen to run an action."
     readonly property var e: Settings.data.edges
-    readonly property var actions: Edges.actions.filter(a => !(Niri.hyprland && a.niriOnly)).map(a => ({ value: a.value, label: a.label }))
+    readonly property var actions: S.Edges.actions.filter(a => !(Niri.hyprland && a.niriOnly)).map(a => ({ value: a.value, label: a.label }))
 
     // niri's own hot corners are written from here, through the compositor config
     Component.onCompleted: Compositor.load()
@@ -39,7 +40,7 @@ Page {
         Layout.fillWidth: true
         visible: !Niri.hyprland && page.e.enabled
         text: "Corners set to Overview are niri's own hot corners, so they also work while you drag a window. niri's corner is turned off everywhere else, so it doesn't get in the way of these actions."
-            + (Edges.perCorner ? "" : " This niri only has its own top-left corner; other Overview corners are done by Flamenco.")
+            + (S.Edges.perCorner ? "" : " This niri only has its own top-left corner; other Overview corners are done by Flamenco.")
         dim: true
         wrapMode: Text.Wrap
     }

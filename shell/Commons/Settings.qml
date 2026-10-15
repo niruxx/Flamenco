@@ -76,14 +76,14 @@ Singleton {
                 property bool shadows: true
                 property bool dimBehindPanels: true
                 property string accentOverride: ""    // "#rrggbb" replaces the palette's accent ("" = palette)
-                property string layoutPreset: ""      // last preset picked in Appearance → Layout presets
+                property string layoutPreset: "islands" // last preset picked in Appearance → Layout presets
             }
 
             property JsonObject bar: JsonObject {
                 property string position: "top"       // top | bottom | left | right
-                property string style: "floating"     // floating | attached | islands
+                property string style: "islands"      // floating | attached | islands
                 property int height: 40
-                property string workspaceStyle: "pills" // pills | numbers | dots
+                property string workspaceStyle: "apps" // pills | numbers | dots | apps (each workspace's app icons)
                 property bool trayHidePassive: false  // hide tray icons whose app reports "passive"
                 property bool trayNativeMenus: false  // use Qt's native menus instead of themed ones
                 property int trayMaxVisible: 6        // extra icons go into an overflow drawer
@@ -91,14 +91,20 @@ Singleton {
                 property string micIndicator: "inuse" // microphone widget: inuse (while recording or muted) | always
                 property var perScreen: ({})          // screens with their own widgets: { "DP-1": { left, center, right } }
                 property bool taskbarTitles: false    // window titles next to the taskbar's icons
+                property string clockLayout: "stacked" // clock: inline (time • date) | stacked (time over date) | time
+                property string clockAlign: "center"  // clock text: left | center | right
+                property string batteryStyle: "battery" // icon | battery (a battery shape with the percent inside)
+                property string statsStyle: "rings"   // CPU / RAM widget: text | rings (circular gauges)
+                property bool statsTemp: true         // CPU / RAM widget: the temperature too
                 // the start button (widget "launcher")
                 property string startIcon: "apps"     // apps | distro | flamenco | custom
                 property string startCustom: ""       // custom: a Material Symbols name, or a picture file
                 property string startLabel: ""        // text beside the icon, e.g. "Start"
                 property string startAction: "auto"  // auto (the overview when it's on, else the launcher) | launcher | overview
-                property var left: ["launcher", "workspaces", "window"]
-                property var center: ["clock", "media"]
-                property var right: ["recording", "privacy", "updates", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"]
+                // the "Islands" layout (Appearance → Layout presets)
+                property var left: ["launcher", "separator", "workspaces", "window"]
+                property var center: ["media", "visualizer"]
+                property var right: ["sysstats", "separator", "recording", "privacy", "updates", "tray", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "clock", "power"]
             }
 
             property JsonObject dock: JsonObject {
@@ -458,7 +464,7 @@ Singleton {
         onTriggered: file.writeAdapter()
     }
 
-    readonly property int currentVersion: 7
+    readonly property int currentVersion: 8
 
     // One-time upgrades for settings files written by older versions.
     function migrate() {
@@ -532,6 +538,26 @@ Singleton {
                 const i = l.indexOf("tray");
                 l.splice(Math.max(0, i), 0, "updates");
                 b[side] = l;
+            }
+        }
+        if (v < 8) {
+            // 0.28.2: the "Islands" look is the default. A bar nobody arranged (the old
+            // default layout and styles, floating) switches to it; a customised one stays.
+            const b = adapter.bar;
+            const same = (l, w) => JSON.stringify(l || []) === JSON.stringify(w);
+            const oldRight = ["recording", "privacy", "updates", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"];
+            if (b.style === "floating" && b.workspaceStyle === "pills" && same(b.left, ["launcher", "workspaces", "window"])
+                    && same(b.center, ["clock", "media"]) && same(b.right, oldRight) && Object.keys(b.perScreen || {}).length === 0) {
+                b.style = "islands";
+                b.workspaceStyle = "apps";
+                b.clockLayout = "stacked";
+                b.batteryStyle = "battery";
+                b.statsStyle = "rings";
+                b.statsTemp = true;
+                b.left = ["launcher", "separator", "workspaces", "window"];
+                b.center = ["media", "visualizer"];
+                b.right = ["sysstats", "separator", "recording", "privacy", "updates", "tray", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "clock", "power"];
+                adapter.appearance.layoutPreset = "islands";
             }
         }
         adapter.configVersion = currentVersion;

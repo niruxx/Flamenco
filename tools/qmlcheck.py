@@ -102,6 +102,10 @@ for f in files:
             if here not in homes[t] and not homes[t] & visible:
                 report(f, f"{line(m.start())}: {t} is defined in {'/'.join(sorted(homes[t]))} but not imported")
 
+    # JavaScript Quickshell's engine doesn't have (a TypeError at runtime)
+    if not f.relative_to(root).as_posix().startswith("Compat/"):
+        for m in re.finditer(r'Object\.fromEntries|\.flatMap\(|\.flat\(\)|\.replaceAll\(', code):
+            report(f, f"{line(m.start())}: {m.group(0).strip('.(')} isn't in Quickshell's JavaScript")
     # reserved words QML refuses as names (the file then fails to load at all)
     for m in re.finditer(r'\b(?:property\s+[\w<>.]+|function|const|let|var|id\s*:)\s+(\w+)', code):
         if m.group(1) in RESERVED:

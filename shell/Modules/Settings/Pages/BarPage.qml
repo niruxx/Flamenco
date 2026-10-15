@@ -10,12 +10,19 @@ Page {
     title: "Bar"
     readonly property var b: Settings.data.bar
     // built-in widgets, plus the bar widgets of plugins that are turned on
-    readonly property var allWidgets: Object.assign({}, builtinWidgets, Object.fromEntries(Object.entries(Plugins.barWidgets).map(([k, v]) => [k, v.label + " (plugin)"])),
-        Object.fromEntries(Object.entries(ThirdParty.barWidgets).map(([k, v]) => [k, v.label])))
+    // (no Object.fromEntries: Quickshell's JavaScript doesn't have it)
+    readonly property var allWidgets: {
+        const out = Object.assign({}, builtinWidgets);
+        for (const k in Plugins.barWidgets)
+            out[k] = Plugins.barWidgets[k].label + " (plugin)";
+        for (const k in ThirdParty.barWidgets)
+            out[k] = ThirdParty.barWidgets[k].label;
+        return out;
+    }
     readonly property var builtinWidgets: ({
             launcher: "Start button (launcher)", workspaces: "Workspaces", window: "Active window", taskbar: "Taskbar (running apps)", clock: "Clock", media: "Media",
             tray: "System tray", sysstats: "CPU / RAM", keyboard: "Keyboard layout", network: "Network", bluetooth: "Bluetooth",
-            audio: "Volume", mic: "Microphone (while in use)", privacy: "Privacy (camera, screen sharing)", recording: "Screen recording (while recording)", updates: "Package updates (when there are some)", notepad: "Notepad", visualizer: "Audio visualizer (cava, while playing)", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", assistant: "AI assistant", power: "Power"
+            audio: "Volume", mic: "Microphone (while in use)", privacy: "Privacy (camera, screen sharing)", recording: "Screen recording (while recording)", updates: "Package updates (when there are some)", notepad: "Notepad", visualizer: "Audio visualizer (cava, while playing)", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", assistant: "AI assistant", power: "Power", separator: "Separator (a thin line)"
         })
     // which layout is being edited: "" = the shared one, else a screen with its own
     property string screenSel: ""
@@ -54,7 +61,20 @@ Page {
         }
         ChoiceRow { title: "Style"; icon: "style"; target: page.b; key: "style"; options: [{ value: "floating", label: "Floating" }, { value: "attached", label: "Attached" }, { value: "islands", label: "Islands" }] }
         SliderRow { title: "Thickness"; icon: "height"; target: page.b; key: "height"; from: 30; to: 56; stepSize: 1; suffix: "px" }
-        ChoiceRow { title: "Workspace indicator"; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }] }
+        ChoiceRow { title: "Workspace indicator"; subtitle: page.b.workspaceStyle === "apps" ? "Each workspace shows its apps' icons; the active one is filled" : ""; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }, { value: "apps", label: "App icons" }] }
+        ChoiceRow { title: "Battery"; icon: "battery_full"; target: page.b; key: "batteryStyle"; segWidth: 150; options: [{ value: "icon", label: "Icon and percent" }, { value: "battery", label: "Battery shape" }] }
+        ChoiceRow { title: "CPU / RAM"; icon: "memory"; target: page.b; key: "statsStyle"; segWidth: 120; options: [{ value: "text", label: "Icons" }, { value: "rings", label: "Ring gauges" }] }
+        SwitchRow { title: "Temperature with CPU / RAM"; icon: "thermostat"; target: page.b; key: "statsTemp" }
+        SettingRow {
+            title: "Clock"
+            subtitle: "Its layout, alignment and position are in Clock & Weather"
+            icon: "schedule"
+            FButton {
+                text: "Clock settings"
+                variant: "text"
+                onClicked: Panels.findSetting("clock", "Bar clock")
+            }
+        }
     }
 
     Group {
@@ -195,14 +215,14 @@ Page {
                 SettingRow {
                     required property string modelData
                     required property int index
-                    title: page.allWidgets[modelData] ?? modelData
+                    title: page.allWidgets[modelData] ?? (modelData.startsWith("separator") ? page.allWidgets.separator : modelData)
                     icon: "drag_indicator"
 
                     Row {
                         spacing: 2
                         FIconButton { icon: "arrow_upward"; size: 30; disabled: index === 0; onClicked: page.move(grp.modelData.key, index, index - 1) }
                         FIconButton { icon: "arrow_downward"; size: 30; disabled: index === page.list(grp.modelData.key).length - 1; onClicked: page.move(grp.modelData.key, index, index + 1) }
-                        FIconButton { icon: "close"; size: 30; iconColor: Theme.error; onClicked: page.setList(grp.modelData.key, page.list(grp.modelData.key).filter(x => x !== modelData)) }
+                        FIconButton { icon: "close"; size: 30; iconColor: Theme.error; onClicked: page.setList(grp.modelData.key, page.list(grp.modelData.key).filter((x, i) => i !== index)) }
                     }
                 }
             }
@@ -212,14 +232,21 @@ Page {
                 Layout.margins: 12
                 spacing: 6
                 Repeater {
-                    model: Object.keys(page.allWidgets).filter(k => !page.used.includes(k))
+                    // separators can go in as often as you like
+                    model: Object.keys(page.allWidgets).filter(k => k === "separator" || !page.used.includes(k))
                     FButton {
                         required property string modelData
                         text: page.allWidgets[modelData]
                         icon: "add"
                         variant: "tonal"
                         implicitHeight: 30
-                        onClicked: page.setList(grp.modelData.key, page.list(grp.modelData.key).concat([modelData]))
+                        onClicked: {
+                            let id = modelData;
+                            let n = 1;
+                            while (modelData === "separator" && page.used.includes(id))
+                                id = "separator:" + (++n);
+                            page.setList(grp.modelData.key, page.list(grp.modelData.key).concat([id]));
+                        }
                     }
                 }
             }

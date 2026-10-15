@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import qs.Commons
 import qs.Services
+import qs.Services as S
 
 // One hot corner of one screen.
 PanelWindow {
@@ -16,7 +17,7 @@ PanelWindow {
     readonly property string action: cfg[key]
 
     // niri's own corner takes Overview corners (see Edges)
-    visible: action !== "none" && !Edges.nativeCorner(key)
+    visible: action !== "none" && !S.Edges.nativeCorner(key)
     screen: output
     color: "transparent"
     anchors {
@@ -49,6 +50,6 @@ PanelWindow {
     Timer {
         id: dwell
         interval: Math.max(1, corner.cfg.delay)
-        onTriggered: if (hover.hovered) Edges.run(corner.action, corner.output.name)
+        onTriggered: if (hover.hovered) S.Edges.run(corner.action, corner.output.name)
     }
 }

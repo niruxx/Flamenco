@@ -301,7 +301,7 @@ Page {
         }
 
         Repeater {
-            model: Object.keys(page.fwd.activeZones ?? {}).flatMap(z => (page.fwd.activeZones[z] || []).map(i => ({ iface: i, zone: z })))
+            model: [].concat(...Object.keys(page.fwd.activeZones ?? {}).map(z => (page.fwd.activeZones[z] || []).map(i => ({ iface: i, zone: z }))))
             SettingRow {
                 id: irow
                 required property var modelData

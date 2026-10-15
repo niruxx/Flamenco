@@ -18,6 +18,71 @@ Page {
     }
 
     Group {
+        id: barClock
+        title: "Bar clock"
+        readonly property var b: Settings.data.bar
+        // which bar section has the clock (the shared layout), and where in it
+        readonly property string side: ["left", "center", "right"].find(k => (b[k] || []).includes("clock")) ?? ""
+        readonly property string place: {
+            const l = b[side] || [];
+            const i = l.indexOf("clock");
+            return i < 0 ? "" : i === 0 && l.length > 1 ? "start" : "end";
+        }
+        function moveTo(side, place) {
+            for (const k of ["left", "center", "right"])
+                b[k] = (b[k] || []).filter(x => x !== "clock");
+            const l = (b[side] || []).slice();
+            if (place === "start")
+                l.unshift("clock");
+            else if (side === "right" && l.includes("power"))
+                l.splice(l.indexOf("power"), 0, "clock");    // stays before the power button
+            else
+                l.push("clock");
+            b[side] = l;
+        }
+
+        ChoiceRow {
+            title: "Layout"
+            subtitle: "On a vertical bar it's always hours over minutes"
+            icon: "schedule"
+            target: barClock.b
+            key: "clockLayout"
+            segWidth: 120
+            options: [{ value: "inline", label: "Time • date" }, { value: "stacked", label: "Time over date" }, { value: "time", label: "Time only" }]
+        }
+        ChoiceRow {
+            visible: barClock.b.clockLayout === "stacked"
+            title: "Line alignment"
+            subtitle: "How the time and the date line up"
+            icon: "format_align_center"
+            target: barClock.b
+            key: "clockAlign"
+            options: [{ value: "left", label: "Left", icon: "format_align_left" }, { value: "center", label: "Center", icon: "format_align_center" }, { value: "right", label: "Right", icon: "format_align_right" }]
+        }
+        SettingRow {
+            title: "Position"
+            subtitle: barClock.side === "" ? "The clock isn't in the bar: pick a side to add it" : "Where in the bar it sits (the shared layout; Bar settings has the rest)"
+            icon: "align_horizontal_center"
+            Row {
+                spacing: 8
+                FSegmented {
+                    implicitWidth: 270
+                    options: [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }]
+                    current: barClock.side
+                    onSelected: v => barClock.moveTo(v, barClock.place || (v === "left" ? "start" : "end"))
+                }
+                FSegmented {
+                    visible: barClock.side !== ""
+                    implicitWidth: 180
+                    options: [{ value: "start", label: "First" }, { value: "end", label: "Last" }]
+                    current: barClock.place
+                    onSelected: v => barClock.moveTo(barClock.side, v)
+                }
+            }
+        }
+    }
+
+    Group {
         id: cals
         title: "Calendars"
         readonly property var list: Settings.data.calendar.sources || []

@@ -98,6 +98,7 @@ Variants {
                 visualizer: visualizerC,
                 plugin: pluginC,
                 thirdparty: thirdPartyC,
+                separator: separatorC,
                 brightness: brightnessC,
                 battery: batteryC,
                 notifications: notifC,
@@ -121,6 +122,7 @@ Variants {
         Component { id: micC; MicIndicator { screenName: win.modelData.name } }
         Component { id: pluginC; PluginBarWidget { screenName: win.modelData.name } }
         Component { id: thirdPartyC; ThirdPartyBarWidget { screenName: win.modelData.name } }
+        Component { id: separatorC; Separator {} }
         Component { id: visualizerC; Visualizer { screenName: win.modelData.name } }
         Component { id: notepadC; FIconButton { id: noteBtn; icon: "sticky_note_2"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "notepad"; onClicked: Panels.toggle("notepad", win.modelData.name, noteBtn) } }
         Component { id: updatesC; UpdatesIndicator { window: win; screenName: win.modelData.name } }

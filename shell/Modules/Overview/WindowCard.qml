@@ -21,19 +21,25 @@ Item {
     readonly property bool hovered: mouse.containsMouse || closeBtn.hovered
     readonly property int labelH: 30
 
+    // Pictures only while the overview shows, and never in a nested niri (its output is
+    // "winit"): capturing asks for dmabuf feedback, which nested niri's old dmabuf
+    // version doesn't have, and the compositor then drops the whole shell.
+    readonly property bool nested: Quickshell.screens.some(s => s.name === "winit")
+    readonly property bool capture: previews && shown && !nested
     // the toplevel with this app id and title, for its picture
-    readonly property var toplevel: previews ? (ToplevelManager.toplevels.values.find(t => t.appId === winData.app_id && t.title === winData.title) ?? null) : null
+    readonly property var toplevel: capture ? (ToplevelManager.toplevels.values.find(t => t.appId === winData.app_id && t.title === winData.title) ?? null) : null
+    readonly property bool hasPicture: pic.item?.hasContent ?? false
     readonly property real shape: {
         const s = winData.layout?.window_size;
         if (s && s[1] > 0)
             return s[0] / s[1];
-        return pic.hasContent && pic.sourceSize.height > 0 ? pic.sourceSize.width / pic.sourceSize.height : 1.6;
+        return hasPicture && pic.item.sourceSize.height > 0 ? pic.item.sourceSize.width / pic.item.sourceSize.height : 1.6;
     }
     readonly property real boxW: Math.max(40, Math.min(width, (height - labelH) * shape))
     readonly property real boxH: boxW / shape
 
     // a fresh picture each time the overview opens
-    onShownChanged: if (shown && pic.captureSource) pic.captureFrame()
+    onShownChanged: if (shown && pic.item?.captureSource) pic.item.captureFrame()
 
     function home() {
         body.x = Qt.binding(() => (card.width - body.width) / 2);
@@ -61,16 +67,19 @@ Item {
             radius: Theme.rLg
             color: Theme.alpha(Theme.surface, 0.92)
 
-            ScreencopyView {
+            Loader {
                 id: pic
                 anchors.fill: parent
-                captureSource: card.toplevel
-                live: false
-                visible: hasContent
+                active: card.toplevel !== null
+                sourceComponent: ScreencopyView {
+                    captureSource: card.toplevel
+                    live: false
+                    visible: hasContent
+                }
             }
             AppIcon {
                 anchors.centerIn: parent
-                visible: !pic.hasContent
+                visible: !card.hasPicture
                 implicitSize: Math.min(96, Math.max(32, card.boxH * 0.4))
                 name: Apps.iconFor(card.winData.app_id)
             }
@@ -87,7 +96,7 @@ Item {
 
         // the app's icon over the bottom edge, like GNOME
         AppIcon {
-            visible: pic.hasContent
+            visible: card.hasPicture
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.bottom
             implicitSize: Math.min(48, Math.max(24, card.boxH * 0.18))
