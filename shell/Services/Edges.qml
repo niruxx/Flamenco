@@ -82,7 +82,8 @@ Singleton {
 
     readonly property var actions: [
         { value: "none", label: "Nothing" },
-        { value: "overview", label: "Overview", niriOnly: true },
+        { value: "overview", label: "Overview (niri's)", niriOnly: true },
+        { value: "activities", label: "Overview (Flamenco)" },
         { value: "launcher", label: "App launcher" },
         { value: "control", label: "Control center" },
         { value: "notifications", label: "Notifications" },
@@ -100,6 +101,9 @@ Singleton {
         switch (action) {
         case "overview":
             Niri.action("toggle-overview");
+            break;
+        case "activities":
+            Panels.toggle("overview", screen);
             break;
         case "launcher":
         case "control":

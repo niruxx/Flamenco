@@ -12,7 +12,7 @@ Page {
     // built-in widgets, plus the bar widgets of plugins that are turned on
     readonly property var allWidgets: Object.assign({}, builtinWidgets, Object.fromEntries(Object.entries(Plugins.barWidgets).map(([k, v]) => [k, v.label + " (plugin)"])))
     readonly property var builtinWidgets: ({
-            launcher: "Launcher", workspaces: "Workspaces", window: "Active window", taskbar: "Taskbar (running apps)", clock: "Clock", media: "Media",
+            launcher: "Start button (launcher)", workspaces: "Workspaces", window: "Active window", taskbar: "Taskbar (running apps)", clock: "Clock", media: "Media",
             tray: "System tray", sysstats: "CPU / RAM", keyboard: "Keyboard layout", network: "Network", bluetooth: "Bluetooth",
             audio: "Volume", mic: "Microphone (while in use)", privacy: "Privacy (camera, screen sharing)", recording: "Screen recording (while recording)", updates: "Package updates (when there are some)", notepad: "Notepad", visualizer: "Audio visualizer (cava, while playing)", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", assistant: "AI assistant", power: "Power"
         })
@@ -54,6 +54,43 @@ Page {
         ChoiceRow { title: "Style"; icon: "style"; target: page.b; key: "style"; options: [{ value: "floating", label: "Floating" }, { value: "attached", label: "Attached" }, { value: "islands", label: "Islands" }] }
         SliderRow { title: "Thickness"; icon: "height"; target: page.b; key: "height"; from: 30; to: 56; stepSize: 1; suffix: "px" }
         ChoiceRow { title: "Workspace indicator"; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }] }
+    }
+
+    Group {
+        title: "Start button"
+        SettingRow {
+            visible: !page.used.includes("launcher")
+            title: "Not in the bar yet"
+            subtitle: "Add \"Start button (launcher)\" to a section below"
+            icon: "info"
+        }
+        ChoiceRow {
+            title: "Icon"
+            icon: "apps"
+            target: page.b
+            key: "startIcon"
+            segWidth: 100
+            options: [{ value: "apps", label: "Apps", icon: "apps" }, { value: "distro", label: "Distro", icon: "deployed_code" }, { value: "flamenco", label: "Flamenco", icon: "local_fire_department" }, { value: "custom", label: "Custom", icon: "edit" }]
+        }
+        TextRow {
+            visible: page.b.startIcon === "custom"
+            title: "Custom icon"
+            subtitle: "A Material Symbols name (e.g. rocket_launch), or the path of a picture"
+            icon: "image"
+            target: page.b
+            key: "startCustom"
+            placeholder: "rocket_launch"
+        }
+        TextRow { title: "Label"; subtitle: "Text beside the icon, e.g. Start. Empty for just the icon."; icon: "label"; target: page.b; key: "startLabel"; placeholder: "Start" }
+        ChoiceRow {
+            title: "Opens"
+            subtitle: Settings.data.overview.enabled ? "Right-click it for the other one" : "The overview is off (Settings → Overview)"
+            icon: "ads_click"
+            target: page.b
+            key: "startAction"
+            segWidth: 120
+            options: [{ value: "auto", label: "Automatic" }, { value: "overview", label: "Overview" }, { value: "launcher", label: "Launcher" }]
+        }
     }
 
     Group {

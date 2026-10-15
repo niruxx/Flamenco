@@ -26,6 +26,8 @@
   flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all   fingerprints (fprintd)
   flamenco ai providers | models P | test P [MODEL] | ask TEXT… | key set|delete P   AI assistant (Settings → AI)
   flamenco assistant           open the AI assistant
+  flamenco overview            open Flamenco's overview (Settings → Overview)
+  flamenco super-watch         print "tap" when Super is pressed on its own (used by the overview)
   flamenco plugins list | new ID | install GIT_URL|FOLDER | remove ID   bar widgets and launcher extensions
   flamenco notepad              open the notepad
   flamenco updates [--json]     waiting package updates (repo, AUR, Flatpak)
@@ -68,7 +70,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.25.1"
+VERSION = "0.26.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1495,6 +1497,7 @@ REPLACED = "// flamenco: replaced by a Flamenco shortcut: "
 # id -> (label, flamenco CLI args)
 SHELL_FUNCTIONS = {
     "launcher": ("App launcher", ["launcher"]),
+    "overview": ("Overview (Flamenco)", ["overview"]),
     "control": ("Control center", ["control"]),
     "notifications": ("Notification center", ["notifications"]),
     "dashboard": ("Dashboard (clock)", ["calendar"]),
@@ -4103,6 +4106,148 @@ def cmd_plugins(args: list[str]) -> int:
     die("usage: flamenco plugins list [--json] | new ID | install GIT_URL|FOLDER | remove ID")
 
 
+# ─────────────────────────────── Super key on its own (overview) ─────────────
+# `flamenco super-watch` prints "tap" whenever Super is pressed and let go with
+# nothing else in between, like GNOME's Activities key. Compositors run key
+# bindings on press, so niri can't tell a lone Super from Super+T. This reads
+# the keyboards and mice directly instead (/dev/input, which needs the input
+# group). It never grabs them, keeps nothing and only prints "tap".
+INPUT_DIR = Path(os.environ.get("FLAMENCO_INPUT_DIR", "/dev/input"))
+SYS_INPUT = Path(os.environ.get("FLAMENCO_SYS_INPUT", "/sys/class/input"))
+EV_KEY, EV_REL = 1, 2
+KEY_META = {125, 126}                      # KEY_LEFTMETA, KEY_RIGHTMETA
+BTN_LEFT = 272
+REL_WHEELS = {6, 8, 11, 12}                # (H)WHEEL and their hi-res versions
+
+
+def input_devices() -> list[Path]:
+    """Event devices with a Super key (keyboards) or buttons (mice, touchpads)."""
+    bits = 8 * struct_size("l")
+    out = []
+    for dev in sorted(INPUT_DIR.glob("event*"), key=lambda d: int(re.sub(r"\D", "", d.name) or 0)):
+        try:
+            words = (SYS_INPUT / dev.name / "device/capabilities/key").read_text().split()
+        except OSError:
+            continue
+        caps = 0
+        for w in words:
+            caps = (caps << bits) | int(w, 16)
+        if any(caps >> k & 1 for k in (*KEY_META, BTN_LEFT)):
+            out.append(dev)
+    return out
+
+
+def struct_size(fmt: str) -> int:
+    import struct
+    return struct.calcsize(fmt)
+
+
+class SuperTap:
+    """Feed it input events; it says when one was the end of a lone Super tap."""
+
+    def __init__(self, max_hold: float = 0.6):
+        self.max_hold = max_hold
+        self.held: set[int] = set()
+        self.since: float | None = None    # when the tap started; None = not a tap
+
+    def feed(self, t: float, kind: int, code: int, value: int) -> bool:
+        if kind == EV_REL:
+            if code in REL_WHEELS:         # Super+scroll
+                self.since = None
+            return False
+        if kind != EV_KEY or value == 2:   # autorepeat
+            return False
+        meta = code in KEY_META
+        if value == 1:
+            others = self.held - KEY_META
+            if meta and not others:
+                if self.since is None:
+                    self.since = t
+            else:                          # Super+key, Super+click, or Ctrl+Super…
+                self.since = None
+            self.held.add(code)
+            return False
+        self.held.discard(code)
+        if not meta:
+            return False
+        tap = self.since is not None and not (self.held & KEY_META) and t - self.since <= self.max_hold
+        if tap or not (self.held & KEY_META):
+            self.since = None
+        return tap
+
+
+def cmd_super_watch(args: list[str]) -> int:
+    import select
+    import struct
+    ev = struct.Struct("llHHi")
+    max_hold = 0.6
+    if "--max-hold" in args:
+        i = args.index("--max-hold")
+        try:
+            max_hold = max(0.1, min(5.0, float(args[i + 1])))
+        except (IndexError, ValueError):
+            die("usage: flamenco super-watch [--max-hold SECONDS]")
+    tap = SuperTap(max_hold)
+    fds: dict[Path, int] = {}
+    said = ""
+
+    def say(line: str):
+        nonlocal said
+        if line != said:
+            said = line
+            print(line, flush=True)
+
+    def rescan():
+        denied = 0
+        for dev in input_devices():
+            if dev in fds:
+                continue
+            try:
+                fds[dev] = os.open(dev, os.O_RDONLY | os.O_NONBLOCK)
+            except PermissionError:
+                denied += 1
+            except OSError:
+                pass
+        if fds:
+            say(f"ready {len(fds)}")
+        elif denied:
+            say("error permission")
+        else:
+            say("error no-keyboard")
+
+    rescan()
+    if not fds and said == "error permission":
+        print("flamenco: no access to /dev/input: add yourself to the input group, then log out and back in", file=sys.stderr)
+        return 3
+    try:
+        while True:
+            ready, _, _ = select.select(list(fds.values()), [], [], 3.0)
+            if not ready:
+                rescan()                    # keyboards plugged in since
+                continue
+            for dev, fd in list(fds.items()):
+                if fd not in ready:
+                    continue
+                try:
+                    data = os.read(fd, ev.size * 64)
+                except BlockingIOError:
+                    continue
+                except OSError:
+                    data = b""
+                if not data:                # unplugged: forget what it was holding
+                    os.close(fd)
+                    del fds[dev]
+                    tap.held.clear()
+                    tap.since = None
+                    continue
+                for off in range(0, len(data) - ev.size + 1, ev.size):
+                    sec, usec, kind, code, value = ev.unpack_from(data, off)
+                    if tap.feed(sec + usec / 1e6, kind, code, value):
+                        print("tap", flush=True)
+    except (KeyboardInterrupt, BrokenPipeError):
+        return 0
+
+
 # ─────────────────────────────── fingerprints (fprintd) ──────────────────────
 # Enrolling goes through fprintd's own tools (fprintd-list / -enroll / -delete),
 # which talk to fprintd over D-Bus as you; polkit lets the active session manage
@@ -6043,6 +6188,20 @@ def doctor_checks() -> list[dict]:
             in_i2c = False
         add("Extras", "i2c access", "ddcutil needs the i2c group and the i2c-dev module", in_i2c and exists("/dev/i2c-0", "/dev/i2c-1", "/dev/i2c-2"), "",
             hint="then log out and back in", fix='sudo usermod -aG i2c "$USER" && echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf >/dev/null && sudo modprobe i2c-dev')
+    # only asked for once the Super key is set to open the overview: the input group
+    # lets any program you run read the keyboard, so it isn't suggested otherwise
+    try:
+        ov = json.loads((CONFIG_DIR / "settings.json").read_text()).get("overview", {}) or {}
+    except Exception:
+        ov = {}
+    if ov.get("enabled") and ov.get("superKey", True):
+        import grp
+        try:
+            in_input = "input" in [grp.getgrgid(g).gr_name for g in os.getgroups()]
+        except KeyError:
+            in_input = False
+        add("Extras", "Super key access", "tapping Super opens the overview; that needs the input group", in_input, "",
+            hint="then log out and back in", fix='sudo usermod -aG input "$USER"')
 
     # ── AI ──
     anth = False
@@ -7334,7 +7493,7 @@ def cmd_screenshot(args: list[str]) -> int:
 
 PANELS = {"launcher": "launcher", "control": "control", "notifications": "notifications",
           "calendar": "calendar", "wallpapers": "wallpapers", "power": "power", "widgets": "widgets",
-          "assistant": "assistant", "notepad": "notepad"}
+          "assistant": "assistant", "notepad": "notepad", "overview": "overview"}
 
 
 def main(argv: list[str]) -> int:
@@ -7441,6 +7600,8 @@ def main(argv: list[str]) -> int:
         return cmd_settings_index(rest)
     if cmd == "privacy":
         return cmd_privacy(rest)
+    if cmd == "super-watch":
+        return cmd_super_watch(rest)
     if cmd == "record":
         return cmd_record(rest)
     if cmd == "ddc":

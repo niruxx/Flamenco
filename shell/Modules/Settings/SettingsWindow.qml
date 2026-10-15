@@ -48,6 +48,7 @@ LazyLoader {
             { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
             { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
             { id: "launcher", icon: "apps", label: "Launcher", comp: launcherC },
+            { id: "overview", icon: "overview_key", label: "Overview", comp: overviewC },
             { id: "defaults", icon: "open_in_new", label: "Default apps", comp: defaultsC },
             { id: "autostart", icon: "rocket_launch", label: "Auto-start", comp: autostartC },
             { id: "flatpak", icon: "inventory_2", label: "Flatpak permissions", comp: flatpakC },
@@ -129,6 +130,7 @@ LazyLoader {
         Component { id: wallpaperC; WallpaperPage {} }
         Component { id: notifC; NotificationsPage {} }
         Component { id: launcherC; LauncherPage {} }
+        Component { id: overviewC; OverviewPage {} }
         Component { id: lockC; LockPage {} }
         Component { id: clockC; ClockPage {} }
         Component { id: aboutC; AboutPage {} }

@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.25.1-E8466F?style=for-the-badge" alt="Version 0.25.1">
+  <img src="https://img.shields.io/badge/version-0.26.0-E8466F?style=for-the-badge" alt="Version 0.26.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -163,6 +163,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, a microphone indicator (shows while an app records; click to mute), brightness, battery, notifications, weather, power |
 | **🔔 App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
 | **🎛️ Control center** | Volume, mic, screen, external-monitor and keyboard brightness sliders. Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, VPN, dark mode, screen recording, desktop widgets and wallpaper: pick, reorder and lay them out in **Settings → Quick settings**, which also sets where the panel opens and its width. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art |
+| **🔭 Overview** | Optional GNOME-style overview (**Settings → Overview**): search apps, this screen's workspaces along the top (drop a window on one to move it), its windows in a grid, and a dash. Opens from the start button, a hot corner, a shortcut, or by tapping Super on its own |
 | **🔍 Launcher** | Fuzzy app search ranked by how often you use each app. `=` calculator, `>` run command, `;` clipboard history (cliphist) |
 | **💬 Notifications** | Built-in daemon: popups with timeout bar, swipe to dismiss, actions, DND. History persists across restarts |
 | **📢 OSD** | Volume, screen brightness, keyboard backlight and mic popups |
@@ -392,6 +393,7 @@ Change the Flamenco shortcuts in **Settings → Keyboard** (see [Keyboard & shor
 | `Mod+L` or `Super+Alt+L` | Lock screen |
 | `Mod+T` / `Mod+Return` | Terminal |
 | `Mod+O` | niri overview |
+| `Super` (tap) | Flamenco overview, once it's on in **Settings → Overview** |
 | `Mod+Q` | Close window |
 | `Mod+Shift+E` | Quit niri |
 
@@ -403,7 +405,7 @@ Every panel closes with `Esc` or a click outside it.
 
 | Widget | Click | Other |
 |---|---|---|
-| Launcher (apps icon) | open launcher | |
+| Start button (apps icon, distro logo, flame or your own) | open the launcher, or the overview when it's on | right-click opens the other one |
 | Workspaces | go to that workspace | scroll to switch workspaces |
 | Active window | window menu: move to another workspace or monitor, float/tile, fullscreen, maximize or center the column, new window, pin to dock, switch to another open window, close, force quit (click twice) | right-click opens the same menu, middle-click closes the window |
 | Taskbar | focus the app; click again to cycle through its windows | right-click opens the window menu (move to a workspace or monitor, float, fullscreen, pin, close all, force quit…), middle-click opens a new window |
@@ -437,6 +439,14 @@ Every panel closes with `Esc` or a click outside it.
 The center section stays centered when there's room and otherwise slides so it never overlaps its neighbours. The bar recomputes whenever the screen, scale or widget layout changes. Popouts never grow taller than the screen; their content scrolls instead.
 
 Rearrange, add or remove widgets in **Settings → Bar**. The same page sets the bar's position, style and thickness, the workspace indicator style, and the tray options. Widgets with nothing to show, like battery on a desktop, hide themselves and leave no gap.
+
+### 🔭 Overview
+
+Turn it on in **Settings → Overview**. Then the start button opens it, and so does tapping Super on its own (Super with another key is still a shortcut). Type to search apps; with nothing typed you see this screen's workspaces along the top and the windows of the one showing. Click a window to go to it, middle-click or × to close it, or drag it onto a workspace to move it there. The dash at the bottom has your dock's pinned apps and the running ones (shown when the dock is off, or always). Escape closes it.
+
+Tapping Super needs keyboard access: niri and Hyprland run shortcuts as soon as a key goes down, so they can't tell Super alone from Super+T. Flamenco reads the keyboard itself (`flamenco super-watch`), which needs you in the `input` group. The Settings page has a button for that. Being in that group lets any program you run read the keyboard, so it's only suggested once you turn the feature on.
+
+**Settings → Bar → Start button** sets the start button's icon (apps, your distro's logo, the Flamenco flame, or any Material Symbols icon or picture), an optional label such as "Start", and what it opens.
 
 ### 🔍 Launcher
 

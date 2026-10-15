@@ -12,6 +12,7 @@ import qs.Modules.Assistant
 import qs.Modules.Background
 import qs.Modules.Keys
 import qs.Modules.Notepad
+import qs.Modules.Overview
 import qs.Modules.Desktop
 import qs.Modules.Bar
 import qs.Modules.Dock
@@ -42,6 +43,7 @@ ShellRoot {
         SessionFx.startup();
         Displays.screenCount;
         AutoMode.on;
+        SuperKey.status;
     }
 
     // first run: open setup once settings are loaded (after the login animation)
@@ -70,6 +72,7 @@ ShellRoot {
     AssistantPanel {}
     KeysPanel {}
     NotepadPanel {}
+    Overview {}
     PowerMenu {}
     SessionOverlay {}
     SettingsWindow {}
@@ -102,6 +105,16 @@ ShellRoot {
     PanelIpc { target: "assistant"; panel: "assistant" }
     PanelIpc { target: "keys"; panel: "keys" }
     PanelIpc { target: "notepad"; panel: "notepad" }
+    PanelIpc { target: "overview"; panel: "overview" }
+
+    // Super tapped on its own (Settings → Overview)
+    Connections {
+        target: SuperKey
+        function onTapped() {
+            if (!lock.locked)
+                Panels.toggle("overview", "");
+        }
+    }
 
     IpcHandler {
         target: "widgets"

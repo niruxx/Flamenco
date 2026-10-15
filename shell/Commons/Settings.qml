@@ -91,6 +91,11 @@ Singleton {
                 property string micIndicator: "inuse" // microphone widget: inuse (while recording or muted) | always
                 property var perScreen: ({})          // screens with their own widgets: { "DP-1": { left, center, right } }
                 property bool taskbarTitles: false    // window titles next to the taskbar's icons
+                // the start button (widget "launcher")
+                property string startIcon: "apps"     // apps | distro | flamenco | custom
+                property string startCustom: ""       // custom: a Material Symbols name, or a picture file
+                property string startLabel: ""        // text beside the icon, e.g. "Start"
+                property string startAction: "auto"  // auto (the overview when it's on, else the launcher) | launcher | overview
                 property var left: ["launcher", "workspaces", "window"]
                 property var center: ["clock", "media"]
                 property var right: ["recording", "privacy", "updates", "tray", "sysstats", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "power"]
@@ -116,6 +121,17 @@ Singleton {
                 property string indicator: "line"    // line | dot | none
                 property bool separator: true        // line between pinned and other running apps
                 property bool labels: true           // app name on hover
+            }
+
+            // Flamenco's overview, like GNOME's Activities: search, workspaces, windows, a dash
+            property JsonObject overview: JsonObject {
+                property bool enabled: false
+                property bool superKey: true          // tap Super on its own to open it (`flamenco super-watch`)
+                property real superHold: 0.6          // s: Super held longer than this isn't a tap
+                property bool workspaces: true        // workspace thumbnails along the top
+                property string dash: "auto"          // auto (when the dock is off) | always | never
+                property bool previews: true          // pictures of the windows, where the compositor allows it
+                property bool blur: true              // the wallpaper behind it, blurred
             }
 
             // Desktop widgets: on the desktop above the wallpaper, under windows.
