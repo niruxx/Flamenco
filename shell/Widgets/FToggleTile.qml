@@ -18,7 +18,8 @@ Rectangle {
     signal moreClicked
 
     readonly property color fg: active ? Theme.onAccent : Theme.text
-    implicitHeight: 76
+    implicitHeight: 92
+    implicitWidth: 120
     radius: Theme.rLg
     color: active ? tint : Theme.alpha(Theme.text, area.containsMouse ? 0.09 : 0.05)
     border.width: active ? 0 : 1
@@ -30,8 +31,11 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 2
+        anchors.leftMargin: 16
+        anchors.rightMargin: 16
+        anchors.topMargin: 14
+        anchors.bottomMargin: 13
+        spacing: 3
 
         FIcon {
             icon: root.icon

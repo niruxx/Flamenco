@@ -187,21 +187,21 @@ ColumnLayout {
 
         // ── toggles and sliders ──
         ColumnLayout {
-            Layout.preferredWidth: (root.width - Theme.sp3 * 2) * 0.33
+            Layout.preferredWidth: (root.width - Theme.sp3 * 2) * 0.37
             Layout.fillHeight: true
             spacing: Theme.sp3
 
             Card {
                 Layout.fillWidth: true
-                implicitHeight: tiles.implicitHeight + 24
+                implicitHeight: tiles.implicitHeight + 32
 
                 GridLayout {
                     id: tiles
                     anchors.fill: parent
-                    anchors.margins: 12
+                    anchors.margins: 16
                     columns: 3
-                    rowSpacing: 8
-                    columnSpacing: 8
+                    rowSpacing: 12
+                    columnSpacing: 12
 
                     FToggleTile {
                         Layout.fillWidth: true
@@ -338,13 +338,13 @@ ColumnLayout {
             Card {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                implicitHeight: sliders.implicitHeight + 24
+                implicitHeight: sliders.implicitHeight + 32
 
                 ColumnLayout {
                     id: sliders
                     anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 8
+                    anchors.margins: 16
+                    spacing: 10
 
                     FPillSlider {
                         Layout.fillWidth: true
@@ -381,7 +381,7 @@ ColumnLayout {
 
         // ── now playing, and what's next ──
         ColumnLayout {
-            Layout.preferredWidth: (root.width - Theme.sp3 * 2) * 0.36
+            Layout.preferredWidth: (root.width - Theme.sp3 * 2) * 0.34
             Layout.fillHeight: true
             spacing: Theme.sp3
 

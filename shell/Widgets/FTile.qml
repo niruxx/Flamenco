@@ -19,7 +19,7 @@ Rectangle {
     signal clicked
     signal detailsClicked
 
-    implicitHeight: cards ? 80 : 64
+    implicitHeight: cards ? 90 : 64
     implicitWidth: 180
     radius: cards ? Theme.rLg : active ? Theme.rLg : Theme.rMd
     color: active ? (cards ? tint : Theme.accent) : cards ? Theme.alpha(Theme.text, main.containsMouse ? 0.09 : 0.05) : Theme.surfaceHigh
@@ -84,8 +84,11 @@ Rectangle {
     ColumnLayout {
         visible: root.cards
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 1
+        anchors.leftMargin: 16
+        anchors.rightMargin: 16
+        anchors.topMargin: 14
+        anchors.bottomMargin: 13
+        spacing: 3
 
         FIcon {
             icon: root.icon

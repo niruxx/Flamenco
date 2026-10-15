@@ -119,8 +119,11 @@ Variants {
                 Layout.fillHeight: true
                 radius: Theme.rXl
                 color: Theme.alpha(Theme.bg, 0.45)
+                // tall enough for every entry and the hint under them
+                Layout.minimumHeight: railItems.implicitHeight + 50
 
                 Column {
+                    id: railItems
                     anchors.top: parent.top
                     anchors.topMargin: 10
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -256,9 +259,14 @@ Variants {
                 Item {
                     id: pages
                     Layout.fillWidth: true
-                    implicitHeight: current ? current.implicitHeight : 0
+                    // hub: one steady height (Home's, or the rail's if taller), so moving between
+                    // pages doesn't shrink the panel and cut the rail off; tabs: each page's own
+                    implicitHeight: panel.hub ? Math.max(homeH, railItems.implicitHeight + 50, current ? current.implicitHeight : 0)
+                        : current ? current.implicitHeight : 0
                     clip: true
 
+                    // Home's height, kept from when it last showed (a hidden page can report 0)
+                    property real homeH: 0
                     readonly property var byTab: ({ home: home, calendar: calendar, overview: overview, media: media, wallpapers: walls, weather: weather })
                     readonly property Item current: byTab[panel.tab] ?? null
 
@@ -269,6 +277,8 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.indexOf("home")
+                        onImplicitHeightChanged: if (active && implicitHeight > 0) pages.homeH = implicitHeight
+                        onActiveChanged: if (active && implicitHeight > 0) pages.homeH = implicitHeight
                         HubHome {
                             width: pages.width
                             screenName: panel.modelData.name
