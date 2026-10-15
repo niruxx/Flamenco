@@ -29,6 +29,8 @@
   flamenco overview            open Flamenco's overview (Settings → Overview)
   flamenco super-watch         print "tap" when Super is pressed on its own (used by the overview)
   flamenco plugins list | new ID | install GIT_URL|FOLDER | remove ID   bar widgets and launcher extensions
+  flamenco compat list | catalog noctalia|dms | install noctalia:ID|dms:ID|GIT_URL|FOLDER | update KEY|all | remove KEY
+                               Noctalia and DMS plugins (Settings → Plugins (3rd party))
   flamenco notepad              open the notepad
   flamenco updates [--json]     waiting package updates (repo, AUR, Flatpak)
   flamenco pick-color           pick a color on screen (copied as #rrggbb)
@@ -70,7 +72,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.26.0"
+VERSION = "0.27.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -4248,6 +4250,421 @@ def cmd_super_watch(args: list[str]) -> int:
         return 0
 
 
+# ─────────────────────────────── 3rd-party plugins (Noctalia, DMS) ───────────
+# Plugins written for Noctalia Shell v4 (QML, manifest.json) and DankMaterialShell
+# (plugin.json). They import their own shell's modules (qs.Commons, qs.Widgets…);
+# Flamenco keeps a copy of each with those imports pointed at its compatibility
+# layer (shell/Compat/<Kind>, see tools/compat-vendor.py) and runs that copy.
+#   ~/.config/flamenco/compat/<kind>/<id>/   the plugin as installed
+#   ~/.cache/flamenco/compat/<kind>/<id>/    the copy the shell loads
+COMPAT_SRC = CONFIG_DIR / "compat"
+COMPAT_RUN = XDG_CACHE / "flamenco" / "compat"
+COMPAT_REPOS = XDG_CACHE / "flamenco" / "compat-repos"
+COMPAT_KINDS = {"noctalia": "Noctalia", "dms": "Dms"}
+COMPAT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
+NOCTALIA_REPO = "https://github.com/noctalia-dev/noctalia-plugins"
+DMS_REGISTRY = "https://github.com/AvengeMedia/dms-plugin-registry"
+# entry points the compatibility layer runs, and the ones it doesn't (yet)
+NOCTALIA_ENTRIES = {"main": "background service", "barWidget": "bar widget", "panel": "panel", "settings": "settings"}
+NOCTALIA_UNSUPPORTED = {"desktopWidget": "desktop widget", "desktopWidgetSettings": "desktop widget settings",
+                        "controlCenterWidget": "control center button", "launcherProvider": "launcher provider"}
+DMS_SUPPORTED_TYPES = {"widget": "bar widget", "daemon": "background service"}
+DMS_UNSUPPORTED_TYPES = {"launcher": "launcher extension", "desktop": "desktop widget", "dash": "dashboard tab", "dashCard": "dashboard card"}
+# Qt and Quickshell types a plugin may use without the compatibility layer providing them
+QT_TYPES = set("""
+Item Rectangle Text TextInput TextEdit Image AnimatedImage BorderImage Row Column Flow Grid Repeater Loader MouseArea Timer
+Behavior NumberAnimation ColorAnimation SequentialAnimation ParallelAnimation PauseAnimation PropertyAction RotationAnimation
+SmoothedAnimation SpringAnimation ScriptAction PropertyAnimation AnchorAnimation FrameAnimation Canvas Transition Connections
+Component QtObject Binding Gradient GradientStop Translate Scale Rotation ListView GridView PathView Flickable ListModel
+ListElement HoverHandler DragHandler WheelHandler TapHandler PointHandler PinchHandler FontLoader FontMetrics TextMetrics
+MultiEffect ShaderEffect ShaderEffectSource RowLayout ColumnLayout GridLayout StackLayout State PropertyChanges AnchorChanges
+StateGroup Instantiator DelegateModel ObjectModel FocusScope DropArea Shortcut Window IntValidator DoubleValidator
+RegularExpressionValidator Path PathLine PathArc PathQuad PathCubic PathMove PathSvg PathAngleArc Shape ShapePath
+LinearGradient RadialGradient ConicalGradient FolderListModel SystemPalette Popup ScrollView ScrollBar Slider RangeSlider
+ComboBox TextField TextArea Button RoundButton ToolButton Switch CheckBox RadioButton SpinBox Menu MenuItem MenuSeparator
+ToolTip Label Control AbstractButton ItemDelegate Pane Frame BusyIndicator ProgressBar StackView SwipeView TabBar TabButton
+Dialog Drawer SplitView ButtonGroup Action Page ToolBar Scope Variants PanelWindow FloatingWindow PopupWindow LazyLoader
+Singleton SystemClock Process StdioCollector SplitParser FileView JsonAdapter JsonObject IpcHandler Region
+PwObjectTracker ClippingRectangle ClippingWrapperRectangle WrapperRectangle WrapperItem WrapperMouseArea IconImage
+QsMenuOpener QsMenuAnchor ScriptModel PersistentProperties Socket ScreencopyView HyprlandFocusGrab ElapsedTimer
+Retainable PopupAnchor ColorQuantizer SoundEffect MediaPlayer AudioOutput VideoOutput Video Settings Keys
+Camera CaptureSession MediaDevices ImageCapture FolderDialog FileDialog ColorDialog MessageDialog FontDialog
+""".split())
+
+
+def compat_dir(kind: str) -> Path:
+    return shell_dir() / "Compat" / COMPAT_KINDS[kind]
+
+
+def compat_manifest(d: Path) -> tuple[str, dict] | None:
+    """(kind, manifest) of a plugin folder, or None."""
+    for kind, name in (("noctalia", "manifest.json"), ("dms", "plugin.json")):
+        f = d / name
+        if f.is_file():
+            try:
+                m = json.loads(f.read_text())
+            except Exception:
+                continue
+            if kind == "noctalia" and not isinstance(m.get("entryPoints"), dict):
+                continue
+            if isinstance(m, dict) and m.get("id"):
+                return kind, m
+    return None
+
+
+def compat_entries(kind: str, m: dict) -> dict:
+    """entry point → file (relative), for the parts Flamenco runs."""
+    if kind == "noctalia":
+        return {k: v for k, v in (m.get("entryPoints") or {}).items() if k in NOCTALIA_ENTRIES and isinstance(v, str)}
+    out = {}
+    comps = m.get("components") if isinstance(m.get("components"), dict) else None
+    if comps:                                   # composite plugin (DMS 1.5+)
+        for part, f in comps.items():
+            if part in DMS_SUPPORTED_TYPES and isinstance(f, str):
+                out[part] = f
+    elif (m.get("type") or "widget") in DMS_SUPPORTED_TYPES and isinstance(m.get("component"), str):
+        out[m.get("type") or "widget"] = m["component"]     # no type: a widget
+    if isinstance(m.get("settings"), str):
+        out["settings"] = m["settings"]
+    return {k: re.sub(r"^\./", "", v) for k, v in out.items()}
+
+
+def compat_rewrite(text: str, kind: str) -> str:
+    return re.sub(r"(?m)^(\s*import\s+)qs\.(?!Compat\.)", rf"\1qs.Compat.{COMPAT_KINDS[kind]}.", text)
+
+
+def compat_convert(kind: str, pid: str) -> Path:
+    """Copy the installed plugin to the folder the shell loads, imports rewritten."""
+    src, out = COMPAT_SRC / kind / pid, COMPAT_RUN / kind / pid
+    if out.exists():
+        shutil.rmtree(out)
+    shutil.copytree(src, out, ignore=shutil.ignore_patterns(".git"), symlinks=False)
+    for f in list(out.rglob("*.qml")) + list(out.rglob("*.js")):
+        try:
+            t = f.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        n = compat_rewrite(t, kind)
+        if n != t:
+            f.write_text(n)
+    return out
+
+
+def compat_provided(kind: str) -> tuple[set[str], set[str]]:
+    """(module paths like "Services/UI", type names) the compatibility layer has."""
+    base = compat_dir(kind)
+    mods, types = set(), set()
+    for f in base.rglob("*.qml"):
+        mods.add(f.parent.relative_to(base).as_posix())
+        types.add(f.stem)
+    return mods, types
+
+
+def compat_scan(kind: str, d: Path, m: dict) -> dict:
+    """What of this plugin Flamenco can run, and what it uses that Flamenco doesn't have."""
+    issues, notes = [], []
+    entries = compat_entries(kind, m)
+    if kind == "noctalia":
+        for k, label in NOCTALIA_UNSUPPORTED.items():
+            if (m.get("entryPoints") or {}).get(k):
+                notes.append(f"its {label} isn't supported yet")
+    else:
+        parts = list((m.get("components") or {}).keys()) if isinstance(m.get("components"), dict) else [m.get("type") or "widget"]
+        for p in parts:
+            if p in DMS_UNSUPPORTED_TYPES:
+                notes.append(f"its {DMS_UNSUPPORTED_TYPES[p]} isn't supported yet")
+            elif p not in DMS_SUPPORTED_TYPES and p:
+                notes.append(f"unknown plugin type {p!r}")
+    for k, f in entries.items():
+        if not (d / f).is_file():
+            issues.append(f"{f} is missing")
+    mods, types = compat_provided(kind) if compat_dir(kind).is_dir() else (set(), set())
+    own = {f.stem for f in d.rglob("*.qml")}
+    missing_mods, missing_types, missing_singletons = set(), set(), set()
+    for f in d.rglob("*.qml"):
+        try:
+            raw = f.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        text = re.sub(r"/\*.*?\*/|//[^\n]*", "", raw, flags=re.S)
+        text = re.sub(r'"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'|`(?:\\.|[^`\\])*`', '""', text, flags=re.S)
+        for mod in re.findall(r"(?m)^\s*import\s+qs\.([\w.]+)", raw):
+            if mod.startswith("Compat."):
+                continue
+            if mod.replace(".", "/") not in mods:
+                missing_mods.add("qs." + mod)
+        quals = set(re.findall(r"(?m)^\s*import\s+\S+(?:\s+[\d.]+)?\s+as\s+(\w+)", raw))
+        for t in re.findall(r"(?:^|[\s:;{(,\[])([A-Z]\w*)\s*\{", re.sub(r"(?m)^\s*(import|pragma)\b.*$", "", text)):
+            if t not in QT_TYPES and t not in types and t not in own and t not in quals \
+                    and not re.search(rf"\b(component\s+{t}\s*:|enum\s+{t}\b)", text):
+                missing_types.add(t)
+        for s in re.findall(r"(?<![\w.])([A-Z]\w*Service)\.\w+", text):
+            if s not in types and s not in own:
+                missing_singletons.add(s)
+    for x in sorted(missing_mods):
+        issues.append(f"imports {x}, which Flamenco doesn't provide")
+    for x in sorted(missing_types):
+        issues.append(f"uses {x}, which Flamenco doesn't provide")
+    for x in sorted(missing_singletons):
+        issues.append(f"uses {x}, which Flamenco doesn't provide")
+    runnable = [k for k in entries if k != "settings"]
+    if not runnable and not entries.get("settings"):
+        status = "unsupported"
+        notes.append("nothing in it that Flamenco can run")
+    elif missing_mods or missing_types:
+        status = "partial" if runnable else "unsupported"
+    elif issues or notes:
+        status = "partial"
+    else:
+        status = "ok"
+    return {"status": status, "issues": issues, "notes": notes, "entries": entries}
+
+
+def compat_list() -> list[dict]:
+    out = []
+    for kind in COMPAT_KINDS:
+        for d in sorted((COMPAT_SRC / kind).glob("*")) if (COMPAT_SRC / kind).is_dir() else []:
+            found = compat_manifest(d)
+            if not d.is_dir() or not found or found[0] != kind:
+                continue
+            m = found[1]
+            run = COMPAT_RUN / kind / d.name
+            # (re)make the copy the shell loads when the plugin changed since
+            newest = max((f.stat().st_mtime for f in d.rglob("*") if f.is_file() and ".git" not in f.parts), default=0)
+            if not run.is_dir() or newest > run.stat().st_mtime:
+                run = compat_convert(kind, d.name)
+            scan = compat_scan(kind, d, m)
+            try:
+                origin = json.loads((d / ".flamenco-origin.json").read_text())
+            except Exception:
+                origin = {}
+            key = f"{kind}/{d.name}"
+            out.append({
+                "key": key, "kind": kind, "id": d.name, "name": str(m.get("name") or d.name),
+                "version": str(m.get("version", "")), "author": str(m.get("author", "")),
+                "description": str(m.get("description", "")), "icon": str(m.get("icon", "")),
+                "dir": str(run), "source": str(d), "origin": origin.get("spec", ""),
+                "manifest": m, "status": scan["status"], "issues": scan["issues"], "notes": scan["notes"],
+                "entries": {k: str(run / v) for k, v in scan["entries"].items()},
+                "defaults": (m.get("metadata") or {}).get("defaultSettings") or {},
+                "dmsType": (m.get("type") or "widget") if kind == "dms" else "",
+                "permissions": m.get("permissions") or [],
+            })
+    return out
+
+
+def compat_repo(url: str, branch: str = "", refresh: bool = False) -> Path:
+    """A shallow clone of a git repository, kept in the cache and refreshed every 6 hours."""
+    import hashlib
+    import time
+    name = re.sub(r"[^A-Za-z0-9._-]", "_", re.sub(r"^https?://", "", url).rstrip("/"))[:80]
+    d = COMPAT_REPOS / (name + ("@" + branch if branch else "") + "-" + hashlib.sha1(url.encode()).hexdigest()[:6])
+    if not shutil.which("git"):
+        die("git isn't installed (it's needed to fetch plugins): sudo pacman -S git")
+    if d.is_dir() and (d / ".git").is_dir():
+        stamp = d / ".git" / "FETCH_HEAD"
+        age = time.time() - (stamp.stat().st_mtime if stamp.exists() else (d / ".git").stat().st_mtime)
+        if refresh or age > 6 * 3600:
+            r = subprocess.run(["git", "-C", str(d), "fetch", "--depth", "1", "origin", branch or "HEAD"], capture_output=True, text=True)
+            if r.returncode == 0:
+                subprocess.run(["git", "-C", str(d), "reset", "--hard", "FETCH_HEAD"], capture_output=True)
+            else:
+                print(f"compat: couldn't update {url}, using the copy from before", file=sys.stderr)
+        return d
+    COMPAT_REPOS.mkdir(parents=True, exist_ok=True)
+    cmd = ["git", "clone", "--depth", "1", *(["--branch", branch] if branch else []), url, str(d)]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        shutil.rmtree(d, ignore_errors=True)
+        die(f"couldn't download {url}: {(r.stderr.strip().splitlines() or ['git clone failed'])[-1]}")
+    return d
+
+
+def compat_catalog(kind: str, refresh: bool = False) -> list[dict]:
+    installed = {p["key"] for p in compat_list()}
+    out = []
+    if kind == "noctalia":
+        repo = compat_repo(NOCTALIA_REPO, refresh=refresh)
+        try:
+            reg = json.loads((repo / "registry.json").read_text()).get("plugins", [])
+        except Exception:
+            reg = [{"id": d.name} for d in repo.iterdir() if (d / "manifest.json").is_file()]
+        for p in reg:
+            pid = str(p.get("id", ""))
+            d = repo / pid
+            if not COMPAT_ID.match(pid) or not d.is_dir():
+                continue
+            found = compat_manifest(d)
+            scan = compat_scan("noctalia", d, found[1]) if found else {"status": "unsupported", "issues": ["no manifest"], "notes": []}
+            out.append({"spec": f"noctalia:{pid}", "kind": "noctalia", "id": pid, "name": p.get("name") or pid,
+                        "description": p.get("description", ""), "author": p.get("author", ""),
+                        "version": p.get("version", ""), "tags": p.get("tags", []), "official": bool(p.get("official")),
+                        "status": scan["status"], "issues": scan["issues"][:6], "notes": scan["notes"],
+                        "installed": f"noctalia/{pid}" in installed})
+    else:
+        repo = compat_repo(DMS_REGISTRY, refresh=refresh)
+        for f in sorted((repo / "plugins").glob("*.json")):
+            try:
+                p = json.loads(f.read_text())
+            except Exception:
+                continue
+            pid = str(p.get("id", ""))
+            if not COMPAT_ID.match(pid):
+                continue
+            caps = p.get("capabilities") or []
+            # before it's downloaded, only what the registry says can be judged
+            can = [c for c in caps if c in ("dankbar-widget", "daemon")]
+            out.append({"spec": f"dms:{pid}", "kind": "dms", "id": pid, "name": p.get("name") or pid,
+                        "description": p.get("description", ""), "author": p.get("author", ""),
+                        "repo": p.get("repo", ""), "tags": caps, "dependencies": p.get("dependencies") or [],
+                        "compositors": p.get("compositors") or [], "screenshot": p.get("screenshot", ""),
+                        "status": "unknown" if can else "unsupported",
+                        "issues": [] if can else ["only " + ", ".join(caps or ["unknown parts"]) + ": Flamenco runs bar widgets and background services"],
+                        "notes": [], "installed": f"dms/{pid}" in installed})
+    return out
+
+
+def compat_find_plugin(root: Path, want: str = "") -> Path:
+    """The plugin folder in a downloaded repository: the root, or the subfolder with the wanted id."""
+    if compat_manifest(root) and (not want or compat_manifest(root)[1].get("id") == want):
+        return root
+    found = []
+    for f in list(root.rglob("manifest.json")) + list(root.rglob("plugin.json")):
+        if ".git" in f.parts or "node_modules" in f.parts:
+            continue
+        mf = compat_manifest(f.parent)
+        if mf:
+            found.append((f.parent, mf[1].get("id")))
+    if want:
+        hit = [p for p, i in found if i == want] or [p for p, _ in found if p.name == want]
+        if hit:
+            return hit[0]
+        die(f"there's no plugin {want!r} in it" + (": it has " + ", ".join(sorted(str(i) for _, i in found)) if found else ""))
+    if len(found) == 1:
+        return found[0][0]
+    if not found:
+        die("that isn't a Noctalia or DMS plugin (no manifest.json or plugin.json)")
+    die("it has several plugins; add #ID to the address. They are: " + ", ".join(sorted(str(i) for _, i in found)))
+
+
+def compat_install(spec: str, refresh: bool = False) -> str:
+    want = ""
+    if spec.startswith("noctalia:"):
+        want = spec.split(":", 1)[1]
+        src = compat_find_plugin(compat_repo(NOCTALIA_REPO, refresh=refresh), want)
+    elif spec.startswith("dms:"):
+        want = spec.split(":", 1)[1]
+        entry = next((p for p in compat_catalog("dms", refresh) if p["id"] == want), None)
+        if not entry or not entry.get("repo"):
+            die(f"no DMS plugin {want!r} in the registry")
+        m = re.match(r"^(https://[^/]+/[^/]+/[^/#]+?)(?:\.git)?(?:/tree/([^/]+)(?:/(.*))?)?/?$", entry["repo"])
+        if not m:
+            die(f"can't read the address {entry['repo']}")
+        repo = compat_repo(m.group(1), m.group(2) or "", refresh)
+        sub = repo / m.group(3) if m.group(3) else repo
+        src = compat_find_plugin(sub if sub.is_dir() else repo, want)
+    elif re.match(r"^(https://|git@)", spec):
+        url, _, sub = spec.partition("#")
+        m = re.match(r"^(https://[^/]+/[^/]+/[^/#]+?)(?:\.git)?/tree/([^/]+)(?:/(.*))?/?$", url)
+        if m:                                   # a GitHub folder address
+            repo = compat_repo(m.group(1), m.group(2), refresh)
+            base = repo / m.group(3) if m.group(3) else repo
+        else:
+            base = compat_repo(url, "", refresh)
+        src = compat_find_plugin(base, sub)
+    else:
+        p = Path(os.path.expanduser(spec)).resolve()
+        if not p.is_dir():
+            die(f"{spec}: no such folder")
+        src = compat_find_plugin(p)
+    found = compat_manifest(src)
+    if not found:
+        die("that isn't a Noctalia or DMS plugin")
+    kind, m = found
+    pid = str(m["id"])
+    if not COMPAT_ID.match(pid):
+        die(f"the plugin's id {pid!r} has characters Flamenco doesn't allow")
+    dest = COMPAT_SRC / kind / pid
+    keep = None
+    if dest.is_dir() and (dest / "settings.json").is_file():
+        keep = (dest / "settings.json").read_bytes()
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src, dest, ignore=shutil.ignore_patterns(".git"), symlinks=False)
+    if keep is not None:
+        (dest / "settings.json").write_bytes(keep)
+    import time
+    (dest / ".flamenco-origin.json").write_text(json.dumps({"spec": spec, "installed": int(time.time())}) + "\n")
+    compat_convert(kind, pid)
+    return f"{kind}/{pid}"
+
+
+def compat_key(arg: str) -> tuple[str, str]:
+    kind, _, pid = arg.partition("/")
+    if kind not in COMPAT_KINDS or not COMPAT_ID.match(pid) or not (COMPAT_SRC / kind / pid).is_dir():
+        die(f"no 3rd-party plugin {arg!r} (see `flamenco compat list`)")
+    return kind, pid
+
+
+def cmd_compat(args: list[str]) -> int:
+    sub = args[0] if args else "list"
+    js = "--json" in args
+    refresh = "--refresh" in args
+    rest = [a for a in args[1:] if not a.startswith("--")]
+    if sub == "list":
+        pl = compat_list()
+        if js:
+            print(json.dumps({"plugins": pl, "dir": str(COMPAT_SRC)}))
+        else:
+            for p in pl:
+                print(f"{p['key']:<34} {p['status']:<12} {p['name']} {p['version']}")
+                for i in p["issues"] + p["notes"]:
+                    print(f"{'':<36}· {i}")
+            if not pl:
+                print("no 3rd-party plugins installed (flamenco compat catalog noctalia|dms)")
+        return 0
+    if sub == "catalog" and rest and rest[0] in COMPAT_KINDS:
+        cat = compat_catalog(rest[0], refresh)
+        if js:
+            print(json.dumps(cat))
+        else:
+            for p in cat:
+                print(f"{p['spec']:<40} {p['status']:<12} {p['name']}{'  (installed)' if p['installed'] else ''}")
+        return 0
+    if sub == "install" and rest:
+        key = compat_install(rest[0], refresh)
+        p = next((x for x in compat_list() if x["key"] == key), None)
+        print(json.dumps(p) if js else f"compat: installed {key} ({p['status'] if p else '?'}). Turn it on in Settings → Plugins (3rd party).")
+        return 0
+    if sub == "update" and rest:
+        keys = [p["key"] for p in compat_list()] if rest[0] == "all" else [rest[0]]
+        for k in keys:
+            kind, pid = compat_key(k)
+            try:
+                spec = json.loads((COMPAT_SRC / kind / pid / ".flamenco-origin.json").read_text())["spec"]
+            except Exception:
+                print(f"compat: {k}: don't know where it came from, skipped", file=sys.stderr)
+                continue
+            compat_install(spec, refresh=True)
+            print(f"compat: updated {k}")
+        return 0
+    if sub == "remove" and rest:
+        kind, pid = compat_key(rest[0])
+        shutil.rmtree(COMPAT_SRC / kind / pid)
+        shutil.rmtree(COMPAT_RUN / kind / pid, ignore_errors=True)
+        print(f"compat: removed {kind}/{pid}")
+        return 0
+    if sub == "scan" and rest:
+        kind, pid = compat_key(rest[0])
+        d = COMPAT_SRC / kind / pid
+        r = compat_scan(kind, d, compat_manifest(d)[1])
+        print(json.dumps(r) if js else "\n".join([r["status"]] + ["· " + x for x in r["issues"] + r["notes"]]))
+        return 0
+    die("usage: flamenco compat list | catalog noctalia|dms [--refresh] | install noctalia:ID|dms:ID|GIT_URL[#ID]|FOLDER"
+        " | update KEY|all | remove KEY | scan KEY   (KEY: noctalia/ID or dms/ID; --json for JSON)")
+
+
 # ─────────────────────────────── fingerprints (fprintd) ──────────────────────
 # Enrolling goes through fprintd's own tools (fprintd-list / -enroll / -delete),
 # which talk to fprintd over D-Bus as you; polkit lets the active session manage
@@ -7600,6 +8017,8 @@ def main(argv: list[str]) -> int:
         return cmd_settings_index(rest)
     if cmd == "privacy":
         return cmd_privacy(rest)
+    if cmd == "compat":
+        return cmd_compat(rest)
     if cmd == "super-watch":
         return cmd_super_watch(rest)
     if cmd == "record":

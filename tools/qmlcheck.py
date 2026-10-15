@@ -33,6 +33,16 @@ ShellRoot Scope Variants PanelWindow FloatingWindow PopupWindow LazyLoader Singl
 SplitParser FileView JsonAdapter JsonObject IpcHandler Region PwObjectTracker NotificationServer WlSessionLock
 WlSessionLockSurface PamContext IdleMonitor ClippingRectangle IconImage QsMenuOpener Shortcut ScriptModel PersistentProperties Socket
 ScreencopyView DropArea
+ComboBox Popup ItemDelegate ShaderEffectSource ShaderEffect Slider RangeSlider Shape ShapePath PathLine PathArc PathQuad
+PathCubic PathMove PathSvg PathAngleArc LinearGradient RadialGradient ConicalGradient IntValidator DoubleValidator
+RegularExpressionValidator Control TextField TextArea ScrollView ScrollBar ScrollIndicator Button RoundButton ToolButton
+Switch CheckBox RadioButton SpinBox Menu MenuItem MenuSeparator ToolTip Label AbstractButton Pane Frame BusyIndicator
+ProgressBar StackView SwipeView TabBar TabButton Dialog Drawer SplitView ButtonGroup Action Page ToolBar Overlay
+AnimatedImage BorderImage PathView StackLayout State PropertyChanges AnchorChanges StateGroup Instantiator DelegateModel
+ObjectModel FocusScope FontMetrics TextMetrics SmoothedAnimation SpringAnimation ScriptAction PropertyAnimation
+AnchorAnimation Scale Rotation PointHandler PinchHandler Window SystemPalette FolderListModel QsMenuAnchor
+ClippingWrapperRectangle WrapperRectangle WrapperItem WrapperMouseArea ElapsedTimer HyprlandFocusGrab ListElement
+SoundEffect MediaPlayer AudioOutput VideoOutput Video DesktopEntries PopupAnchor ColorQuantizer Retainable
 """.split())
 # objects that aren't QQuickItems; a Behavior directly inside them crashes Qt 6.12
 NON_ITEM = {"Singleton", "Scope", "ShellRoot", "PanelWindow", "FloatingWindow", "PopupWindow", "Variants", "LazyLoader",
@@ -66,7 +76,9 @@ def report(f, msg):
 
 for f in files:
     src = f.read_text()
-    code = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|/\*.*?\*/|//[^\n]*', '""', src, flags=re.S)
+    # regex literals first (a `//` inside one isn't a comment)
+    src_nore = re.sub(r'(?<=[(,=:!&|?])(\s*)/(?![/*])(?:\\.|\[(?:\\.|[^\]\n])*\]|[^/\\\n])+/[gimsuy]*', r'\1""', src)
+    code = re.sub(r'`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|/\*.*?\*/|//[^\n]*', '""', src_nore, flags=re.S)
     line = lambda pos: code[:pos].count("\n") + 1
 
     for o, c in ("{}", "()", "[]"):
@@ -81,7 +93,7 @@ for f in files:
     for m in re.finditer(r'(?<![\w.])([A-Z]\w*)\s*\{', code):
         t = m.group(1)
         pre = code[max(0, m.start() - 20):m.start()]
-        if re.search(r'\b(on|component)\s+[\w.]*\s*$', pre):
+        if re.search(r'\b(on|component|enum)\s+[\w.]*\s*$', pre):
             continue
         if t not in defined and t not in KNOWN and t not in inline:
             report(f, f"{line(m.start())}: unknown type {t}")

@@ -42,11 +42,15 @@ Rectangle {
                 required property string modelData
                 Layout.alignment: Qt.AlignCenter
                 // "plugin:<id>" entries are plugins' widgets (Plugins service)
-                sourceComponent: sec.registry[modelData] ?? (modelData.startsWith("plugin:") ? sec.registry["plugin"] ?? null : null)
+                // "tp:<kind>/<id>" are Noctalia and DMS plugins' widgets (ThirdParty service)
+                sourceComponent: sec.registry[modelData] ?? (modelData.startsWith("plugin:") ? sec.registry["plugin"] ?? null
+                    : modelData.startsWith("tp:") ? sec.registry["thirdparty"] ?? null : null)
                 // widgets that adapt to tight bars declare `barLevel`
                 onLoaded: {
                     if (item && item.pluginId !== undefined)
                         item.pluginId = modelData.slice(7);
+                    if (item && item.key !== undefined && modelData.startsWith("tp:"))
+                        item.key = modelData.slice(3);
                     if (item && item.barLevel !== undefined)
                         item.barLevel = Qt.binding(() => sec.level);
                 }

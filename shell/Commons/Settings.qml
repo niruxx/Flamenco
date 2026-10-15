@@ -170,6 +170,11 @@ Singleton {
                 property var config: ({})
             }
 
+            // Noctalia and DMS plugins turned on (Settings → Plugins (3rd party)): "noctalia/<id>", "dms/<id>"
+            property JsonObject thirdParty: JsonObject {
+                property var enabled: []
+            }
+
             // Package updates in the bar (`flamenco updates`)
             property JsonObject updates: JsonObject {
                 property int interval: 60             // minutes between checks

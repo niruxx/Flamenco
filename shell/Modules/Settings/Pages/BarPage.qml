@@ -10,7 +10,8 @@ Page {
     title: "Bar"
     readonly property var b: Settings.data.bar
     // built-in widgets, plus the bar widgets of plugins that are turned on
-    readonly property var allWidgets: Object.assign({}, builtinWidgets, Object.fromEntries(Object.entries(Plugins.barWidgets).map(([k, v]) => [k, v.label + " (plugin)"])))
+    readonly property var allWidgets: Object.assign({}, builtinWidgets, Object.fromEntries(Object.entries(Plugins.barWidgets).map(([k, v]) => [k, v.label + " (plugin)"])),
+        Object.fromEntries(Object.entries(ThirdParty.barWidgets).map(([k, v]) => [k, v.label])))
     readonly property var builtinWidgets: ({
             launcher: "Start button (launcher)", workspaces: "Workspaces", window: "Active window", taskbar: "Taskbar (running apps)", clock: "Clock", media: "Media",
             tray: "System tray", sysstats: "CPU / RAM", keyboard: "Keyboard layout", network: "Network", bluetooth: "Bluetooth",

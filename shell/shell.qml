@@ -13,6 +13,7 @@ import qs.Modules.Background
 import qs.Modules.Keys
 import qs.Modules.Notepad
 import qs.Modules.Overview
+import qs.Modules.ThirdParty
 import qs.Modules.Desktop
 import qs.Modules.Bar
 import qs.Modules.Dock
@@ -44,6 +45,7 @@ ShellRoot {
         Displays.screenCount;
         AutoMode.on;
         SuperKey.status;
+        ThirdParty.plugins;
     }
 
     // first run: open setup once settings are loaded (after the login animation)
@@ -73,6 +75,7 @@ ShellRoot {
     KeysPanel {}
     NotepadPanel {}
     Overview {}
+    ThirdPartyPanel {}
     PowerMenu {}
     SessionOverlay {}
     SettingsWindow {}

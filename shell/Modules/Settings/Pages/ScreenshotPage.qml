@@ -13,31 +13,22 @@ Page {
 
     Component.onCompleted: Compositor.load()
 
-    // close settings first so it isn't in the picture
+    // in a service: this page goes away while Settings is closed for the picture
     function take(mode) {
-        Panels.settingsOpen = false;
-        shot.mode = mode;
-        shot.restart();
-    }
-
-    Timer {
-        id: shot
-        property string mode
-        interval: 450
-        onTriggered: Quickshell.execDetached([Paths.bin, "screenshot", mode])
+        Screenshot.fromSettings(mode);
     }
 
     Group {
         title: "Take a screenshot"
         SettingRow {
-            title: "Capture"
-            subtitle: "Settings closes first" + (page.s.delay > 0 ? ", then waits " + page.s.delay + " s" : "")
+            title: "Take one now"
+            subtitle: "Settings steps aside" + (page.s.delay > 0 ? ", waits " + page.s.delay + " s," : "") + " and comes back when it's taken"
             icon: "screenshot_monitor"
             RowLayout {
                 spacing: 8
-                FButton { text: "Area"; icon: "screenshot_region"; onClicked: page.take("region") }
-                FButton { text: "Screen"; icon: "desktop_windows"; variant: "tonal"; onClicked: page.take("screen") }
-                FButton { text: "Window"; icon: "web_asset"; variant: "tonal"; onClicked: page.take("window") }
+                FButton { text: "Capture an area"; icon: "screenshot_region"; variant: "tonal"; onClicked: page.take("region") }
+                FButton { text: "Capture the screen"; icon: "desktop_windows"; variant: "tonal"; onClicked: page.take("screen") }
+                FButton { text: "Capture a window"; icon: "web_asset"; variant: "tonal"; onClicked: page.take("window") }
             }
         }
     }
@@ -81,14 +72,14 @@ Page {
     Group {
         title: "Screen recording"
         SettingRow {
-            title: Recorder.recording ? "Recording · " + Recorder.clock : "Record"
-            subtitle: Recorder.recording ? Paths.fileName(Recorder.file) : "The bar shows a red timer while recording; click it to stop. Needs wf-recorder or gpu-screen-recorder."
+            title: Recorder.recording ? "Recording · " + Recorder.clock : "Start recording now"
+            subtitle: Recorder.recording ? Paths.fileName(Recorder.file) : "Settings closes and recording starts. The bar shows a red timer; click it to stop. Needs wf-recorder or gpu-screen-recorder."
             icon: Recorder.recording ? "stop_circle" : "screen_record"
             Row {
                 spacing: 8
                 FButton {
                     visible: !Recorder.recording
-                    text: "Screen"
+                    text: "Record the screen"
                     icon: "screen_record"
                     variant: "tonal"
                     onClicked: {
@@ -98,7 +89,7 @@ Page {
                 }
                 FButton {
                     visible: !Recorder.recording
-                    text: "Area"
+                    text: "Record an area"
                     icon: "crop"
                     variant: "tonal"
                     onClicked: {

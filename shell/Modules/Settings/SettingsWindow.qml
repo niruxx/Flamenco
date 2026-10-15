@@ -38,6 +38,7 @@ LazyLoader {
             { id: "network", icon: "wifi", label: "Network", comp: networkC },
             { id: "ai", icon: "auto_awesome", label: "AI", comp: aiC },
             { id: "plugins", icon: "extension", label: "Plugins", comp: pluginsC },
+            { id: "thirdparty", icon: "deployed_code", label: "Plugins (3rd party)", comp: thirdPartyC },
             { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
             { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
             { id: "screenshots", icon: "screenshot_monitor", label: "Screenshots", comp: screenshotC },
@@ -120,6 +121,7 @@ LazyLoader {
         Component { id: networkC; NetworkPage {} }
         Component { id: aiC; AiPage {} }
         Component { id: pluginsC; PluginsPage {} }
+        Component { id: thirdPartyC; ThirdPartyPage {} }
         Component { id: sharingC; ScreenSharingPage {} }
         Component { id: soundC; SoundPage {} }
         Component { id: firewallC; FirewallPage {} }

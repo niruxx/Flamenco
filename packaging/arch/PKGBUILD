@@ -2,12 +2,12 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.26.0
+pkgver=0.27.0
 pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
 url="https://github.com/niruxx/flamenco-shell"
-license=('unknown' 'Apache-2.0' 'OFL-1.1')  # Apache-2.0: Material Symbols; OFL-1.1: Google Sans Flex / Code
+license=('unknown' 'Apache-2.0' 'OFL-1.1' 'MIT')  # Apache-2.0: Material Symbols; OFL-1.1: Google Sans Flex / Code; MIT: shell/Compat (Noctalia, DMS, Tabler icons)
 depends=('quickshell' 'python' 'python-gobject' 'qt6-declarative' 'procps-ng')
 optdepends=(
     'niri: compositor (or hyprland)'
@@ -69,6 +69,10 @@ package() {
     install -Dm644 "$src/shell/assets/fonts/MaterialSymbols-LICENSE.txt" "$pkgdir/usr/share/licenses/flamenco-shell/MaterialSymbols-LICENSE.txt"
     install -Dm644 "$src/shell/assets/fonts/GoogleSansFlex-OFL.txt" "$pkgdir/usr/share/licenses/flamenco-shell/GoogleSansFlex-OFL.txt"
     install -Dm644 "$src/shell/assets/fonts/GoogleSansCode-OFL.txt" "$pkgdir/usr/share/licenses/flamenco-shell/GoogleSansCode-OFL.txt"
+    install -Dm644 "$src/shell/Compat/Noctalia/LICENSE" "$pkgdir/usr/share/licenses/flamenco-shell/Noctalia-MIT.txt"
+    install -Dm644 "$src/shell/Compat/Dms/LICENSE" "$pkgdir/usr/share/licenses/flamenco-shell/DankMaterialShell-MIT.txt"
+    install -Dm644 "$src/shell/Compat/Dms/DankCommon/LICENSE" "$pkgdir/usr/share/licenses/flamenco-shell/dank-qml-common-MIT.txt"
+    install -Dm644 "$src/shell/Compat/Noctalia/Assets/Fonts/tabler/tabler-icons-license.txt" "$pkgdir/usr/share/licenses/flamenco-shell/Tabler-Icons-MIT.txt"
     # the default fonts for every app (GTK, the greeter), not just the shell;
     # linked to the shell's copies, and fontconfig's pacman hook refreshes the cache
     install -d "$pkgdir/usr/share/fonts/flamenco-shell"

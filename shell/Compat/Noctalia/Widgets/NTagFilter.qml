@@ -1,0 +1,50 @@
+// Vendored from https://github.com/noctalia-dev/noctalia-shell (branch legacy-v4) (MIT) by tools/compat-vendor.py.
+// Don't edit: change the vendoring tool or a Flamenco shim next to it.
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import qs.Compat.Noctalia.Commons
+import qs.Compat.Noctalia.Widgets
+
+NCollapsible {
+  id: root
+
+  // Public API
+  property var tags: []  // Array of tag strings
+  property string selectedTag: ""
+  property alias label: root.label
+  property alias description: root.description
+  property alias expanded: root.expanded
+
+  // Formatting function for tag display (optional override)
+  property var formatTag: function (tag) {
+    if (tag === "")
+      return I18n.tr("launcher.categories.all");
+    // Default: capitalize first letter
+    return tag.charAt(0).toUpperCase() + tag.slice(1);
+  }
+
+  Layout.fillWidth: true
+  contentSpacing: Style.marginXS
+
+  Flow {
+    Layout.fillWidth: true
+    spacing: Style.marginXS
+    flow: Flow.LeftToRight
+
+    Repeater {
+      model: [""].concat(root.tags)
+
+      delegate: NButton {
+        text: root.formatTag(modelData)
+        backgroundColor: root.selectedTag === modelData ? Color.mPrimary : Color.mSurfaceVariant
+        textColor: root.selectedTag === modelData ? Color.mOnPrimary : Color.mOnSurfaceVariant
+        onClicked: root.selectedTag = modelData
+        fontSize: Style.fontSizeS
+        iconSize: Style.fontSizeS
+        fontWeight: Style.fontWeightSemiBold
+        buttonRadius: Style.iRadiusM
+      }
+    }
+  }
+}
