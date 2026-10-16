@@ -52,6 +52,16 @@ Variants {
             { id: "shutdown", icon: "power_settings_new", label: "Shut down", verb: "Shutting down", run: () => Power.shutdown() }
         ]
 
+        // run an action, after the goodbye screen; niri's own logout shows its prompt
+        // instead (Settings → Lock & Login → Session), so nothing covers the screen if
+        // you cancel it
+        function finish(a) {
+            if (a.id === "logout" && Settings.data.session.logout === "niri" && !Niri.hyprland)
+                a.run();
+            else
+                SessionFx.playOutro(a.verb + "…", a.run, false);
+        }
+
         function cancel() {
             countdown.stop();
             release.stop();
@@ -67,7 +77,7 @@ Variants {
             cancel();
             Panels.close();
             if (a.verb)
-                SessionFx.playOutro(a.verb + "…", a.run, false);
+                win.finish(a);
             else
                 a.run();
         }
@@ -107,7 +117,7 @@ Variants {
                 Panels.close();
                 // the logout animation covers the screen first, then the action runs
                 if (a)
-                    SessionFx.playOutro(a.verb + "…", a.run, false);
+                    win.finish(a);
             }
         }
         SequentialAnimation {

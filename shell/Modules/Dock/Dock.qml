@@ -144,9 +144,12 @@ Variants {
             anchors.margins: win.margin
             anchors.horizontalCenter: win.vertical ? undefined : parent.horizontalCenter
             anchors.verticalCenter: win.vertical ? parent.verticalCenter : undefined
+            // after logging in it slides up from the edge (SessionFx.revealDock)
+            readonly property real loginShift: (1 - SessionFx.revealDock) * (win.thickness + win.margin * 2 + 12)
+            opacity: SessionFx.revealDock
             transform: Translate {
-                x: win.edge === "left" ? -dock.shift : win.edge === "right" ? dock.shift : 0
-                y: win.edge === "bottom" ? dock.shift : 0
+                x: win.edge === "left" ? -(dock.shift + dock.loginShift) : win.edge === "right" ? dock.shift + dock.loginShift : 0
+                y: win.edge === "bottom" ? dock.shift + dock.loginShift : 0
             }
             visible: win.ids.length > 0
             width: win.vertical ? win.thickness : row.width + win.pad * 2

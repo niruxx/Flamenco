@@ -263,7 +263,9 @@ Variants {
 
                     // Home's height, kept from when it last showed (a hidden page can report 0)
                     property real homeH: 0
-                    readonly property var byTab: ({ home: home, calendar: calendar, overview: overview, media: panel.hub ? hubMedia : media, wallpapers: walls, weather: weather, system: system })
+                    readonly property var byTab: ({ home: home, calendar: calendar, overview: overview, media: panel.hub ? hubMedia : media, wallpapers: panel.hub ? hubWalls : walls, weather: panel.hub ? hubWeather : weather, system: system })
+                    // the height the hub's full pages fill
+                    readonly property real hubH: Math.max(homeH, railItems.implicitHeight + 50)
                     readonly property Item current: byTab[panel.tab] ?? null
 
                     Behavior on implicitHeight { Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
@@ -290,7 +292,7 @@ Variants {
                         index: panel.hub ? panel.indexOf("media") : -1
                         HubMedia {
                             width: pages.width
-                            fillHeight: Math.max(pages.homeH, railItems.implicitHeight + 50)
+                            fillHeight: pages.hubH
                             live: panel.shouldShow && panel.hub && panel.tab === "media"
                         }
                     }
@@ -309,7 +311,33 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.indexOf("calendar")
-                        HubCalendar { width: pages.width }
+                        HubCalendar {
+                            width: pages.width
+                            fillHeight: pages.hubH
+                        }
+                    }
+                    DashboardPage {
+                        id: hubWeather
+                        width: pages.width
+                        currentIndex: panel.tabIndex
+                        index: panel.hub ? panel.indexOf("weather") : -1
+                        HubWeather {
+                            width: pages.width
+                            fillHeight: pages.hubH
+                            onOpenSettings: p => panel.openSettings(p)
+                        }
+                    }
+                    DashboardPage {
+                        id: hubWalls
+                        width: pages.width
+                        currentIndex: panel.tabIndex
+                        index: panel.hub ? panel.indexOf("wallpapers") : -1
+                        HubWallpaper {
+                            width: pages.width
+                            fillHeight: pages.hubH
+                            screenName: panel.modelData.name
+                            onOpenSettings: p => panel.openSettings(p)
+                        }
                     }
                     DashboardPage {
                         id: overview
@@ -332,7 +360,7 @@ Variants {
                         id: walls
                         width: pages.width
                         currentIndex: panel.tabIndex
-                        index: panel.indexOf("wallpapers")
+                        index: panel.hub ? -1 : panel.indexOf("wallpapers")
                         WallpapersTab {
                             width: pages.width
                             screenName: panel.modelData.name
@@ -343,7 +371,7 @@ Variants {
                         id: weather
                         width: pages.width
                         currentIndex: panel.tabIndex
-                        index: panel.indexOf("weather")
+                        index: panel.hub ? -1 : panel.indexOf("weather")
                         WeatherTab {
                             width: pages.width
                             onOpenSettings: p => panel.openSettings(p)

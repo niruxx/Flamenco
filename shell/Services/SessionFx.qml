@@ -20,6 +20,41 @@ Singleton {
     property var pending: null          // action to run once an outro has covered the screen
     readonly property int duration: Theme.speed <= 0 ? 0 : Math.max(300, cfg.duration) / Theme.speed
 
+    // 0 → 1 as the bar, the dock and the desktop widgets slide in after logging in
+    // (Settings → Lock & Login → Session); 1 otherwise, e.g. after `flamenco restart`
+    property real revealBar: 1
+    property real revealDock: 1
+    property real revealDesk: 1
+    readonly property int slideMs: Theme.speed <= 0 ? 0 : Math.max(100, cfg.slideDuration ?? 900) / Theme.speed
+    readonly property int staggerMs: Theme.speed <= 0 ? 0 : Math.max(0, cfg.slideStagger ?? 180) / Theme.speed
+
+    function startReveal() {
+        if (revealBar >= 1 && revealDock >= 1 && revealDesk >= 1)
+            return;
+        reveal.restart();
+    }
+    // a preview from Settings: hide them and slide them back in
+    function previewReveal() {
+        reveal.stop();
+        revealBar = 0;
+        revealDock = 0;
+        revealDesk = 0;
+        Qt.callLater(() => reveal.restart());
+    }
+
+    ParallelAnimation {
+        id: reveal
+        NumberAnimation { target: root; property: "revealBar"; to: 1; duration: root.slideMs; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+        SequentialAnimation {
+            PauseAnimation { duration: root.staggerMs }
+            NumberAnimation { target: root; property: "revealDock"; to: 1; duration: root.slideMs; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+        }
+        SequentialAnimation {
+            PauseAnimation { duration: root.staggerMs * 2 }
+            NumberAnimation { target: root; property: "revealDesk"; to: 1; duration: root.slideMs; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+        }
+    }
+
     function greeting() {
         const h = new Date().getHours();
         return (h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + ", " + Paths.user;
@@ -30,7 +65,16 @@ Singleton {
     function startup() {
         if (Quickshell.env("FLAMENCO_INTRO") === "1" && !persist.introPlayed) {
             persist.introPlayed = true;
-            introDelay.start();
+            // the desktop starts hidden and slides in once the welcome screen has opened up
+            if (cfg.slideIn ?? true) {
+                revealBar = 0;
+                revealDock = 0;
+                revealDesk = 0;
+            }
+            if ((cfg.welcome ?? true) && cfg.intro !== "none")
+                introDelay.start();
+            else
+                revealDelay.start();
         }
     }
 
@@ -57,7 +101,7 @@ Singleton {
 
     function playOutro(label, action, isPreview) {
         const p = cfg.outro;
-        if ((p === "none" || duration === 0) && !isPreview) {
+        if ((p === "none" || !(cfg.goodbye ?? true) || duration === 0) && !isPreview) {
             if (action)
                 action();
             return;
@@ -73,6 +117,12 @@ Singleton {
         anim.from = 0;
         anim.to = 1;
         anim.restart();
+    }
+
+    Timer {
+        id: revealDelay
+        interval: 300
+        onTriggered: root.startReveal()
     }
 
     Timer {
@@ -118,6 +168,7 @@ Singleton {
                 hold.start();
             } else if (root.cover <= 0) {
                 root.mode = "";
+                root.startReveal();
             }
         }
     }

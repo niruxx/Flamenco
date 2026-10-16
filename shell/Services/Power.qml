@@ -73,6 +73,9 @@ Singleton {
         Quickshell.execDetached(["systemctl", "poweroff"]);
     }
     function logout() {
-        Niri.action("quit", "--skip-confirmation");
+        if (Settings.data.session.logout === "niri" && !Niri.hyprland)
+            Niri.action("quit");                   // niri asks "Exit niri?" itself
+        else
+            Niri.action("quit", "--skip-confirmation");
     }
 }

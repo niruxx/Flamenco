@@ -55,6 +55,9 @@ Variants {
                 x: Desk.px(modelData.x, win.width, width)
                 y: Desk.px(modelData.y, win.height, height)
                 visible: !win.editingHere
+                // after logging in they fade and rise into place (SessionFx.revealDesk)
+                opacity: SessionFx.revealDesk
+                transform: Translate { y: (1 - SessionFx.revealDesk) * 24 }
                 property Region region: Region { item: wb }
             }
         }

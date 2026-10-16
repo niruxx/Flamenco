@@ -75,6 +75,65 @@ Page {
     }
 
     Group {
+        id: sess
+        readonly property var c: Settings.data.session
+        title: "Session"
+
+        SwitchRow {
+            title: "Welcome screen"
+            subtitle: "A greeting with the date as you log in, then the desktop opens up (style in Appearance → Login & logout)"
+            icon: "waving_hand"
+            target: sess.c
+            key: "welcome"
+        }
+        SwitchRow {
+            title: "Goodbye screen"
+            subtitle: "Covers the screen with \"See you soon\" before logging out, restarting or shutting down. Off: they happen straight away."
+            icon: "logout"
+            target: sess.c
+            key: "goodbye"
+        }
+        ChoiceRow {
+            visible: !Niri.hyprland
+            title: "Logging out"
+            subtitle: sess.c.logout === "niri" ? "niri asks \"Exit niri?\" itself, with no goodbye screen first" : "Flamenco logs out right away (after the goodbye screen and the power menu's hold)"
+            icon: "exit_to_app"
+            target: sess.c
+            key: "logout"
+            segWidth: 130
+            options: [{ value: "flamenco", label: "Flamenco" }, { value: "niri", label: "niri's own" }]
+        }
+        SwitchRow {
+            title: "Slide in after logging in"
+            subtitle: "The bar, then the dock, then desktop widgets glide into place"
+            icon: "animation"
+            target: sess.c
+            key: "slideIn"
+        }
+        SliderRow { visible: sess.c.slideIn; title: "Slide speed"; subtitle: "How long each one takes"; icon: "speed"; target: sess.c; key: "slideDuration"; from: 200; to: 2500; stepSize: 50; suffix: " ms" }
+        SliderRow { visible: sess.c.slideIn; title: "Gap between them"; subtitle: "0 slides them all at once"; icon: "timer"; target: sess.c; key: "slideStagger"; from: 0; to: 800; stepSize: 20; suffix: " ms" }
+        SettingRow {
+            title: "Preview"
+            subtitle: "Plays it without logging out"
+            icon: "play_circle"
+            Row {
+                spacing: 6
+                FButton {
+                    text: "Slide in"
+                    icon: "animation"
+                    variant: "tonal"
+                    onClicked: {
+                        Panels.settingsOpen = false;
+                        SessionFx.previewReveal();
+                    }
+                }
+                FButton { text: "Welcome"; icon: "login"; variant: "tonal"; onClicked: SessionFx.playIntro(true) }
+                FButton { text: "Goodbye"; icon: "logout"; variant: "tonal"; onClicked: SessionFx.playOutro("Logging out…", null, true) }
+            }
+        }
+    }
+
+    Group {
         title: "Idle"
         SwitchRow { title: "Lock when idle"; icon: "lock_clock"; target: page.l; key: "autoLock" }
         SliderRow { title: "Lock after"; icon: "timer"; target: page.l; key: "idleMinutes"; from: 1; to: 60; stepSize: 1; suffix: " min" }

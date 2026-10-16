@@ -9,6 +9,9 @@ import qs.Widgets
 RowLayout {
     id: root
     spacing: Theme.sp3
+    // as tall as the Hub (its cards stretch to it)
+    property real fillHeight: 600
+    implicitHeight: Math.max(520, fillHeight)
 
     readonly property var day: Events.on(month.selected)
     readonly property bool isToday: Events.key(month.selected) === Events.key(Time.now)
@@ -33,14 +36,15 @@ RowLayout {
     }
 
     Card {
-        Layout.preferredWidth: root.width * 0.48
+        id: monthCard
+        Layout.preferredWidth: root.width * 0.5
         Layout.fillHeight: true
-        implicitHeight: month.implicitHeight + 36
         MonthGrid {
             id: month
             anchors.fill: parent
-            anchors.margins: 18
-            cellHeight: 52
+            anchors.margins: 20
+            // six rows of days fill the card
+            cellHeight: Math.max(44, Math.floor((monthCard.height - 40 - 96) / 6))
         }
     }
 

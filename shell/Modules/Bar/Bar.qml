@@ -65,8 +65,9 @@ Variants {
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.namespace: "flamenco-bar"
 
-        // Entrance: slide in from the edge on startup.
-        readonly property real enter: enterAnim.v
+        // Entrance: slide in from the edge on startup, and slowly after logging in
+        // (SessionFx.revealBar, Settings → Lock & Login → Session)
+        readonly property real enter: Math.min(enterAnim.v, SessionFx.revealBar)
 
         // animated value lives on an Item: Behaviors on the window itself crash Qt 6.12
         Item {
@@ -148,7 +149,7 @@ Variants {
             anchors.rightMargin: win.pos === "left" ? 0 : Theme.barMargin
             opacity: win.enter
             transform: Translate {
-                readonly property real d: (1 - win.enter) * Theme.barHeight
+                readonly property real d: (1 - win.enter) * (Theme.barHeight + Theme.barMargin * 2)
                 x: win.pos === "left" ? -d : win.pos === "right" ? d : 0
                 y: win.pos === "top" ? -d : win.pos === "bottom" ? d : 0
             }

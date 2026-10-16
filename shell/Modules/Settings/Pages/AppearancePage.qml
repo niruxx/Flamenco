@@ -376,6 +376,16 @@ Page {
 
     Group {
         title: "Login & logout"
+        SettingRow {
+            title: "Turning them on or off"
+            subtitle: "The welcome and goodbye screens, niri's own logout, and the slide-in are in Lock & Login → Session"
+            icon: "toggle_on"
+            FButton {
+                text: "Session settings"
+                variant: "text"
+                onClicked: Panels.findSetting("lock", "Session")
+            }
+        }
 
         DropdownRow {
             title: "When you log in"

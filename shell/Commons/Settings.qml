@@ -416,6 +416,12 @@ Singleton {
                 property string outro: "curtain"
                 property int duration: 1400           // ms
                 property bool greeting: true
+                property bool welcome: true           // the welcome screen when you log in
+                property bool goodbye: true           // the goodbye screen before logging out, restarting or shutting down
+                property string logout: "flamenco"    // flamenco (straight out, after the goodbye) | niri (niri's own "Exit niri?" prompt)
+                property bool slideIn: true           // the bar, dock and desktop widgets slide in when you log in
+                property int slideDuration: 900       // ms each one takes
+                property int slideStagger: 180        // ms between the bar, the dock and the widgets
             }
 
             // Dashboard: the clock/calendar popout
