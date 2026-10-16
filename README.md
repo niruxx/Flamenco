@@ -1380,6 +1380,8 @@ packaging/arch/              PKGBUILD and a makepkg-free build script
 tools/qmlcheck.py            static QML checks
 tools/screenshots.sh         regenerates docs/screenshots/
 tools/readme-assets.py       draws the README artwork in docs/assets/
+tools/gen-sounds.py          synthesizes the bundled sound theme in data/sounds/flamenco
+tools/compat-vendor.py       copies the Noctalia and DMS parts plugins need into shell/Compat
 ```
 
 <a id="development"></a>

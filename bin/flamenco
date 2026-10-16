@@ -2247,10 +2247,6 @@ def command_exists(command: str) -> bool:
     return shutil.which(first) is not None or any(os.access(Path(d) / first, os.X_OK) for d in ("/usr/bin", "/usr/local/bin"))
 
 
-def greeter_command(compositor: str) -> str:
-    return f"{GREETER_BIN} --command {compositor}"
-
-
 def unit_enabled(unit: str) -> str:
     return run_out(["systemctl", "is-enabled", unit]).strip() or "not-found"
 
