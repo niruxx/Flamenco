@@ -527,7 +527,7 @@ ColumnLayout {
                     visible: !Media.active
                     spacing: 6
                     FIcon { Layout.alignment: Qt.AlignHCenter; icon: "music_off"; size: 36; color: Theme.textDim }
-                    FText { Layout.alignment: Qt.AlignHCenter; text: "Nothing playing"; dim: true }
+                    FText { Layout.alignment: Qt.AlignHCenter; text: "No media"; font.weight: Font.DemiBold; dim: true }
                 }
 
                 MouseArea {

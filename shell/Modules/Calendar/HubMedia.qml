@@ -292,9 +292,20 @@ ClippingRectangle {
         anchors.centerIn: parent
         visible: !Media.active
         spacing: 8
-        FIcon { Layout.alignment: Qt.AlignHCenter; icon: "music_off"; size: 56; color: Theme.textDim }
-        FText { Layout.alignment: Qt.AlignHCenter; text: "Nothing playing"; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
-        FText { Layout.alignment: Qt.AlignHCenter; text: "Play something in any app that supports MPRIS"; dim: true }
+        // a soft disc behind the symbol
+        Rectangle {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.bottomMargin: 6
+            width: 120
+            height: 120
+            radius: 60
+            color: Theme.alpha(Theme.accent, 0.12)
+            border.width: 2
+            border.color: Theme.alpha(Theme.accent, 0.3)
+            FIcon { anchors.centerIn: parent; icon: "music_off"; size: 56; fill: 1; color: Theme.accent }
+        }
+        FText { Layout.alignment: Qt.AlignHCenter; text: "No media"; font.pixelSize: Theme.fsXxl; font.weight: Font.Bold }
+        FText { Layout.alignment: Qt.AlignHCenter; text: "Play something in a music or video app and it shows up here"; dim: true }
     }
 
     // ── the visualizer, across the bottom: cava's bars spread out, colored along the way ──

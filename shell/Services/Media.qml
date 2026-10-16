@@ -9,10 +9,12 @@ Singleton {
 
     readonly property var players: Mpris.players.values
     property var manual: null
-    readonly property var player: (manual && players.includes(manual)) ? manual : (players.find(p => p.isPlaying) ?? players[0] ?? null)
-    readonly property bool active: player !== null
+    // the one playing, else one with a track loaded, else any
+    readonly property var player: (manual && players.includes(manual)) ? manual : (players.find(p => p.isPlaying) ?? players.find(p => (p.trackTitle ?? "") !== "") ?? players[0] ?? null)
+    // something to show: a player with a track (an open but empty player doesn't count)
+    readonly property bool active: player !== null && ((player.trackTitle ?? "") !== "" || player.isPlaying)
     readonly property bool playing: player?.isPlaying ?? false
-    readonly property string title: player?.trackTitle || "Nothing playing"
+    readonly property string title: player?.trackTitle || "No media"
     readonly property string artist: player?.trackArtist || player?.identity || ""
     readonly property string art: player?.trackArtUrl ?? ""
     readonly property real length: player?.length ?? 0
