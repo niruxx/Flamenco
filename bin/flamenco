@@ -74,7 +74,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.36.6"
+VERSION = "0.36.7"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1065,6 +1065,28 @@ def fmt_mode(m: dict) -> str:
 def fmt_scale(v) -> str:
     v = round(float(v), 2)
     return str(int(v)) if v == int(v) else f"{v:g}"
+
+
+def hypr_clean_scale(w: int, h: int, want: float) -> float:
+    """The scale nearest `want` that Hyprland accepts for a w × h mode: a multiple of
+    1/120 that divides both evenly (the scaled size must be whole pixels), otherwise
+    Hyprland refuses it ("invalid scale")."""
+    if not w or not h:
+        return want
+    k0 = max(1, round(float(want) * 120))
+    for d in range(0, 121):
+        for k in (k0 - d, k0 + d):
+            if k > 0 and (w * 120) % k == 0 and (h * 120) % k == 0:
+                return k / 120
+    return want
+
+
+def fmt_hypr_scale(o: dict) -> str:
+    """The monitor's scale, made valid for its mode and written precisely enough
+    (1.333333, not 1.33) for Hyprland to accept it."""
+    m = o.get("mode") or {}
+    v = hypr_clean_scale(int(m.get("w", 0) or 0), int(m.get("h", 0) or 0), float(o.get("scale", 1) or 1))
+    return str(int(v)) if v == int(v) else f"{v:.6f}".rstrip("0").rstrip(".")
 
 
 def display_list(raw_json: str | None = None) -> list[dict]:
@@ -5998,7 +6020,7 @@ def hypr_monitor_line(o: dict) -> str:
         return f"monitor = {o['name']}, disable"
     m = o.get("mode") or {}
     mode = f"{m['w']}x{m['h']}@{int(m['r']) / 1000:.2f}" if m else "preferred"
-    line = f"monitor = {o['name']}, {mode}, {int(o.get('x', 0))}x{int(o.get('y', 0))}, {fmt_scale(o.get('scale', 1))}"
+    line = f"monitor = {o['name']}, {mode}, {int(o.get('x', 0))}x{int(o.get('y', 0))}, {fmt_hypr_scale(o)}"
     line += f", transform, {HYPR_TRANSFORMS.get(norm_transform(o.get('transform')), 0)}"
     if o.get("vrrSupported") and "vrr" in o:
         line += f", vrr, {1 if o['vrr'] else 0}"
@@ -6245,7 +6267,7 @@ def lua_monitor(o: dict) -> str:
     mode = f"{m['w']}x{m['h']}@{int(m['r']) / 1000:.3f}" if m else "preferred"
     parts = [f"output = {lua_str(o['name'])}", f"mode = {lua_str(mode)}",
              f"position = {lua_str(str(int(o.get('x', 0))) + 'x' + str(int(o.get('y', 0))))}",
-             f"scale = {fmt_scale(o.get('scale', 1))}"]
+             f"scale = {fmt_hypr_scale(o)}"]
     tf = HYPR_TRANSFORMS.get(norm_transform(o.get("transform")), 0)
     if tf:
         parts.append(f"transform = {tf}")   # same name as hyprlang's monitor option

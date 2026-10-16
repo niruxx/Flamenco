@@ -22,7 +22,28 @@ Page {
     }
 
     function update(name, patch) {
-        draft = draft.map(o => o.name === name ? Object.assign({}, o, patch) : o);
+        draft = draft.map(o => {
+            if (o.name !== name)
+                return o;
+            const n = Object.assign({}, o, patch);
+            // on Hyprland the scale has to suit the resolution: a new mode re-snaps it
+            if (Niri.hyprland && n.mode)
+                n.scale = cleanScale(n.mode.w, n.mode.h, n.scale ?? 1);
+            return n;
+        });
+    }
+
+    // the scale nearest `want` Hyprland accepts for a w × h mode: a multiple of 1/120
+    // that divides both evenly (the scaled size has to be whole pixels)
+    function cleanScale(w, h, want) {
+        if (!w || !h)
+            return want;
+        const k0 = Math.max(1, Math.round(want * 120));
+        for (let d = 0; d <= 120; d++)
+            for (const k of [k0 - d, k0 + d])
+                if (k > 0 && (w * 120) % k === 0 && (h * 120) % k === 0)
+                    return k / 120;
+        return want;
     }
 
     // logical (scaled, rotated) size in niri's layout coordinates
@@ -271,7 +292,13 @@ Page {
             icon: "zoom_in"
             FDropdown {
                 implicitWidth: 260
-                options: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3].map(v => ({ value: v, label: Math.round(v * 100) + "%" }))
+                // Hyprland only takes scales that divide the mode evenly: offer the nearest of those
+                options: {
+                    const wanted = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3];
+                    const m = page.sel?.mode;
+                    const list = Niri.hyprland && m ? wanted.map(v => page.cleanScale(m.w, m.h, v)) : wanted;
+                    return [...new Set(list)].map(v => ({ value: v, label: Math.round(v * 100) + "%" }));
+                }
                 current: page.sel?.scale ?? 1
                 onSelected: v => page.update(page.selected, { scale: v })
             }
