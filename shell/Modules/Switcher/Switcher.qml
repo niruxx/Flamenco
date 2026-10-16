@@ -3,6 +3,7 @@ import QtQuick.Effects
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Widgets
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -24,6 +25,9 @@ Variants {
         readonly property int cardW: Math.max(168, Math.min(212, (width - 200) / Math.max(1, n) - 14))
         readonly property int cardH: Math.round(cardW * 1.22)
         readonly property var tints: [Theme.accent, Theme.accent2, Theme.accent3]
+        // window pictures (Settings → Overview → App switcher); never in a nested niri, whose
+        // old dmabuf version makes capturing drop the whole shell
+        readonly property bool previews: (Settings.data.switcher.previews ?? false) && !Quickshell.screens.some(s => s.name === "winit")
 
         screen: modelData
         visible: shown || p > 0.01
@@ -211,9 +215,36 @@ Variants {
                                     GradientStop { position: 0; color: Theme.alpha(slot.tint, slot.sel ? 0.42 : 0.22) }
                                     GradientStop { position: 1; color: Theme.alpha(slot.tint, 0.06) }
                                 }
+                                // the window's picture, when previews are on and it can be captured
+                                Loader {
+                                    id: shot
+                                    anchors.fill: parent
+                                    anchors.margins: 4
+                                    readonly property var toplevel: win.previews && win.shown ? (ToplevelManager.toplevels.values.find(t => t.appId === slot.modelData.app_id && t.title === slot.modelData.title) ?? null) : null
+                                    active: toplevel !== null
+                                    sourceComponent: ClippingRectangle {
+                                        readonly property bool got: pic.hasContent
+                                        radius: 14
+                                        color: "transparent"
+                                        ScreencopyView {
+                                            id: pic
+                                            anchors.centerIn: parent
+                                            readonly property real aspect: hasContent && sourceSize.height > 0 ? sourceSize.width / sourceSize.height : 16 / 10
+                                            width: Math.min(parent.width, parent.height * aspect)
+                                            height: width / aspect
+                                            captureSource: shot.toplevel
+                                            live: false
+                                        }
+                                    }
+                                }
+                                readonly property bool hasShot: shot.item?.got ?? false
                                 AppIcon {
-                                    anchors.centerIn: parent
-                                    implicitSize: Math.round(win.cardW * (slot.sel ? 0.42 : 0.36))
+                                    // over the picture, it moves to a corner as a badge
+                                    anchors.centerIn: parent.hasShot ? undefined : parent
+                                    anchors.left: parent.hasShot ? parent.left : undefined
+                                    anchors.bottom: parent.hasShot ? parent.bottom : undefined
+                                    anchors.margins: 8
+                                    implicitSize: parent.hasShot ? 30 : Math.round(win.cardW * (slot.sel ? 0.42 : 0.36))
                                     name: Apps.iconFor(slot.modelData.app_id)
                                     Behavior on implicitSize { Anim { duration: Theme.durShort } }
                                 }

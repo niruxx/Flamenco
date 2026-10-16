@@ -92,6 +92,22 @@ Page {
     }
 
     Group {
+        title: "App switcher"
+        SettingRow {
+            title: "Alt+Tab"
+            subtitle: "Your windows as cards, most recent first. Hold Alt and press Tab to move, let go to switch."
+            icon: "select_window"
+        }
+        SwitchRow {
+            title: "Window previews"
+            subtitle: "A picture of each window on its card, where the compositor allows capturing windows (Hyprland does; niri may show icons). Not in a nested niri window."
+            icon: "preview"
+            target: Settings.data.switcher
+            key: "previews"
+        }
+    }
+
+    Group {
         title: "More ways to open it"
         SettingRow {
             title: "Start button"

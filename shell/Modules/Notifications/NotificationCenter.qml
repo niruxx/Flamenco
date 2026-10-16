@@ -10,7 +10,8 @@ Variants {
 
     OverlayPanel {
         id: panel
-        name: "notifications"
+        // the drop-down; the shade (Settings → Notifications → Style) is NotificationShade
+        name: Settings.data.notifications.style === "shade" ? "notifications-panel" : "notifications"
         hAlign: "right"
         cardWidth: 440
         onOpened: Notifs.markRead()

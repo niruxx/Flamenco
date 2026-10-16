@@ -72,6 +72,7 @@ ShellRoot {
 
     ControlCenter {}
     NotificationCenter {}
+    NotificationShade {}
     Launcher {}
     CalendarPanel {}
     PerformancePanel {}

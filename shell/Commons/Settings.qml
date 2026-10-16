@@ -183,6 +183,11 @@ Singleton {
                 property int maxItems: 500            // entries cliphist keeps
             }
 
+            // The app switcher (Alt+Tab)
+            property JsonObject switcher: JsonObject {
+                property bool previews: false         // pictures of the windows on the cards, where the compositor allows it
+            }
+
             // Noctalia and DMS plugins turned on (Settings → Plugins (3rd party)): "noctalia/<id>", "dms/<id>"
             property JsonObject thirdParty: JsonObject {
                 property var enabled: []
@@ -223,6 +228,9 @@ Singleton {
                 property bool dnd: false
                 property string position: "top-right" // top-right | top-left | top-center | bottom-right | bottom-left
                 property int timeout: 6
+                property string style: "panel"        // the notification center: panel (drop-down) | shade (a full-height sheet from a side)
+                property string shadeSide: "auto"     // shade: auto (the bell's side of the bar) | left | right
+                property bool shadeCalendar: true     // shade: the month above the notifications
             }
 
             property JsonObject osd: JsonObject {

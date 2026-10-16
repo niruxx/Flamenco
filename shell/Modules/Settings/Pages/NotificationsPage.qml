@@ -24,6 +24,70 @@ Page {
     }
 
     Group {
+        id: center
+        title: "Notification center"
+        readonly property var b: Settings.data.bar
+        // which bar section has the bell (the shared layout)
+        readonly property string bellSide: ["left", "center", "right"].find(k => (b[k] || []).includes("notifications")) ?? ""
+        function moveBell(side) {
+            for (const k of ["left", "center", "right"])
+                b[k] = (b[k] || []).filter(x => x !== "notifications");
+            const l = (b[side] || []).slice();
+            if (side === "left")
+                l.splice(Math.min(1, l.length), 0, "notifications");   // just after the start button
+            else if (side === "right" && l.includes("clock"))
+                l.splice(l.indexOf("clock"), 0, "notifications");
+            else
+                l.push("notifications");
+            b[side] = l;
+        }
+
+        ChoiceRow {
+            title: "Style"
+            subtitle: page.n.style === "shade" ? "A full-height sheet from the side, with the date, the month and notifications grouped by app" : "A drop-down under the bar"
+            icon: "view_sidebar"
+            target: page.n
+            key: "style"
+            segWidth: 120
+            options: [{ value: "panel", label: "Drop-down", icon: "arrow_drop_down_circle" }, { value: "shade", label: "Shade", icon: "view_sidebar" }]
+        }
+        ChoiceRow {
+            visible: page.n.style === "shade"
+            title: "Shade comes in from"
+            subtitle: page.n.shadeSide === "auto" ? "The side of the bar the bell is on" : ""
+            icon: "swap_horiz"
+            target: page.n
+            key: "shadeSide"
+            options: [{ value: "auto", label: "The bell's side" }, { value: "left", label: "Left" }, { value: "right", label: "Right" }]
+            segWidth: 120
+        }
+        SwitchRow { visible: page.n.style === "shade"; title: "Calendar in the shade"; subtitle: "The month above the notifications"; icon: "calendar_month"; target: page.n; key: "shadeCalendar" }
+        SettingRow {
+            title: "Bell in the bar"
+            subtitle: center.bellSide === "" ? "Not in the bar: pick a side to add it" : "Click it to open the notification center; right-click for Do not disturb"
+            icon: "notifications"
+            FSegmented {
+                implicitWidth: 270
+                options: [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }]
+                current: center.bellSide
+                onSelected: v => center.moveBell(v)
+            }
+        }
+        SettingRow {
+            title: "Preview"
+            icon: "visibility"
+            FButton {
+                text: "Open it"
+                variant: "tonal"
+                onClicked: {
+                    Panels.settingsOpen = false;
+                    Panels.open("notifications", "");
+                }
+            }
+        }
+    }
+
+    Group {
         title: "On-screen display"
         SwitchRow { title: "Volume & brightness OSD"; icon: "tune"; target: Settings.data.osd; key: "enabled" }
         ChoiceRow { title: "Position"; icon: "vertical_align_bottom"; target: Settings.data.osd; key: "position"; options: [{ value: "top", label: "Top" }, { value: "bottom", label: "Bottom" }] }

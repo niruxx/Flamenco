@@ -22,6 +22,7 @@ Item {
     required property int timeout
     required property string actionsJson
     property bool popup: false
+    property bool stripe: false                 // an accent line down its left side (the shade)
 
     readonly property var actions: JSON.parse(actionsJson || "[]")
     readonly property bool critical: urgency === 2
@@ -48,11 +49,22 @@ Item {
             Anim { easing.bezierCurve: Theme.curves.spring }
         }
 
+        Rectangle {
+            visible: root.stripe
+            x: 7
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.margins: 12
+            width: 3
+            radius: 2
+            color: root.critical ? Theme.error : Theme.accent3
+        }
+
         Column {
             id: content
-            x: root.pad
+            x: root.pad + (root.stripe ? 6 : 0)
             y: root.pad
-            width: card.width - root.pad * 2
+            width: card.width - root.pad * 2 - (root.stripe ? 6 : 0)
             spacing: 8
 
             // header: icon · app name · time · close
