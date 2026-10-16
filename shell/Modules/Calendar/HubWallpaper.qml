@@ -16,7 +16,7 @@ ClippingRectangle {
     property string screenName: ""
     property real fillHeight: 600
     signal openSettings(string page)
-    implicitHeight: Math.max(540, fillHeight)
+    implicitHeight: Math.max(420, fillHeight)
     radius: Theme.rXl
     color: Theme.surfaceHigh
 
@@ -52,53 +52,62 @@ ClippingRectangle {
         // ── the one you're on (or hovering) ──
         ColumnLayout {
             Layout.preferredWidth: parent.width * 0.42
+            Layout.maximumWidth: parent.width * 0.42
             Layout.fillHeight: true
-            spacing: 14
+            spacing: 12
 
-            ClippingRectangle {
+            // the preview takes what's left after the rest, keeping 16:9
+            Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: width * 9 / 16
-                radius: Theme.rXl
-                color: Theme.surface
-                border.width: 2
-                border.color: Theme.alpha(Theme.accent, 0.7)
-                Image {
-                    anchors.fill: parent
-                    source: Paths.toUrl(root.shown)
-                    fillMode: Image.PreserveAspectCrop
-                    sourceSize: Qt.size(960, 540)
-                    asynchronous: true
-                }
-                Rectangle {
-                    visible: root.shown === root.current && root.current !== ""
-                    anchors.top: parent.top
-                    anchors.right: parent.right
-                    anchors.margins: 12
-                    width: cur.implicitWidth + 20
-                    height: 24
-                    radius: 12
-                    color: Theme.accent3
-                    FText { id: cur; anchors.centerIn: parent; text: "current"; font.pixelSize: Theme.fsXs; font.weight: Font.Bold; color: Theme.onAccent }
+                Layout.fillHeight: true
+                Layout.preferredHeight: 100
+                ClippingRectangle {
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width, parent.height * 16 / 9)
+                    height: width * 9 / 16
+                    radius: Theme.rXl
+                    color: Theme.surface
+                    border.width: 2
+                    border.color: Theme.alpha(Theme.accent, 0.7)
+                    Image {
+                        anchors.fill: parent
+                        source: Paths.toUrl(root.shown)
+                        fillMode: Image.PreserveAspectCrop
+                        sourceSize: Qt.size(960, 540)
+                        asynchronous: true
+                    }
+                    Rectangle {
+                        visible: root.shown === root.current && root.current !== ""
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.margins: 12
+                        width: cur.implicitWidth + 20
+                        height: 24
+                        radius: 12
+                        color: Theme.accent3
+                        FText { id: cur; anchors.centerIn: parent; text: "current"; font.pixelSize: Theme.fsXs; font.weight: Font.Bold; color: Theme.onAccent }
+                    }
                 }
             }
             FText {
                 Layout.fillWidth: true
                 text: Paths.fileName(root.shown).replace(/\.[^.]+$/, "") || "No wallpaper"
                 color: "#ffffff"
-                font.pixelSize: Theme.fsXl
+                font.pixelSize: Theme.fsLg
                 font.weight: Font.Bold
                 elide: Text.ElideMiddle
             }
             // its colors (click one to copy it)
             Row {
-                spacing: 8
+                Layout.fillWidth: true
+                spacing: 6
                 Repeater {
                     model: quant.colors.slice(0, 8)
                     Rectangle {
                         required property color modelData
-                        width: 34
-                        height: 34
-                        radius: 10
+                        width: 30
+                        height: 30
+                        radius: 9
                         color: modelData
                         border.width: 1
                         border.color: Qt.rgba(1, 1, 1, 0.3)
@@ -111,23 +120,22 @@ ClippingRectangle {
                 }
             }
             FText {
+                Layout.fillWidth: true
                 text: Wallpapers.files.length + " wallpapers in " + Paths.fileName(Wallpapers.dir) + (Settings.data.wallpaper.perScreen ? " · this screen only" : "")
                 color: Qt.rgba(1, 1, 1, 0.7)
                 font.pixelSize: Theme.fsSm
+                elide: Text.ElideRight
             }
-            Item { Layout.fillHeight: true }
-            Flow {
+            // what you can do, in an even 2 × 2
+            GridLayout {
                 Layout.fillWidth: true
-                spacing: 8
-                FButton { text: "Shuffle"; icon: "shuffle"; onClicked: Wallpapers.random(root.screenName) }
-                FButton {
-                    text: "Switcher"
-                    icon: "view_carousel"
-                    variant: "tonal"
-                    onClicked: Panels.open("wallpaper", root.screenName)
-                }
-                FButton { text: "Rescan"; icon: "refresh"; variant: "tonal"; onClicked: Wallpapers.rescan() }
-                FButton { text: "Settings"; icon: "tune"; variant: "tonal"; onClicked: root.openSettings("wallpaper") }
+                columns: 2
+                rowSpacing: 8
+                columnSpacing: 8
+                FButton { Layout.fillWidth: true; text: "Shuffle"; icon: "shuffle"; onClicked: Wallpapers.random(root.screenName) }
+                FButton { Layout.fillWidth: true; text: "Switcher"; icon: "view_carousel"; variant: "tonal"; onClicked: Panels.open("wallpaper", root.screenName) }
+                FButton { Layout.fillWidth: true; text: "Rescan"; icon: "refresh"; variant: "tonal"; onClicked: Wallpapers.rescan() }
+                FButton { Layout.fillWidth: true; text: "Settings"; icon: "tune"; variant: "tonal"; onClicked: root.openSettings("wallpaper") }
             }
         }
 

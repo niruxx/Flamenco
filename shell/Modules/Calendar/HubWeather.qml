@@ -13,7 +13,7 @@ ClippingRectangle {
 
     property real fillHeight: 600
     signal openSettings(string page)
-    implicitHeight: Math.max(540, fillHeight)
+    implicitHeight: Math.max(420, fillHeight)
     radius: Theme.rXl
 
     readonly property int code: Weather.code

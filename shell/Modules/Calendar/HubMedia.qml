@@ -14,7 +14,7 @@ ClippingRectangle {
 
     property bool live: false                  // showing right now (the visualizer and the record run only then)
     property real fillHeight: 600
-    implicitHeight: Math.max(540, fillHeight)
+    implicitHeight: Math.max(420, fillHeight)
     radius: Theme.rXl
     color: Theme.alpha(Theme.text, 0.035)
 

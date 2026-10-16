@@ -74,7 +74,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.34.0"
+VERSION = "0.34.1"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()

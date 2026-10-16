@@ -257,15 +257,17 @@ Variants {
                     Layout.fillWidth: true
                     // hub: one steady height (Home's, or the rail's if taller), so moving between
                     // pages doesn't shrink the panel and cut the rail off; tabs: each page's own
-                    implicitHeight: panel.hub ? Math.max(homeH, railItems.implicitHeight + 50, current ? current.implicitHeight : 0)
+                    implicitHeight: panel.hub ? Math.max(hubH, current ? current.implicitHeight : 0)
                         : current ? current.implicitHeight : 0
                     clip: true
 
                     // Home's height, kept from when it last showed (a hidden page can report 0)
                     property real homeH: 0
                     readonly property var byTab: ({ home: home, calendar: calendar, overview: overview, media: panel.hub ? hubMedia : media, wallpapers: panel.hub ? hubWalls : walls, weather: panel.hub ? hubWeather : weather, system: system })
-                    // the height the hub's full pages fill
-                    readonly property real hubH: Math.max(homeH, railItems.implicitHeight + 50)
+                    // the height the hub's full pages fill: Home's (or the rail's), but never
+                    // more than fits on this screen under the bar
+                    readonly property real fitH: panel.modelData.height - Theme.barHeight - Theme.gap * 6 - panel.cardPadding * 2
+                    readonly property real hubH: Math.min(Math.max(homeH, railItems.implicitHeight + 50), Math.max(420, fitH))
                     readonly property Item current: byTab[panel.tab] ?? null
 
                     Behavior on implicitHeight { Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
