@@ -56,28 +56,63 @@ Item {
         }
     }
 
-    RowLayout {
+    // controls too wide to leave the text room (big buttons, high scaling) go under it
+    readonly property real iconW: root.icon !== "" ? Theme.iconSize + 14 : 0
+    readonly property bool stacked: slot.childrenRect.width > 0 && root.width - 32 - iconW - slot.childrenRect.width - 14 < 240
+
+    ColumnLayout {
         id: lay
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
         anchors.leftMargin: 16
         anchors.rightMargin: 16
-        spacing: 14
+        spacing: 10
 
-        FIcon {
-            visible: root.icon !== ""
-            icon: root.icon
-            color: Theme.textDim
-        }
-        ColumnLayout {
+        RowLayout {
             Layout.fillWidth: true
-            spacing: 1
-            FText { Layout.fillWidth: true; text: root.title; font.weight: Font.Medium; wrapMode: Text.Wrap }
-            FText { Layout.fillWidth: true; visible: text !== ""; text: root.subtitle; dim: true; font.pixelSize: Theme.fsSm; wrapMode: Text.Wrap }
+            spacing: 14
+
+            FIcon {
+                visible: root.icon !== ""
+                Layout.alignment: root.stacked ? Qt.AlignTop : Qt.AlignVCenter
+                icon: root.icon
+                color: Theme.textDim
+            }
+            // the title and description, measured at their real width so wrapped lines
+            // make the row taller instead of spilling over the next one
+            Item {
+                Layout.fillWidth: true
+                implicitHeight: texts.implicitHeight
+                Column {
+                    id: texts
+                    width: parent.width
+                    spacing: 1
+                    FText { width: parent.width; text: root.title; font.weight: Font.Medium; wrapMode: Text.Wrap }
+                    FText { width: parent.width; visible: text !== ""; text: root.subtitle; dim: true; font.pixelSize: Theme.fsSm; wrapMode: Text.Wrap }
+                }
+            }
+            Item {
+                id: inlineHolder
+                visible: !root.stacked
+                Layout.preferredWidth: root.stacked ? 0 : slot.childrenRect.width
+                Layout.preferredHeight: root.stacked ? 0 : slot.childrenRect.height
+            }
         }
+        // under the text, lined up with it
         Item {
-            id: slot
-            Layout.preferredWidth: childrenRect.width
-            Layout.preferredHeight: childrenRect.height
+            id: belowHolder
+            visible: root.stacked
+            Layout.fillWidth: true
+            Layout.leftMargin: root.iconW
+            Layout.preferredHeight: root.stacked ? slot.childrenRect.height : 0
         }
+    }
+
+    Item {
+        id: slot
+        parent: root.stacked ? belowHolder : inlineHolder
+        width: childrenRect.width
+        height: childrenRect.height
     }
 }
