@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -38,7 +39,8 @@ BarFlow {
     property bool barVisible: apps.length > 0
 
     Repeater {
-        model: root.apps
+        // ScriptModel diffs by value: a window's title changing doesn't rebuild every icon
+        model: ScriptModel { values: root.apps }
 
         BarChip {
             id: chip

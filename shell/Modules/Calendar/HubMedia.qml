@@ -119,6 +119,7 @@ ClippingRectangle {
                     Image {
                         anchors.fill: parent
                         source: Media.art
+                        sourceSize: Qt.size(360, 360)
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                     }

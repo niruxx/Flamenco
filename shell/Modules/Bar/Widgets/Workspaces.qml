@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -133,15 +134,17 @@ Rectangle {
         spacing: 5
 
         Repeater {
-            model: root.apps ? root.list : []
+            // workspace ids, diffed: focus moving or a title changing doesn't rebuild the icons
+            model: ScriptModel { values: root.apps ? root.list.map(w => w.id) : [] }
 
             delegate: Rectangle {
                 id: aw
-                required property var modelData
-                readonly property bool active: !!modelData.is_active
+                required property var modelData        // the workspace id
+                readonly property var ws: root.list.find(w => w.id === modelData) ?? ({})
+                readonly property bool active: !!ws.is_active
                 readonly property var ids: {
                     const out = [];
-                    for (const w of Niri.windowsOn(modelData.id))
+                    for (const w of Niri.windowsOn(aw.modelData))
                         if (w.app_id && !out.includes(w.app_id))
                             out.push(w.app_id);
                     return out;
@@ -170,7 +173,7 @@ Rectangle {
                     FText {
                         visible: aw.active
                         anchors.verticalCenter: parent.verticalCenter
-                        text: aw.modelData.name || aw.modelData.idx || ""
+                        text: aw.ws.name || aw.ws.idx || ""
                         font.pixelSize: Theme.fsSm
                         font.weight: Font.Bold
                         color: Theme.onAccent
@@ -201,7 +204,7 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                 }
                 TapHandler {
-                    onTapped: Niri.focusWorkspace(aw.modelData)
+                    onTapped: Niri.focusWorkspace(aw.ws)
                 }
             }
         }

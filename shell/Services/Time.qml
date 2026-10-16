@@ -17,8 +17,10 @@ Singleton {
         return Qt.formatDateTime(clock.date, fmt);
     }
 
+    // ticks once a minute (everything bound to the time wakes up 60× less);
+    // every second only while the bar shows seconds
     SystemClock {
         id: clock
-        precision: SystemClock.Seconds
+        precision: Settings.data.general.showSeconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 }

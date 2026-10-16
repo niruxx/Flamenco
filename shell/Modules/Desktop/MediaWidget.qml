@@ -30,6 +30,7 @@ RowLayout {
             id: art
             anchors.fill: parent
             source: Media.art
+            sourceSize: Qt.size(300, 300)
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
         }

@@ -100,8 +100,9 @@ Singleton {
             up.reload();
             loadavg.reload();
             netdev.reload();
-            if (!sensorsProc.running)
-                sensorsProc.running = true;
+            // the sensors found at startup, read directly (no process every 2 s)
+            for (let i = 0; i < sensorFiles.count; i++)
+                sensorFiles.objectAt(i)?.reload();
             if (root.detailed) {
                 cpuinfo.reload();
                 if (!procs.running)
@@ -296,26 +297,70 @@ Singleton {
         }
     }
 
-    // every hwmon temperature sensor: "chip|label|millidegrees"
+    // Temperature sensors: found once (and again every couple of minutes, for
+    // hot-plugged ones) as "chip|label|path"; their files are then read directly
+    // on each tick instead of starting a shell every 2 seconds.
+    property var sensorPaths: []              // [{ chip, label, path }]
+    property var sensorValues: ({})           // path → °C
+
     Process {
         id: sensorsProc
-        command: ["sh", "-c", "for d in /sys/class/hwmon/hwmon*; do n=$(cat \"$d/name\" 2>/dev/null); for t in \"$d\"/temp*_input; do [ -r \"$t\" ] || continue; l=$(cat \"${t%_input}_label\" 2>/dev/null); echo \"$n|$l|$(cat \"$t\" 2>/dev/null)\"; done; done"]
+        running: true
+        command: ["sh", "-c", "for d in /sys/class/hwmon/hwmon*; do n=$(cat \"$d/name\" 2>/dev/null); for t in \"$d\"/temp*_input; do [ -r \"$t\" ] || continue; l=$(cat \"${t%_input}_label\" 2>/dev/null); echo \"$n|$l|$t\"; done; done"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const list = [];
                 for (const line of text.trim().split("\n")) {
-                    const [chip, label, v] = line.split("|");
-                    const t = parseInt(v) / 1000;
-                    if (chip && !isNaN(t) && t > 0 && t < 150)
-                        list.push({ chip, label: label || chip, temp: t });
+                    const [chip, label, path] = line.split("|");
+                    if (chip && path)
+                        list.push({ chip, label: label || chip, path });
                 }
-                root.sensors = list;
-                // prefer CPU package sensors for the headline number
-                const cpuish = list.filter(s => /k10temp|coretemp|zenpower|cpu|acpitz/i.test(s.chip) || /package|tctl|tdie/i.test(s.label));
-                const pool = cpuish.length ? cpuish : list;
-                root.temp = pool.length ? Math.max(...pool.map(s => s.temp)) : 0;
-                root.tempHistory = root.push(root.tempHistory, root.temp);
+                if (JSON.stringify(list) !== JSON.stringify(root.sensorPaths))
+                    root.sensorPaths = list;
             }
+        }
+    }
+    Timer {
+        interval: 120000
+        running: true
+        repeat: true
+        onTriggered: if (!sensorsProc.running) sensorsProc.running = true
+    }
+
+    Instantiator {
+        id: sensorFiles
+        model: root.sensorPaths
+        delegate: FileView {
+            required property var modelData
+            path: modelData.path
+            printErrors: false
+            onLoaded: {
+                const t = parseInt(text()) / 1000;
+                const v = Object.assign({}, root.sensorValues);
+                v[modelData.path] = t;
+                root.sensorValues = v;
+                sensorsDone.restart();
+            }
+        }
+    }
+
+    // once a round of readings is in: the list, and the headline temperature
+    Timer {
+        id: sensorsDone
+        interval: 30
+        onTriggered: {
+            const list = [];
+            for (const s of root.sensorPaths) {
+                const t = root.sensorValues[s.path];
+                if (!isNaN(t) && t > 0 && t < 150)
+                    list.push({ chip: s.chip, label: s.label, temp: t });
+            }
+            root.sensors = list;
+            // prefer CPU package sensors for the headline number
+            const cpuish = list.filter(s => /k10temp|coretemp|zenpower|cpu|acpitz/i.test(s.chip) || /package|tctl|tdie/i.test(s.label));
+            const pool = cpuish.length ? cpuish : list;
+            root.temp = pool.length ? Math.max(...pool.map(s => s.temp)) : 0;
+            root.tempHistory = root.push(root.tempHistory, root.temp);
         }
     }
 

@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -34,7 +35,7 @@ Rectangle {
         spacing: Theme.sp2
 
         Repeater {
-            model: dash.ids
+            model: ScriptModel { values: dash.ids }
 
             Item {
                 id: app

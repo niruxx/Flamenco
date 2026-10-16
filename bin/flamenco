@@ -74,7 +74,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.34.2"
+VERSION = "0.35.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -3276,16 +3276,79 @@ def camera_users() -> list[str]:
     return sorted(names)
 
 
-def cmd_privacy(args: list[str]) -> int:
+def privacy_watch():
+    """Print {"camera": [...]} whenever the apps using a camera change. Scanning
+    every process's open files is costly with browsers open, so this waits for
+    the kernel (inotify) to say a /dev/video* device was opened or closed, or a
+    camera was plugged in, and scans only then; with no camera, never."""
+    import ctypes
+    import select
+    import struct
     import time
+    IN_OPEN, IN_CLOSE_WRITE, IN_CLOSE_NOWRITE, IN_CREATE, IN_DELETE = 0x20, 0x08, 0x10, 0x100, 0x200
+    last = None
+
+    def emit():
+        nonlocal last
+        now = camera_users() if any(Path("/dev").glob("video*")) else []
+        if now != last:
+            print(json.dumps({"camera": now}), flush=True)
+            last = now
+
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        fd = libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
+        if fd < 0:
+            raise OSError(ctypes.get_errno(), "inotify_init1")
+    except (OSError, AttributeError):
+        while True:                           # no inotify: look now and then
+            emit()
+            time.sleep(5)
+
+    def add(path: str, mask: int):
+        libc.inotify_add_watch(fd, path.encode(), mask)
+
+    def watch_devices():
+        for dev in Path("/dev").glob("video*"):
+            add(str(dev), IN_OPEN | IN_CLOSE_WRITE | IN_CLOSE_NOWRITE)
+
+    add("/dev", IN_CREATE | IN_DELETE)        # cameras plugged in or out
+    watch_devices()
+    emit()
+    while True:
+        ready, _, _ = select.select([fd], [], [], 60)
+        if not ready:
+            emit()                            # now and then anyway, in case one was missed
+            continue
+        replug = False
+        while True:                           # take everything waiting
+            try:
+                data = os.read(fd, 65536)
+            except BlockingIOError:
+                break
+            off = 0
+            while off + 16 <= len(data):
+                _wd, mask, _cookie, length = struct.unpack_from("iIII", data, off)
+                name = data[off + 16:off + 16 + length].split(b"\0", 1)[0].decode(errors="replace")
+                if mask & (IN_CREATE | IN_DELETE) and name.startswith("video"):
+                    replug = True
+                off += 16 + length
+        if replug:
+            time.sleep(0.5)                   # let udev set the new node's permissions
+            watch_devices()
+        time.sleep(0.25)                      # opens come in bursts: one scan for them all
+        try:
+            while os.read(fd, 65536):
+                pass
+        except BlockingIOError:
+            pass
+        emit()
+
+
+def cmd_privacy(args: list[str]) -> int:
     if args[:1] == ["watch"]:
-        last = None
-        while True:
-            now = camera_users()
-            if now != last:
-                print(json.dumps({"camera": now}), flush=True)
-                last = now
-            time.sleep(3)
+        privacy_watch()
+        return 0
     print(json.dumps({"camera": camera_users()}))
     return 0
 

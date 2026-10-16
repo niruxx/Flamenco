@@ -170,6 +170,7 @@ Variants {
                                 asynchronous: true
                                 cache: false
                                 source: Clipboard.previews[row.modelData.id] ? "file://" + Clipboard.previews[row.modelData.id] : ""
+                                sourceSize: Qt.size(240, 160)
                             }
                             FIcon {
                                 anchors.centerIn: parent

@@ -123,6 +123,7 @@ Item {
                     Image {
                         anchors.fill: parent
                         source: root.image
+                        sourceSize: Qt.size(96, 96)
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                     }

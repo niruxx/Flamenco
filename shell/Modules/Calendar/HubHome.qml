@@ -123,6 +123,7 @@ ColumnLayout {
                         id: face
                         anchors.fill: parent
                         source: Paths.toUrl(Settings.data.general.avatar)
+                        sourceSize: Qt.size(208, 208)
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                     }
@@ -450,6 +451,7 @@ ColumnLayout {
                         Image {
                             anchors.fill: parent
                             source: Media.art
+                            sourceSize: Qt.size(300, 300)
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                         }
