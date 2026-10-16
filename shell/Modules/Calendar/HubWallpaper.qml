@@ -25,10 +25,10 @@ ClippingRectangle {
     readonly property string shown: hovered || current
 
     // the wallpaper, blurred, behind the page
-    Image {
+    SafeImage {
         id: bg
         anchors.fill: parent
-        source: Paths.toUrl(root.current)
+        path: Paths.toUrl(root.current)
         fillMode: Image.PreserveAspectCrop
         sourceSize: Qt.size(480, 300)
         asynchronous: true
@@ -69,9 +69,9 @@ ClippingRectangle {
                     color: Theme.surface
                     border.width: 2
                     border.color: Theme.alpha(Theme.accent, 0.7)
-                    Image {
+                    SafeImage {
                         anchors.fill: parent
-                        source: Paths.toUrl(root.shown)
+                        path: Paths.toUrl(root.shown)
                         fillMode: Image.PreserveAspectCrop
                         sourceSize: Qt.size(960, 540)
                         asynchronous: true
@@ -179,9 +179,9 @@ ClippingRectangle {
                         border.color: Theme.accent
                         scale: area.containsMouse ? 1.04 : 1
                         Behavior on scale { Anim { duration: Theme.durShort } }
-                        Image {
+                        SafeImage {
                             anchors.fill: parent
-                            source: Paths.toUrl(cell.modelData)
+                            path: Paths.toUrl(cell.modelData)
                             fillMode: Image.PreserveAspectCrop
                             sourceSize: Qt.size(320, 200)
                             asynchronous: true

@@ -310,9 +310,9 @@ Variants {
                         border.width: card.centre ? 2 : 0
                         border.color: Theme.accent
 
-                        Image {
+                        SafeImage {
                             anchors.fill: parent
-                            source: Paths.toUrl(card.modelData)
+                            path: Paths.toUrl(card.modelData)
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             sourceSize: Qt.size(720, 420)
@@ -363,11 +363,11 @@ Variants {
                 clip: true
                 opacity: 0.4
 
-                Image {
+                SafeImage {
                     id: mirror
                     width: win.cardW
                     height: win.cardH
-                    source: Paths.toUrl(win.selected)
+                    path: Paths.toUrl(win.selected)
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     sourceSize: Qt.size(360, 210)

@@ -48,9 +48,9 @@ GridView {
             Behavior on radius { Anim { easing.bezierCurve: Theme.curves.spring } }
             Behavior on scale { Anim { easing.bezierCurve: Theme.curves.springFast } }
 
-            Image {
+            SafeImage {
                 anchors.fill: parent
-                source: Paths.toUrl(cell.modelData)
+                path: Paths.toUrl(cell.modelData)
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 sourceSize: Qt.size(320, 200)
