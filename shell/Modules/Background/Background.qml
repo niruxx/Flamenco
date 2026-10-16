@@ -146,7 +146,11 @@ Scope {
                 source: front
                 maskEnabled: !["fade", "focus"].includes(win.kind)
                 maskSource: mask
-                maskThresholdMin: 0.0
+                // MultiEffect's lower edge runs from min·(1+spread) − spread to min·(1+spread):
+                // 0.5 with a spread of 1 maps the mask's 0 → 1 to hidden → shown (with min 0
+                // it ran from −1 to 0, so an empty mask already showed the whole new picture,
+                // and the wallpaper changed before the transition played)
+                maskThresholdMin: 0.5
                 maskSpreadAtMin: 1.0
                 opacity: win.kind === "fade" ? win.ease(win.p) : win.kind === "focus" ? Math.min(1, win.p * 1.6) : 1
                 blurEnabled: win.kind === "focus"
