@@ -74,7 +74,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.36.5"
+VERSION = "0.36.6"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -145,6 +145,8 @@ LOG_FILE = XDG_CACHE / "flamenco/shell.log"
 def cmd_run(args: list[str]) -> int:
     for d in (CONFIG_DIR, STATE_DIR, XDG_CACHE / "flamenco"):
         d.mkdir(parents=True, exist_ok=True)
+    if compositor() == "hyprland" and hypr_lua():
+        lua_repair()
     # the login animation plays when niri starts the shell, not on `flamenco restart`
     env = dict(os.environ, FLAMENCO_BIN=self_path(), FLAMENCO_INTRO="0" if "--no-intro" in args else "1")
     if fallback_enabled():
@@ -6212,7 +6214,8 @@ def lua_apply_input(kb: dict | None, pointer: dict | None = None):
                f"        repeat_rate = {int(kb.get('repeatRate', 25))},",
                f"        numlock_by_default = {'true' if kb.get('numlock') else 'false'},"]
     lval = lambda v: v if v in ("true", "false") or re.fullmatch(r"-?[\d.]+", v) else lua_str(v)
-    lkey = lambda k: k if re.fullmatch(r"[A-Za-z_]\w*", k) else f"[{lua_str(k)}]"
+    # the Lua config spells options with underscores (hyprlang's tap-to-click is tap_to_click)
+    lkey = lambda k: k.replace("-", "_")
     top, tp = hypr_pointer_fields(pointer)
     fields += [f"        {lkey(k)} = {lval(v)}," for k, v in top]
     if tp:
@@ -6235,8 +6238,9 @@ def lua_apply_cursor(theme: str, size: int):
 
 def lua_monitor(o: dict) -> str:
     if not o.get("enabled", True):
-        # best guess for the Lua form of hyprlang's "disable"; loaded via pcall
-        return f'hl.monitor({{ output = {lua_str(o["name"])}, mode = "disable" }})'
+        # a separate field, like monitorv2's; "disable" isn't a mode in the Lua config
+        # ("hl.monitor: error applying field mode")
+        return f'hl.monitor({{ output = {lua_str(o["name"])}, disabled = true }})'
     m = o.get("mode") or {}
     mode = f"{m['w']}x{m['h']}@{int(m['r']) / 1000:.3f}" if m else "preferred"
     parts = [f"output = {lua_str(o['name'])}", f"mode = {lua_str(mode)}",
@@ -6248,6 +6252,31 @@ def lua_monitor(o: dict) -> str:
     if o.get("vrrSupported") and "vrr" in o:
         parts.append(f"vrr = {1 if o['vrr'] else 0}")
     return "hl.monitor({ " + ", ".join(parts) + " })"
+
+
+def lua_repair():
+    """Fix files older versions wrote into hypr/flamenco/ that Hyprland's Lua config
+    rejects: `mode = "disable"` (hl.monitor: error applying field mode) and dashed
+    option names like ["tap-to-click"] (unknown config key). Runs as the shell starts."""
+    fixes = {
+        "monitors.lua": [(re.compile(r'mode = "disable"'), "disabled = true")],
+        "input.lua": [(re.compile(r'\["([a-z_]+(?:-[a-z_]+)+)"\]'), lambda m: m.group(1).replace("-", "_"))],
+    }
+    changed = False
+    for name, subs in fixes.items():
+        f = HYPR_LUA_DIR / name
+        try:
+            text = f.read_text()
+        except OSError:
+            continue
+        new = text
+        for pat, repl in subs:
+            new = pat.sub(repl, new)
+        if new != text:
+            f.write_text(new)
+            changed = True
+    if changed:
+        hypr_reload()
 
 
 def lua_display_write(spec: list[dict]) -> int:
