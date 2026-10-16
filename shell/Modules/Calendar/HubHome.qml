@@ -22,8 +22,10 @@ ColumnLayout {
         const n = (Quickshell.env("USER") || "").trim();
         return n ? n.charAt(0).toUpperCase() + n.slice(1) : "";
     }
+    // the time to the minute: things that only need minutes follow this, not every second
+    readonly property string minute: Qt.formatDateTime(Time.now, "yyyy-MM-ddTHH:mm")
     readonly property string greeting: {
-        const h = Time.now.getHours();
+        const h = new Date(minute).getHours();
         return (h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + (firstName ? ", " + firstName : "");
     }
 
@@ -539,7 +541,8 @@ ColumnLayout {
                 Layout.fillHeight: true
                 implicitHeight: next.implicitHeight + 28
 
-                readonly property var today: Events.on(Time.now).filter(e => e.allDay || new Date(e.end) >= Time.now)
+                // what's left today, rechecked each minute (not every clock tick)
+                readonly property var today: Events.on(new Date(root.minute)).filter(e => e.allDay || new Date(e.end) >= new Date(root.minute))
 
                 ColumnLayout {
                     id: next

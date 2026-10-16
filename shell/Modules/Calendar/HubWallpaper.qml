@@ -211,9 +211,18 @@ ClippingRectangle {
         }
     }
 
+    // the colors follow the preview once the pointer settles (not every thumbnail it crosses)
+    property string settled: ""
+    onShownChanged: settle.restart()
+    Component.onCompleted: settled = shown
+    Timer {
+        id: settle
+        interval: 350
+        onTriggered: root.settled = root.shown
+    }
     ColorQuantizer {
         id: quant
-        source: root.shown ? Paths.toUrl(root.shown) : ""
+        source: root.settled ? Paths.toUrl(root.settled) : ""
         depth: 3
         rescaleSize: 64
     }

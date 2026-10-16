@@ -279,11 +279,14 @@ Variants {
                         index: panel.indexOf("home")
                         onImplicitHeightChanged: if (active && implicitHeight > 0) pages.homeH = implicitHeight
                         onActiveChanged: if (active && implicitHeight > 0) pages.homeH = implicitHeight
-                        HubHome {
-                            width: pages.width
-                            screenName: panel.modelData.name
-                            live: panel.shouldShow && panel.tab === "home"
-                            onOpenTab: t => panel.select(t)
+                        open: panel.shouldShow
+                        page: Component {
+                            HubHome {
+                                width: pages.width
+                                screenName: panel.modelData.name
+                                live: panel.shouldShow && panel.tab === "home"
+                                onOpenTab: t => panel.select(t)
+                            }
                         }
                     }
                     // the hub's own Media and System pages
@@ -292,10 +295,13 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.hub ? panel.indexOf("media") : -1
-                        HubMedia {
-                            width: pages.width
-                            fillHeight: pages.hubH
-                            live: panel.shouldShow && panel.hub && panel.tab === "media"
+                        open: panel.shouldShow
+                        page: Component {
+                            HubMedia {
+                                width: pages.width
+                                fillHeight: pages.hubH
+                                live: panel.shouldShow && panel.hub && panel.tab === "media"
+                            }
                         }
                     }
                     DashboardPage {
@@ -303,9 +309,12 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.indexOf("system")
-                        HubSystem {
-                            width: pages.width
-                            live: panel.shouldShow && panel.tab === "system"
+                        open: panel.shouldShow
+                        page: Component {
+                            HubSystem {
+                                width: pages.width
+                                live: panel.shouldShow && panel.tab === "system"
+                            }
                         }
                     }
                     DashboardPage {
@@ -313,9 +322,12 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.indexOf("calendar")
-                        HubCalendar {
-                            width: pages.width
-                            fillHeight: pages.hubH
+                        open: panel.shouldShow
+                        page: Component {
+                            HubCalendar {
+                                width: pages.width
+                                fillHeight: pages.hubH
+                            }
                         }
                     }
                     DashboardPage {
@@ -323,10 +335,13 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.hub ? panel.indexOf("weather") : -1
-                        HubWeather {
-                            width: pages.width
-                            fillHeight: pages.hubH
-                            onOpenSettings: p => panel.openSettings(p)
+                        open: panel.shouldShow
+                        page: Component {
+                            HubWeather {
+                                width: pages.width
+                                fillHeight: pages.hubH
+                                onOpenSettings: p => panel.openSettings(p)
+                            }
                         }
                     }
                     DashboardPage {
@@ -334,11 +349,14 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.hub ? panel.indexOf("wallpapers") : -1
-                        HubWallpaper {
-                            width: pages.width
-                            fillHeight: pages.hubH
-                            screenName: panel.modelData.name
-                            onOpenSettings: p => panel.openSettings(p)
+                        open: panel.shouldShow
+                        page: Component {
+                            HubWallpaper {
+                                width: pages.width
+                                fillHeight: pages.hubH
+                                screenName: panel.modelData.name
+                                onOpenSettings: p => panel.openSettings(p)
+                            }
                         }
                     }
                     DashboardPage {
@@ -346,9 +364,12 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.indexOf("overview")
-                        OverviewTab {
-                            width: pages.width
-                            onOpenTab: t => panel.select(t)
+                        open: panel.shouldShow
+                        page: Component {
+                            OverviewTab {
+                                width: pages.width
+                                onOpenTab: t => panel.select(t)
+                            }
                         }
                     }
                     DashboardPage {
@@ -356,17 +377,23 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.hub ? -1 : panel.indexOf("media")
-                        MediaTab { width: pages.width }
+                        open: panel.shouldShow
+                        page: Component {
+                            MediaTab { width: pages.width }
+                        }
                     }
                     DashboardPage {
                         id: walls
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.hub ? -1 : panel.indexOf("wallpapers")
-                        WallpapersTab {
-                            width: pages.width
-                            screenName: panel.modelData.name
-                            onOpenSettings: p => panel.openSettings(p)
+                        open: panel.shouldShow
+                        page: Component {
+                            WallpapersTab {
+                                width: pages.width
+                                screenName: panel.modelData.name
+                                onOpenSettings: p => panel.openSettings(p)
+                            }
                         }
                     }
                     DashboardPage {
@@ -374,9 +401,12 @@ Variants {
                         width: pages.width
                         currentIndex: panel.tabIndex
                         index: panel.hub ? -1 : panel.indexOf("weather")
-                        WeatherTab {
-                            width: pages.width
-                            onOpenSettings: p => panel.openSettings(p)
+                        open: panel.shouldShow
+                        page: Component {
+                            WeatherTab {
+                                width: pages.width
+                                onOpenSettings: p => panel.openSettings(p)
+                            }
                         }
                     }
                 }

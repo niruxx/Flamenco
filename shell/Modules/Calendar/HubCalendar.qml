@@ -14,14 +14,30 @@ Item {
     implicitHeight: Math.max(420, fillHeight)
 
     property int monthOffset: 0
-    property date selected: Time.now
+    // set once (not bound to the clock, which ticks every second)
+    property date selected: new Date()
     readonly property date shown: {
-        const n = Time.now;
-        return new Date(n.getFullYear(), n.getMonth() + monthOffset, 1);
+        const [y, m] = todayKey.split("-").map(Number);
+        return new Date(y, m - 1 + monthOffset, 1);
     }
     readonly property int lead: (shown.getDay() + 6) % 7      // Monday first
+    // today as "yyyy-mm-dd": the clock ticks every second, this only changes at midnight,
+    // so the tiles don't all recompute every second
+    readonly property string todayKey: Events.key(Time.now)
+    readonly property string selectedKey: Events.key(selected)
+    // the six weeks on show: day key → its events, worked out once per month/calendar change
+    readonly property var byDay: {
+        const out = {};
+        for (let i = 0; i < 42; i++) {
+            const d = new Date(shown.getFullYear(), shown.getMonth(), i - lead + 1);
+            const list = Events.on(d);
+            if (list.length)
+                out[Events.key(d)] = list;
+        }
+        return out;
+    }
     readonly property var day: Events.on(selected)
-    readonly property bool isToday: Events.key(selected) === Events.key(Time.now)
+    readonly property bool isToday: selectedKey === todayKey
     // after the chosen day (a week ahead)
     readonly property var upcoming: {
         const out = [];
@@ -36,7 +52,7 @@ Item {
     }
     function goToday() {
         monthOffset = 0;
-        selected = Time.now;
+        selected = new Date();
     }
 
     component Card: Rectangle {
@@ -113,9 +129,10 @@ Item {
                             required property int index
                             readonly property date date: new Date(root.shown.getFullYear(), root.shown.getMonth(), index - root.lead + 1)
                             readonly property bool inMonth: date.getMonth() === root.shown.getMonth()
-                            readonly property bool today: Events.key(date) === Events.key(Time.now)
-                            readonly property bool picked: Events.key(date) === Events.key(root.selected)
-                            readonly property var events: Events.on(date)
+                            readonly property string key: Events.key(date)
+                            readonly property bool today: key === root.todayKey
+                            readonly property bool picked: key === root.selectedKey
+                            readonly property var events: root.byDay[key] ?? []
                             width: days.cellW
                             height: days.cellH
                             radius: Theme.rMd
