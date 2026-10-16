@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
@@ -6,9 +7,10 @@ import qs.Commons
 import qs.Services
 import qs.Widgets
 
-// The app switcher (Switcher service): the open windows as cards, most recent
-// first. Keep Alt held and press Tab to move along (Shift+Tab back); let go of
-// Alt to switch. Arrows, Enter, a click and Esc work too.
+// The app switcher (Switcher service), in Material 3 cards: the open windows,
+// most recent first, on a raised sheet. Keep Alt held and press Tab to move
+// along (Shift+Tab back); let go of Alt to switch. Arrows, Enter, a click and
+// Esc work too.
 Variants {
     model: Quickshell.screens
 
@@ -18,7 +20,10 @@ Variants {
         required property ShellScreen modelData
         readonly property bool shown: Switcher.open && Panels.screen === modelData.name
         readonly property real p: pAnim.v
-        readonly property int cardW: Math.max(150, Math.min(196, (width - 160) / Math.max(1, Switcher.list.length) - 12))
+        readonly property int n: Switcher.list.length
+        readonly property int cardW: Math.max(168, Math.min(212, (width - 200) / Math.max(1, n) - 14))
+        readonly property int cardH: Math.round(cardW * 1.22)
+        readonly property var tints: [Theme.accent, Theme.accent2, Theme.accent3]
 
         screen: modelData
         visible: shown || p > 0.01
@@ -35,12 +40,13 @@ Variants {
         Item {
             id: pAnim
             property real v: win.shown ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durA("panels", 220); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { duration: Theme.durA("panels", 260); easing.bezierCurve: Theme.curves.emphasizedDecel } }
         }
 
+        // the scrim
         Rectangle {
             anchors.fill: parent
-            color: Theme.alpha(Theme.shadow, 0.3)
+            color: Theme.alpha(Theme.shadow, 0.32)
             opacity: win.p
             MouseArea {
                 anchors.fill: parent
@@ -74,107 +80,204 @@ Variants {
             }
         }
 
-        Rectangle {
-            id: card
-            anchors.centerIn: parent
-            width: Math.min(parent.width - 80, row.width + 32)
-            height: row.height + 76
-            radius: Theme.rXl
-            color: Theme.panelBg
-            border.width: 1
-            border.color: Theme.alpha(Theme.border, 0.7)
+        // the sheet's shadow
+        RectangularShadow {
+            anchors.fill: sheet
+            radius: sheet.radius
+            blur: 36
+            spread: 2
+            offset: Qt.vector2d(0, 10)
+            color: Theme.alpha(Theme.shadow, 0.35)
             opacity: win.p
-            scale: 0.94 + 0.06 * win.p
+            scale: sheet.scale
+        }
 
-            FText {
-                anchors.top: parent.top
-                anchors.topMargin: 14
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.width - 40
-                horizontalAlignment: Text.AlignHCenter
-                elide: Text.ElideRight
-                text: Switcher.selected?.title || Switcher.selected?.app_id || ""
-                font.weight: Font.Bold
+        // ── the sheet ──
+        Rectangle {
+            id: sheet
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 80, Math.max(row.width, header.implicitWidth) + 48)
+            height: header.height + row.height + 72
+            radius: 32
+            color: Theme.surface
+            border.width: 1
+            border.color: Theme.alpha(Theme.border, 0.6)
+            opacity: win.p
+            scale: 0.92 + 0.08 * win.p
+
+            // header: what this is, how many, and the keys as chips
+            RowLayout {
+                id: header
+                x: 24
+                y: 20
+                width: sheet.width - 48
+                spacing: 10
+
+                Rectangle {
+                    Layout.preferredWidth: 40
+                    Layout.preferredHeight: 40
+                    radius: 14
+                    color: Theme.alpha(Theme.accent, 0.18)
+                    FIcon { anchors.centerIn: parent; icon: "select_window"; size: 22; fill: 1; color: Theme.accent }
+                }
+                ColumnLayout {
+                    spacing: 0
+                    FText { text: "Switch window"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+                    FText { text: win.n + (win.n === 1 ? " window open" : " windows open"); dim: true; font.pixelSize: Theme.fsXs }
+                }
+                Item { Layout.fillWidth: true }
+                Repeater {
+                    model: [{ k: "Tab", t: "next" }, { k: "⇧ Tab", t: "back" }, { k: "Alt", t: "release to switch" }]
+                    Rectangle {
+                        required property var modelData
+                        implicitWidth: chip.implicitWidth + 20
+                        implicitHeight: 30
+                        radius: 9
+                        color: "transparent"
+                        border.width: 1
+                        border.color: Theme.alpha(Theme.text, 0.18)
+                        Row {
+                            id: chip
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Rectangle {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: kt.implicitWidth + 10
+                                height: 20
+                                radius: 6
+                                color: Theme.alpha(Theme.text, 0.1)
+                                FText { id: kt; anchors.centerIn: parent; text: modelData.k; mono: true; font.pixelSize: Theme.fsXs; font.weight: Font.Bold }
+                            }
+                            FText { anchors.verticalCenter: parent.verticalCenter; text: modelData.t; dim: true; font.pixelSize: Theme.fsXs }
+                        }
+                    }
+                }
             }
 
             ListView {
                 id: row
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 16
+                anchors.bottomMargin: 24
                 anchors.horizontalCenter: parent.horizontalCenter
                 orientation: ListView.Horizontal
-                spacing: 12
-                width: Math.min(contentWidth, win.width - 112)
-                height: win.cardW + 34
+                spacing: 14
+                width: Math.min(contentWidth, win.width - 128)
+                height: win.cardH + 16
                 interactive: contentWidth > width
                 model: Switcher.list
                 currentIndex: Switcher.index
                 highlightFollowsCurrentItem: true
                 highlightMoveDuration: Theme.durShort
+                preferredHighlightBegin: width / 2 - win.cardW / 2
+                preferredHighlightEnd: width / 2 + win.cardW / 2
+                highlightRangeMode: contentWidth > width ? ListView.ApplyRange : ListView.NoHighlightRange
                 clip: true
 
-                delegate: Rectangle {
-                    id: tile
+                delegate: Item {
+                    id: slot
                     required property var modelData
                     required property int index
                     readonly property bool sel: index === Switcher.index
                     readonly property var ws: Niri.workspaces.find(w => w.id === modelData.workspace_id)
+                    readonly property color tint: win.tints[index % win.tints.length]
+                    readonly property string appName: Apps.lookup(modelData.app_id)?.name ?? modelData.app_id ?? ""
                     width: win.cardW
-                    height: win.cardW + 34
-                    radius: Theme.rLg
-                    color: sel ? Theme.alpha(Theme.accent, 0.18) : hover.hovered ? Theme.alpha(Theme.text, 0.06) : "transparent"
-                    border.width: sel ? 2 : 0
-                    border.color: Theme.accent
-                    scale: sel ? 1 : 0.94
-                    Behavior on scale { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }
-                    Behavior on color { CAnim {} }
+                    height: win.cardH + 16
 
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 6
+                    // an M3 card: tonal when picked, raised a little
+                    Rectangle {
+                        id: m3card
+                        width: parent.width
+                        height: win.cardH
+                        y: slot.sel ? 0 : 8
+                        radius: 24
+                        color: slot.sel ? Theme.alpha(Theme.accent, 0.2) : Theme.surfaceHigh
+                        border.width: slot.sel ? 2 : 1
+                        border.color: slot.sel ? Theme.accent : Theme.alpha(Theme.text, 0.06)
+                        Behavior on y { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }
+                        Behavior on color { CAnim {} }
 
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            AppIcon {
-                                anchors.centerIn: parent
-                                implicitSize: Math.round(win.cardW * 0.46)
-                                name: Apps.iconFor(tile.modelData.app_id)
-                            }
-                            // which workspace it's on
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            spacing: 8
+
+                            // hero: the app on a soft wash of its tint
                             Rectangle {
-                                visible: !!tile.ws
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                width: 22
-                                height: 22
-                                radius: 11
-                                color: tile.sel ? Theme.accent : Theme.surfaceHigh
-                                FText {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                radius: 18
+                                gradient: Gradient {
+                                    GradientStop { position: 0; color: Theme.alpha(slot.tint, slot.sel ? 0.42 : 0.22) }
+                                    GradientStop { position: 1; color: Theme.alpha(slot.tint, 0.06) }
+                                }
+                                AppIcon {
                                     anchors.centerIn: parent
-                                    text: tile.ws ? (tile.ws.name || tile.ws.idx) : ""
-                                    font.pixelSize: Theme.fsXs
+                                    implicitSize: Math.round(win.cardW * (slot.sel ? 0.42 : 0.36))
+                                    name: Apps.iconFor(slot.modelData.app_id)
+                                    Behavior on implicitSize { Anim { duration: Theme.durShort } }
+                                }
+                                // the workspace, as an assist chip
+                                Rectangle {
+                                    visible: !!slot.ws
+                                    anchors.top: parent.top
+                                    anchors.left: parent.left
+                                    anchors.margins: 8
+                                    width: wsRow.implicitWidth + 14
+                                    height: 24
+                                    radius: 8
+                                    color: Theme.alpha(Theme.surface, 0.85)
+                                    Row {
+                                        id: wsRow
+                                        anchors.centerIn: parent
+                                        spacing: 3
+                                        FIcon { anchors.verticalCenter: parent.verticalCenter; icon: "view_carousel"; size: 13; color: slot.tint }
+                                        FText { anchors.verticalCenter: parent.verticalCenter; text: slot.ws ? (slot.ws.name || slot.ws.idx) : ""; font.pixelSize: Theme.fsXs; font.weight: Font.Bold }
+                                    }
+                                }
+                                // floating windows get a badge
+                                FIcon {
+                                    visible: !!slot.modelData.is_floating
+                                    anchors.top: parent.top
+                                    anchors.right: parent.right
+                                    anchors.margins: 10
+                                    icon: "picture_in_picture"
+                                    size: 16
+                                    color: slot.tint
+                                }
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.leftMargin: 6
+                                Layout.rightMargin: 6
+                                Layout.bottomMargin: 4
+                                spacing: 1
+                                FText {
+                                    Layout.fillWidth: true
+                                    text: slot.modelData.title || slot.appName
+                                    font.pixelSize: Theme.fsSm
                                     font.weight: Font.Bold
-                                    color: tile.sel ? Theme.onAccent : Theme.text
+                                    elide: Text.ElideRight
+                                }
+                                FText {
+                                    Layout.fillWidth: true
+                                    text: slot.appName
+                                    font.pixelSize: Theme.fsXs
+                                    color: slot.sel ? Theme.accent : Theme.textDim
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
                                 }
                             }
                         }
-                        FText {
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
-                            text: Apps.lookup(tile.modelData.app_id)?.name ?? tile.modelData.app_id ?? ""
-                            font.pixelSize: Theme.fsSm
-                            font.weight: tile.sel ? Font.Bold : Font.DemiBold
-                            elide: Text.ElideRight
-                        }
-                        FText {
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
-                            text: tile.modelData.title || ""
-                            dim: true
-                            font.pixelSize: Theme.fsXs
-                            elide: Text.ElideRight
+
+                        // M3 state layer
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Theme.text
+                            opacity: hover.hovered && !slot.sel ? 0.06 : 0
+                            Behavior on opacity { Anim { duration: Theme.durShort } }
                         }
                     }
 
@@ -184,7 +287,7 @@ Variants {
                     }
                     TapHandler {
                         onTapped: {
-                            Switcher.index = tile.index;
+                            Switcher.index = slot.index;
                             Switcher.activate();
                         }
                     }

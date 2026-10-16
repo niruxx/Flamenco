@@ -29,7 +29,7 @@ Variants {
             { value: "calendar", label: "Calendar", icon: "calendar_month" },
             { value: "weather", label: "Weather", icon: "partly_cloudy_day" },
             { value: "wallpapers", label: "Wallpaper", icon: "wallpaper" },
-            { value: "system", label: "System", icon: "monitoring", action: true },
+            { value: "system", label: "System", icon: "monitoring" },
             { value: "settings", label: "Settings", icon: "settings", action: true }
         ] : [
             { value: "overview", label: "Overview", icon: "dashboard" },
@@ -78,10 +78,6 @@ Variants {
         function select(t) {
             if (t === "settings") {
                 Panels.openSettings("clock");
-                return;
-            }
-            if (t === "system") {
-                Panels.open("performance", modelData.name);
                 return;
             }
             if (indexOf(page(t)) >= 0)
@@ -267,7 +263,7 @@ Variants {
 
                     // Home's height, kept from when it last showed (a hidden page can report 0)
                     property real homeH: 0
-                    readonly property var byTab: ({ home: home, calendar: calendar, overview: overview, media: media, wallpapers: walls, weather: weather })
+                    readonly property var byTab: ({ home: home, calendar: calendar, overview: overview, media: panel.hub ? hubMedia : media, wallpapers: walls, weather: weather, system: system })
                     readonly property Item current: byTab[panel.tab] ?? null
 
                     Behavior on implicitHeight { Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
@@ -284,6 +280,28 @@ Variants {
                             screenName: panel.modelData.name
                             live: panel.shouldShow && panel.tab === "home"
                             onOpenTab: t => panel.select(t)
+                        }
+                    }
+                    // the hub's own Media and System pages
+                    DashboardPage {
+                        id: hubMedia
+                        width: pages.width
+                        currentIndex: panel.tabIndex
+                        index: panel.hub ? panel.indexOf("media") : -1
+                        HubMedia {
+                            width: pages.width
+                            fillHeight: Math.max(pages.homeH, railItems.implicitHeight + 50)
+                            live: panel.shouldShow && panel.hub && panel.tab === "media"
+                        }
+                    }
+                    DashboardPage {
+                        id: system
+                        width: pages.width
+                        currentIndex: panel.tabIndex
+                        index: panel.indexOf("system")
+                        HubSystem {
+                            width: pages.width
+                            live: panel.shouldShow && panel.tab === "system"
                         }
                     }
                     DashboardPage {
@@ -307,7 +325,7 @@ Variants {
                         id: media
                         width: pages.width
                         currentIndex: panel.tabIndex
-                        index: panel.indexOf("media")
+                        index: panel.hub ? -1 : panel.indexOf("media")
                         MediaTab { width: pages.width }
                     }
                     DashboardPage {

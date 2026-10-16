@@ -10,7 +10,13 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    property bool detailed: false
+    // on while anything shows the detailed stats (the performance panel, the dashboard's
+    // Home and System pages); each calls hold(true) when it starts showing, hold(false) after
+    property int detailUsers: 0
+    readonly property bool detailed: detailUsers > 0
+    function hold(on) {
+        detailUsers = Math.max(0, detailUsers + (on ? 1 : -1));
+    }
 
     // ── always on ──
     property real cpu: 0
@@ -34,6 +40,29 @@ Singleton {
     property var sensors: []     // [{ chip, label, temp }]
     property var disks: []       // [{ mount, size, used }]
     property var processes: []   // [{ pid, name, cpu, mem }]
+    property var coreUsage: []   // 0..1 per logical core
+    property string cpuModel: ""
+    property real memAvailable: 0 // GiB
+    property real memCached: 0
+    property real memShared: 0
+    property var tempHistory: [] // °C
+    readonly property real tempPeak: tempHistory.length ? Math.max(...tempHistory.slice(-45)) : temp
+    property int processCount: 0
+    property real netRxTotal: 0  // bytes since the shell started
+    property real netTxTotal: 0
+    property string netIface: ""
+    property string netIp: ""
+    property string kernel: ""
+    property string hostname: ""
+    // GPU: AMD and Intel from sysfs; NVIDIA only while gpuNvidia is on (polling keeps it awake)
+    property bool gpuNvidia: false
+    property string gpuName: ""
+    property real gpuBusy: -1    // 0..1, -1 = unknown
+    property real gpuMemUsed: 0  // GiB
+    property real gpuMemTotal: 0
+    property real gpuTemp: 0
+    property var _prevCores: []
+    property var _netStart: null
 
     property var _prevCpu: null
     property var _prevNet: null
@@ -81,13 +110,80 @@ Singleton {
         }
     }
 
-    // disks change slowly
+    // disks, the network interface and the machine change slowly
     Timer {
         interval: 30000
         running: root.detailed
         repeat: true
         triggeredOnStart: true
-        onTriggered: if (!df.running) df.running = true
+        onTriggered: {
+            if (!df.running)
+                df.running = true;
+            if (!netInfo.running)
+                netInfo.running = true;
+            if (!hostInfo.running && root.kernel === "")
+                hostInfo.running = true;
+        }
+    }
+
+    // the GPU, every few seconds while detailed
+    Timer {
+        interval: 3000
+        running: root.detailed
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: if (!gpuProc.running) gpuProc.running = true
+    }
+
+    // the interface and address the default route uses
+    Process {
+        id: netInfo
+        command: ["sh", "-c", "ip -4 route get 1.1.1.1 2>/dev/null | head -1"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.netIface = text.match(/\bdev (\S+)/)?.[1] ?? "";
+                root.netIp = text.match(/\bsrc (\S+)/)?.[1] ?? "";
+            }
+        }
+    }
+    Process {
+        id: hostInfo
+        command: ["sh", "-c", "cat /proc/sys/kernel/osrelease /proc/sys/kernel/hostname"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const l = text.trim().split("\n");
+                root.kernel = l[0] ?? "";
+                root.hostname = l[1] ?? "";
+            }
+        }
+    }
+    // AMD / Intel: sysfs ("amd|busy%|vram used|vram total|temp"); NVIDIA: nvidia-smi when allowed
+    Process {
+        id: gpuProc
+        command: ["sh", "-c", 'for c in /sys/class/drm/card[0-9]; do d="$c/device"; if [ -r "$d/gpu_busy_percent" ]; then t=$(cat "$d"/hwmon/hwmon*/temp1_input 2>/dev/null | head -1); echo "sysfs|$(cat "$d/gpu_busy_percent")|$(cat "$d/mem_info_vram_used" 2>/dev/null)|$(cat "$d/mem_info_vram_total" 2>/dev/null)|$t|$(cat "$d/product_name" 2>/dev/null)"; exit; fi; done; '
+            + 'if [ "$1" = 1 ] && command -v nvidia-smi >/dev/null; then nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,name --format=csv,noheader,nounits | head -1 | sed "s/, /|/g; s/^/nvidia|/"; '
+            + 'elif command -v nvidia-smi >/dev/null; then echo "nvidia-off"; fi', "sh", root.gpuNvidia ? "1" : "0"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const f = text.trim().split("|");
+                if (f[0] === "sysfs") {
+                    root.gpuBusy = Number(f[1]) / 100;
+                    root.gpuMemUsed = Number(f[2] || 0) / 1073741824;
+                    root.gpuMemTotal = Number(f[3] || 0) / 1073741824;
+                    root.gpuTemp = Number(f[4] || 0) / 1000;
+                    root.gpuName = f[5] || "GPU";
+                } else if (f[0] === "nvidia") {
+                    root.gpuBusy = Number(f[1]) / 100;
+                    root.gpuMemUsed = Number(f[2]) / 1024;
+                    root.gpuMemTotal = Number(f[3]) / 1024;
+                    root.gpuTemp = Number(f[4]);
+                    root.gpuName = f[5] || "NVIDIA";
+                } else {
+                    root.gpuBusy = -1;
+                    root.gpuName = text.trim() === "nvidia-off" ? "NVIDIA" : "";
+                }
+            }
+        }
     }
 
     FileView {
@@ -106,7 +202,20 @@ Singleton {
                 }
             }
             root._prevCpu = { idle, total };
-            root.cores = Math.max(1, lines.filter(l => /^cpu\d+ /.test(l)).length);
+            const coreLines = lines.filter(l => /^cpu\d+ /.test(l));
+            root.cores = Math.max(1, coreLines.length);
+            if (root.detailed) {
+                const now = coreLines.map(l => {
+                    const c = l.trim().split(/\s+/).slice(1).map(Number);
+                    return { idle: c[3] + (c[4] || 0), total: c.reduce((a, b) => a + b, 0) };
+                });
+                if (root._prevCores.length === now.length)
+                    root.coreUsage = now.map((c, i) => {
+                        const dt = c.total - root._prevCores[i].total;
+                        return dt > 0 ? Math.max(0, Math.min(1, 1 - (c.idle - root._prevCores[i].idle) / dt)) : 0;
+                    });
+                root._prevCores = now;
+            }
         }
     }
 
@@ -123,6 +232,9 @@ Singleton {
                 root.memUsed = (total - avail) / 1048576;
                 root.memHistory = root.push(root.memHistory, root.mem);
             }
+            root.memAvailable = avail / 1048576;
+            root.memCached = (kb("Cached") + kb("Buffers")) / 1048576;
+            root.memShared = kb("Shmem") / 1048576;
             root.swapTotal = kb("SwapTotal") / 1048576;
             root.swapUsed = (kb("SwapTotal") - kb("SwapFree")) / 1048576;
         }
@@ -137,7 +249,11 @@ Singleton {
     FileView {
         id: loadavg
         path: "/proc/loadavg"
-        onLoaded: root.load = text().trim().split(/\s+/).slice(0, 3).map(Number)
+        onLoaded: {
+            const f = text().trim().split(/\s+/);
+            root.load = f.slice(0, 3).map(Number);
+            root.processCount = Number((f[3] || "0/0").split("/")[1]) || 0;
+        }
     }
 
     FileView {
@@ -163,6 +279,10 @@ Singleton {
                 }
             }
             root._prevNet = { rx, tx, t: now };
+            if (!root._netStart)
+                root._netStart = { rx, tx };
+            root.netRxTotal = rx - root._netStart.rx;
+            root.netTxTotal = tx - root._netStart.tx;
         }
     }
 
@@ -172,6 +292,7 @@ Singleton {
         onLoaded: {
             const mhz = (text().match(/^cpu MHz\s*:\s*([\d.]+)/gm) ?? []).map(l => parseFloat(l.split(":")[1]));
             root.cpuFreq = mhz.length ? mhz.reduce((a, b) => a + b, 0) / mhz.length : 0;
+            root.cpuModel = (text().match(/^model name\s*:\s*(.+)$/m)?.[1] ?? "").replace(/\(R\)|\(TM\)|CPU @.*| Processor/g, "").replace(/\s+/g, " ").trim();
         }
     }
 
@@ -193,6 +314,7 @@ Singleton {
                 const cpuish = list.filter(s => /k10temp|coretemp|zenpower|cpu|acpitz/i.test(s.chip) || /package|tctl|tdie/i.test(s.label));
                 const pool = cpuish.length ? cpuish : list;
                 root.temp = pool.length ? Math.max(...pool.map(s => s.temp)) : 0;
+                root.tempHistory = root.push(root.tempHistory, root.temp);
             }
         }
     }
@@ -222,7 +344,7 @@ Singleton {
         command: ["ps", "-eo", "pid=,comm=,%cpu=,%mem=", "--sort=-%cpu"]
         stdout: StdioCollector {
             onStreamFinished: {
-                root.processes = text.trim().split("\n").slice(0, 6).map(l => {
+                root.processes = text.trim().split("\n").slice(0, 8).map(l => {
                     const f = l.trim().split(/\s+/);
                     const n = f.length;
                     return { pid: Number(f[0]), name: f.slice(1, n - 2).join(" "), cpu: Number(f[n - 2]), mem: Number(f[n - 1]) };

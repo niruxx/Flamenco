@@ -33,12 +33,14 @@ ColumnLayout {
             Cava.users++;
         else
             Cava.users = Math.max(0, Cava.users - 1);
-        if (live)
-            SystemStats.detailed = true;
-        else if (Panels.current !== "performance")
-            SystemStats.detailed = false;
+        SystemStats.hold(live);
     }
-    Component.onDestruction: if (live) Cava.users = Math.max(0, Cava.users - 1)
+    Component.onDestruction: {
+        if (live) {
+            Cava.users = Math.max(0, Cava.users - 1);
+            SystemStats.hold(false);
+        }
+    }
 
     component Card: Rectangle {
         radius: Theme.rXl

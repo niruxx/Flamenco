@@ -21,7 +21,7 @@ Variants {
         Connections {
             target: panel
             function onShouldShowChanged() {
-                SystemStats.detailed = panel.shouldShow;
+                SystemStats.hold(panel.shouldShow);
             }
         }
 

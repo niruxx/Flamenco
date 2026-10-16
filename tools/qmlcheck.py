@@ -43,7 +43,7 @@ ObjectModel FocusScope FontMetrics TextMetrics SmoothedAnimation SpringAnimation
 AnchorAnimation Scale Rotation PointHandler PinchHandler Window SystemPalette FolderListModel QsMenuAnchor
 ClippingWrapperRectangle WrapperRectangle WrapperItem WrapperMouseArea ElapsedTimer HyprlandFocusGrab ListElement
 SoundEffect MediaPlayer AudioOutput VideoOutput Video DesktopEntries PopupAnchor ColorQuantizer Retainable
-PathAttribute PathPercent PathInterpolator Path
+PathAttribute PathPercent PathInterpolator Path RectangularShadow RotationAnimator OpacityAnimator ScaleAnimator XAnimator YAnimator
 """.split())
 # objects that aren't QQuickItems; a Behavior directly inside them crashes Qt 6.12
 NON_ITEM = {"Singleton", "Scope", "ShellRoot", "PanelWindow", "FloatingWindow", "PopupWindow", "Variants", "LazyLoader",
