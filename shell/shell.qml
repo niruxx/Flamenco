@@ -51,6 +51,8 @@ ShellRoot {
         SuperKey.status;
         ThirdParty.plugins;
         Clipboard.available;
+        // its one-time shortcut additions (Super+L, Alt+Tab) run at startup, not only once Settings → Keyboard opens
+        Keyboard.cfg;
     }
 
     // first run: open setup once settings are loaded (after the login animation)
