@@ -17,8 +17,15 @@ Singleton {
     readonly property string wanted: Settings.data.appearance.palette === "wallpaper" ? Paths.expand(Settings.data.wallpaper.current) : ""
     property int attempt: 0
 
-    onWantedChanged: generate()
+    // after a new wallpaper's transition has (nearly) played, so the colors change as
+    // it finishes revealing instead of before it starts
+    onWantedChanged: afterTransition.restart()
     Component.onCompleted: generate()
+    Timer {
+        id: afterTransition
+        interval: Settings.data.wallpaper.transition === "none" ? 0 : Math.max(0, (Settings.data.wallpaper.duration || 1200) * 0.8)
+        onTriggered: root.generate()
+    }
 
     function generate() {
         if (!wanted)

@@ -138,7 +138,11 @@ Scope {
             MultiEffect {
                 id: reveal
                 anchors.fill: parent
-                visible: win.running
+                // The mask is drawn in a layer that still holds the end of the last
+                // transition (fully revealed) until it redraws; showing the new picture
+                // through it at once flashed the whole wallpaper before the animation.
+                // So it shows once the transition is under way and the mask is fresh.
+                visible: win.running && (win.p > 0.02 || win.kind === "fade" || win.kind === "focus")
                 source: front
                 maskEnabled: !["fade", "focus"].includes(win.kind)
                 maskSource: mask
