@@ -197,7 +197,11 @@ Singleton {
                     root.status = "missing";
                     return;
                 }
-                root.files = text.split("\n").filter(Boolean).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+                const found = text.split("\n").filter(Boolean).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+                // the same files: keep the list as it is, so the switchers aren't reset
+                // (a new list sent their grids back to the top and the carousel to the start)
+                if (found.join("\n") !== root.files.join("\n"))
+                    root.files = found;
                 root.status = root.files.length ? "ok" : "empty";
                 root.makePosters(root.files);
                 // also replaces a "._name" metadata file picked before they were skipped

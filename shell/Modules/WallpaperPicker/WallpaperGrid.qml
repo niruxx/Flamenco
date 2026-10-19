@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Widgets
 import qs.Commons
 import qs.Services
@@ -14,7 +15,8 @@ GridView {
     cellWidth: width / cols
     cellHeight: cellWidth * 0.62
     clip: true
-    model: Wallpapers.files
+    // ScriptModel diffs the list, so a rescan adds or removes cards without scrolling back to the top
+    model: ScriptModel { values: Wallpapers.files }
     boundsBehavior: Flickable.OvershootBounds
 
     SmoothWheel {

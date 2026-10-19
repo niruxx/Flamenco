@@ -264,7 +264,7 @@ Singleton {
                 property string picker: "carousel"   // the switcher: carousel (3D cover flow) | grid
                 // live wallpapers: videos (mp4, webm, mkv, mov) and GIFs in the folder play on the desktop
                 property bool live: true              // off: they show a still
-                property bool livePauseBattery: true  // still while on battery
+                property bool livePauseSaver: true    // still while the power profile is Power saver (they play on battery otherwise)
                 property bool livePauseWindows: true  // still while windows cover the workspace
                 property real liveSpeed: 1.0
                 property bool liveSound: false

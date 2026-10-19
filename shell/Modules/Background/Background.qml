@@ -22,7 +22,7 @@ import qs.Widgets
 //
 // Live wallpapers (videos, GIFs): the transitions run on the video's still
 // (Wallpapers.still), then the video fades in over it and plays (LiveVideo),
-// paused on battery or while windows cover the workspace if so set.
+// paused in the Power saver profile or while windows cover the workspace if so set.
 Scope {
     id: root
 
@@ -46,7 +46,7 @@ Scope {
             readonly property bool liveOn: live !== "" && !win.running && back.status === Image.Ready && String(back.source) === Paths.toUrl(wanted)
             readonly property var activeWs: Niri.workspaces.find(w => w.output === modelData.name && w.is_active) ?? null
             readonly property bool covered: activeWs !== null && Niri.windows.some(w => w.workspace_id === activeWs.id && !w.is_floating)
-            readonly property bool livePlaying: !(cfg.livePauseBattery && Power.onBattery) && !(cfg.livePauseWindows && covered)
+            readonly property bool livePlaying: !((cfg.livePauseSaver ?? true) && Power.profileId === "power-saver") && !(cfg.livePauseWindows && covered)
             readonly property real diag: Math.hypot(width, height)
             property string kind: "fade"
             property real p: 0          // 0 → 1, linear; effects apply their own easing

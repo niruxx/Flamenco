@@ -225,7 +225,8 @@ Variants {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: -40
                 height: win.cardH + 80
-                model: win.files
+                // diffed, so a rescan doesn't send the carousel back to the first card
+                model: ScriptModel { values: win.files }
                 pathItemCount: Math.min(9, Math.max(1, win.files.length))
                 cacheItemCount: 4
                 preferredHighlightBegin: 0.5

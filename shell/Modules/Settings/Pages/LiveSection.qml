@@ -41,7 +41,7 @@ Group {
             onClicked: Panels.openSettings("system")
         }
     }
-    SwitchRow { visible: root.w.live; title: "Pause on battery"; subtitle: "Saves power: the picture stays, it just stops moving"; icon: "battery_saver"; target: root.w; key: "livePauseBattery" }
+    SwitchRow { visible: root.w.live; title: "Pause in power saver"; subtitle: Power.profileId === "power-saver" ? "Paused now: the power profile is Power saver. They play on battery otherwise" : "While the power profile is Power saver; they play on battery otherwise. The picture stays, it just stops moving"; icon: "battery_saver"; target: root.w; key: "livePauseSaver" }
     SwitchRow { visible: root.w.live; title: "Pause behind windows"; subtitle: "While a tiled window is on the screen's workspace"; icon: "select_window"; target: root.w; key: "livePauseWindows" }
     SliderRow { visible: root.w.live; title: "Speed"; icon: "speed"; target: root.w; key: "liveSpeed"; from: 0.25; to: 2; stepSize: 0.05; decimals: 2; suffix: "×" }
     SwitchRow { visible: root.w.live; title: "Sound"; subtitle: "Videos are silent unless this is on"; icon: "volume_up"; target: root.w; key: "liveSound" }

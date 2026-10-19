@@ -87,7 +87,8 @@ ColumnLayout {
         cellWidth: width / cols
         cellHeight: cellWidth * 0.62
         clip: true
-        model: root.results
+        // diffed: the next page is added below instead of replacing the list (which scrolled to the top)
+        model: ScriptModel { values: root.results }
         boundsBehavior: Flickable.OvershootBounds
         SmoothWheel { view: grid }
         // the next page when the end comes into view

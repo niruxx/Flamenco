@@ -163,7 +163,7 @@ ClippingRectangle {
                 readonly property int cols: Math.max(2, Math.floor(width / 210))
                 cellWidth: width / cols
                 cellHeight: cellWidth * 0.62
-                model: Wallpapers.files
+                model: ScriptModel { values: Wallpapers.files }
                 boundsBehavior: Flickable.StopAtBounds
 
                 SmoothWheel {
