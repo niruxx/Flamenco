@@ -19,6 +19,10 @@ import qs.Widgets
 // in white, blurred for a soft edge, and fed to MultiEffect; an accent glow
 // follows the edge. Kinds: fade · focus · circle · ripple · wipe · sweep ·
 // blinds · mosaic · random.
+//
+// Live wallpapers (videos, GIFs): the transitions run on the video's still
+// (Wallpapers.still), then the video fades in over it and plays (LiveVideo),
+// paused on battery or while windows cover the workspace if so set.
 Scope {
     id: root
 
@@ -33,7 +37,16 @@ Scope {
             id: win
 
             required property ShellScreen modelData
-            readonly property string wanted: Wallpapers.forScreen(modelData.name)
+            readonly property string picked: Wallpapers.forScreen(modelData.name)
+            readonly property string wanted: Wallpapers.still(picked)
+            // ── live ──
+            readonly property var cfg: Settings.data.wallpaper
+            readonly property string live: cfg.live && Paths.isAnimated(picked) ? picked : ""
+            // once its still is in place underneath and no transition is running
+            readonly property bool liveOn: live !== "" && !win.running && back.status === Image.Ready && String(back.source) === Paths.toUrl(wanted)
+            readonly property var activeWs: Niri.workspaces.find(w => w.output === modelData.name && w.is_active) ?? null
+            readonly property bool covered: activeWs !== null && Niri.windows.some(w => w.workspace_id === activeWs.id && !w.is_floating)
+            readonly property bool livePlaying: !(cfg.livePauseBattery && Power.onBattery) && !(cfg.livePauseWindows && covered)
             readonly property real diag: Math.hypot(width, height)
             property string kind: "fade"
             property real p: 0          // 0 → 1, linear; effects apply their own easing
@@ -84,6 +97,36 @@ Scope {
                         win.running = false;
                         win.p = 0;
                     }
+                }
+            }
+
+            // the live wallpaper, over its still
+            Loader {
+                id: liveVideo
+                anchors.fill: parent
+                active: win.liveOn && Paths.isVideo(win.live)
+                source: active ? "LiveVideo.qml" : ""
+                opacity: active && (item?.started ?? false) ? 1 : 0
+                Behavior on opacity { Anim { duration: 400 } }
+                onLoaded: {
+                    item.url = Qt.binding(() => Paths.toUrl(win.live));
+                    item.playing = Qt.binding(() => win.livePlaying);
+                    item.speed = Qt.binding(() => win.cfg.liveSpeed || 1);
+                    item.sound = Qt.binding(() => win.cfg.liveSound ?? false);
+                    item.fillMode = Qt.binding(() => root.fillMode);
+                }
+            }
+            Loader {
+                anchors.fill: parent
+                active: win.liveOn && !Paths.isVideo(win.live)
+                sourceComponent: AnimatedImage {
+                    source: Paths.toUrl(win.live)
+                    fillMode: root.fillMode
+                    asynchronous: true
+                    cache: false
+                    playing: true
+                    paused: !win.livePlaying
+                    speed: win.cfg.liveSpeed || 1
                 }
             }
 
@@ -404,7 +447,7 @@ Scope {
             id: backdrop
 
             required property ShellScreen modelData
-            readonly property string url: Paths.toUrl(Wallpapers.forScreen(modelData.name))
+            readonly property string url: Wallpapers.stillUrl(Wallpapers.forScreen(modelData.name))
             property bool useA: true
 
             screen: modelData

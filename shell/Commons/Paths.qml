@@ -36,6 +36,26 @@ Singleton {
         return p.length > 1 ? p.replace(/\/+$/, "") : p;
     }
 
+    // Live wallpapers: videos play on the desktop (Background's LiveVideo), GIFs
+    // animate. A video's still (its "poster", one frame, made by Wallpapers with
+    // ffmpeg) stands in for it everywhere a picture is needed: thumbnails, the
+    // transitions, the lock screen and colors from wallpaper.
+    readonly property var videoExts: ["mp4", "webm", "mkv", "mov", "m4v", "avi"]
+    function ext(path) {
+        const m = String(path ?? "").toLowerCase().match(/\.([a-z0-9]+)$/);
+        return m ? m[1] : "";
+    }
+    function isVideo(path) {
+        return videoExts.includes(ext(path));
+    }
+    function isAnimated(path) {
+        return isVideo(path) || ext(path) === "gif";
+    }
+    // where a video's poster goes (`flamenco` computes the same name: md5 of the path)
+    function poster(path) {
+        return cacheDir + "/live/" + Qt.md5(expand(path)) + ".jpg";
+    }
+
     // file:// URL for a path. Each segment is percent-encoded, so names with
     // spaces, #, % or ? still load.
     function toUrl(path) {

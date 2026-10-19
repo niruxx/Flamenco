@@ -40,7 +40,7 @@ Page {
     Group {
         SettingRow {
             title: "Folder"
-            subtitle: Wallpapers.status === "missing" ? "Folder not found" : Wallpapers.scanning ? "Scanning…" : Wallpapers.files.length + " images (including subfolders)"
+            subtitle: Wallpapers.status === "missing" ? "Folder not found" : Wallpapers.scanning ? "Scanning…" : Wallpapers.files.length + " wallpapers (including subfolders)" + (Wallpapers.liveCount ? ", " + Wallpapers.liveCount + " live" : "")
             icon: "folder"
             FFolderField {
                 width: 400
@@ -88,6 +88,8 @@ Page {
     // which screen the library below sets, in per-screen mode
     property string target: ""
 
+    LiveSection {}
+
     Group {
         title: "Screens"
         SwitchRow {
@@ -115,7 +117,7 @@ Page {
                         color: Theme.surfaceHigh
                         Image {
                             anchors.fill: parent
-                            source: Paths.toUrl(Wallpapers.forScreen(srow.modelData.name))
+                            source: Wallpapers.stillUrl(Wallpapers.forScreen(srow.modelData.name))
                             sourceSize: Qt.size(192, 112)
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true

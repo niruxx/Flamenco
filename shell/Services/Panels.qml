@@ -36,6 +36,8 @@ Singleton {
 
     // control-center sub page: "" (main) | wifi | bluetooth | audio | mic
     property string controlDetail: ""
+    // the bar hidden by hand (`flamenco bar toggle`, a shortcut); until shown again or a restart
+    property bool barHidden: false
     // desktop widget editing (sidebar + arranging), on Panels.screen
     property bool widgetsEdit: false
     // text the launcher opens with (`flamenco launcher openWith ":"`)

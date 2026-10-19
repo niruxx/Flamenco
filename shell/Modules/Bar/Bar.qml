@@ -61,13 +61,50 @@ Variants {
         }
         implicitHeight: vertical ? 0 : thickness
         implicitWidth: vertical ? thickness : 0
-        exclusiveZone: thickness
+        exclusiveZone: !hides || cfg.hideKeepSpace ? thickness : 0
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.namespace: "flamenco-bar"
 
+        // ── hiding (Settings → Bar → Hide) ──
+        // auto: out of the way until the pointer reaches the edge; windows: while the
+        // screen's workspace has windows. `flamenco bar toggle` hides it by hand.
+        // Brought back by the pointer at the edge (a thin strip stays there) and
+        // while a panel is open on this screen.
+        readonly property string hideMode: cfg.hide || "never"
+        readonly property var activeWs: Niri.workspaces.find(w => w.output === modelData.name && w.is_active) ?? null
+        readonly property bool hasWindows: activeWs !== null && Niri.windows.some(w => w.workspace_id === activeWs.id)
+        readonly property bool hides: Panels.barHidden || hideMode === "auto" || hideMode === "windows" && hasWindows
+        readonly property bool panelHere: Panels.current !== "" && Panels.screen === modelData.name
+        readonly property bool revealed: !hides || barHover.hovered || hideDelay.running || panelHere
+        Item {
+            id: hideAnim
+            property real v: win.revealed ? 1 : 0
+            Behavior on v { Anim { duration: Theme.durA("bar", win.revealed ? 260 : 320); easing.bezierCurve: win.revealed ? Theme.curves.emphasizedDecel : Theme.curves.emphasizedAccel } }
+        }
+        Timer {
+            id: hideDelay
+            interval: Math.max(0, win.cfg.hideDelay ?? 600)
+        }
+        HoverHandler {
+            id: barHover
+            onHoveredChanged: if (!hovered) hideDelay.restart()
+        }
+        // input: the whole bar while it's out, else the strip along the edge
+        mask: Region { item: hitArea }
+        Item {
+            id: hitArea
+            readonly property real across: win.revealed || hideAnim.v > 0.01 ? win.thickness : Math.max(1, win.cfg.revealSize ?? 3)
+            width: win.vertical ? across : win.width
+            height: win.vertical ? win.height : across
+            anchors.top: win.pos === "top" || win.vertical ? parent.top : undefined
+            anchors.bottom: win.pos === "bottom" ? parent.bottom : undefined
+            anchors.left: win.pos === "left" || !win.vertical ? parent.left : undefined
+            anchors.right: win.pos === "right" ? parent.right : undefined
+        }
+
         // Entrance: slide in from the edge on startup, and slowly after logging in
         // (SessionFx.revealBar, Settings → Lock & Login → Session)
-        readonly property real enter: Math.min(enterAnim.v, SessionFx.revealBar)
+        readonly property real enter: Math.min(enterAnim.v, SessionFx.revealBar, hideAnim.v)
 
         // animated value lives on an Item: Behaviors on the window itself crash Qt 6.12
         Item {

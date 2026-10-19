@@ -62,7 +62,6 @@ Page {
         ChoiceRow { title: "Style"; icon: "style"; target: page.b; key: "style"; options: [{ value: "floating", label: "Floating" }, { value: "attached", label: "Attached" }, { value: "islands", label: "Islands" }] }
         SliderRow { title: "Thickness"; icon: "height"; target: page.b; key: "height"; from: 30; to: 56; stepSize: 1; suffix: "px" }
         ChoiceRow { title: "Workspace indicator"; subtitle: page.b.workspaceStyle === "apps" ? "Each workspace shows its apps' icons; the active one is filled" : ""; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }, { value: "apps", label: "App icons" }] }
-        ChoiceRow { title: "Battery"; icon: "battery_full"; target: page.b; key: "batteryStyle"; segWidth: 150; options: [{ value: "icon", label: "Icon and percent" }, { value: "battery", label: "Battery shape" }] }
         ChoiceRow { title: "CPU / RAM"; icon: "memory"; target: page.b; key: "statsStyle"; segWidth: 120; options: [{ value: "text", label: "Icons" }, { value: "rings", label: "Ring gauges" }] }
         SwitchRow { title: "Temperature with CPU / RAM"; icon: "thermostat"; target: page.b; key: "statsTemp" }
         SettingRow {
@@ -76,6 +75,36 @@ Page {
             }
         }
     }
+
+    Group {
+        title: "Hide"
+        ChoiceRow {
+            title: "Hide the bar"
+            subtitle: page.b.hide === "auto" ? "Out of the way until you move the pointer to the screen's edge"
+                : page.b.hide === "windows" ? "Hidden while windows are open on the workspace; shown on an empty one, or at the edge"
+                : "Always shown. A shortcut can still hide it (Show / hide the bar, in Keyboard → Flamenco functions)"
+            icon: "visibility_off"
+            target: page.b
+            key: "hide"
+            segWidth: 120
+            options: [{ value: "never", label: "Never" }, { value: "auto", label: "Auto-hide" }, { value: "windows", label: "With windows" }]
+        }
+        SliderRow { visible: page.b.hide !== "never"; title: "Hide after"; subtitle: "Once the pointer leaves the bar"; icon: "timer"; target: page.b; key: "hideDelay"; from: 0; to: 3000; stepSize: 100; suffix: " ms" }
+        SliderRow { visible: page.b.hide !== "never"; title: "Edge to reveal it"; subtitle: "How close to the edge the pointer has to be"; icon: "border_outer"; target: page.b; key: "revealSize"; from: 1; to: 12; stepSize: 1; suffix: " px" }
+        SwitchRow { visible: page.b.hide !== "never"; title: "Keep its space"; subtitle: "Windows stay clear of the bar's spot while it's hidden, so it never covers them"; icon: "space_bar"; target: page.b; key: "hideKeepSpace" }
+        SettingRow {
+            title: Panels.barHidden ? "Hidden by hand" : "Hide it now"
+            subtitle: Panels.barHidden ? "Until you show it again or the shell restarts. Also: flamenco bar toggle" : "Until you show it again (the pointer at the edge still brings it out). Also: flamenco bar toggle"
+            icon: "toggle_on"
+            FButton {
+                text: Panels.barHidden ? "Show the bar" : "Hide the bar"
+                variant: "tonal"
+                onClicked: Panels.barHidden = !Panels.barHidden
+            }
+        }
+    }
+
+    BatterySection {}
 
     Group {
         title: "Start button"

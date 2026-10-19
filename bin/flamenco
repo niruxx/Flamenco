@@ -60,6 +60,9 @@
   flamenco niri-config [--print | --snippet]   write a complete ~/.config/niri/config.kdl (backs up the old one)
   flamenco hyprland-config [--lua|--conf] [--print]   write a complete Hyprland config (hyprland.lua or .conf; old one backed up)
   flamenco hypr-dispatch ACTION [ARGS]   run a niri-style action on Hyprland (used by the shell)
+  flamenco bar toggle|show|hide | mode never|auto|windows   hide the bar (by hand, automatically, or while windows are open)
+  flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO
+                               live (video) wallpapers: find them online (wikimedia, pexels, pixabay), download, API keys
   flamenco logs [-f]           show the shell's log (~/.cache/flamenco/shell.log)
 """
 
@@ -69,12 +72,13 @@ import configparser
 import json
 import re
 import os
+import shlex
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.36.7"
+VERSION = "0.37.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1480,7 +1484,7 @@ def cmd_printers(args: list[str]) -> int:
             print(json.dumps(st))
             return 0
         if not st["installed"]:
-            print("CUPS is not installed (sudo pacman -S cups)")
+            print(f"CUPS is not installed ({install_hint('cups')})")
             return 1
         print(f"cups.service: {st['service'].get('raw', '')}   cups.socket: {st['socket'].get('raw', '')}")
         for pr in st["printers"]:
@@ -1561,6 +1565,7 @@ SHELL_FUNCTIONS = {
     "theme-toggle": ("Toggle dark / light", ["theme", "toggle"]),
     "dnd": ("Toggle Do Not Disturb", ["ipc", "notifs", "toggleDnd"]),
     "caffeine": ("Toggle caffeine", ["ipc", "toggles", "caffeine"]),
+    "bar-toggle": ("Show / hide the bar", ["bar", "toggle"]),
     "night-light": ("Toggle night light", ["ipc", "toggles", "nightLight"]),
     "screenshot": ("Screenshot (select an area)", ["screenshot", "region"]),
     "screenshot-screen": ("Screenshot of the screen", ["screenshot", "screen"]),
@@ -2127,7 +2132,7 @@ def cmd_pick(args: list[str]) -> int:
     title = "Choose a folder" if folder else "Choose an image"
     picked = portal_pick(start, title, folder)
     if picked is None:
-        images = "*.jpg *.jpeg *.png *.webp *.bmp *.gif *.avif *.jxl"
+        images = "*.jpg *.jpeg *.png *.webp *.bmp *.gif *.avif *.jxl *.mp4 *.webm *.mkv *.mov"
         if shutil.which("kdialog"):
             cmd = ["kdialog", "--title", title] + (["--getexistingdirectory", start] if folder else ["--getopenfilename", start, f"Images ({images})"])
         elif shutil.which("zenity"):
@@ -2305,6 +2310,9 @@ def greeter_config(spec: dict) -> tuple[dict, dict]:
     if src is not None:
         if not src.is_file():
             die(f"wallpaper not found: {src}")
+        # a live wallpaper: the login screen gets its still
+        if src.suffix.lower() in (".mp4", ".webm", ".mkv", ".mov", ".m4v", ".avi"):
+            src = live_poster(Path(os.path.abspath(src))) or die(f"couldn't make a still of {src} for the login screen (is ffmpeg installed?)")
         name = "wallpaper" + src.suffix.lower()
         files[name] = src
         wallpaper.update(mode="image", file=name)
@@ -2447,7 +2455,7 @@ def cmd_greeter(args: list[str]) -> int:
     if sub == "enable":
         # make greetd the display manager at boot (replaces SDDM, GDM, ly…)
         if not (shutil.which("greetd") or Path("/usr/bin/greetd").exists()):
-            die("greetd isn't installed (sudo pacman -S greetd)")
+            die(f"greetd isn't installed ({install_hint('greetd')})")
         cfg = read_greetd()
         command = cfg.get("default_session", {}).get("command", "") if not cfg.get("error") else ""
         if not command or not command_exists(command):
@@ -3971,7 +3979,23 @@ def updates_list() -> dict:
             if len(parts) >= 4:
                 out["repo"].append({"name": parts[0], "from": parts[1], "to": parts[3]})
         out["tools"]["checkupdates"] = True
-    aur = next((h for h in ("paru", "yay") if shutil.which(h)), "")
+    mgr = pkg_manager()
+    if mgr == "apt" and not shutil.which("checkupdates"):
+        # from the last `apt update` (no root needed to read it)
+        r = subprocess.run(["apt", "list", "--upgradable"], capture_output=True, text=True, timeout=120)
+        for line in r.stdout.splitlines():
+            m = re.match(r"^([^/\s]+)/\S+\s+(\S+)\s+\S+\s+\[upgradable from: ([^\]]+)\]", line)
+            if m:
+                out["repo"].append({"name": m.group(1), "from": m.group(3), "to": m.group(2)})
+        out["tools"]["apt"] = True
+    elif mgr == "dnf" and not shutil.which("checkupdates"):
+        r = subprocess.run(["dnf", "-q", "check-update"], capture_output=True, text=True, timeout=180)
+        for line in r.stdout.splitlines():
+            parts = line.split()
+            if len(parts) == 3 and "." in parts[0] and not line.startswith(" "):
+                out["repo"].append({"name": parts[0].rsplit(".", 1)[0], "from": "", "to": parts[1]})
+        out["tools"]["dnf"] = True
+    aur = next((h for h in ("paru", "yay") if shutil.which(h)), "") if mgr == "pacman" else ""
     if aur:
         r = subprocess.run([aur, "-Qua"], capture_output=True, text=True, timeout=180)
         for line in r.stdout.splitlines():
@@ -3986,7 +4010,8 @@ def updates_list() -> dict:
             if parts and parts[0]:
                 out["flatpak"].append({"name": parts[0], "from": "", "to": parts[1] if len(parts) > 1 else ""})
         out["tools"]["flatpak"] = True
-    steps = [f"{aur} -Syu" if aur else "sudo pacman -Syu"]
+    steps = ["sudo apt update && sudo apt upgrade" if mgr == "apt" else "sudo dnf upgrade" if mgr == "dnf"
+             else f"{aur} -Syu" if aur else "sudo pacman -Syu"]
     if out["flatpak"]:
         steps.append("flatpak update")
     out["upgrade"] = " && ".join(steps)
@@ -4036,6 +4061,265 @@ def cmd_wallhaven(args: list[str]) -> int:
             die(f"download failed: {ai_http_error(e)}")
     print(dest)
     return 0
+
+
+# ─────────────────────────────── live wallpapers ─────────────────────────────
+# Videos and GIFs in the wallpaper folder play on the desktop. The picker's
+# "Live" tab finds more online through this (the shell never sees the API keys):
+#   flamenco live search SOURCE [QUERY] [PAGE]   JSON: {"results": [...], "more": bool}
+#   flamenco live get URL                         download into <folder>/live, print its path
+#   flamenco live key SOURCE [--clear]            store an API key (read from stdin)
+#   flamenco live keys                            JSON: which sources have a key
+#   flamenco live poster VIDEO                    make (or find) its still, print its path
+# Sources: wikimedia (Wikimedia Commons, no key), pexels and pixabay (free API keys).
+
+LIVE_SOURCES = {
+    "wikimedia": {"name": "Wikimedia Commons", "key": False, "site": "https://commons.wikimedia.org"},
+    "pexels": {"name": "Pexels", "key": True, "site": "https://www.pexels.com/api/"},
+    "pixabay": {"name": "Pixabay", "key": True, "site": "https://pixabay.com/api/docs/"},
+}
+LIVE_KEY_FILE = CONFIG_DIR / "wallpaper-keys.json"
+LIVE_TYPES = {"video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov", "video/x-matroska": ".mkv", "image/gif": ".gif"}
+LIVE_EXTS = (".mp4", ".webm", ".mkv", ".mov", ".m4v", ".gif")
+LIVE_MAX_BYTES = 600 * 1024 * 1024
+UA = "flamenco-shell/" + VERSION + " (https://github.com/niruxx/flamenco-shell)"
+
+
+def wallpaper_dir() -> Path:
+    try:
+        wp = json.loads((CONFIG_DIR / "settings.json").read_text()).get("wallpaper", {}).get("dir") or "~/Pictures/Wallpapers"
+    except (OSError, ValueError):
+        wp = "~/Pictures/Wallpapers"
+    return Path(os.path.expanduser(wp))
+
+
+def live_key_get(src: str) -> str:
+    if ai_keyring():
+        r = subprocess.run(["secret-tool", "lookup", "service", "flamenco-wallpaper", "source", src],
+                           capture_output=True, text=True, timeout=10)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip()
+    try:
+        return str(json.loads(LIVE_KEY_FILE.read_text()).get(src, ""))
+    except (OSError, ValueError):
+        return ""
+
+
+def live_key_file_write(src: str, key: str | None) -> None:
+    try:
+        data = json.loads(LIVE_KEY_FILE.read_text())
+    except (OSError, ValueError):
+        data = {}
+    if key is None:
+        if data.pop(src, None) is None:
+            return
+    else:
+        data[src] = key
+    LIVE_KEY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(LIVE_KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(data, f)
+    os.chmod(LIVE_KEY_FILE, 0o600)
+
+
+def live_key_set(src: str, key: str) -> str:
+    if ai_keyring():
+        r = subprocess.run(["secret-tool", "store", "--label", f"Flamenco wallpapers: {LIVE_SOURCES[src]['name']}",
+                            "service", "flamenco-wallpaper", "source", src], input=key, text=True,
+                           capture_output=True, timeout=30)
+        if r.returncode == 0:
+            live_key_file_write(src, None)
+            return "keyring"
+    live_key_file_write(src, key)
+    return "file"
+
+
+def live_key_clear(src: str) -> None:
+    if ai_keyring():
+        subprocess.run(["secret-tool", "clear", "service", "flamenco-wallpaper", "source", src], capture_output=True, timeout=10)
+    live_key_file_write(src, None)
+
+
+def live_fetch_json(url: str, headers: dict | None = None):
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json", **(headers or {})})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode("utf-8", errors="replace"))
+
+
+def live_best(files: list[dict], max_w: int = 2560) -> dict | None:
+    """The largest of `files` ({w, h, url}) no wider than max_w, else the smallest."""
+    files = [f for f in files if f.get("url")]
+    fit = [f for f in files if (f.get("w") or 0) <= max_w]
+    if fit:
+        return max(fit, key=lambda f: f.get("w") or 0)
+    return min(files, key=lambda f: f.get("w") or 0) if files else None
+
+
+def live_search(src: str, query: str, page: int) -> dict:
+    import urllib.parse
+    q = query.strip()
+    out = []
+    if src == "wikimedia":
+        per = 24
+        params = {"action": "query", "format": "json", "formatversion": "2", "generator": "search", "gsrnamespace": "6",
+                  "gsrsearch": f"filetype:video filew:>1279 {q or 'nature'}", "gsrlimit": str(per), "gsroffset": str((page - 1) * per),
+                  "prop": "videoinfo", "viprop": "url|size|mime|derivatives", "viurlwidth": "480"}
+        d = live_fetch_json("https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode(params))
+        for pg in sorted((d.get("query") or {}).get("pages") or [], key=lambda x: x.get("index", 0)):
+            vi = (pg.get("videoinfo") or [{}])[0]
+            w, h = vi.get("width") or 0, vi.get("height") or 0
+            if not w or w < h:
+                continue
+            files = [{"w": x.get("width") or 0, "h": x.get("height") or 0, "url": x.get("src", "")}
+                     for x in vi.get("derivatives") or [] if "webm" in str(x.get("type", "")) or "mp4" in str(x.get("type", ""))]
+            if vi.get("mime") in ("video/webm", "video/mp4"):
+                files.append({"w": w, "h": h, "url": vi.get("url", "")})
+            best = live_best(files)
+            if not best:
+                continue
+            out.append({"id": str(pg.get("pageid")), "title": re.sub(r"^File:|\.[^.]+$", "", pg.get("title", "")),
+                        "thumb": vi.get("thumburl", ""), "url": best["url"], "w": best["w"] or w, "h": best["h"] or h,
+                        "duration": round(float(vi.get("duration") or 0)), "author": "", "page": vi.get("descriptionurl", "")})
+        return {"results": out, "more": "continue" in d}
+    key = live_key_get(src)
+    if not key:
+        return {"results": [], "more": False, "needKey": True,
+                "error": f"{LIVE_SOURCES[src]['name']} needs a free API key: add it in Settings → Wallpaper → Live wallpapers"}
+    if src == "pexels":
+        per = 24
+        if q:
+            url = "https://api.pexels.com/videos/search?" + urllib.parse.urlencode({"query": q, "orientation": "landscape", "size": "large", "per_page": per, "page": page})
+        else:
+            url = "https://api.pexels.com/videos/popular?" + urllib.parse.urlencode({"min_width": 1920, "per_page": per, "page": page})
+        d = live_fetch_json(url, {"Authorization": key})
+        for v in d.get("videos") or []:
+            files = [{"w": f.get("width") or 0, "h": f.get("height") or 0, "url": f.get("link", "")}
+                     for f in v.get("video_files") or [] if f.get("file_type") == "video/mp4"]
+            best = live_best(files)
+            if best and (v.get("width") or 0) >= (v.get("height") or 0):
+                out.append({"id": str(v.get("id")), "title": "", "thumb": v.get("image", ""), "url": best["url"], "w": best["w"], "h": best["h"],
+                            "duration": int(v.get("duration") or 0), "author": (v.get("user") or {}).get("name", ""), "page": v.get("url", "")})
+        return {"results": out, "more": bool(d.get("next_page"))}
+    if src == "pixabay":
+        per = 24
+        url = "https://pixabay.com/api/videos/?" + urllib.parse.urlencode({"key": key, "q": q, "page": page, "per_page": per, "safesearch": "true", "order": "popular" if not q else "popular"})
+        d = live_fetch_json(url)
+        for v in d.get("hits") or []:
+            vids = v.get("videos") or {}
+            files = [{"w": f.get("width") or 0, "h": f.get("height") or 0, "url": f.get("url", "")} for f in vids.values() if isinstance(f, dict)]
+            best = live_best(files)
+            thumb = next((f.get("thumbnail") for f in (vids.get("medium"), vids.get("small"), vids.get("large")) if f and f.get("thumbnail")), "")
+            if best and (best["w"] >= best["h"]):
+                out.append({"id": str(v.get("id")), "title": str(v.get("tags", "")).split(",")[0], "thumb": thumb, "url": best["url"],
+                            "w": best["w"], "h": best["h"], "duration": int(v.get("duration") or 0), "author": v.get("user", ""), "page": v.get("pageURL", "")})
+        return {"results": out, "more": page * per < int(d.get("totalHits") or 0)}
+    die(f"unknown source: {src} (wikimedia, pexels or pixabay)")
+
+
+def live_poster(video: Path) -> Path | None:
+    """Its still in ~/.cache/flamenco/live (the shell names it the same way: md5 of the path)."""
+    import hashlib
+    out = XDG_CACHE / "flamenco" / "live" / (hashlib.md5(str(video).encode()).hexdigest() + ".jpg")
+    if out.is_file() and out.stat().st_size > 0:
+        return out
+    if not shutil.which("ffmpeg"):
+        return None
+    out.parent.mkdir(parents=True, exist_ok=True)
+    base = ["ffmpeg", "-nostdin", "-loglevel", "error", "-y"]
+    subprocess.run(base + ["-ss", "1", "-i", str(video), "-frames:v", "1", "-vf", "scale=min(2560\\,iw):-2", "-q:v", "3", str(out)], capture_output=True, timeout=60)
+    if not (out.is_file() and out.stat().st_size > 0):
+        subprocess.run(base + ["-i", str(video), "-frames:v", "1", "-q:v", "3", str(out)], capture_output=True, timeout=60)
+    return out if out.is_file() and out.stat().st_size > 0 else None
+
+
+def live_get(url: str) -> Path:
+    import urllib.parse
+    import urllib.request
+    u = urllib.parse.urlparse(url)
+    if u.scheme not in ("https", "http") or not u.netloc:
+        die("not a web address (https://…)")
+    folder = wallpaper_dir() / "live"
+    folder.mkdir(parents=True, exist_ok=True)
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    try:
+        r = urllib.request.urlopen(req, timeout=60)
+    except Exception as e:
+        die(f"download failed: {ai_http_error(e)}")
+    with r:
+        ctype = r.headers.get_content_type()
+        name = Path(urllib.parse.unquote(u.path)).name
+        ext = Path(name).suffix.lower()
+        if ext not in LIVE_EXTS:
+            ext = LIVE_TYPES.get(ctype, "")
+            if not ext:
+                die(f"that isn't a video or a GIF ({ctype}); live wallpapers are mp4, webm, mkv, mov or gif")
+            name = (Path(name).stem or "live") + ext
+        stem = re.sub(r"[^\w.-]+", "-", Path(name).stem).strip("-.")[:80] or "live"
+        size = int(r.headers.get("Content-Length") or 0)
+        if size > LIVE_MAX_BYTES:
+            die(f"too big ({size // 1048576} MB; the limit is {LIVE_MAX_BYTES // 1048576} MB)")
+        dest = folder / (stem + ext)
+        if dest.exists():
+            return dest
+        tmp = dest.with_name(dest.name + ".part")
+        got = 0
+        try:
+            with open(tmp, "wb") as f:
+                while chunk := r.read(1 << 16):
+                    got += len(chunk)
+                    if got > LIVE_MAX_BYTES:
+                        raise ValueError(f"too big (over {LIVE_MAX_BYTES // 1048576} MB)")
+                    f.write(chunk)
+            tmp.replace(dest)
+        except Exception as e:
+            tmp.unlink(missing_ok=True)
+            die(f"download failed: {ai_http_error(e)}")
+    if dest.suffix != ".gif":
+        live_poster(dest)
+    return dest
+
+
+def cmd_live(args: list[str]) -> int:
+    sub = args[0] if args else ""
+    if sub == "search":
+        src = args[1] if len(args) > 1 else "wikimedia"
+        if src not in LIVE_SOURCES:
+            die(f"unknown source: {src} (wikimedia, pexels or pixabay)")
+        query = args[2] if len(args) > 2 else ""
+        page = max(1, int(args[3])) if len(args) > 3 and args[3].isdigit() else 1
+        try:
+            res = live_search(src, query, page)
+        except Exception as e:
+            res = {"results": [], "more": False, "error": f"{LIVE_SOURCES[src]['name']}: {ai_http_error(e)}"}
+        print(json.dumps(res))
+        return 0
+    if sub == "get" and len(args) > 1:
+        print(live_get(args[1]))
+        return 0
+    if sub == "key" and len(args) > 1:
+        src = args[1]
+        if src not in LIVE_SOURCES or not LIVE_SOURCES[src]["key"]:
+            die("API keys are for pexels and pixabay")
+        if "--clear" in args:
+            live_key_clear(src)
+            print("cleared")
+            return 0
+        key = sys.stdin.readline().strip()
+        if not key:
+            die("no key given (pipe it in: flamenco live key pexels <<< KEY)")
+        print(live_key_set(src, key))
+        return 0
+    if sub == "keys":
+        print(json.dumps({s: bool(live_key_get(s)) for s, v in LIVE_SOURCES.items() if v["key"]}))
+        return 0
+    if sub == "poster" and len(args) > 1:
+        p = live_poster(Path(os.path.abspath(os.path.expanduser(args[1]))))
+        if not p:
+            die("couldn't make a still (is ffmpeg installed?)")
+        print(p)
+        return 0
+    die("usage: flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO")
 
 
 # ─────────────────────────────── plugins ─────────────────────────────────────
@@ -4550,7 +4834,7 @@ def compat_repo(url: str, branch: str = "", refresh: bool = False) -> Path:
     name = re.sub(r"[^A-Za-z0-9._-]", "_", re.sub(r"^https?://", "", url).rstrip("/"))[:80]
     d = COMPAT_REPOS / (name + ("@" + branch if branch else "") + "-" + hashlib.sha1(url.encode()).hexdigest()[:6])
     if not shutil.which("git"):
-        die("git isn't installed (it's needed to fetch plugins): sudo pacman -S git")
+        die(f"git isn't installed (it's needed to fetch plugins): {install_hint('git')}")
     if d.is_dir() and (d / ".git").is_dir():
         stamp = d / ".git" / "FETCH_HEAD"
         age = time.time() - (stamp.stat().st_mtime if stamp.exists() else (d / ".git").stat().st_mtime)
@@ -4877,7 +5161,7 @@ def cmd_fingerprint(args: list[str]) -> int:
     if sub not in ("enroll", "delete"):
         die("usage: flamenco fingerprint status [--json] | enroll FINGER | delete FINGER|all")
     if not shutil.which("fprintd-list"):
-        die("fprintd isn't installed (sudo pacman -S fprintd)")
+        die(f"fprintd isn't installed ({install_hint('fprintd')})")
     target = args[1] if len(args) > 1 else ""
     if sub == "enroll":
         if target not in FINGERS:
@@ -5810,7 +6094,7 @@ def cmd_keyring(args: list[str]) -> int:
         else:
             b = keyring_bin(kind)
             if not b:
-                die(f"{KEYRINGS[kind]['label']} isn't installed (sudo pacman -S {KEYRINGS[kind]['package']})")
+                die(f"{KEYRINGS[kind]['label']} isn't installed ({install_hint(KEYRINGS[kind]['package'])})")
             lines = [f"# flamenco-keyring: {kind}", "[D-BUS Service]", "Name=org.freedesktop.secrets",
                      "Exec=" + KEYRINGS[kind]["exec"].format(bin=b)]
             if KEYRINGS[kind]["systemd"]:
@@ -6671,6 +6955,7 @@ def doctor_checks() -> list[dict]:
         exists("/usr/lib/NetworkManager/VPN/nm-openvpn-service.name"), "networkmanager-openvpn")
     add("Features", "WireGuard tools", "WireGuard VPNs", have("wg"), "wireguard-tools")
     add("Features", "PipeWire volume", "volume keys without the shell", have("wpctl"), "wireplumber")
+    add("Features", "App mixer outputs", "move an app to another speaker or headset (pactl)", have("pactl"), "libpulse")
     add("Features", "brightnessctl", "screen brightness", have("brightnessctl"), "brightnessctl")
     add("Features", "playerctl", "media keys without the shell", have("playerctl"), "playerctl")
     add("Features", "Power profiles", "Power saver / Balanced / Performance", have("powerprofilesctl"), "power-profiles-daemon")
@@ -6704,7 +6989,7 @@ def doctor_checks() -> list[dict]:
         add("Extras", "hyprpicker", "the color picker on Hyprland", have("hyprpicker"), "hyprpicker")
         add("Extras", "jq", "window screenshots on Hyprland", have("jq"), "jq")
     add("Extras", "Emoji font", "emoji in the launcher (:) and everywhere else", font_installed("Noto Color Emoji"), "noto-fonts-emoji")
-    add("Extras", "Package updates", "the updates widget (checkupdates)", have("checkupdates"), "pacman-contrib")
+    add("Extras", "Package updates", "the updates widget (checkupdates, apt or dnf)", have("checkupdates") or pkg_manager() in ("apt", "dnf"), "pacman-contrib")
     add("Extras", "AUR helper", "AUR updates in the updates widget, and installing AUR packages here", have("paru", "yay"), "",
         hint="install paru or yay yourself: https://github.com/Morganamilo/paru#installation")
     add("Extras", "cava", "the audio visualizer in the bar", have("cava"), "cava")
@@ -6755,7 +7040,12 @@ def doctor_checks() -> list[dict]:
         hint="set by the niri config's environment block; log in again after `flamenco niri-config`")
     add("Theming", "gsettings", "GTK dark/light preference", have("gsettings"), "glib2")
     add("Theming", "adw-gtk3", "GTK 3 apps that match libadwaita", exists("/usr/share/themes/adw-gtk3", str(XDG_DATA / "themes/adw-gtk3")), "adw-gtk-theme")
-    add("Theming", "WebP wallpapers", "qt6-imageformats", exists("/usr/lib/qt6/plugins/imageformats/libqwebp.so"), "qt6-imageformats")
+    add("Theming", "WebP wallpapers", "qt6-imageformats", exists("/usr/lib/qt6/plugins/imageformats/libqwebp.so", "/usr/lib64/qt6/plugins/imageformats/libqwebp.so", *(str(x) for x in Path("/usr/lib").glob("*-linux-gnu/qt6/plugins/imageformats/libqwebp.so"))), "qt6-imageformats")
+    qt_dirs = ["/usr/lib/qt6", "/usr/lib64/qt6", *(str(x) for x in Path("/usr/lib").glob("*-linux-gnu/qt6"))]
+    add("Theming", "Live wallpapers", "play video wallpapers (Qt Multimedia and its FFmpeg backend)",
+        exists(*(d + "/qml/QtMultimedia" for d in qt_dirs)) and exists(*(d + "/plugins/multimedia/" + lib for d in qt_dirs for lib in ("libffmpegmediaplugin.so", "libgstreamermediaplugin.so"))),
+        "qt6-multimedia qt6-multimedia-ffmpeg")
+    add("Theming", "ffmpeg", "stills of live wallpapers (thumbnails, transitions, colors)", have("ffmpeg"), "ffmpeg")
     add("Theming", "matugen", "colors from your wallpaper", have("matugen"), "matugen-bin", aur=True)
     add("Theming", "Kvantum", "the Kvantum Qt style (App Theming)", have("kvantummanager"), "kvantum")
     # only for apps you have
@@ -6772,12 +7062,80 @@ def kdl_spawn_lines(text: str) -> list[tuple[int, int]]:
     return [(m.start(), m.end()) for m in re.finditer(r"(?m)^[ \t]*spawn(?:-sh)?-at-startup\b[^\n]*", masked)]
 
 
+# ─────────────────────────── distros: package names ─────────────────────────
+# Flamenco names packages the Arch way; on Debian/Ubuntu (apt) and Fedora (dnf)
+# these are their names there. None = not in that distro's repositories.
+DISTRO_PACKAGES = {
+    "apt": {
+        "adw-gtk-theme": None, "bluez-utils": "bluez", "glib2": "libglib2.0-bin", "kvantum": "qt-style-kvantum",
+        "libnotify": "libnotify-bin", "libsecret": "libsecret-tools", "matugen-bin": None, "mesa": "libgl1-mesa-dri",
+        "networkmanager": "network-manager", "networkmanager-openvpn": "network-manager-openvpn",
+        "noto-fonts-emoji": "fonts-noto-color-emoji", "pacman-contrib": None, "pipewire": "pipewire-bin", "libpulse": "pulseaudio-utils",
+        "python-anthropic": None, "python-gobject": "python3-gi", "qt6-imageformats": "qt6-image-formats-plugins",
+        "quickshell": None, "xwayland-satellite": None, "hyprland": "hyprland",
+        "qt6-multimedia": "qml6-module-qtmultimedia", "qt6-multimedia-ffmpeg": "libqt6multimedia6",
+    },
+    "dnf": {
+        "adw-gtk-theme": "adw-gtk3-theme", "bluez-utils": "bluez", "glib2": "glib2", "libnotify": "libnotify",
+        "matugen-bin": None, "mesa": "mesa-dri-drivers", "networkmanager": "NetworkManager",
+        "networkmanager-openvpn": "NetworkManager-openvpn", "noto-fonts-emoji": "google-noto-color-emoji-fonts",
+        "pacman-contrib": None, "pipewire": "pipewire-utils", "libpulse": "pulseaudio-utils", "python-anthropic": None, "python-gobject": "python3-gobject",
+        "qt6-imageformats": "qt6-qtimageformats", "quickshell": None,
+        "qt6-multimedia": "qt6-qtmultimedia", "qt6-multimedia-ffmpeg": "qt6-qtmultimedia",
+    },
+}
+# where to get what a distro doesn't package
+NOT_PACKAGED = {
+    "quickshell": "Quickshell: https://quickshell.org/docs/guide/install-setup (Fedora: COPR errornointernet/quickshell)",
+    "matugen-bin": "matugen: cargo install matugen",
+    "python-anthropic": "the Anthropic SDK: pip install --user anthropic",
+}
+
+
+def pkg_manager() -> str:
+    """pacman, apt or dnf: whichever this system has (pacman first)."""
+    return next((m for m in ("pacman", "apt", "dnf") if shutil.which(m)), "")
+
+
+def distro_pkg(name: str) -> str | None:
+    """An Arch package name as this distro calls it (None: not in its repositories)."""
+    mgr = pkg_manager()
+    if mgr in ("", "pacman"):
+        return name
+    return DISTRO_PACKAGES[mgr].get(name, name)
+
+
+def install_hint(*names: str) -> str:
+    """The command that installs these packages on this system, for messages."""
+    mgr = pkg_manager()
+    pkgs = [p for p in (distro_pkg(n) for n in names) if p]
+    if not pkgs:
+        return "; ".join(NOT_PACKAGED.get(n, n) for n in names)
+    if mgr == "apt":
+        return "sudo apt install " + " ".join(pkgs)
+    if mgr == "dnf":
+        return "sudo dnf install " + " ".join(pkgs)
+    return "sudo pacman -S " + " ".join(pkgs)
+
+
 def install_command(checks: list[dict]) -> str:
     missing = [c for c in checks if not c["ok"] and c["package"]]
-    repo = sorted({c["package"] for c in missing if not c["aur"]})
-    aur = sorted({c["package"] for c in missing if c["aur"]})
+    # a check can name several packages ("qt6-multimedia qt6-multimedia-ffmpeg")
+    repo = sorted({p for c in missing if not c["aur"] for p in c["package"].split()})
+    aur = sorted({p for c in missing if c["aur"] for p in c["package"].split()})
     helper = next((h for h in ("paru", "yay") if shutil.which(h)), "")
     parts = []
+    mgr = pkg_manager()
+    if mgr in ("apt", "dnf"):
+        # this distro's names; what it doesn't package is said, not installed
+        want = sorted({distro_pkg(p) for p in repo + aur if distro_pkg(p)})
+        gone = sorted({p for p in repo + aur if not distro_pkg(p)})
+        if want:
+            parts.append(("sudo apt install " if mgr == "apt" else "sudo dnf install ") + " ".join(want))
+        if gone:
+            parts.append("echo " + shlex.quote("Not in your distro's repositories: " + " · ".join(NOT_PACKAGED.get(p, p) for p in gone)))
+        parts += [c["fix"] for c in checks if not c["ok"] and c.get("fix")]
+        return " && ".join(parts) if parts else ""
     if repo:
         parts.append("sudo pacman -S --needed " + " ".join(repo))
     # AUR packages need a helper; without one they're listed but left out (see the "AUR helper" check)
@@ -8054,6 +8412,13 @@ def main(argv: list[str]) -> int:
         return cmd_power(rest)          # `flamenco power` alone still opens the power menu
     if cmd == "calendar" and rest[:1] == ["events"]:
         return cmd_calendar(rest)
+    if cmd == "bar":
+        sub = rest[0] if rest else "toggle"
+        if sub == "mode" and len(rest) > 1 and rest[1] in ("never", "auto", "windows"):
+            return ipc("bar", "mode", rest[1])
+        if sub not in ("toggle", "show", "hide"):
+            die("usage: flamenco bar toggle|show|hide | mode never|auto|windows")
+        return ipc("bar", sub)
     if cmd == "switcher":
         return ipc("switcher", rest[0] if rest and rest[0] in ("next", "prev", "go", "cancel") else "next")
     if cmd in PANELS:
@@ -8150,6 +8515,8 @@ def main(argv: list[str]) -> int:
         return cmd_plugins(rest)
     if cmd == "wallhaven":
         return cmd_wallhaven(rest)
+    if cmd == "live":
+        return cmd_live(rest)
     if cmd == "updates":
         return cmd_updates(rest)
     if cmd == "emoji":

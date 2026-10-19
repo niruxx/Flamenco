@@ -11,7 +11,7 @@ import qs.Modules.Background
 
 // The wallpaper switcher as a carousel (Settings → Wallpaper → Switcher): the
 // wallpapers in a 3D cover flow over the selected one, blurred, with its colors
-// and name below. ← → browse, Enter applies, / searches, ↑ ↓ switch to Wallhaven,
+// and name below. ← → browse, Enter applies, / searches, ↑ ↓ switch to Wallhaven / Live,
 // Esc closes. Click the centre card to apply it, another to bring it to the centre.
 Variants {
     model: Quickshell.screens
@@ -24,7 +24,7 @@ Variants {
         readonly property bool shown: Panels.current === "wallpaper" && Panels.screen === screenName && Settings.data.wallpaper.picker !== "grid"
         readonly property real p: pAnim.v
 
-        property string source: "folder"           // folder | wallhaven
+        property string source: "folder"           // folder | wallhaven | live
         property string query: ""
         readonly property var files: {
             const q = query.trim().toLowerCase();
@@ -99,7 +99,7 @@ Variants {
             anchors.fill: parent
             opacity: win.p
             BackdropLayer {
-                source: Paths.toUrl(win.selected || win.applied)
+                source: Wallpapers.stillUrl(win.selected || win.applied)
                 shown: true
             }
             Rectangle {
@@ -135,7 +135,7 @@ Variants {
                 else if (k === Qt.Key_Return || k === Qt.Key_Enter)
                     win.apply();
                 else if (k === Qt.Key_Up || k === Qt.Key_Down)
-                    win.source = win.source === "folder" ? "wallhaven" : "folder";
+                    win.source = (k === Qt.Key_Down ? { folder: "wallhaven", wallhaven: "live", live: "folder" } : { folder: "live", live: "wallhaven", wallhaven: "folder" })[win.source];
                 else if (k === Qt.Key_Slash || k === Qt.Key_F && event.modifiers & Qt.ControlModifier)
                     search.focusInput();
                 else if (k === Qt.Key_R)
@@ -160,8 +160,8 @@ Variants {
                 spacing: 12
 
                 FSegmented {
-                    implicitWidth: 300
-                    options: [{ value: "folder", label: "Wallpapers · " + Wallpapers.files.length, icon: "image" }, { value: "wallhaven", label: "Wallhaven", icon: "travel_explore" }]
+                    implicitWidth: 420
+                    options: [{ value: "folder", label: "Wallpapers · " + Wallpapers.files.length, icon: "image" }, { value: "wallhaven", label: "Wallhaven", icon: "travel_explore" }, { value: "live", label: "Live", icon: "animated_images" }]
                     current: win.source
                     onSelected: v => win.source = v
                 }
@@ -312,7 +312,7 @@ Variants {
 
                         SafeImage {
                             anchors.fill: parent
-                            path: Paths.toUrl(card.modelData)
+                            path: Wallpapers.stillUrl(card.modelData)
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             sourceSize: Qt.size(720, 420)
@@ -326,6 +326,13 @@ Variants {
                             opacity: card.centre ? 0 : 0.28
                             Behavior on opacity { Anim {} }
                         }
+                    }
+                    LiveBadge {
+                        path: card.modelData
+                        big: true
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.margins: 12
                     }
                     Rectangle {
                         visible: card.modelData === win.applied
@@ -367,7 +374,7 @@ Variants {
                     id: mirror
                     width: win.cardW
                     height: win.cardH
-                    path: Paths.toUrl(win.selected)
+                    path: Wallpapers.stillUrl(win.selected)
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     sourceSize: Qt.size(360, 210)
@@ -411,6 +418,28 @@ Variants {
                     sourceComponent: WallhavenGrid {
                         screenName: win.screenName
                         minSize: Qt.size(win.modelData.width, win.modelData.height)
+                    }
+                }
+            }
+
+            // ── live wallpapers online ──
+            Rectangle {
+                visible: win.source === "live"
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: top.bottom
+                anchors.topMargin: 24
+                width: Math.min(1100, parent.width - 160)
+                height: Math.min(620, parent.height - top.y - top.height - 120)
+                radius: Theme.rXl
+                color: Theme.panelBg
+                border.width: 1
+                border.color: Theme.border
+                Loader {
+                    anchors.fill: parent
+                    anchors.margins: Theme.sp4
+                    active: win.source === "live"
+                    sourceComponent: LiveGrid {
+                        screenName: win.screenName
                     }
                 }
             }
@@ -482,7 +511,7 @@ Variants {
                 }
                 FText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "← → browse  ·  ↑ ↓ wallpapers / Wallhaven  ·  Enter apply  ·  / search  ·  R shuffle  ·  click the centre card to apply"
+                    text: "← → browse  ·  ↑ ↓ wallpapers / Wallhaven / Live  ·  Enter apply  ·  / search  ·  R shuffle  ·  click the centre card to apply"
                     color: Qt.rgba(1, 1, 1, 0.6)
                     font.pixelSize: Theme.fsXs
                 }
@@ -491,7 +520,7 @@ Variants {
 
         ColorQuantizer {
             id: quant
-            source: win.selected ? Paths.toUrl(win.selected) : ""
+            source: win.selected ? Wallpapers.stillUrl(win.selected) : ""
             depth: 3
             rescaleSize: 64
         }

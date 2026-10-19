@@ -6,7 +6,7 @@ import qs.Services
 import qs.Widgets
 
 // Opened from the bar's volume icon: output volume + device switcher,
-// per-app volumes, and the microphone.
+// the app mixer (AppMixer), and the microphone.
 Variants {
     model: Quickshell.screens
 
@@ -94,57 +94,27 @@ Variants {
                 }
             }
 
-            // ── apps ──
-            FText {
-                visible: Audio.streams.length > 0
-                text: "Apps"
-                dim: true
-                font.pixelSize: Theme.fsSm
-                font.weight: Font.Bold
+            // ── apps: the mixer ──
+            RowLayout {
+                Layout.fillWidth: true
                 Layout.topMargin: Theme.sp2
-            }
-
-            Repeater {
-                model: Audio.streams
-                RowLayout {
-                    id: app
-                    required property var modelData
+                FText {
                     Layout.fillWidth: true
-                    spacing: 10
-                    AppIcon {
-                        implicitSize: 24
-                        name: Audio.streamIcon(app.modelData) || Audio.streamName(app.modelData).toLowerCase()
-                        fallback: "audio-x-generic"
-                    }
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 2
-                        FText {
-                            Layout.fillWidth: true
-                            text: Audio.streamName(app.modelData)
-                            font.pixelSize: Theme.fsSm
-                            elide: Text.ElideRight
-                        }
-                        FSlider {
-                            Layout.fillWidth: true
-                            implicitHeight: 24
-                            value: app.modelData.audio?.muted ? 0 : (app.modelData.audio?.volume ?? 0)
-                            accent: Theme.accent2
-                            onMoved: v => {
-                                if (!app.modelData.audio)
-                                    return;
-                                app.modelData.audio.muted = false;
-                                app.modelData.audio.volume = v;
-                            }
-                        }
-                    }
-                    FIconButton {
-                        icon: app.modelData.audio?.muted ? "volume_off" : "volume_up"
-                        size: 30
-                        iconSize: 16
-                        onClicked: if (app.modelData.audio) app.modelData.audio.muted = !app.modelData.audio.muted
-                    }
+                    text: "Apps" + (Audio.streamGroups.length ? " · " + Audio.streamGroups.length : "")
+                    dim: true
+                    font.pixelSize: Theme.fsSm
+                    font.weight: Font.Bold
                 }
+                FText {
+                    visible: Settings.data.sound.mixerBoost
+                    text: "up to 150%"
+                    dim: true
+                    font.pixelSize: Theme.fsXs
+                }
+            }
+            AppMixer {
+                Layout.fillWidth: true
+                showRecording: false
             }
 
             // ── microphone ──

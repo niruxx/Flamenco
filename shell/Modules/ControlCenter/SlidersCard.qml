@@ -47,6 +47,52 @@ FCard {
             }
         }
 
+        // the app mixer: who's playing, a tap away
+        Rectangle {
+            Layout.fillWidth: true
+            visible: Audio.streamGroups.length > 0
+            implicitHeight: 40
+            radius: root.cards ? 20 : Theme.rMd
+            color: Theme.alpha(Theme.text, 0.05)
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 8
+                spacing: 8
+                // the first few apps' icons, overlapping
+                Row {
+                    spacing: -6
+                    Repeater {
+                        model: Audio.streamGroups.slice(0, 4)
+                        Rectangle {
+                            required property var modelData
+                            width: 24
+                            height: 24
+                            radius: 12
+                            color: Theme.surfaceHigh
+                            border.width: 2
+                            border.color: Theme.surface
+                            AppIcon {
+                                anchors.centerIn: parent
+                                implicitSize: 16
+                                name: modelData.icon
+                                fallback: "audio-x-generic"
+                            }
+                        }
+                    }
+                }
+                FText {
+                    Layout.fillWidth: true
+                    text: Audio.streamGroups.length === 1 ? Audio.streamGroups[0].name + " is playing" : Audio.streamGroups.length + " apps playing"
+                    font.pixelSize: Theme.fsSm
+                    elide: Text.ElideRight
+                }
+                FText { text: "Mixer"; color: Theme.accent; font.pixelSize: Theme.fsSm; font.weight: Font.DemiBold }
+                FIcon { icon: "chevron_right"; size: 18; color: Theme.accent }
+            }
+            StateLayer { onClicked: root.openDetail("mixer") }
+        }
+
         RowLayout {
             Layout.fillWidth: true
             visible: Audio.source !== null

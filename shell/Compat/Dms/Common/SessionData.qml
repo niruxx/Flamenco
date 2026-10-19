@@ -9,7 +9,7 @@ import qs.Services as FS
 Singleton {
     readonly property bool isLightMode: !F.Theme.dark
     readonly property bool doNotDisturb: FS.Notifs.dnd
-    readonly property string wallpaperPath: FS.Wallpapers.current
+    readonly property string wallpaperPath: FS.Wallpapers.still(FS.Wallpapers.current)
     readonly property string locale: ""
     readonly property var perMonitorWallpapers: ({})
 

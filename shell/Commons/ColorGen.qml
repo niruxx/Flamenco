@@ -14,7 +14,13 @@ Singleton {
     readonly property bool available: dark !== null && light !== null
     property bool busy: proc.running
 
-    readonly property string wanted: Settings.data.appearance.palette === "wallpaper" ? Paths.expand(Settings.data.wallpaper.current) : ""
+    // a live (video) wallpaper's colors come from its poster (Wallpapers runs this again once it's made)
+    readonly property string wanted: {
+        if (Settings.data.appearance.palette !== "wallpaper")
+            return "";
+        const p = Paths.expand(Settings.data.wallpaper.current);
+        return Paths.isVideo(p) ? Paths.poster(p) : p;
+    }
     property int attempt: 0
 
     // after a new wallpaper's transition has (nearly) played, so the colors change as

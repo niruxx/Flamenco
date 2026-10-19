@@ -45,7 +45,7 @@ Variants {
             Image {
                 id: wall
                 anchors.fill: parent
-                source: Paths.toUrl(Wallpapers.forScreen(win.modelData.name))
+                source: Wallpapers.stillUrl(Wallpapers.forScreen(win.modelData.name))
                 fillMode: Image.PreserveAspectCrop
                 sourceSize: Qt.size(Math.max(1, win.width / 2), Math.max(1, win.height / 2))
                 asynchronous: true

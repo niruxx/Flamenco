@@ -142,6 +142,14 @@ ShellRoot {
     }
 
     IpcHandler {
+        target: "bar"
+        function toggle(): void { Panels.barHidden = !Panels.barHidden; }
+        function hide(): void { Panels.barHidden = true; }
+        function show(): void { Panels.barHidden = false; }
+        function mode(m: string): void { if (["never", "auto", "windows"].includes(m)) Settings.data.bar.hide = m; }
+    }
+
+    IpcHandler {
         target: "widgets"
         function edit(): void { Panels.editWidgets(""); }
         function done(): void { Panels.widgetsEdit = false; }

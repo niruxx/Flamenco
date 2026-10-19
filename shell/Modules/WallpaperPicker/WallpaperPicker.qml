@@ -15,7 +15,7 @@ Variants {
         name: Settings.data.wallpaper.picker === "grid" ? "wallpaper" : "wallpaper-grid"
         cardWidth: Math.min(980, modelData.width - 80)
         onOpened: Wallpapers.rescan()
-        property string source: "folder"        // folder | wallhaven
+        property string source: "folder"        // folder | wallhaven | live
 
         ColumnLayout {
             width: parent.width
@@ -24,9 +24,9 @@ Variants {
             RowLayout {
                 Layout.fillWidth: true
                 FSegmented {
-                    implicitWidth: 220
+                    implicitWidth: 300
                     implicitHeight: 34
-                    options: [{ value: "folder", label: "Your folder" }, { value: "wallhaven", label: "Wallhaven" }]
+                    options: [{ value: "folder", label: "Your folder" }, { value: "wallhaven", label: "Wallhaven" }, { value: "live", label: "Live" }]
                     current: panel.source
                     onSelected: v => panel.source = v
                 }
@@ -36,7 +36,7 @@ Variants {
                     font.pixelSize: Theme.fsXl
                     font.weight: Font.Bold
                 }
-                FText { text: Wallpapers.files.length + " images"; dim: true }
+                FText { text: Wallpapers.files.length + " wallpapers"; dim: true }
                 // per screen, or every screen at once
                 FSegmented {
                     visible: Quickshell.screens.length > 1
@@ -64,6 +64,15 @@ Variants {
                 sourceComponent: WallhavenGrid {
                     screenName: panel.modelData.name
                     minSize: Qt.size(panel.modelData.width, panel.modelData.height)
+                }
+            }
+            Loader {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 560
+                active: panel.source === "live"
+                visible: active
+                sourceComponent: LiveGrid {
+                    screenName: panel.modelData.name
                 }
             }
         }

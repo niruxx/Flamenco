@@ -79,7 +79,7 @@ ColumnLayout {
         Image {
             id: wall
             anchors.fill: parent
-            source: Paths.toUrl(Wallpapers.forScreen(root.screenName))
+            source: Wallpapers.stillUrl(Wallpapers.forScreen(root.screenName))
             fillMode: Image.PreserveAspectCrop
             sourceSize: Qt.size(640, 220)
             asynchronous: true

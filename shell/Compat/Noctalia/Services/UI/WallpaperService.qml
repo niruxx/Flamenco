@@ -12,7 +12,7 @@ Singleton {
     readonly property var currentWallpapers: {
         const out = {};
         for (const s of Quickshell.screens)
-            out[s.name] = FS.Wallpapers.forScreen(s.name);
+            out[s.name] = FS.Wallpapers.still(FS.Wallpapers.forScreen(s.name));
         return out;
     }
     readonly property string noctaliaDefaultWallpaper: ""
@@ -21,7 +21,7 @@ Singleton {
     signal wallpaperProcessingComplete(string screenName, string path, string cachedPath)
 
     function getWallpaper(screenName) {
-        return FS.Wallpapers.forScreen(screenName || "");
+        return FS.Wallpapers.still(FS.Wallpapers.forScreen(screenName || ""));
     }
     function changeWallpaper(path, screenName) {
         FS.Wallpapers.set(String(path), screenName || "");

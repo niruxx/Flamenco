@@ -21,7 +21,7 @@ ColumnLayout {
 
     readonly property var cfg: st.config ?? {}
     readonly property bool greeterInUse: String(cfg.command ?? "").split(" ")[0].endsWith("flamenco-greeter")
-    readonly property string wallpaperPath: g.wallpaperMode === "custom" ? Paths.expand(g.wallpaper) : g.wallpaperMode === "desktop" ? Wallpapers.current : ""
+    readonly property string wallpaperPath: g.wallpaperMode === "custom" ? Paths.expand(g.wallpaper) : g.wallpaperMode === "desktop" ? Wallpapers.still(Wallpapers.current) : ""
 
     // greetd draft: loaded from the config, written with "Apply greetd settings"
     QtObject {

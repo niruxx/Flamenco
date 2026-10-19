@@ -50,12 +50,19 @@ GridView {
 
             SafeImage {
                 anchors.fill: parent
-                path: Paths.toUrl(cell.modelData)
+                path: Wallpapers.stillUrl(cell.modelData)
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 sourceSize: Qt.size(320, 200)
                 opacity: status === Image.Ready ? 1 : 0
                 Behavior on opacity { Anim {} }
+            }
+
+            LiveBadge {
+                path: cell.modelData
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.margins: 8
             }
 
             Rectangle {

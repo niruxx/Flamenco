@@ -30,7 +30,7 @@ NumberAnimation ColorAnimation SequentialAnimation ParallelAnimation PauseAnimat
 Transition Connections Component QtObject Binding Gradient GradientStop Translate ListView GridView Flickable ListModel
 HoverHandler DragHandler WheelHandler TapHandler FontLoader MultiEffect RowLayout ColumnLayout GridLayout
 ShellRoot Scope Variants PanelWindow FloatingWindow PopupWindow LazyLoader Singleton SystemClock Process StdioCollector
-SplitParser FileView JsonAdapter JsonObject IpcHandler Region PwObjectTracker NotificationServer WlSessionLock
+SplitParser FileView JsonAdapter JsonObject IpcHandler Region PwObjectTracker PwNodeLinkTracker NotificationServer WlSessionLock
 WlSessionLockSurface PamContext IdleMonitor ClippingRectangle IconImage QsMenuOpener Shortcut ScriptModel PersistentProperties Socket
 ScreencopyView DropArea
 ComboBox Popup ItemDelegate ShaderEffectSource ShaderEffect Slider RangeSlider Shape ShapePath PathLine PathArc PathQuad

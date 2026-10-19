@@ -3,11 +3,12 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Services
 import qs.Widgets
+import qs.Modules.Volume
 
 Page {
     id: page
     title: "Sound"
-    subtitle: "Sound theme for the shell and your apps, event sounds, and audio devices."
+    subtitle: "Sound theme for the shell and your apps, event sounds, audio devices and each app's volume."
     readonly property var sd: Settings.data.sound
 
     Component.onCompleted: Sounds.load()
@@ -117,6 +118,17 @@ Page {
                 accent: Theme.accent2
                 onMoved: v => Audio.setMicVolume(v)
             }
+        }
+    }
+
+    Group {
+        title: "App volumes"
+        SwitchRow { title: "Allow up to 150%"; subtitle: "For quiet apps; above 100% can distort"; icon: "volume_up"; target: page.sd; key: "mixerBoost" }
+        SwitchRow { title: "Set each stream"; subtitle: "An app playing several things (browser tabs) opens up to set each one"; icon: "format_list_bulleted"; target: page.sd; key: "mixerStreams" }
+        AppMixer {
+            Layout.fillWidth: true
+            Layout.margins: Theme.sp3
+            roomy: true
         }
     }
 }

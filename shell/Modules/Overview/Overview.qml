@@ -119,7 +119,7 @@ Variants {
             opacity: win.p
 
             BackdropLayer {
-                source: Paths.toUrl(Wallpapers.forScreen(win.screenName))
+                source: Wallpapers.stillUrl(Wallpapers.forScreen(win.screenName))
                 shown: win.cfg.blur
             }
             Rectangle {
@@ -196,7 +196,7 @@ Variants {
                         ws: modelData
                         height: strip.thumbH
                         width: Math.round(strip.thumbH * win.aspect)
-                        wallpaper: Paths.toUrl(Wallpapers.forScreen(win.screenName))
+                        wallpaper: Wallpapers.stillUrl(Wallpapers.forScreen(win.screenName))
                     }
                 }
             }

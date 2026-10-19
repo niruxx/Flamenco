@@ -32,7 +32,7 @@ Item {
     Image {
         id: wall
         anchors.fill: parent
-        source: Paths.toUrl(Wallpapers.forScreen(root.screenName))
+        source: Wallpapers.stillUrl(Wallpapers.forScreen(root.screenName))
         sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
         fillMode: Image.PreserveAspectCrop
         asynchronous: false

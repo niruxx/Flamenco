@@ -93,7 +93,18 @@ Singleton {
                 property bool taskbarTitles: false    // window titles next to the taskbar's icons
                 property string clockLayout: "stacked" // clock: inline (time • date) | stacked (time over date) | time
                 property string clockAlign: "center"  // clock text: left | center | right
-                property string batteryStyle: "battery" // icon | battery (a battery shape with the percent inside)
+                // hiding: never | auto (until the pointer reaches the edge) | windows (while windows are open on the workspace)
+                property string hide: "never"
+                property int hideDelay: 600         // ms after the pointer leaves before it hides
+                property int revealSize: 3          // px strip at the edge that brings it back
+                property bool hideKeepSpace: false  // windows keep the bar's space while it's hidden
+                // battery indicator theme: icon | battery (shape, percent inside) | outline | cells | vertical | ring | pill | dot | text
+                property string batteryStyle: "battery"
+                property string batteryColors: "theme"  // theme (accent) | level (red → amber → green) | mono
+                property bool batteryPercent: true      // show the percent
+                property int batteryLow: 15             // percent at which it turns red
+                property bool batteryBlink: true        // blink when nearly empty (10% below low) and not charging
+                property bool batteryChargeAnim: true   // a sweep through the fill while charging
                 property string statsStyle: "rings"   // CPU / RAM widget: text | rings (circular gauges)
                 property bool statsTemp: true         // CPU / RAM widget: the temperature too
                 // the start button (widget "launcher")
@@ -251,6 +262,13 @@ Singleton {
                 property bool perScreen: false
                 property var screens: ({})
                 property string picker: "carousel"   // the switcher: carousel (3D cover flow) | grid
+                // live wallpapers: videos (mp4, webm, mkv, mov) and GIFs in the folder play on the desktop
+                property bool live: true              // off: they show a still
+                property bool livePauseBattery: true  // still while on battery
+                property bool livePauseWindows: true  // still while windows cover the workspace
+                property real liveSpeed: 1.0
+                property bool liveSound: false
+                property string liveSource: "wikimedia" // online live wallpapers: wikimedia | pexels | pixabay
             }
 
             property JsonObject lock: JsonObject {
@@ -416,6 +434,8 @@ Singleton {
                 property bool notifications: true     // shell: sound when a notification pops up
                 property bool volumeFeedback: true    // shell: click when you change the volume
                 property bool brightnessFeedback: true // shell: tick when you change the brightness
+                property bool mixerBoost: false        // the app mixer goes to 150%
+                property bool mixerStreams: true       // an app with several streams (browser tabs) can be expanded to set each
             }
 
             // Login / logout animations
