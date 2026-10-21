@@ -13,7 +13,7 @@ Rectangle {
     property int padding: 7
     property bool highlighted: false
     readonly property bool vertical: Theme.barVertical
-    readonly property int cross: Theme.barHeight - 10
+    readonly property int cross: Theme.barItem
     signal clicked
     signal rightClicked
     signal middleClicked

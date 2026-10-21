@@ -67,7 +67,7 @@ Group {
                         anchors.horizontalCenter: parent.horizontalCenter
                         y: 12
                         width: parent.width - 24
-                        height: Theme.barHeight - 10
+                        height: Theme.barItem
                         radius: height / 2
                         color: Theme.alpha(Theme.bg, 0.7)
                         BatteryGlyph {

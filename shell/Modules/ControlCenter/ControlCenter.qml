@@ -83,7 +83,7 @@ Variants {
                     opacity: pager.slide
                     visible: opacity > 0
                     active: panel.detail !== "" || opacity > 0
-                    sourceComponent: panel.detail === "wifi" ? wifiC : panel.detail === "bluetooth" ? btC : panel.detail === "audio" ? audioC : panel.detail === "mic" ? micC : panel.detail === "mixer" ? mixerC : panel.detail === "vpn" ? vpnC : panel.detail === "power" ? powerC : null
+                    sourceComponent: panel.detail === "wifi" ? wifiC : panel.detail === "bluetooth" ? btC : panel.detail === "audio" ? audioC : panel.detail === "mic" ? micC : panel.detail === "mixer" ? mixerC : panel.detail === "night" ? nightC : panel.detail === "vpn" ? vpnC : panel.detail === "power" ? powerC : null
                 }
             }
         }
@@ -141,9 +141,11 @@ Variants {
                         tint: Theme.warning
                         icon: "nightlight"
                         title: "Night light"
-                        subtitle: Toggles.nightLight ? Settings.data.night.temperature + "K" : "Off"
+                        subtitle: Toggles.status
                         active: Toggles.nightLight
+                        hasDetails: true
                         onClicked: Toggles.setNightLight(!Toggles.nightLight)
+                        onDetailsClicked: Panels.controlDetail = "night"
                     }
         }
 
@@ -266,5 +268,6 @@ Variants {
         Component { id: powerC; PowerPage { onBack: Panels.controlDetail = "" } }
         Component { id: micC; AudioDevicesPage { onBack: Panels.controlDetail = ""; input: true } }
         Component { id: mixerC; MixerPage { onBack: Panels.controlDetail = "" } }
+        Component { id: nightC; NightPage { onBack: Panels.controlDetail = "" } }
     }
 }

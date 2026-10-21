@@ -13,7 +13,7 @@ FIconButton {
     property string detail: ""
     // a popout of its own (e.g. "volume") instead of the control center
     property string panel: ""
-    size: Theme.barHeight - 10
+    size: Theme.barItem
     iconSize: 18
     active: panel ? Panels.current === panel : Panels.current === "control" && Panels.controlDetail === detail && detail !== ""
     onClicked: panel ? Panels.toggle(panel, screenName, root) : Panels.openControl(detail, screenName, root)

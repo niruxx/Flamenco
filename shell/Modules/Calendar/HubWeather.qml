@@ -8,8 +8,11 @@ import qs.Widgets
 // The Hub's Weather page: the sky it is now (clear day, night, clouds, rain,
 // snow, storm) filling the page, the temperature large, the details as glass
 // chips, the next hours with their curve, and the week.
-ClippingRectangle {
+// (A plain Rectangle with only the background clipped: a ClippingRectangle around
+// the whole page could fail to draw when the page was built in the background.)
+Rectangle {
     id: root
+    color: "transparent"
 
     property real fillHeight: 600
     signal openSettings(string page)
@@ -41,26 +44,31 @@ ClippingRectangle {
         return iso ? Qt.formatTime(new Date(iso), Settings.data.general.use24h ? "HH:mm" : "h:mm AP") : "—";
     }
 
-    // the sky
-    Rectangle {
+    ClippingRectangle {
         anchors.fill: parent
-        gradient: Gradient {
-            GradientStop { position: 0; color: root.colors[0] }
-            GradientStop { position: 0.65; color: root.colors[1] }
-            GradientStop { position: 1; color: root.colors[2] }
+        radius: root.radius
+        color: "transparent"
+        // the sky
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                GradientStop { position: 0; color: root.colors[0] }
+                GradientStop { position: 0.65; color: root.colors[1] }
+                GradientStop { position: 1; color: root.colors[2] }
+            }
         }
-    }
-    // a sun or moon glow in the corner
-    Rectangle {
-        x: parent.width - width * 0.6
-        y: -height * 0.4
-        width: 420
-        height: 420
-        radius: 210
-        visible: root.sky === "clear" || root.sky === "night"
-        gradient: Gradient {
-            GradientStop { position: 0; color: root.night ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 0.92, 0.6, 0.55) }
-            GradientStop { position: 1; color: "transparent" }
+        // a sun or moon glow in the corner
+        Rectangle {
+            x: parent.width - width * 0.6
+            y: -height * 0.4
+            width: 420
+            height: 420
+            radius: 210
+            visible: root.sky === "clear" || root.sky === "night"
+            gradient: Gradient {
+                GradientStop { position: 0; color: root.night ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 0.92, 0.6, 0.55) }
+                GradientStop { position: 1; color: "transparent" }
+            }
         }
     }
 

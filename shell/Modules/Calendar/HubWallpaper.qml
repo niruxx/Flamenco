@@ -10,7 +10,12 @@ import qs.Widgets
 // The Hub's Wallpaper page, over the current wallpaper blurred: a big preview of
 // the one you're on (or hovering) with its colors and what you can do, and every
 // wallpaper in a grid beside it. Click one to put it on.
-ClippingRectangle {
+//
+// A plain rounded Rectangle with only the blurred background clipped: the whole
+// page used to sit in a ClippingRectangle, whose offscreen layer sometimes wasn't
+// drawn when the page was built in the background, so it showed empty while its
+// (invisible) controls still worked.
+Rectangle {
     id: root
 
     property string screenName: ""
@@ -24,24 +29,29 @@ ClippingRectangle {
     property string hovered: ""
     readonly property string shown: hovered || current
 
-    // the wallpaper, blurred, behind the page
-    SafeImage {
-        id: bg
+    // the wallpaper, blurred, behind the page (rounded to the page's corners)
+    ClippingRectangle {
         anchors.fill: parent
-        path: Wallpapers.stillUrl(root.current)
-        fillMode: Image.PreserveAspectCrop
-        sourceSize: Qt.size(480, 300)
-        asynchronous: true
-        visible: false
-    }
-    MultiEffect {
-        anchors.fill: parent
-        source: bg
-        blurEnabled: true
-        blur: 1
-        blurMax: 64
-        brightness: -0.35
-        saturation: 0.1
+        radius: root.radius
+        color: "transparent"
+        SafeImage {
+            id: bg
+            anchors.fill: parent
+            path: Wallpapers.stillUrl(root.current)
+            fillMode: Image.PreserveAspectCrop
+            sourceSize: Qt.size(480, 300)
+            asynchronous: true
+            visible: false
+        }
+        MultiEffect {
+            anchors.fill: parent
+            source: bg
+            blurEnabled: true
+            blur: 1
+            blurMax: 64
+            brightness: -0.35
+            saturation: 0.1
+        }
     }
 
     RowLayout {

@@ -31,9 +31,23 @@ Singleton {
         return (cfg.widgets || []).filter(w => w.screen === screen || (!names.includes(w.screen) && screen === first));
     }
 
-    // a stored 0–1 share of the screen → pixels, kept fully on screen
+    // a stored 0–1 share of the screen → pixels, kept on screen and at least the shell's
+    // edge distance (Theme.edge, the windows' gap) from its sides, like panels and the bar
     function px(share, total, size) {
-        return Math.max(0, Math.min(total - size, (Number(share) || 0) * total));
+        const m = Math.min(Theme.edge, Math.max(0, (total - size) / 2));
+        return Math.max(m, Math.min(total - size - m, (Number(share) || 0) * total));
+    }
+
+    // where a dropped widget settles: on a grid of that same distance, and centered
+    // when it's dropped close to the middle, so widgets line up with each other
+    function snap(v, total, size) {
+        const m = Math.min(Theme.edge, Math.max(0, (total - size) / 2));
+        const step = Math.max(4, Theme.edge);
+        const mid = (total - size) / 2;
+        if (Math.abs(v - mid) < step * 1.5)
+            return mid;
+        const p = Math.round((v - m) / step) * step + m;
+        return Math.max(m, Math.min(total - size - m, p));
     }
 
     function add(type, screen, x, y) {

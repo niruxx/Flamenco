@@ -98,7 +98,7 @@ Variants {
                     xAxis.maximum: ed.width - slot.width
                     yAxis.minimum: 0
                     yAxis.maximum: ed.height - slot.height
-                    onActiveChanged: if (!active) Desk.update(slot.modelData.id, { x: slot.x / ed.width, y: slot.y / ed.height })
+                    onActiveChanged: if (!active) Desk.update(slot.modelData.id, { x: Desk.snap(slot.x, ed.width, slot.width) / ed.width, y: Desk.snap(slot.y, ed.height, slot.height) / ed.height })
                 }
 
                 // size and remove, above the widget while it's hovered

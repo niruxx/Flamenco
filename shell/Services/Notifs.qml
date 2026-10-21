@@ -79,32 +79,38 @@ Singleton {
         unread = 0;
     }
 
-    NotificationServer {
-        keepOnReload: true
-        actionsSupported: true
-        bodyMarkupSupported: true
-        bodySupported: true
-        imageSupported: true
-        persistenceSupported: true
+    // the notification service is the shell's unless mako shows them (Settings →
+    // Notifications → Shown by): then it's let go, for mako (Mako) to take
+    readonly property bool own: (Settings.data.notifications.backend || "flamenco") !== "mako" || !Mako.found
+    LazyLoader {
+        active: root.own
+        NotificationServer {
+            keepOnReload: true
+            actionsSupported: true
+            bodyMarkupSupported: true
+            bodySupported: true
+            imageSupported: true
+            persistenceSupported: true
 
-        onNotification: n => {
-            n.tracked = true;
-            const e = root.entryFor(n);
-            root.live[n.id] = n;
-            n.closed.connect(() => delete root.live[n.id]);
+            onNotification: n => {
+                n.tracked = true;
+                const e = root.entryFor(n);
+                root.live[n.id] = n;
+                n.closed.connect(() => delete root.live[n.id]);
 
-            historyModel.insert(0, e);
-            while (historyModel.count > 100)
-                historyModel.remove(historyModel.count - 1);
-            root.unread++;
+                historyModel.insert(0, e);
+                while (historyModel.count > 100)
+                    historyModel.remove(historyModel.count - 1);
+                root.unread++;
 
-            if (Settings.data.notifications.popups && (!root.dnd || e.urgency === 2)) {
-                Sounds.notification(e.urgency === 2);
-                popupModel.insert(0, e);
-                while (popupModel.count > 5)
-                    popupModel.remove(popupModel.count - 1);
+                if (Settings.data.notifications.popups && (!root.dnd || e.urgency === 2)) {
+                    Sounds.notification(e.urgency === 2);
+                    popupModel.insert(0, e);
+                    while (popupModel.count > 5)
+                        popupModel.remove(popupModel.count - 1);
+                }
+                saveTimer.restart();
             }
-            saveTimer.restart();
         }
     }
 

@@ -25,7 +25,7 @@ BarChip {
         spacing: Theme.barVertical ? 0 : 4
 
         Item {
-            implicitWidth: parent.ring ? Theme.barHeight - 16 : 16
+            implicitWidth: parent.ring ? Theme.barItem - 6 : 16
             implicitHeight: implicitWidth
 
             Canvas {

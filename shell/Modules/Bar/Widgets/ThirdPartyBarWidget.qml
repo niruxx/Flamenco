@@ -60,7 +60,7 @@ Item {
                 axis: { isVertical: Theme.barVertical, edge: Settings.data.bar.position },
                 section: sec,
                 parentScreen: screenObj,
-                widgetThickness: Theme.barHeight - 10,
+                widgetThickness: Theme.barItem,
                 barThickness: Theme.barHeight
             };
             const obj = comp.createObject(holder, props);

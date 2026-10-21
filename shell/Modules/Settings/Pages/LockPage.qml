@@ -139,16 +139,11 @@ Page {
         SliderRow { title: "Lock after"; icon: "timer"; target: page.l; key: "idleMinutes"; from: 1; to: 60; stepSize: 1; suffix: " min" }
         SliderRow { title: "Turn screens off after"; subtitle: "0 disables"; icon: "monitor"; target: page.l; key: "screenOffMinutes"; from: 0; to: 90; stepSize: 1; suffix: " min" }
         SwitchRow { title: "Media controls on lock screen"; icon: "music_note"; target: page.l; key: "showMedia" }
-        TextRow { title: "Avatar image"; icon: "account_circle"; target: Settings.data.general; key: "avatar"; placeholder: "~/.face" }
+        TextRow { title: "Avatar image"; subtitle: "Or choose a picture in Users"; icon: "account_circle"; target: Settings.data.general; key: "avatar"; placeholder: "~/.face" }
     }
 
     FingerprintSection {}
 
     LoginSection {}
 
-    Group {
-        title: "Night light"
-        SwitchRow { title: "Night light"; subtitle: "Uses gammastep"; icon: "nightlight"; target: Settings.data.night; key: "enabled" }
-        SliderRow { title: "Temperature"; icon: "thermostat"; target: Settings.data.night; key: "temperature"; from: 2500; to: 6000; stepSize: 100; suffix: "K" }
-    }
 }

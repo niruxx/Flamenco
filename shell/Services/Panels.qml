@@ -74,7 +74,19 @@ Singleton {
         anchor = Theme.barVertical ? c.y : c.x;
     }
 
+    // fuzzel as the launcher (Settings → Launcher): it opens instead of the shell's panel
+    function external(name) {
+        if (name === "launcher" && Fuzzel.on && Fuzzel.found) {
+            close();
+            Fuzzel.toggle();
+            return true;
+        }
+        return false;
+    }
+
     function open(name, s, from) {
+        if (external(name))
+            return;
         widgetsEdit = false;
         noteOrigin(from);
         screen = targetScreen(s);
@@ -86,6 +98,8 @@ Singleton {
     }
 
     function toggle(name, s, from) {
+        if (external(name))
+            return;
         const sc = targetScreen(s);
         if (current === name && screen === sc) {
             close();

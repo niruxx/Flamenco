@@ -9,7 +9,9 @@ import qs.Widgets
 // The Hub's Media page: the cover on a spinning record over the blurred cover,
 // the track large, a wavy progress line, big controls, and the visualizer
 // across the bottom.
-ClippingRectangle {
+// (A plain Rectangle with only the background clipped: a ClippingRectangle around
+// the whole page could fail to draw when the page was built in the background.)
+Rectangle {
     id: root
 
     property bool live: false                  // showing right now (the visualizer and the record run only then)
@@ -24,31 +26,36 @@ ClippingRectangle {
     onLiveChanged: live ? Cava.users++ : Cava.users = Math.max(0, Cava.users - 1)
     Component.onDestruction: if (live) Cava.users = Math.max(0, Cava.users - 1)
 
-    // ── the blurred cover behind it all ──
-    Image {
-        id: bg
+    ClippingRectangle {
         anchors.fill: parent
-        source: Media.art
-        fillMode: Image.PreserveAspectCrop
-        sourceSize: Qt.size(480, 320)
-        asynchronous: true
-        visible: false
-    }
-    MultiEffect {
-        anchors.fill: parent
-        visible: Media.art !== ""
-        source: bg
-        blurEnabled: true
-        blur: 1
-        blurMax: 64
-        brightness: -0.3
-        saturation: 0.25
-    }
-    Rectangle {
-        anchors.fill: parent
-        gradient: Gradient {
-            GradientStop { position: 0; color: "transparent" }
-            GradientStop { position: 1; color: Theme.alpha(Theme.shadow, Media.art !== "" ? 0.55 : 0.1) }
+        radius: root.radius
+        color: "transparent"
+        // ── the blurred cover behind it all ──
+        Image {
+            id: bg
+            anchors.fill: parent
+            source: Media.art
+            fillMode: Image.PreserveAspectCrop
+            sourceSize: Qt.size(480, 320)
+            asynchronous: true
+            visible: false
+        }
+        MultiEffect {
+            anchors.fill: parent
+            visible: Media.art !== ""
+            source: bg
+            blurEnabled: true
+            blur: 1
+            blurMax: 64
+            brightness: -0.3
+            saturation: 0.25
+        }
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                GradientStop { position: 0; color: "transparent" }
+                GradientStop { position: 1; color: Theme.alpha(Theme.shadow, Media.art !== "" ? 0.55 : 0.1) }
+            }
         }
     }
 

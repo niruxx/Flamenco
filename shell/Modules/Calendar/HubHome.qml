@@ -252,10 +252,12 @@ ColumnLayout {
                         Layout.fillWidth: true
                         icon: "nightlight"
                         title: "Night light"
-                        subtitle: Toggles.nightLight ? Settings.data.night.temperature + "K" : "Off"
+                        subtitle: Toggles.status
                         active: Toggles.nightLight
                         tint: Theme.warning
+                        hasMore: true
                         onClicked: Toggles.setNightLight(!Toggles.nightLight)
+                        onMoreClicked: Panels.openSettings("night")
                     }
                     FToggleTile {
                         Layout.fillWidth: true

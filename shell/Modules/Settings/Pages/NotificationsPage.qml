@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import qs.Commons
 import qs.Services
 import qs.Widgets
@@ -8,6 +9,33 @@ Page {
     id: page
     title: "Notifications"
     readonly property var n: Settings.data.notifications
+
+    Group {
+        title: "Shown by"
+        ChoiceRow {
+            title: "Notification daemon"
+            subtitle: page.n.backend === "mako"
+                ? (Mako.found ? "mako, in your theme's colors, fonts and corners, at the position and timeout below. Do Not Disturb follows Flamenco's switch. There's no history panel with mako: the bell brings the last notification back (middle-click clears them)"
+                    : "mako isn't installed, so Flamenco keeps showing notifications (Settings → System check)")
+                : "Flamenco's own: popups, a history panel or shade, actions and images"
+            icon: "notifications"
+            target: page.n
+            key: "backend"
+            segWidth: 120
+            options: [{ value: "flamenco", label: "Flamenco", icon: "local_fire_department" }, { value: "mako", label: "mako", icon: "chat_bubble" }]
+        }
+        SettingRow {
+            visible: page.n.backend === "mako" && Mako.found
+            title: "Send a test"
+            subtitle: "Its config is " + Mako.path + "; your own ~/.config/mako is left alone"
+            icon: "send"
+            FButton {
+                text: "Test notification"
+                variant: "tonal"
+                onClicked: Quickshell.execDetached(["notify-send", "-a", "Flamenco", "Hello from mako", "Themed to match " + (Palettes.labels[Settings.data.appearance.palette] ?? "your theme")])
+            }
+        }
+    }
 
     Group {
         SwitchRow { title: "Show popups"; icon: "notifications_active"; target: page.n; key: "popups" }

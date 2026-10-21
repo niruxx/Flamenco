@@ -48,7 +48,7 @@ BarFlow {
             id: it
             required property SystemTrayItem modelData
             readonly property bool attention: modelData.status === Status.NeedsAttention
-            width: Theme.barHeight - 10
+            width: Theme.barItem
             height: width
 
             IconImage {
@@ -116,7 +116,7 @@ BarFlow {
     // overflow toggle
     FIconButton {
         visible: root.overflowing
-        size: Theme.barHeight - 14
+        size: Theme.barItem - 4
         iconSize: 16
         icon: Theme.barVertical ? (root.expanded ? "keyboard_arrow_up" : "keyboard_arrow_down") : (root.expanded ? "chevron_left" : "chevron_right")
         onClicked: root.expanded = !root.expanded

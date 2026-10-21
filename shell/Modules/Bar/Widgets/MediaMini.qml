@@ -18,7 +18,7 @@ BarChip {
     BarFlow {
         // spinning "vinyl" cover
         ClippingRectangle {
-            width: Theme.barHeight - 18
+            width: Theme.barItem - 8
             height: width
             radius: width / 2
             color: Theme.surfaceHighest

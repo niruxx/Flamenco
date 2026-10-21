@@ -22,7 +22,7 @@ Rectangle {
     readonly property bool apps: style === "apps" && !Theme.barVertical
 
     // geometry, all derived from the bar height
-    readonly property int capsuleH: Theme.barHeight - 12
+    readonly property int capsuleH: Theme.barItem - 2
     readonly property int dot: numbers ? capsuleH - 10 : style === "dots" ? Math.round(capsuleH * 0.26) : Math.round(capsuleH * 0.34)
     readonly property int activeW: numbers ? dot : style === "dots" ? dot * 2.2 : dot * 2.8
     readonly property int gap: numbers ? 2 : 4

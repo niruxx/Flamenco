@@ -33,14 +33,10 @@ Variants {
             right: win.pos.endsWith("right")
             left: win.pos.endsWith("left")
         }
-        margins {
-            top: Theme.gap
-            bottom: Theme.gap
-            left: Theme.gap
-            right: Theme.gap
-        }
-        implicitWidth: 400
-        implicitHeight: Math.max(1, list.contentHeight + 20)
+        // the cards sit Theme.edge from the screen's edge (and the bar), level with panels
+        // and windows; the window itself goes to the edge so their shadows have room
+        implicitWidth: 380 + Theme.edge * 2
+        implicitHeight: Math.max(1, list.contentHeight + Theme.edge * 2)
         exclusionMode: ExclusionMode.Normal
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "flamenco-notifications"
@@ -48,7 +44,7 @@ Variants {
         ListView {
             id: list
             anchors.fill: parent
-            anchors.margins: 10
+            anchors.margins: Theme.edge
             interactive: false
             spacing: Theme.gap
             verticalLayoutDirection: win.atTop ? ListView.TopToBottom : ListView.BottomToTop

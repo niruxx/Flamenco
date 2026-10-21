@@ -12,7 +12,7 @@ Item {
     property bool barVisible: Cava.available && Media.playing && barLevel < 2
     readonly property bool vertical: Theme.barVertical
     readonly property int count: 10
-    readonly property int thick: Theme.barHeight - 18
+    readonly property int thick: Theme.barItem - 8
 
     implicitWidth: vertical ? thick : count * 4 + (count - 1) * 2
     implicitHeight: vertical ? count * 4 + (count - 1) * 2 : thick

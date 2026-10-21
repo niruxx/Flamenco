@@ -84,15 +84,18 @@ Singleton {
             fontProc.running = true;
     }
 
-    // A click on every key press, right away. While a slider is dragged the
-    // clicks are spaced out (one per cooldown, plus one when it stops).
+    // Volume / brightness feedback. A key press or click sounds right away; while a
+    // slider is dragged (changes coming fast) nothing more plays until it settles,
+    // then one click confirms where it landed. (It used to click every 90 ms while
+    // dragging: each click outlasted that, so they stacked into a rapid stutter.)
     component Tick: Timer {
         signal fire
         property bool pending: false
-        interval: 90
+        interval: 220
         function hit() {
             if (running) {
-                pending = true;
+                pending = true;          // still moving: wait for it to settle
+                restart();
             } else {
                 fire();
                 start();
@@ -101,16 +104,45 @@ Singleton {
         onTriggered: if (pending) {
             pending = false;
             fire();
-            start();
         }
     }
     Tick {
         id: volumeTick
-        onFire: root.play("audio-volume-change")
+        onFire: root.feedback("audio-volume-change")
     }
     Tick {
         id: brightnessTick
-        onFire: root.play("brightness-change")
+        onFire: root.feedback("brightness-change")
+    }
+
+    // One player for feedback: a click never cuts off or overlaps the one playing;
+    // one asked for meanwhile plays when it ends (only the latest is kept).
+    function feedback(event) {
+        const f = paths[event];
+        if (f === "")
+            return;
+        if (!f) {
+            play(event);                 // not resolved yet: the CLI finds and plays it
+            return;
+        }
+        if (fbPlayer.running) {
+            fbPlayer.queued = f;
+            return;
+        }
+        fbPlayer.command = ["sh", "-c", 'pw-play "$1" 2>/dev/null || paplay "$1"', "sh", f];
+        fbPlayer.running = true;
+    }
+    Process {
+        id: fbPlayer
+        property string queued: ""
+        onExited: {
+            if (queued === "")
+                return;
+            const f = queued;
+            queued = "";
+            command = ["sh", "-c", 'pw-play "$1" 2>/dev/null || paplay "$1"', "sh", f];
+            Qt.callLater(() => fbPlayer.running = true);
+        }
     }
 
     Process {

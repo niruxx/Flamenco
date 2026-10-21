@@ -20,7 +20,7 @@ Item {
 
     FIconButton {
         id: btn
-        size: Theme.barHeight - 10
+        size: Theme.barItem
         iconSize: 18
         icon: Audio.micMuted ? "mic_off" : "mic"
         // in use: highlighted; muted: the error color, so it stands out

@@ -83,8 +83,8 @@ Variants {
             width: win.sheetW
             anchors.top: parent.top
             anchors.bottom: parent.bottom
-            anchors.margins: Theme.gap
-            x: win.side === "left" ? Theme.gap - (1 - win.p) * (width + Theme.gap * 2) : parent.width - width - Theme.gap + (1 - win.p) * (width + Theme.gap * 2)
+            anchors.margins: Theme.edge
+            x: win.side === "left" ? Theme.edge - (1 - win.p) * (width + Theme.edge * 2) : parent.width - width - Theme.edge + (1 - win.p) * (width + Theme.edge * 2)
             radius: Theme.rXl
             color: Theme.panelBg
             border.width: 1

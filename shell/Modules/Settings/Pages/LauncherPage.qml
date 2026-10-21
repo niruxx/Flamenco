@@ -11,6 +11,33 @@ Page {
     readonly property var l: Settings.data.launcher
 
     Group {
+        title: "Launcher app"
+        ChoiceRow {
+            title: "Open apps with"
+            subtitle: page.l.backend === "fuzzel"
+                ? (Fuzzel.found ? "fuzzel, in your theme's colors, fonts and corners (redone whenever the theme changes). The = > ; : # extras below are Flamenco's own and not in fuzzel"
+                    : "fuzzel isn't installed, so Flamenco's launcher opens for now (Settings → System check)")
+                : "Flamenco's launcher: apps, the calculator, commands, clipboard, emoji and colors"
+            icon: "apps"
+            target: page.l
+            key: "backend"
+            segWidth: 120
+            options: [{ value: "flamenco", label: "Flamenco", icon: "local_fire_department" }, { value: "fuzzel", label: "fuzzel", icon: "search" }]
+        }
+        SettingRow {
+            visible: page.l.backend === "fuzzel" && Fuzzel.found
+            title: "Try it"
+            subtitle: "Its config is " + Fuzzel.path + "; your own ~/.config/fuzzel is left alone. Position, width and results below apply to it too"
+            icon: "play_arrow"
+            FButton {
+                text: Fuzzel.running ? "Close fuzzel" : "Open fuzzel"
+                variant: "tonal"
+                onClicked: Fuzzel.toggle()
+            }
+        }
+    }
+
+    Group {
         title: "Placement"
         DropdownRow {
             title: "Position"

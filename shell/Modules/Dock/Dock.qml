@@ -159,6 +159,9 @@ Variants {
             border.width: win.cfg.border ? 1 : 0
             border.color: Theme.alpha(Theme.border, 0.6 * win.cfg.opacity)
 
+            // the surface finish (gloss / chrome), under the content
+            Finish { strength: win.cfg.opacity }
+
             // eases when apps come and go; while magnifying it follows the icons
             // directly, which already animate, so it never lags behind them
             Behavior on width { enabled: !win.vertical && !win.magnifying; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
