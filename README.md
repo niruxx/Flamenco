@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.37.3-E8466F?style=for-the-badge" alt="Version 0.37.3">
+  <img src="https://img.shields.io/badge/version-0.38.1-E8466F?style=for-the-badge" alt="Version 0.38.1">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -34,7 +34,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
   <tr>
     <td width="33%" valign="top">
       <h3>🎨 One look, everywhere</h3>
-      13 palettes in dark and light, your own accent, or colors from your wallpaper. Qt, GTK, KDE colors, cursors and icons follow along.
+      14 palettes in dark and light, your own accent, or colors from your wallpaper. Qt, GTK, KDE colors, cursors and icons follow along.
     </td>
     <td width="33%" valign="top">
       <h3>⚙️ A real Settings app</h3>
@@ -160,7 +160,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 
 | | |
 |---|---|
-| **📊 Bar** | Floating, attached or "islands" style, on any screen edge (left/right give a vertical bar). It can **hide**: auto-hide until the pointer reaches the edge, hide while windows are open on the workspace, or by hand with a shortcut or `flamenco bar toggle`. Widget styles: workspaces as pills, numbers, dots or each workspace's app icons; CPU/RAM/temperature as numbers or ring gauges; the battery in ten themes (battery shape, capsule, outline, cells, upright, ring, symbol, dot, line or text) with accent, by-level or plain colors, a low-battery level, blinking and a charging animation, picked from live previews in **Settings → Bar → Battery**; the clock inline, stacked (time over date) or time only, aligned and placed where you like; separators between groups. The **Islands** layout preset sets all of that up in one click. Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, a microphone indicator (shows while an app records; click to mute), brightness, battery, notifications, weather, a clipboard history button (search, copy again, delete entries or clear it all; Flamenco records text and images with cliphist), power |
+| **📊 Bar** | Floating, attached, "islands" or "framed" (a solid bar with each group as a pill, the Flamenco look) style, on any screen edge (left/right give a vertical bar). It can **hide**: auto-hide until the pointer reaches the edge, hide while windows are open on the workspace, or by hand with a shortcut or `flamenco bar toggle`. Widget styles: workspaces as pills, numbers, dots or each workspace's app icons; CPU/RAM/temperature as numbers or ring gauges; the battery in ten themes (battery shape, capsule, outline, cells, upright, ring, symbol, dot, line or text) with accent, by-level or plain colors, a low-battery level, blinking and a charging animation, picked from live previews in **Settings → Bar → Battery**; the clock inline, stacked (time over date) or time only, aligned and placed where you like; separators between groups. The **Islands** layout preset sets all of that up in one click. Widgets are reorderable: launcher, niri workspaces (compact gliding indicator), active window (click for a window menu), a taskbar of running apps (right-click for the same menu), clock, media (spinning cover art), system tray, CPU/RAM, keyboard layout, network, Bluetooth, volume, a microphone indicator (shows while an app records; click to mute), brightness, battery, notifications, weather, a clipboard history button (search, copy again, delete entries or clear it all; Flamenco records text and images with cliphist), power |
 | **🔔 App indicators** | StatusNotifierItem / libappindicator tray with themed menus (submenus, check/radio items), tooltips, attention pulse, optional hiding of passive icons, overflow drawer. Native Qt menus available as a setting |
 | **🎛️ Control center** | Volume, mic, screen, external-monitor and keyboard brightness sliders, and an **app mixer**: each app's volume and mute, which speaker or headset it plays on, a browser's tabs one by one, apps recording, optionally up to 150% (also in the volume panel and Settings → Sound). Tiles for Wi-Fi, Bluetooth, DND, night light, caffeine, power profile, VPN, dark mode, screen recording, desktop widgets and wallpaper: pick, reorder and lay them out in **Settings → Quick settings**, which also sets where the panel opens and its width. Wi-Fi, Bluetooth and audio-device pages slide in. Media card with blurred album art. Two looks: **cards** (icon on top, tinted when on, big gradient sliders, matching the dashboard) or **classic** |
 | **🔔 Notification center** | A drop-down under the bar, or a **shade**: a full-height sheet from the left or right (or whichever side the bell is on) with the date and time, the month, and notifications grouped by app, with Do not disturb and Clear. Move the bell to the left, center or right of the bar in **Settings → Notifications** |
@@ -213,7 +213,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 
 | | |
 |---|---|
-| **⚙️ Settings app** | Its own window (`flamenco settings`) with a page for every module, and a search box (`Ctrl+F`) that finds any setting, opens its page and points it out. Every change applies live |
+| **⚙️ Settings app** | Its own window (`flamenco settings`), laid out like GNOME Settings / macOS System Settings: your profile card, then the pages in a few sections (Personalize, Desktop & windows, Devices, Network & sharing, Apps, Privacy & security, System) with colored badges, back / forward (`Alt+←/→`), centered pages with rounded lists, and a search box (`Ctrl+F`) that finds any setting, opens its page and points it out. A narrow window shows the list and the page in turn. Every change applies live |
 | **🎨 App theming** | Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
 | **📦 Default apps** | Browser, file manager, email, text editor, images, video, music, PDF, archives and terminal, written to `mimeapps.list` |
 | **🚀 Auto-start** | XDG autostart entries: turn them on or off, add apps or plain commands; Flamenco runs them at login unless systemd already does |
@@ -227,7 +227,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
   <img alt="The 13 Flamenco palettes" src="docs/assets/palettes-dark.svg" width="100%">
 </picture>
 
-Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, Dracula, Kanagawa, Solarized, One Dark and Monochrome, each hand-tuned in dark and light. You can also derive the palette from your wallpaper, swap in your own accent color, and pick a whole layout preset (Modern, Minimal, Classic, Dock & menu bar, Vertical). Palette switches cross-fade across the whole shell.
+Flamenco (black and grey, with an ember accent), Material Design, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, Dracula, Kanagawa, Solarized, One Dark and Monochrome, each hand-tuned in dark and light. You can also derive the palette from your wallpaper, swap in your own accent color, and pick a whole layout preset (**Flamenco**: the black-and-grey palette, a solid bar with grey pill groups and a rounded screen frame that grows in at login; or Islands, Modern, Minimal, Classic, Dock & menu bar, Vertical). Palette switches cross-fade across the whole shell.
 
 <p align="right"><a href="#top">⬆️ Back to top</a></p>
 
@@ -1009,6 +1009,7 @@ flamenco display fallback      # turn a screen on if none is on
 ### 🪟 Windows, workspaces & screen edges
 
 **Settings → Windows & Layout** controls how windows look and behave:
+- **Window mode:** tiling (windows side by side, never overlapping) or floating (windows open on top of each other, like a classic desktop). Switching moves the windows already open too; the "Switch tiling / floating windows" shortcut function and `flamenco ipc windows toggleMode` flip it.
 - **Layout:** gaps, an extra margin along the left and right edges, the width of new columns, when to center the focused column, and asking apps not to draw their own title bars.
 - **Look:** corner radius, focus ring and border (on/off and width), shadows.
   - **Colors:** the ring and border follow your palette's accent, or turn that off and pick your own: click a palette swatch or type a hex color.
@@ -1174,7 +1175,7 @@ Theming has two layers: the **shell palette**, which colors the shell itself, an
 In **Settings → Appearance**:
 
 - **Color mode:** dark or light. **Switch automatically** changes it at sunset and sunrise (needs weather on, which knows your location) or on a schedule. Flipping it by hand lasts until the next switch.
-- **Palette:** Flamenco, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, Dracula, Kanagawa, Solarized, One Dark, Monochrome, or *From wallpaper*.
+- **Palette:** Flamenco, Material Design, Breeze, Catppuccin, Rosé Pine, Nord, Tokyo Night, Gruvbox, Everforest, Dracula, Kanagawa, Solarized, One Dark, Monochrome, or *From wallpaper*.
 - **Accent:** keep the palette's accent, pick a swatch, or type any hex color. It recolors the whole shell, the window focus ring and your themed apps.
 - **Layout presets:** one click sets up the bar, dock, launcher and notifications:
   - *Modern*: floating top bar, centered clock
@@ -1182,7 +1183,8 @@ In **Settings → Appearance**:
   - *Classic*: a Windows-style taskbar at the bottom, with running apps
   - *Dock & menu bar*: a thin top bar and a dock, macOS-style
   - *Vertical*: a bar on the left side
-- **Shape and surfaces:** corner roundness, panel opacity, shadows, dimming behind panels, and **Connect panels to the bar**. With that last one, quick settings, the calendar and the other panels grow out of the bar as one surface, with curved joins and no gap showing the wallpaper. It doesn't apply to the Islands bar style. Panels opened from the bar open on the same side as the widget you clicked: a clock in the right section opens the calendar on the right, and one in the center opens it under the clock.
+- **Transparency:** a **Whole UI** slider that scales everything at once, and one for each part: panels, the bar (and screen frame), notifications and pop-ups, switchers and the overview, the dock, desktop widgets and the Settings window. The bar, pop-ups and switchers follow the panels until you set them yourself. **Blur behind** (Hyprland) blurs what shows through.
+- **Shape and surfaces:** corner roundness, shadows, dimming behind panels, and **Connect panels to the bar**. With that last one, quick settings, the calendar and the other panels grow out of the bar as one surface, with curved joins and no gap showing the wallpaper. It doesn't apply to the Islands bar style. Panels opened from the bar open on the same side as the widget you clicked: a clock in the right section opens the calendar on the right, and one in the center opens it under the clock.
 - **Motion:**
   - **Speed:** for everything; 0% turns animations off.
   - **Style:** *Expressive* (springy, the default), *Smooth* (nothing overshoots), *Snappy* (quick and crisp) or *Minimal*. It changes every animation's easing at once.
