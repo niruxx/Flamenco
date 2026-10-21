@@ -19,9 +19,9 @@ Page {
         Layout.fillWidth: true
         spacing: Theme.sp3
         FButton {
-            text: AppTheming.busy ? "Applying…" : "Apply now"
+            text: AppTheming.busy ? "Applying…" : AppTheming.following ? "Apply now" : "Use Flamenco's colors"
             icon: "format_paint"
-            onClicked: AppTheming.apply()
+            onClicked: AppTheming.following ? AppTheming.apply() : AppTheming.useScheme("flamenco")
         }
         FButton {
             text: "Restore originals"
@@ -34,6 +34,76 @@ Page {
             text: AppTheming.lastStatus
             dim: true
             elide: Text.ElideRight
+        }
+    }
+
+    // ── which look apps get: the shell's, or a desktop's own defaults ──
+    Group {
+        title: "Color scheme"
+        Item {
+            Layout.fillWidth: true
+            Layout.margins: Theme.sp3
+            implicitHeight: schemes.implicitHeight
+            Flow {
+                id: schemes
+                width: parent.width
+                spacing: Theme.sp2
+                readonly property real tileW: (width - spacing * 2) / 3
+                Repeater {
+                    model: [
+                        { value: "flamenco", label: "Flamenco", hint: "Your shell palette in every app", swatch: [Theme.bg, Theme.surfaceHigh, Theme.accent, Theme.accent2] },
+                        { value: "gnome", label: "GNOME defaults", hint: "Adwaita, GNOME's fonts, no color scheme", swatch: ["#fafafb", "#ebebed", "#3584e4", "#241f31"] },
+                        { value: "kde", label: "KDE defaults", hint: "Breeze colors, style and icons", swatch: ["#eff0f1", "#fcfcfc", "#3daee9", "#232629"] }
+                    ]
+                    Rectangle {
+                        id: stile
+                        required property var modelData
+                        readonly property bool on: (page.o.scheme || "flamenco") === modelData.value
+                        width: Math.max(160, schemes.tileW)
+                        height: 108
+                        radius: Theme.rLg
+                        color: on ? Theme.alpha(Theme.accent, 0.14) : Theme.alpha(Theme.text, 0.04)
+                        border.width: on ? 2 : 1
+                        border.color: on ? Theme.accent : Theme.alpha(Theme.text, 0.08)
+                        Row {
+                            x: 12
+                            y: 12
+                            spacing: 4
+                            Repeater {
+                                model: stile.modelData.swatch
+                                Rectangle {
+                                    required property color modelData
+                                    width: 26
+                                    height: 26
+                                    radius: 8
+                                    color: modelData
+                                    border.width: 1
+                                    border.color: Theme.alpha(Theme.text, 0.12)
+                                }
+                            }
+                        }
+                        Column {
+                            x: 12
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 10
+                            width: parent.width - 24
+                            FText { text: stile.modelData.label; font.weight: Font.Bold; color: stile.on ? Theme.accent : Theme.text }
+                            FText { width: parent.width; text: stile.modelData.hint; dim: true; font.pixelSize: Theme.fsXs; elide: Text.ElideRight }
+                        }
+                        StateLayer {
+                            radius: parent.radius
+                            onClicked: if (!stile.on) AppTheming.useScheme(stile.modelData.value)
+                        }
+                    }
+                }
+            }
+        }
+        SettingRow {
+            title: AppTheming.following ? "Using another desktop too?" : "Apps use " + (page.o.scheme === "kde" ? "KDE's" : "GNOME's") + " defaults"
+            subtitle: AppTheming.following
+                ? "Before switching to GNOME or Plasma, pick its defaults here: Flamenco's colors come out of GTK, GNOME and KDE settings (your own files from before Flamenco come back), so the other desktop and its tools (GNOME Tweaks, System Settings) work as usual. Pick Flamenco again when you're back."
+                : "Flamenco won't re-theme apps until you pick Flamenco again. Restart open apps to see the change."
+            icon: AppTheming.following ? "swap_horiz" : "check_circle"
         }
     }
 

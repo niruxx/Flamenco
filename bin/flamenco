@@ -80,7 +80,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.41.0"
+VERSION = "0.42.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -3938,6 +3938,192 @@ def cal_fetch(src: dict, refresh: bool) -> tuple[list[str], str]:
     return [], f"not found: {path}"
 
 
+# ─────────────────────────────── online accounts (CalDAV) ────────────────────
+# Settings → Online Accounts: sign in to a CalDAV server (iCloud, Nextcloud,
+# Fastmail, Radicale, Baïkal… any with a user name and an app password), pick
+# calendars, and their events show in the calendar like any other. Passwords
+# stay in the keyring (or a 0600 file); settings.json only names the account.
+#   flamenco accounts discover SERVER USER      password on stdin → JSON calendars
+#   flamenco accounts secret ID [--clear]       store (stdin) / forget an account's password
+
+ACCOUNT_KEYS = CONFIG_DIR / "account-keys.json"
+CALDAV_PRESETS = {"icloud": "https://caldav.icloud.com/", "fastmail": "https://caldav.fastmail.com/dav/",
+                  "nextcloud": "{host}/remote.php/dav/", "yahoo": "https://caldav.calendar.yahoo.com/",
+                  "zoho": "https://calendar.zoho.com/caldav/", "mailbox": "https://dav.mailbox.org/caldav/"}
+
+
+def acct_secret_get(aid: str) -> str:
+    if ai_keyring():
+        r = subprocess.run(["secret-tool", "lookup", "service", "flamenco-calendar", "account", aid],
+                           capture_output=True, text=True, timeout=10)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.rstrip("\n")
+    try:
+        return str(json.loads(ACCOUNT_KEYS.read_text()).get(aid, ""))
+    except (OSError, ValueError):
+        return ""
+
+
+def acct_secret_file(aid: str, value: str | None) -> None:
+    try:
+        data = json.loads(ACCOUNT_KEYS.read_text())
+    except (OSError, ValueError):
+        data = {}
+    if value is None:
+        if data.pop(aid, None) is None:
+            return
+    else:
+        data[aid] = value
+    ACCOUNT_KEYS.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(ACCOUNT_KEYS, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        json.dump(data, f)
+    os.chmod(ACCOUNT_KEYS, 0o600)
+
+
+def acct_secret_set(aid: str, value: str) -> str:
+    if ai_keyring():
+        r = subprocess.run(["secret-tool", "store", "--label", f"Flamenco calendar account {aid}",
+                            "service", "flamenco-calendar", "account", aid], input=value, text=True, capture_output=True, timeout=30)
+        if r.returncode == 0:
+            acct_secret_file(aid, None)
+            return "keyring"
+    acct_secret_file(aid, value)
+    return "file"
+
+
+def dav_request(method: str, url: str, user: str, password: str, body: str = "", depth: str = "0"):
+    """(status, final url, text) of a WebDAV request, following redirects (urllib won't for PROPFIND)."""
+    import base64
+    import urllib.error
+    import urllib.request
+    auth = "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()
+    for _ in range(6):
+        req = urllib.request.Request(url, data=body.encode() if body else None, method=method,
+                                     headers={"Authorization": auth, "Depth": depth, "User-Agent": UA,
+                                              "Content-Type": "application/xml; charset=utf-8"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.status, r.geturl(), r.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as e:
+            if e.code in (301, 302, 303, 307, 308) and e.headers.get("Location"):
+                import urllib.parse
+                url = urllib.parse.urljoin(url, e.headers["Location"])
+                continue
+            if e.code == 401:
+                raise ValueError("the user name or password was refused (many services need an app password)")
+            raise
+    raise ValueError("too many redirects")
+
+
+DAV_NS = {"d": "DAV:", "c": "urn:ietf:params:xml:ns:caldav", "a": "http://apple.com/ns/ical/", "cs": "http://calendarserver.org/ns/"}
+
+
+def dav_props(xml: str) -> list[tuple[str, object]]:
+    import xml.etree.ElementTree as ET
+    root = ET.fromstring(xml)
+    return [(r.findtext("d:href", "", DAV_NS), r) for r in root.findall("d:response", DAV_NS)]
+
+
+def caldav_discover(server: str, user: str, password: str) -> list[dict]:
+    import urllib.parse
+    server = server.strip()
+    if not re.match(r"(?i)^https?://", server):
+        server = "https://" + server
+    # a bare host: its well-known address leads to the CalDAV root
+    start = server if urllib.parse.urlparse(server).path not in ("", "/") else server.rstrip("/") + "/.well-known/caldav"
+    q = lambda inner: f'<?xml version="1.0"?><d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:a="http://apple.com/ns/ical/"><d:prop>{inner}</d:prop></d:propfind>'
+    _, base, xml = dav_request("PROPFIND", start, user, password, q("<d:current-user-principal/>"))
+    href = next((r.findtext(".//d:current-user-principal/d:href", "", DAV_NS) for _, r in dav_props(xml)), "")
+    principal = urllib.parse.urljoin(base, href) if href else base
+    _, base, xml = dav_request("PROPFIND", principal, user, password, q("<c:calendar-home-set/>"))
+    href = next((r.findtext(".//c:calendar-home-set/d:href", "", DAV_NS) for _, r in dav_props(xml)), "")
+    home = urllib.parse.urljoin(base, href) if href else principal
+    _, base, xml = dav_request("PROPFIND", home, user, password,
+                               q("<d:displayname/><d:resourcetype/><a:calendar-color/><c:supported-calendar-component-set/>"), depth="1")
+    cals = []
+    for href, r in dav_props(xml):
+        if r.find(".//d:resourcetype/c:calendar", DAV_NS) is None:
+            continue
+        comps = [c.get("name") for c in r.findall(".//c:supported-calendar-component-set/c:comp", DAV_NS)]
+        if comps and "VEVENT" not in comps:
+            continue                          # task lists only
+        color = (r.findtext(".//a:calendar-color", "", DAV_NS) or "").strip()[:7]
+        url = urllib.parse.urljoin(base, href)
+        cals.append({"url": url, "name": (r.findtext(".//d:displayname", "", DAV_NS) or "").strip() or url.rstrip("/").rsplit("/", 1)[-1],
+                     "color": color if re.fullmatch(r"#[0-9a-fA-F]{6}", color) else ""})
+    if not cals:
+        raise ValueError("signed in, but no calendars were found there")
+    return cals
+
+
+def caldav_fetch(src: dict, lo, hi, refresh: bool) -> tuple[list[str], str]:
+    """Events of one CalDAV calendar between lo and hi, as ICS texts (cached for 15 minutes)."""
+    import hashlib
+    import time
+    import xml.etree.ElementTree as ET
+    url, aid = str(src.get("url", "")), str(src.get("account", ""))
+    CAL_CACHE.mkdir(parents=True, exist_ok=True)
+    f = CAL_CACHE / (hashlib.sha1(("caldav:" + url).encode()).hexdigest() + ".json")
+    if not refresh and f.exists() and time.time() - f.stat().st_mtime < 900:
+        try:
+            return json.loads(f.read_text()), ""
+        except ValueError:
+            pass
+    acct = next((a for a in (cal_settings().get("accounts") or []) if a.get("id") == aid), None)
+    if not acct:
+        return [], "its account was removed"
+    password = acct_secret_get(aid)
+    if not password:
+        return [], "no password saved for " + (acct.get("name") or acct.get("user", "the account"))
+    t = lambda d: d.strftime("%Y%m%dT000000Z")
+    body = ('<?xml version="1.0"?><c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">'
+            '<d:prop><c:calendar-data/></d:prop><c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT">'
+            f'<c:time-range start="{t(lo)}" end="{t(hi)}"/></c:comp-filter></c:comp-filter></c:filter></c:calendar-query>')
+    try:
+        _, _, xml = dav_request("REPORT", url, acct.get("user", ""), password, body, depth="1")
+        texts = [e.text for e in ET.fromstring(xml).iter("{urn:ietf:params:xml:ns:caldav}calendar-data") if e.text]
+    except Exception as e:
+        if f.exists():
+            return json.loads(f.read_text()), ""
+        return [], ai_http_error(e) if not isinstance(e, ValueError) else str(e)
+    f.write_text(json.dumps(texts))
+    return texts, ""
+
+
+def cal_settings() -> dict:
+    try:
+        return json.loads((CONFIG_DIR / "settings.json").read_text()).get("calendar", {}) or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def cmd_accounts(args: list[str]) -> int:
+    sub = args[0] if args else ""
+    if sub == "discover" and len(args) > 2:
+        password = sys.stdin.readline().rstrip("\n")
+        try:
+            print(json.dumps({"calendars": caldav_discover(args[1], args[2], password)}))
+        except Exception as e:
+            print(json.dumps({"error": str(e) if isinstance(e, ValueError) else ai_http_error(e)}))
+        return 0
+    if sub == "secret" and len(args) > 1:
+        if not re.fullmatch(r"[\w-]{1,64}", args[1]):
+            die("bad account id")
+        if "--clear" in args:
+            acct_secret_file(args[1], None)
+            if ai_keyring():
+                subprocess.run(["secret-tool", "clear", "service", "flamenco-calendar", "account", args[1]], capture_output=True, timeout=10)
+            print("cleared")
+            return 0
+        value = sys.stdin.readline().rstrip("\n")
+        if not value:
+            die("no password given on stdin")
+        print(acct_secret_set(args[1], value))
+        return 0
+    die("usage: flamenco accounts discover SERVER USER (password on stdin) | secret ID [--clear]")
+
+
 def calendar_events(days_before: int = 7, days_after: int = 62, refresh: bool = False) -> dict:
     from datetime import datetime, timedelta
     try:
@@ -3950,7 +4136,7 @@ def calendar_events(days_before: int = 7, days_after: int = 62, refresh: bool = 
     for src in cfg.get("sources", []) or []:
         if not src.get("enabled", True):
             continue
-        texts, err = cal_fetch(src, refresh)
+        texts, err = caldav_fetch(src, lo, hi, refresh) if src.get("type") == "caldav" else cal_fetch(src, refresh)
         if err:
             errors[src.get("name") or src.get("url", "")] = err
         for t in texts:
@@ -6848,9 +7034,134 @@ def cmd_hypr_dispatch(args: list[str]) -> int:
 
 # ─────────────────────────────── apps-theme ──────────────────────────────────
 
+# ─────────────────────────────── theming: back to a desktop's defaults ───────
+# For using GNOME or Plasma (even for a while): Flamenco's colors leak into them
+# through files they read too (gtk.css overrides that GNOME Tweaks can't undo,
+# kdeglobals, gsettings). `apps-theme --reset gnome|kde` puts back the files that
+# were there before Flamenco (its backups), removes everything it generated, and
+# resets every key it changed to that desktop's own defaults: GNOME (Adwaita,
+# its fonts, no color scheme) or KDE (Breeze). The shell stops re-applying its
+# theme to apps until you pick Flamenco again in Settings → App Theming.
+
+GTK_KEYS = ("gtk-application-prefer-dark-theme", "gtk-font-name", "gtk-icon-theme-name", "gtk-theme-name",
+            "gtk-cursor-theme-name", "gtk-cursor-theme-size")
+GS_KEYS = ("color-scheme", "gtk-theme", "font-name", "monospace-font-name", "document-font-name", "icon-theme",
+           "cursor-theme", "cursor-size", "accent-color")
+
+
+def ini_edit(path: Path, edit) -> bool:
+    """Change an ini file in place (no backups: this is undoing ours). False if it isn't there."""
+    if not path.is_file():
+        return False
+    cp = ini_read(path)
+    edit(cp)
+    from io import StringIO
+    buf = StringIO()
+    cp.write(buf, space_around_delimiters=False)
+    path.write_text(buf.getvalue())
+    return True
+
+
+def generated(path: Path) -> bool:
+    try:
+        return path.is_file() and MARKER in path.read_text(errors="ignore")[:400]
+    except OSError:
+        return False
+
+
+def theme_reset(target: str) -> list[str]:
+    done = []
+    restore()                                         # the user's own files back, ours removed
+    kde = target == "kde"
+    breeze_gtk = "Breeze" in gtk_themes()
+    # GTK: no colour overrides, no forced theme / fonts / icons / cursor
+    for v in ("gtk-3.0", "gtk-4.0"):
+        css = XDG_CONFIG / v / "gtk.css"
+        if generated(css):
+            css.unlink()
+            done.append(f"{v}/gtk.css removed")
+
+        def gtk_edit(cp, v=v):
+            if not cp.has_section("Settings"):
+                return
+            for k in GTK_KEYS:
+                cp.remove_option("Settings", k)
+            if kde:
+                if breeze_gtk and v == "gtk-3.0":
+                    cp.set("Settings", "gtk-theme-name", "Breeze")
+                cp.set("Settings", "gtk-icon-theme-name", "breeze")
+        if ini_edit(XDG_CONFIG / v / "settings.ini", gtk_edit):
+            done.append(f"{v}/settings.ini")
+    # GNOME settings: each key back to the schema's default (Adwaita, its fonts, no dark preference)
+    if shutil.which("gsettings"):
+        iface = "org.gnome.desktop.interface"
+        for k in GS_KEYS:
+            subprocess.run(["gsettings", "reset", iface, k], capture_output=True)
+        if kde:
+            if breeze_gtk:
+                subprocess.run(["gsettings", "set", iface, "gtk-theme", "Breeze"], capture_output=True)
+            subprocess.run(["gsettings", "set", iface, "icon-theme", "breeze"], capture_output=True)
+            subprocess.run(["gsettings", "set", iface, "cursor-theme", "breeze_cursors"], capture_output=True)
+        done.append("GNOME settings reset" + (" (Breeze for GTK)" if kde else " (Adwaita)"))
+    # KDE / Qt: Flamenco's colour scheme out, Breeze (Plasma's default) in
+    scheme = XDG_DATA / "color-schemes/Flamenco.colors"
+    if scheme.is_file():
+        scheme.unlink()
+
+    def kde_edit(cp):
+        if cp.has_section("General") and cp.get("General", "ColorScheme", fallback="") == "Flamenco":
+            for sec in [x for x in cp.sections() if x.startswith("Colors:")] + ["WM"]:
+                cp.remove_section(sec)
+            cp.remove_option("General", "ColorScheme")
+            if cp.get("General", "Name", fallback="") == "Flamenco":
+                cp.remove_option("General", "Name")
+        if cp.has_section("KDE"):
+            cp.set("KDE", "widgetStyle", "Breeze")
+        if kde:
+            if not cp.has_section("Icons"):
+                cp.add_section("Icons")
+            cp.set("Icons", "Theme", "breeze")
+            if not cp.has_section("General"):
+                cp.add_section("General")
+            cp.set("General", "ColorScheme", "BreezeLight")
+    if ini_edit(XDG_CONFIG / "kdeglobals", kde_edit):
+        done.append("kdeglobals")
+    if kde and shutil.which("plasma-apply-colorscheme"):
+        subprocess.run(["plasma-apply-colorscheme", "BreezeLight"], capture_output=True)
+    # qt5ct / qt6ct (Qt apps in niri): the style's own palette, no stylesheet, no forced fonts
+    for ct in ("qt5ct", "qt6ct"):
+        def qt_edit(cp):
+            if not cp.has_section("Appearance"):
+                cp.add_section("Appearance")
+            cp.set("Appearance", "custom_palette", "false")
+            cp.remove_option("Appearance", "color_scheme_path")
+            cp.set("Appearance", "style", "Breeze" if kde else "Fusion")
+            if cp.has_section("Interface"):
+                cp.set("Interface", "stylesheets", "@Invalid()")
+            if cp.has_section("Fonts"):
+                cp.remove_section("Fonts")
+        if ini_edit(XDG_CONFIG / ct / f"{ct}.conf", qt_edit):
+            done.append(ct)
+    # the default X cursor Flamenco set
+    cur = XDG_DATA / "icons/default/index.theme"
+    if generated(cur):
+        cur.unlink()
+    save_manifest({"files": [], "backups": {}, "gsettings": {}})
+    return done
+
+
 def cmd_apps_theme(args: list[str]) -> int:
     if "--restore" in args:
         return restore()
+    if "--reset" in args:
+        i = args.index("--reset")
+        target = args[i + 1] if i + 1 < len(args) else "gnome"
+        if target not in ("gnome", "kde"):
+            die("usage: flamenco apps-theme --reset gnome|kde")
+        for d in theme_reset(target):
+            print(d)
+        print("Apps are back to " + ("KDE's defaults (Breeze)" if target == "kde" else "GNOME's defaults (Adwaita)") + ". Restart open apps to see it.")
+        return 0
     raw = None
     if "--json" in args:
         i = args.index("--json")
@@ -6862,7 +7173,7 @@ def cmd_apps_theme(args: list[str]) -> int:
     elif "--file" in args:
         raw = Path(args[args.index("--file") + 1]).read_text()
     else:
-        die("usage: flamenco apps-theme --json SPEC | --stdin | --file PATH | --restore")
+        die("usage: flamenco apps-theme --json SPEC | --stdin | --file PATH | --restore | --reset gnome|kde")
     try:
         spec = Spec(json.loads(raw))
     except json.JSONDecodeError as e:
@@ -8730,6 +9041,8 @@ def main(argv: list[str]) -> int:
         return cmd_live(rest)
     if cmd == "users":
         return cmd_users(rest)
+    if cmd == "accounts":
+        return cmd_accounts(rest)
     if cmd == "updates":
         return cmd_updates(rest)
     if cmd == "emoji":

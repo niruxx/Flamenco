@@ -4,7 +4,8 @@ import qs.Commons
 import qs.Services
 import qs.Widgets
 
-// This month, with today marked.
+// This month, with today marked, dots on days with events (your calendars and
+// Online Accounts), and the next few events under it (not in the small size).
 ColumnLayout {
     id: root
     property real k: 1
@@ -54,6 +55,17 @@ ColumnLayout {
                 height: Math.round(28 * root.k)
                 radius: height / 2
                 color: isToday ? Theme.accent : "transparent"
+                readonly property bool busy: modelData > 0 && !!Events.busyDays[Events.key(new Date(root.today.getFullYear(), root.today.getMonth(), modelData))]
+                Rectangle {
+                    visible: parent.busy
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: Math.round(2 * root.k)
+                    width: Math.round(4 * root.k)
+                    height: width
+                    radius: width / 2
+                    color: parent.isToday ? Theme.onAccent : Theme.accent3
+                }
                 FText {
                     anchors.centerIn: parent
                     visible: parent.modelData > 0
@@ -62,6 +74,30 @@ ColumnLayout {
                     font.weight: parent.isToday ? Font.Bold : Font.Normal
                     font.pixelSize: Math.round(Theme.fsSm * root.k)
                 }
+            }
+        }
+    }
+
+    // what's next
+    Repeater {
+        model: root.spec?.size === "s" ? [] : Events.events.filter(e => new Date(e.end || e.start) >= root.today).slice(0, root.spec?.size === "l" ? 4 : 2)
+        RowLayout {
+            id: up
+            required property var modelData
+            Layout.fillWidth: true
+            Layout.maximumWidth: Math.round(7 * 34 * root.k)
+            spacing: Math.round(8 * root.k)
+            Rectangle {
+                Layout.preferredWidth: Math.max(3, Math.round(3 * root.k))
+                Layout.preferredHeight: Math.round(28 * root.k)
+                radius: width / 2
+                color: up.modelData.color || Theme.accent
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+                FText { Layout.fillWidth: true; text: up.modelData.title; font.pixelSize: Math.round(Theme.fsSm * root.k); font.weight: Font.Medium; elide: Text.ElideRight }
+                FText { Layout.fillWidth: true; text: Qt.formatDate(new Date(up.modelData.start), "ddd d") + " · " + Events.timeOf(up.modelData); dim: true; font.pixelSize: Math.round(Theme.fsXs * root.k); elide: Text.ElideRight }
             }
         }
     }

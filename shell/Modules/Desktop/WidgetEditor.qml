@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Io
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
@@ -126,6 +127,22 @@ Variants {
                                 implicitHeight: 30
                                 onClicked: Desk.update(slot.modelData.id, { size: modelData })
                             }
+                        }
+                        // the photo frame: its picture, or back to the wallpaper slideshow
+                        FIconButton {
+                            visible: slot.modelData.type === "photo"
+                            icon: "add_photo_alternate"
+                            size: 30
+                            onClicked: {
+                                photoPick.target = slot.modelData.id;
+                                photoPick.running = true;
+                            }
+                        }
+                        FIconButton {
+                            visible: slot.modelData.type === "photo" && !!slot.modelData.path
+                            icon: "slideshow"
+                            size: 30
+                            onClicked: Desk.update(slot.modelData.id, { path: "" })
                         }
                         FIconButton {
                             icon: "delete"
@@ -279,6 +296,20 @@ Variants {
                 id: gb
                 spec: ({ id: "", type: ghost.type || "clock", size: "m", text: "" })
                 editing: true
+            }
+        }
+    }
+
+    // the photo frame's picture chooser
+    Process {
+        id: photoPick
+        property string target
+        command: [Paths.bin, "pick", "image", Paths.home + "/Pictures"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const p = text.trim();
+                if (p && photoPick.target)
+                    Desk.update(photoPick.target, { path: p });
             }
         }
     }

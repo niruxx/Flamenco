@@ -231,8 +231,12 @@ Singleton {
 
             // Calendars shown in the calendar panel (`flamenco calendar events`):
             // [{ name, url, color, enabled }]; url: an ICS link, an .ics file or a vdir folder
+            // sources: also { type: "caldav", account: id, url: the calendar's address } from Online Accounts
             property JsonObject calendar: JsonObject {
                 property var sources: []
+                // Online Accounts (CalDAV sign-ins): [{ id, kind, name, server, user }];
+                // passwords are in the keyring (`flamenco accounts secret`), never here
+                property var accounts: []
             }
 
             // Screen recording (`flamenco record`)
@@ -499,6 +503,9 @@ Singleton {
             // Theming of regular applications, applied by `flamenco apps-theme`.
             property JsonObject apps: JsonObject {
                 property bool autoApply: true         // re-apply whenever the palette changes
+                // apps' look: flamenco (the shell's palette) | gnome (GNOME's defaults: Adwaita) | kde (KDE's: Breeze).
+                // gnome / kde put back what Flamenco changed, e.g. for using that desktop instead
+                property string scheme: "flamenco"
                 property bool syncFonts: true         // push shell fonts to Qt + GTK
                 property string iconTheme: ""         // "" = leave untouched
                 property string cursorTheme: ""

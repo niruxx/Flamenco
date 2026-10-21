@@ -17,7 +17,14 @@ Singleton {
         { type: "system", name: "System", icon: "monitoring", about: "Processor, memory and temperature" },
         { type: "media", name: "Now playing", icon: "music_note", about: "Cover art and controls" },
         { type: "calendar", name: "Calendar", icon: "calendar_month", about: "This month at a glance" },
-        { type: "note", name: "Note", icon: "sticky_note_2", about: "Type a note right on the desktop" }
+        { type: "note", name: "Note", icon: "sticky_note_2", about: "Type a note right on the desktop" },
+        { type: "events", name: "Up next", icon: "event_upcoming", about: "Coming events from your calendars" },
+        { type: "greeting", name: "Greeting", icon: "waving_hand", about: "Good morning, with your name and the day" },
+        { type: "photo", name: "Photo frame", icon: "photo", about: "A picture, or a slideshow of your wallpapers" },
+        { type: "battery", name: "Battery", icon: "battery_full", about: "Charge, time left and the power profile" },
+        { type: "network", name: "Network", icon: "network_check", about: "Speeds now and the last minutes" },
+        { type: "apps", name: "App shortcuts", icon: "apps", about: "Your pinned apps, a click away" },
+        { type: "visualizer", name: "Visualizer", icon: "graphic_eq", about: "Bars dancing to what's playing" }
     ]
 
     function info(type) {

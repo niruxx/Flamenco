@@ -86,6 +86,16 @@ Page {
         id: cals
         title: "Calendars"
         readonly property var list: Settings.data.calendar.sources || []
+        SettingRow {
+            title: "Online accounts"
+            subtitle: "Sign in to iCloud, Nextcloud, Fastmail or any CalDAV server, or add Google and Outlook calendars"
+            icon: "cloud_sync"
+            FButton {
+                text: "Online Accounts"
+                variant: "tonal"
+                onClicked: Panels.settingsPage = "accounts"
+            }
+        }
         function setAt(i, changes) {
             Settings.data.calendar.sources = list.map((c, j) => j === i ? Object.assign({}, c, changes) : c);
         }

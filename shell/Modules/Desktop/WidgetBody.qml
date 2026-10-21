@@ -32,7 +32,8 @@ Item {
     Loader {
         id: content
         anchors.centerIn: parent
-        sourceComponent: ({ clock: clockC, weather: weatherC, system: systemC, media: mediaC, calendar: calendarC, note: noteC })[body.spec.type] ?? unknownC
+        sourceComponent: ({ clock: clockC, weather: weatherC, system: systemC, media: mediaC, calendar: calendarC, note: noteC,
+                events: eventsC, greeting: greetingC, photo: photoC, battery: batteryC, network: networkC, apps: appsC, visualizer: visualizerC })[body.spec.type] ?? unknownC
         onLoaded: {
             item.k = Qt.binding(() => body.k);
             item.spec = Qt.binding(() => body.spec);
@@ -54,6 +55,13 @@ Item {
     Component { id: mediaC; MediaWidget {} }
     Component { id: calendarC; CalendarWidget {} }
     Component { id: noteC; NoteWidget {} }
+    Component { id: eventsC; EventsWidget {} }
+    Component { id: greetingC; GreetingWidget {} }
+    Component { id: photoC; PhotoWidget {} }
+    Component { id: batteryC; BatteryWidget {} }
+    Component { id: networkC; NetworkWidget {} }
+    Component { id: appsC; AppsWidget {} }
+    Component { id: visualizerC; VisualizerWidget {} }
     Component {
         id: unknownC
         FText {

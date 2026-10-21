@@ -72,9 +72,33 @@ Singleton {
         }
     }
 
-    onSpecChanged: if (cfg.autoApply && Settings.ready) debounce.restart()
+    // only while apps follow the shell (not after going back to GNOME's or KDE's defaults)
+    readonly property bool following: (cfg.scheme || "flamenco") === "flamenco"
+    onSpecChanged: if (cfg.autoApply && following && Settings.ready) debounce.restart()
+
+    // Settings → App Theming → Color scheme: the shell's palette, or a desktop's defaults
+    function useScheme(v) {
+        cfg.scheme = v;
+        debounce.stop();
+        if (v === "flamenco") {
+            apply();
+            return;
+        }
+        lastStatus = "Resetting…";
+        resetter.command = [Paths.bin, "apps-theme", "--reset", v];
+        resetter.running = true;
+    }
+    Process {
+        id: resetter
+        onExited: code => root.lastStatus = code === 0 ? ((root.cfg.scheme === "kde" ? "KDE" : "GNOME") + " defaults · " + Qt.formatTime(new Date(), "HH:mm:ss")) : "Reset failed (exit " + code + ")"
+        stdout: StdioCollector {
+            onStreamFinished: if (text.trim()) console.log("[AppTheming]", text.trim())
+        }
+    }
 
     function apply() {
+        if (!following)
+            return;
         if (proc.running) {
             debounce.restart();
             return;
