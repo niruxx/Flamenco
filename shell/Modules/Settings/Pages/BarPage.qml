@@ -48,6 +48,64 @@ Page {
     }
     readonly property var used: list("left").concat(list("center"), list("right"))
 
+    // ── placing one widget: which section it's in (left / center / right), or off ──
+    function where(id) {
+        for (const k of ["left", "center", "right"])
+            if (list(k).includes(id))
+                return k;
+        return "off";
+    }
+    function place(id, to) {
+        for (const k of ["left", "center", "right"]) {
+            const l = list(k);
+            if (l.includes(id))
+                setList(k, l.filter(x => x !== id));
+        }
+        if (to === "off")
+            return;
+        const l = list(to);
+        // where in the section reads naturally: the start button first on the left; the tray
+        // and the window title lead the right side; the clock goes last (before power)
+        let at = l.length;
+        if (to === "left" && id === "launcher")
+            at = 0;
+        else if (to === "right" && (id === "tray" || id === "window"))
+            at = 0;
+        else if (to === "right" && id === "clock" && l.includes("power"))
+            at = l.indexOf("power");
+        l.splice(at, 0, id);
+        setList(to, l);
+    }
+    readonly property var places: [{ value: "left", label: "Left", icon: "align_horizontal_left" }, { value: "center", label: "Center", icon: "align_horizontal_center" }, { value: "right", label: "Right", icon: "align_horizontal_right" }, { value: "off", label: "Off", icon: "block" }]
+
+    BarStyleSection {}
+
+    Group {
+        title: "Placement"
+        Repeater {
+            model: [
+                { id: "tray", title: "App indicators (system tray)", icon: "apps" },
+                { id: "launcher", title: "Start button", icon: "rocket_launch" },
+                { id: "window", title: "Active window", icon: "select_window" },
+                { id: "clock", title: "Clock", icon: "schedule" }
+            ]
+            SettingRow {
+                id: prow
+                required property var modelData
+                readonly property string at: page.where(modelData.id)
+                title: modelData.title
+                subtitle: Theme.barVertical ? "Left, center and right are top, middle and bottom on a side bar" : ""
+                icon: modelData.icon
+                FSegmented {
+                    implicitWidth: 340
+                    options: page.places
+                    current: prow.at
+                    onSelected: v => page.place(prow.modelData.id, v)
+                }
+            }
+        }
+    }
+
     Group {
         title: "Layout"
         ChoiceRow {
@@ -59,8 +117,6 @@ Page {
             segWidth: 84
             options: [{ value: "top", label: "Top", icon: "border_top" }, { value: "bottom", label: "Bottom", icon: "border_bottom" }, { value: "left", label: "Left", icon: "border_left" }, { value: "right", label: "Right", icon: "border_right" }]
         }
-        ChoiceRow { title: "Style"; icon: "style"; target: page.b; key: "style"; options: [{ value: "floating", label: "Floating" }, { value: "attached", label: "Attached" }, { value: "islands", label: "Islands" }] }
-        SliderRow { title: "Thickness"; icon: "height"; target: page.b; key: "height"; from: 30; to: 56; stepSize: 1; suffix: "px" }
         ChoiceRow { title: "Workspace indicator"; subtitle: page.b.workspaceStyle === "apps" ? "Each workspace shows its apps' icons; the active one is filled" : ""; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }, { value: "apps", label: "App icons" }] }
         ChoiceRow { title: "CPU / RAM"; icon: "memory"; target: page.b; key: "statsStyle"; segWidth: 120; options: [{ value: "text", label: "Icons" }, { value: "rings", label: "Ring gauges" }] }
         SwitchRow { title: "Temperature with CPU / RAM"; icon: "thermostat"; target: page.b; key: "statsTemp" }

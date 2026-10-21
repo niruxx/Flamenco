@@ -17,14 +17,23 @@ Variants {
         required property ShellScreen modelData
         readonly property var cfg: Settings.data.bar
         readonly property bool islands: cfg.style === "islands"
-        readonly property bool attached: cfg.style === "attached"
+        // framed: a solid bar edge to edge (like attached) with each section as a grey pill on it
+        readonly property bool framed: cfg.style === "framed"
+        readonly property bool attached: cfg.style === "attached" || framed
+        // capsule: one pill hugging the widgets, centered; minimal: no bar at all, a soft
+        // shade behind the widgets; outline: a see-through bar drawn as an outline
+        readonly property bool capsule: cfg.style === "capsule"
+        readonly property bool minimal: cfg.style === "minimal"
+        readonly property bool outline: cfg.style === "outline"
+        // the room between the bar's ends and its first / last widget: the same as above and below them
+        readonly property int edgePad: islands ? 0 : framed ? Theme.barPillPad : Theme.barInset
         // this screen's own widgets (Settings → Bar → Layout for), else the shared layout
         readonly property var layout: (cfg.perScreen || {})[modelData.name] ?? cfg
 
         screen: modelData
         color: "transparent"
         readonly property bool vertical: Theme.barVertical
-        readonly property int sectionGap: 12
+        readonly property int sectionGap: Theme.sp3
 
         // compaction level for this screen; recomputed from 0 whenever the space or layout changes
         property int level: 0
@@ -164,7 +173,7 @@ Variants {
         Component { id: separatorC; Separator {} }
         Component { id: clipboardC; ClipboardButton { screenName: win.modelData.name } }
         Component { id: visualizerC; Visualizer { screenName: win.modelData.name } }
-        Component { id: notepadC; FIconButton { id: noteBtn; icon: "sticky_note_2"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "notepad"; onClicked: Panels.toggle("notepad", win.modelData.name, noteBtn) } }
+        Component { id: notepadC; FIconButton { id: noteBtn; icon: "sticky_note_2"; size: Theme.barItem; iconSize: 18; active: Panels.current === "notepad"; onClicked: Panels.toggle("notepad", win.modelData.name, noteBtn) } }
         Component { id: updatesC; UpdatesIndicator { window: win; screenName: win.modelData.name } }
         Component { id: recordC; RecordIndicator { screenName: win.modelData.name } }
         Component { id: privacyC; PrivacyIndicator { window: win; screenName: win.modelData.name } }
@@ -172,9 +181,9 @@ Variants {
         Component { id: batteryC; Battery { screenName: win.modelData.name } }
         Component { id: notifC; NotifBell { screenName: win.modelData.name } }
         Component { id: weatherC; WeatherChip { screenName: win.modelData.name } }
-        Component { id: quickC; FIconButton { id: qsBtn; icon: "menu"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name, qsBtn) } }
-        Component { id: assistantC; FIconButton { id: aiBtn; property bool barVisible: Settings.data.ai.enabled; icon: "auto_awesome"; size: Theme.barHeight - 10; iconSize: 18; active: Panels.current === "assistant"; onClicked: Panels.toggle("assistant", win.modelData.name, aiBtn) } }
-        Component { id: powerC; FIconButton { id: powerBtn; icon: "power_settings_new"; size: Theme.barHeight - 10; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name, powerBtn) } }
+        Component { id: quickC; FIconButton { id: qsBtn; icon: "menu"; size: Theme.barItem; iconSize: 18; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name, qsBtn) } }
+        Component { id: assistantC; FIconButton { id: aiBtn; property bool barVisible: Settings.data.ai.enabled; icon: "auto_awesome"; size: Theme.barItem; iconSize: 18; active: Panels.current === "assistant"; onClicked: Panels.toggle("assistant", win.modelData.name, aiBtn) } }
+        Component { id: powerC; FIconButton { id: powerBtn; icon: "power_settings_new"; size: Theme.barItem; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name, powerBtn) } }
 
         Item {
             id: content
@@ -191,17 +200,41 @@ Variants {
                 y: win.pos === "top" ? -d : win.pos === "bottom" ? d : 0
             }
 
+            // capsule: where the packed sections start (centered along the bar)
+            readonly property real capLen: (startSec.visible ? startSec.size + win.sectionGap : 0) + (centerSec.visible ? centerSec.size + win.sectionGap : 0) + (endSec.visible ? endSec.size : 0) - (endSec.visible ? 0 : win.sectionGap)
+            readonly property real capStart: ((win.vertical ? height : width) - capLen) / 2
+
+            // minimal: a soft shade from the screen edge, so the widgets read on any wallpaper
+            Rectangle {
+                visible: win.minimal
+                anchors.fill: parent
+                anchors.margins: -Theme.barMargin
+                gradient: Gradient {
+                    orientation: win.vertical ? Gradient.Horizontal : Gradient.Vertical
+                    GradientStop { position: 0; color: win.pos === "top" || win.pos === "left" ? Theme.alpha(Theme.shadow, 0.38 * Theme.barOp) : "transparent" }
+                    GradientStop { position: 1; color: win.pos === "top" || win.pos === "left" ? "transparent" : Theme.alpha(Theme.shadow, 0.38 * Theme.barOp) }
+                }
+            }
+
             Rectangle {
                 id: bg
-                anchors.fill: parent
-                visible: !win.islands
-                color: Theme.barBg
-                radius: win.attached ? 0 : Theme.rLg
+                visible: !win.islands && !win.minimal
+                // the whole bar, or (capsule) just around the widgets
+                x: win.capsule && !win.vertical ? content.capStart - Theme.barInset : 0
+                y: win.capsule && win.vertical ? content.capStart - Theme.barInset : 0
+                width: win.capsule && !win.vertical ? content.capLen + Theme.barInset * 2 : parent.width
+                height: win.capsule && win.vertical ? content.capLen + Theme.barInset * 2 : parent.height
+                Behavior on width { enabled: win.capsule; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
+                Behavior on x { enabled: win.capsule; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
+                color: win.outline ? Theme.alpha(Theme.bg, Theme.barOp * 0.3) : Theme.barBg
+                radius: win.attached ? 0 : win.capsule ? Math.floor(Theme.barHeight / 2) : Theme.barRadius
                 // no outline when panels blend into the bar: it would show as a seam
-                border.width: win.attached || Theme.blendPanels ? 0 : 1
-                border.color: Theme.alpha(Theme.border, 0.5)
+                border.width: win.outline ? 1.5 : win.attached || Theme.blendPanels || !(win.cfg.border ?? true) ? 0 : 1
+                border.color: win.outline ? Theme.alpha(Theme.text, 0.28) : Theme.alpha(Theme.border, 0.5)
 
-                layer.enabled: Settings.data.appearance.shadows && !win.attached
+                Finish { visible: !win.outline && (Settings.data.appearance.finish || "flat") !== "flat" }
+
+                layer.enabled: Settings.data.appearance.shadows && (win.cfg.shadow ?? true) && !win.attached && !win.outline
                 layer.effect: MultiEffect {
                     shadowEnabled: true
                     shadowColor: Theme.alpha(Theme.shadow, 0.35)
@@ -214,7 +247,7 @@ Variants {
             // Sections that don't fit step the bar through compaction levels
             // (0 full · 1 no text labels · 2 low-priority widgets hidden · 3 minimal).
             readonly property real avail: win.vertical ? height : width
-            readonly property real used: (startSec.visible ? startSec.size : 0) + (centerSec.visible ? centerSec.size : 0) + (endSec.visible ? endSec.size : 0) + 2 * win.sectionGap + 12
+            readonly property real used: (startSec.visible ? startSec.size : 0) + (centerSec.visible ? centerSec.size : 0) + (endSec.visible ? endSec.size : 0) + 2 * win.sectionGap + 2 * win.edgePad
             onUsedChanged: fitTimer.restart()
             onAvailChanged: win.refit()
 
@@ -234,12 +267,14 @@ Variants {
                 id: startSec
                 barSide: "start"
                 registry: win.registry
-                islands: win.islands
+                islands: win.islands || win.framed
+                pills: win.framed
                 vertical: win.vertical
                 level: win.level
                 ids: win.layout.left ?? win.cfg.left
-                x: win.vertical ? (parent.width - width) / 2 : (win.islands ? 0 : 6)
-                y: win.vertical ? (win.islands ? 0 : 6) : (parent.height - height) / 2
+                readonly property real along: win.capsule ? content.capStart : win.edgePad
+                x: win.vertical ? (parent.width - width) / 2 : along
+                y: win.vertical ? along : (parent.height - height) / 2
             }
 
             // center: centered when there's room, otherwise kept between its neighbours
@@ -247,7 +282,8 @@ Variants {
                 id: centerSec
                 barSide: "center"
                 registry: win.registry
-                islands: win.islands
+                islands: win.islands || win.framed
+                pills: win.framed
                 vertical: win.vertical
                 level: win.level
                 ids: win.layout.center ?? win.cfg.center
@@ -255,7 +291,7 @@ Variants {
                 readonly property real lo: startSec.visible ? (win.vertical ? startSec.y + startSec.height : startSec.x + startSec.width) + win.sectionGap : 0
                 readonly property real hi: (endSec.visible ? (win.vertical ? endSec.y : endSec.x) - win.sectionGap : (win.vertical ? parent.height : parent.width)) - size
                 readonly property real ideal: ((win.vertical ? parent.height : parent.width) - size) / 2
-                readonly property real pos: Math.max(lo, Math.min(hi, ideal))
+                readonly property real pos: win.capsule ? content.capStart + (startSec.visible ? startSec.size + win.sectionGap : 0) : Math.max(lo, Math.min(hi, ideal))
 
                 x: win.vertical ? (parent.width - width) / 2 : pos
                 y: win.vertical ? pos : (parent.height - height) / 2
@@ -266,12 +302,15 @@ Variants {
                 id: endSec
                 barSide: "end"
                 registry: win.registry
-                islands: win.islands
+                islands: win.islands || win.framed
+                pills: win.framed
                 vertical: win.vertical
                 level: win.level
                 ids: win.layout.right ?? win.cfg.right
-                x: win.vertical ? (parent.width - width) / 2 : parent.width - width - (win.islands ? 0 : 6)
-                y: win.vertical ? parent.height - height - (win.islands ? 0 : 6) : (parent.height - height) / 2
+                readonly property real along: win.capsule ? centerSec.pos + (centerSec.visible ? centerSec.size + win.sectionGap : 0)
+                    : (win.vertical ? parent.height : parent.width) - size - win.edgePad
+                x: win.vertical ? (parent.width - width) / 2 : along
+                y: win.vertical ? along : (parent.height - height) / 2
             }
         }
     }

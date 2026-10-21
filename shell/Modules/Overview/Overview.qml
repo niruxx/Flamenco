@@ -124,7 +124,7 @@ Variants {
             }
             Rectangle {
                 anchors.fill: parent
-                color: win.cfg.blur ? Theme.alpha(Theme.shadow, 0.25) : Theme.alpha(Theme.bg, 0.82)
+                color: win.cfg.blur ? Theme.alpha(Theme.shadow, 0.25) : Theme.alpha(Theme.bg, Math.min(0.82, Theme.switcherOp))
             }
             TapHandler { onTapped: win.close() }
         }

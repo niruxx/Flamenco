@@ -92,7 +92,7 @@ PanelWindow {
         readonly property string fromAlign: from === "start" ? "left" : from === "end" ? "right" : from === "center" ? "anchor" : ""
         readonly property string hPos: root.place === "bar" ? (edge === "left" || edge === "right" ? edge : fromAlign || root.hAlign) : root.place.endsWith("left") ? "left" : root.place.endsWith("right") ? "right" : "center"
         // distance kept from the screen's sides
-        readonly property real side: blend ? inset : Theme.gap
+        readonly property real side: blend ? inset : Theme.edge
         function clampTo(v, size, room) {
             return Math.max(side, Math.min(room - size - side, v));
         }
@@ -102,14 +102,14 @@ PanelWindow {
         readonly property bool blend: Theme.blendPanels && root.place === "bar"
         readonly property int fillet: Math.min(Theme.rXl, 24)
         // keep clear of the bar's ends (margin + rounded corner) so the joins sit on its straight part
-        readonly property int inset: blend ? Theme.barMargin + (Settings.data.bar.style === "attached" ? 0 : Theme.rLg) + fillet : Theme.gap
+        readonly property int inset: blend ? Theme.barMargin + (Theme.barFlush ? 0 : Theme.barRadius) + fillet : Theme.edge
         readonly property bool alongTop: edge === "top" || edge === "bottom"
 
-        width: Math.min(root.cardWidth, parent.width - Theme.gap * 2)
+        width: Math.min(root.cardWidth, parent.width - Theme.edge * 2)
         // never taller than the screen (minus a gap); the content scrolls instead
-        height: Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.gap * 2)
+        height: Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.edge * 2)
         x: blend && edge === "left" ? 0 : blend && edge === "right" ? parent.width - width
-            : edge === "left" ? Theme.gap : edge === "right" ? parent.width - width - Theme.gap
+            : edge === "left" ? Theme.edge : edge === "right" ? parent.width - width - Theme.edge
             : hPos === "left" ? side : hPos === "right" ? parent.width - width - side
             : hPos === "anchor" && root.openedAt >= 0 ? clampTo(root.openedAt - width / 2, width, parent.width)
             : (parent.width - width) / 2
@@ -120,7 +120,7 @@ PanelWindow {
         y: root.place === "center" ? (parent.height - height) / 2.6
             : blend && edge === "top" ? 0 : blend && edge === "bottom" ? parent.height - height
             : edge === "left" || edge === "right" ? alongY
-            : edge === "bottom" ? parent.height - height - Theme.gap : Theme.gap
+            : edge === "bottom" ? parent.height - height - Theme.edge : Theme.edge
 
         radius: Theme.rXl
         // square where it meets the bar
@@ -131,6 +131,10 @@ PanelWindow {
         color: blend ? Theme.barBg : Theme.panelBg
         border.width: blend ? 0 : 1
         border.color: Theme.alpha(Theme.border, 0.7)
+
+        // the surface finish (gloss / chrome), under the content (not on a card joined to the bar,
+        // whose square corners it wouldn't follow)
+        Finish { visible: !card.blend && (Settings.data.appearance.finish || "flat") !== "flat" }
 
         opacity: card.blend || root.effect === "slide" ? Math.min(1, root.progress * 1.6) : root.progress
         // blended cards slide out from under the bar instead of zooming

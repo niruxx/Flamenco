@@ -409,7 +409,7 @@ Variants {
                 width: Math.min(1100, parent.width - 160)
                 height: Math.min(620, parent.height - top.y - top.height - 120)
                 radius: Theme.rXl
-                color: Theme.panelBg
+                color: Theme.switcherBg
                 border.width: 1
                 border.color: Theme.border
                 Loader {
@@ -432,7 +432,7 @@ Variants {
                 width: Math.min(1100, parent.width - 160)
                 height: Math.min(620, parent.height - top.y - top.height - 120)
                 radius: Theme.rXl
-                color: Theme.panelBg
+                color: Theme.switcherBg
                 border.width: 1
                 border.color: Theme.border
                 Loader {

@@ -31,7 +31,7 @@ Variants {
             width: 420
             height: col.implicitHeight + 40
             radius: Theme.rXl
-            color: Theme.panelBg
+            color: Theme.popupBg
             border.width: 1
             border.color: Theme.alpha(Theme.border, 0.7)
 

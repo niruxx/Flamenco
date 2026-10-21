@@ -2,7 +2,7 @@
 #
 # Builds from this local checkout:  cd packaging/arch && makepkg -si
 pkgname=flamenco-shell
-pkgver=0.37.3
+pkgver=0.41.0
 pkgrel=1
 pkgdesc="Quickshell desktop shell for niri, with Qt and GTK app theming"
 arch=('any')
@@ -35,6 +35,8 @@ optdepends=(
     'qt6-multimedia-ffmpeg: live wallpapers: the video backend'
     'ffmpeg: live wallpapers: stills for thumbnails and colors'
     'cliphist: clipboard history in the launcher'
+    'fuzzel: the fuzzel launcher (Settings → Launcher), themed by Flamenco'
+    'mako: mako notifications (Settings → Notifications), themed by Flamenco'
     'wl-clipboard: copy from launcher / clipboard'
     'gammastep: night light'
     'qt5ct: theme Qt 5 apps'

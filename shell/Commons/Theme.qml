@@ -71,10 +71,23 @@ Singleton {
     readonly property color success: role("success")
     readonly property color shadow: "#000000"
 
-    readonly property color panelBg: alpha(surface, a.panelOpacity)
-    readonly property color barBg: alpha(bg, a.panelOpacity)
+    // ── transparency (Appearance → Transparency) ──
+    // each part's opacity (-1: the panels'), all scaled by the whole-UI slider
+    function opacityOf(v) {
+        const own = v === undefined || v < 0 ? a.panelOpacity : v;
+        return Math.max(0, Math.min(1, own * (a.uiOpacity ?? 1)));
+    }
+    readonly property real panelOp: opacityOf(a.panelOpacity)
+    readonly property real barOp: opacityOf(a.barOpacity)
+    readonly property real popupOp: opacityOf(a.popupOpacity)
+    readonly property real switcherOp: opacityOf(a.switcherOpacity)
+    readonly property real settingsOp: opacityOf(a.settingsOpacity ?? 1)
+    readonly property color panelBg: alpha(surface, panelOp)
+    readonly property color barBg: alpha(bg, barOp)
+    readonly property color popupBg: alpha(surface, popupOp)
+    readonly property color switcherBg: alpha(surface, switcherOp)
     // panels grow out of the bar as one surface (not with the islands bar style)
-    readonly property bool blendPanels: a.blendPanels && Settings.data.bar.style !== "islands"
+    readonly property bool blendPanels: a.blendPanels && !["islands", "capsule", "minimal"].includes(Settings.data.bar.style)
 
     function alpha(c, value) {
         return Qt.rgba(c.r, c.g, c.b, value);
@@ -85,20 +98,28 @@ Singleton {
     }
 
     // ── Shape ──
+    // radii and spacing grow with the UI scale, like the text, so a bigger UI
+    // keeps its proportions instead of crowding (they used to stay fixed)
     readonly property real round: Math.max(0, a.roundness)
-    readonly property int rXs: Math.round(6 * round)
-    readonly property int rSm: Math.round(10 * round)
-    readonly property int rMd: Math.round(16 * round)
-    readonly property int rLg: Math.round(22 * round)
-    readonly property int rXl: Math.round(30 * round)
+    readonly property int rXs: Math.round(6 * round * scale)
+    readonly property int rSm: Math.round(10 * round * scale)
+    readonly property int rMd: Math.round(16 * round * scale)
+    readonly property int rLg: Math.round(22 * round * scale)
+    readonly property int rXl: Math.round(30 * round * scale)
 
-    readonly property int gap: 8
-    readonly property int sp1: 4
-    readonly property int sp2: 8
-    readonly property int sp3: 12
-    readonly property int sp4: 16
-    readonly property int sp5: 24
-    readonly property int sp6: 32
+    readonly property int gap: Math.round(8 * scale)
+    readonly property int sp1: Math.round(4 * scale)
+    readonly property int sp2: Math.round(8 * scale)
+    readonly property int sp3: Math.round(12 * scale)
+    readonly property int sp4: Math.round(16 * scale)
+    readonly property int sp5: Math.round(24 * scale)
+    readonly property int sp6: Math.round(32 * scale)
+
+    // ── Rhythm ──
+    // One distance between the screen's edge, the bar, panels, pop-ups and windows:
+    // the windows' gap (Settings → Windows & Layout), so a floating bar, a panel and
+    // a window all line up along the same edge.
+    readonly property int edge: Math.max(4, Math.min(24, Settings.data.windows.gaps ?? 12))
 
     // ── Type ──
     readonly property real scale: a.uiScale > 0 ? a.uiScale : 1
@@ -141,7 +162,27 @@ Singleton {
     readonly property bool barTop: barPos !== "bottom"
     // bar thickness (height when horizontal, width when vertical)
     readonly property int barHeight: Math.round(barCfg.height * scale)
-    readonly property int barMargin: barCfg.style === "attached" ? 0 : gap
+    readonly property string barStyle: barCfg.style || "islands"
+    // styles that sit flush on the screen's edge
+    readonly property bool barFlush: barStyle === "attached" || barStyle === "framed"
+    // the bar's distance from the screen edge: its own setting, else the windows' gap
+    readonly property int barMargin: barFlush ? 0 : (barCfg.margin ?? -1) >= 0 ? Math.round(barCfg.margin * scale) : edge
+
+    // Bar metrics: every style is built from these, so items sit the same distance
+    // from the bar's (or their group's) edges on all four sides, and rounded
+    // shapes nest (an item's radius plus its inset is its container's radius).
+    //  - barInset: space around items inside the bar (or an island)
+    //  - barGroup: height of a section's pill (framed / capsule pills inside a bar)
+    //  - barItem:  height of a bar item (icon buttons, chips)
+    readonly property bool barPills: barStyle === "framed"
+    readonly property int barInset: Math.max(3, Math.round(barHeight * 0.125))
+    readonly property int barPillPad: Math.max(2, Math.round(barInset * 0.66))
+    readonly property int barGroup: barPills ? barHeight - 2 * barPillPad : barHeight
+    readonly property int barItem: barPills ? barGroup - 2 * barPillPad : barHeight - 2 * barInset
+    // space between items in a section
+    readonly property int barSpacing: Math.round(Math.max(2, barInset * 0.8) * ((barCfg.spacing ?? 1) > 0 ? barCfg.spacing : 1))
+    // the bar's own corner radius: its setting (px), else the theme's, never more than a full round end
+    readonly property int barRadius: Math.min((barCfg.radius ?? -1) >= 0 ? Math.round(barCfg.radius * scale) : rLg, Math.floor(barHeight / 2))
 
     // ── Motion ──
     readonly property real speed: a.animSpeed

@@ -58,7 +58,7 @@ PopupWindow {
         id: body
         anchors.fill: parent
         radius: Theme.rLg
-        color: Theme.panelBg
+        color: Theme.popupBg
         border.width: 1
         border.color: Theme.alpha(Theme.border, 0.7)
 

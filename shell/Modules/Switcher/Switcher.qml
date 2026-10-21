@@ -103,11 +103,14 @@ Variants {
             width: Math.min(parent.width - 80, Math.max(row.width, header.implicitWidth) + 48)
             height: header.height + row.height + 72
             radius: 32
-            color: Theme.surface
+            color: Theme.switcherBg
             border.width: 1
             border.color: Theme.alpha(Theme.border, 0.6)
             opacity: win.p
             scale: 0.92 + 0.08 * win.p
+
+            // the surface finish (gloss / chrome), under the content
+            Finish {}
 
             // header: what this is, how many, and the keys as chips
             RowLayout {

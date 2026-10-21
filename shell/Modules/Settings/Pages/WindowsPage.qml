@@ -13,6 +13,27 @@ Page {
     Component.onCompleted: Compositor.load()
 
     Group {
+        title: "Window mode"
+        SettingRow {
+            title: "How windows open"
+            subtitle: page.w.floating ? "Floating: windows open on top of each other where you like, like a classic desktop. Super+V tiles one"
+                : "Tiling: windows open side by side and never overlap. Super+V floats one"
+            icon: page.w.floating ? "stack" : "view_column"
+            FSegmented {
+                implicitWidth: 260
+                options: [{ value: false, label: "Tiling", icon: "view_column" }, { value: true, label: "Floating", icon: "stack" }]
+                current: page.w.floating
+                onSelected: v => Compositor.setFloating(v)
+            }
+        }
+        SettingRow {
+            title: "Windows already open"
+            subtitle: "Switching moves them too. A shortcut switches back and forth: Switch tiling / floating windows (Keyboard → Flamenco functions)"
+            icon: "info"
+        }
+    }
+
+    Group {
         title: "Layout"
         SliderRow { title: "Gaps"; subtitle: "Space around and between windows"; icon: "padding"; target: page.w; key: "gaps"; from: 0; to: 48; stepSize: 1; suffix: " px"; onEdited: Compositor.queue() }
         SliderRow { title: "Screen edge margin"; subtitle: "Extra space kept free along the left and right edges"; icon: "border_outer"; visible: !Niri.hyprland; target: page.w; key: "struts"; from: 0; to: 120; stepSize: 1; suffix: " px"; onEdited: Compositor.queue() }

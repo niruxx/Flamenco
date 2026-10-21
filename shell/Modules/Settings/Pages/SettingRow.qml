@@ -11,6 +11,19 @@ Item {
     property string subtitle
     property string icon
     default property alias control: slot.data
+    readonly property bool isSettingRow: true
+    // a hairline above every row but the first shown in its list (GNOME's boxed list)
+    readonly property bool firstInList: {
+        const kids = parent ? parent.children : [];
+        for (let i = 0; i < kids.length; i++) {
+            const k = kids[i];
+            if (k === root)
+                return true;
+            if (k.isSettingRow && k.visible)
+                return false;
+        }
+        return true;
+    }
 
     Layout.fillWidth: true
     implicitHeight: Math.max(60, lay.implicitHeight + 24)
@@ -54,6 +67,17 @@ Item {
             NumberAnimation { target: hl; property: "opacity"; to: 0.22; duration: 280 }
             NumberAnimation { target: hl; property: "opacity"; to: 0; duration: 420 }
         }
+    }
+
+    Rectangle {
+        visible: !root.firstInList
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: 16 + root.iconW
+        anchors.rightMargin: 16
+        height: 1
+        color: Theme.alpha(Theme.text, 0.07)
     }
 
     // controls too wide to leave the text room (big buttons, high scaling) go under it

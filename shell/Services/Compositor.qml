@@ -16,7 +16,7 @@ Singleton {
     readonly property var keys: ["gaps", "struts", "centerColumn", "defaultWidth", "focusRing", "focusRingWidth", "border",
         "borderWidth", "activeColor", "inactiveColor", "borderActiveColor", "borderInactiveColor", "gradient", "gradientTo",
         "gradientAngle", "cornerRadius", "shadows", "focusFollowsMouse", "warpMouse",
-        "hideCursorTyping", "hideCursorAfter", "preferNoCsd", "hotCorners", "skipHotkeyOverlay", "workspaceBackForth"]
+        "hideCursorTyping", "hideCursorAfter", "preferNoCsd", "hotCorners", "skipHotkeyOverlay", "workspaceBackForth", "floating"]
     property string status: ""
     property bool failed: false
     readonly property bool busy: applier.running
@@ -38,6 +38,21 @@ Singleton {
         }
     }
 
+    // Window mode: new windows float or tile (the compositor rule), and the
+    // windows already open move over too
+    property var pendingFloating: null
+    function setFloating(on) {
+        if (cfg.floating === on)
+            return;
+        cfg.floating = on;
+        if (!cfg.imported)
+            pendingFloating = on;       // the config import below mustn't undo it
+        queue();
+        for (const w of S.Niri.windows)
+            if (!!w.is_floating !== on)
+                S.Niri.action(on ? "move-window-to-floating" : "move-window-to-tiling", "--id", String(w.id));
+    }
+
     function hex(c) {
         return String(Qt.color(c)).slice(0, 7);
     }
@@ -56,7 +71,16 @@ Singleton {
         s.hotCorners = s.overviewCorners.length > 0;
         s.workspaces = Settings.data.workspaces.named || [];
         s.screenshotPath = Settings.data.screenshot.path;
+        s.blur = !!Settings.data.appearance.blur;
         return s;
+    }
+
+    // blur behind the shell (Appearance → Transparency) is a compositor rule too
+    Connections {
+        target: Settings.data.appearance
+        function onBlurChanged() {
+            root.queue();
+        }
     }
 
     // ring / border colors follow the palette
@@ -95,6 +119,10 @@ Singleton {
                         Settings.data.workspaces.named = d.workspaces;
                     if (d.screenshotPath)
                         Settings.data.screenshot.path = d.screenshotPath;
+                    if (root.pendingFloating !== null) {
+                        root.cfg.floating = root.pendingFloating;
+                        root.pendingFloating = null;
+                    }
                     // keep custom colors that differ from the palette
                     root.cfg.syncColors = d.activeColor === root.hex(Theme.palette.accent) || d.activeColor === "#ff5d73";
                     root.cfg.imported = true;

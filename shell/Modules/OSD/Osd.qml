@@ -81,12 +81,15 @@ Scope {
                 width: 300
                 height: 58
                 radius: height / 2
-                color: Theme.panelBg
+                color: Theme.popupBg
                 border.width: 1
                 border.color: Theme.alpha(Theme.border, 0.6)
                 opacity: win.p
                 scale: 0.7 + 0.3 * win.p
                 transform: Translate { y: (1 - win.p) * (Settings.data.osd.position === "top" ? -30 : 30) }
+
+                // the surface finish (gloss / chrome), under the content
+                Finish {}
 
                 layer.enabled: Settings.data.appearance.shadows
                 layer.effect: MultiEffect { shadowEnabled: true; shadowColor: Theme.alpha(Theme.shadow, 0.4); shadowBlur: 0.8 }

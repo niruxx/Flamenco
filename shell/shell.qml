@@ -10,6 +10,7 @@ import qs.Commons
 import qs.Services
 import qs.Modules.Assistant
 import qs.Modules.Background
+import qs.Modules.Frame
 import qs.Modules.Keys
 import qs.Modules.Notepad
 import qs.Modules.Clipboard
@@ -65,6 +66,7 @@ ShellRoot {
     Background {}
     Desktop {}
     Bar {}
+    ScreenFrame {}
     Dock {}
     HotCorners {}
     Popups {}
@@ -139,6 +141,13 @@ ShellRoot {
             if (!lock.locked)
                 Panels.toggle("overview", "");
         }
+    }
+
+    IpcHandler {
+        target: "windows"
+        function toggleMode(): void { Compositor.setFloating(!Settings.data.windows.floating); }
+        function floating(): void { Compositor.setFloating(true); }
+        function tiling(): void { Compositor.setFloating(false); }
     }
 
     IpcHandler {

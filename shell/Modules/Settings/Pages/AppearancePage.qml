@@ -27,6 +27,24 @@ Page {
 
     // bar / dock / launcher / notification layouts in one click
     readonly property var presets: [
+        { id: "flamenco", label: "Flamenco", icon: "local_fire_department", hint: "Black and grey: pills on a solid bar, a rounded screen frame",
+          appearance: { palette: "noir", mode: "dark", accentOverride: "", screenFrame: true, frameWidth: 6, frameRadius: 18, blendPanels: false },
+          bar: { position: "top", style: "framed", height: 44, workspaceStyle: "pills", batteryStyle: "icon", statsStyle: "text", statsTemp: false, clockLayout: "inline", clockAlign: "center",
+                 left: ["launcher", "workspaces"], center: ["clock"],
+                 right: ["recording", "privacy", "updates", "tray", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings", "power"] },
+          dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-right" } },
+        { id: "y2k", label: "Y2K", icon: "auto_awesome", hint: "Chrome and pearl, hot pink and cyber cyan, bubbly",
+          appearance: { palette: "y2k", mode: "dark", accentOverride: "", finish: "chrome", roundness: 1.5, panelOpacity: 0.9, screenFrame: false, blendPanels: false },
+          bar: { position: "top", style: "capsule", height: 40, border: true, workspaceStyle: "dots", batteryStyle: "pill", statsStyle: "rings", statsTemp: false, clockLayout: "inline", clockAlign: "center",
+                 left: ["launcher", "workspaces"], center: ["clock", "media"],
+                 right: ["tray", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings"] },
+          dock: { enabled: true, autoHide: false, magnify: true }, launcher: { position: "center" }, notifications: { position: "top-right" } },
+        { id: "aero", label: "Frutiger Aero", icon: "water_drop", hint: "Glossy glass, sky blue and grass green",
+          appearance: { palette: "aero", mode: "light", accentOverride: "", finish: "gloss", roundness: 1.25, panelOpacity: 0.82, blur: true, screenFrame: false, blendPanels: false },
+          bar: { position: "bottom", style: "floating", height: 48, border: true, workspaceStyle: "apps", batteryStyle: "battery", statsStyle: "text", statsTemp: false, clockLayout: "stacked", clockAlign: "center",
+                 left: ["launcher", "taskbar"], center: [],
+                 right: ["tray", "network", "bluetooth", "audio", "battery", "clock", "notifications", "quicksettings"] },
+          dock: { enabled: false }, launcher: { position: "bottom-left" }, notifications: { position: "bottom-right" } },
         { id: "islands", label: "Islands", icon: "view_column_2", hint: "Three floating islands: app icons per workspace, ring gauges, battery shape, stacked clock",
           bar: { position: "top", style: "islands", height: 40, workspaceStyle: "apps", batteryStyle: "battery", statsStyle: "rings", statsTemp: true, clockLayout: "stacked", clockAlign: "center",
                  left: ["launcher", "separator", "workspaces", "window"], center: ["media", "visualizer"],
@@ -60,9 +78,17 @@ Page {
 
     function applyPreset(p) {
         const d = Settings.data;
-        for (const section of ["bar", "dock", "launcher", "notifications"])
-            for (const k in p[section])
+        for (const section of ["appearance", "bar", "dock", "launcher", "notifications"])
+            for (const k in (p[section] ?? {}))
                 d[section][k] = Array.isArray(p[section][k]) ? p[section][k].slice() : p[section][k];
+        // the screen frame belongs to the Flamenco look; other layouts leave it off
+        if (p.appearance?.screenFrame === undefined)
+            a.screenFrame = false;
+        // likewise the gloss / chrome finish and the rounder shapes of Aero and Y2K
+        if (p.appearance?.finish === undefined)
+            a.finish = "flat";
+        if (p.appearance?.roundness === undefined && (a.layoutPreset === "y2k" || a.layoutPreset === "aero"))
+            a.roundness = 1;
         a.layoutPreset = p.id;
     }
 
@@ -289,9 +315,71 @@ Page {
     }
 
     Group {
+        title: "Screen frame"
+        SwitchRow { title: "Frame the screen"; subtitle: "A band in the bar's color around the screen's edges, rounding the desktop's corners (part of the Flamenco layout)"; icon: "crop_free"; target: page.a; key: "screenFrame" }
+        SliderRow { visible: page.a.screenFrame; title: "Frame width"; icon: "border_outer"; target: page.a; key: "frameWidth"; from: 0; to: 24; stepSize: 1; suffix: " px" }
+        SliderRow { visible: page.a.screenFrame; title: "Corner radius"; icon: "rounded_corner"; target: page.a; key: "frameRadius"; from: 0; to: 48; stepSize: 1; suffix: " px" }
+    }
+
+    Group {
+        title: "Transparency"
+        OpacityRow {
+            title: "Whole UI"
+            subtitle: "Scales every part below at once: lower to see more of the wallpaper through the shell"
+            icon: "opacity"
+            target: page.a
+            key: "uiOpacity"
+            from: 0.4
+        }
+        OpacityRow { title: "Panels"; subtitle: "Quick settings, the dashboard, launcher, volume, clipboard and the other panels"; icon: "dock_to_left"; target: page.a; key: "panelOpacity" }
+        OpacityRow { title: "Bar"; subtitle: "And the screen frame"; icon: "toolbar"; target: page.a; key: "barOpacity"; follows: true; from: 0 }
+        OpacityRow { title: "Notifications & pop-ups"; subtitle: "Notification pop-ups, the volume / brightness OSD, tray and window menus"; icon: "notifications"; target: page.a; key: "popupOpacity"; follows: true }
+        OpacityRow { title: "Switchers & overview"; subtitle: "The app switcher, the overview and the wallpaper switcher"; icon: "select_window"; target: page.a; key: "switcherOpacity"; follows: true }
+        OpacityRow { title: "Dock"; subtitle: "On top of the panels' opacity"; icon: "dock_to_bottom"; target: Settings.data.dock; key: "opacity"; from: 0 }
+        OpacityRow { title: "Desktop widgets"; subtitle: "Their cards (glass and card styles)"; icon: "widgets"; target: Settings.data.desktop; key: "opacity"; from: 0 }
+        OpacityRow { title: "Settings window"; icon: "settings"; target: page.a; key: "settingsOpacity"; from: 0.5 }
+        SwitchRow {
+            title: "Blur behind"
+            subtitle: Niri.hyprland ? "Blurs what's behind the see-through parts (Hyprland layer blur; costs some GPU)" : "Hyprland only: niri doesn't blur behind other programs' surfaces yet"
+            icon: "blur_on"
+            enabled: Niri.hyprland
+            opacity: enabled ? 1 : 0.5
+            target: page.a
+            key: "blur"
+        }
+        SettingRow {
+            title: "Reset transparency"
+            subtitle: "Every slider above back to its default"
+            icon: "format_color_reset"
+            FButton {
+                text: "Reset"
+                variant: "text"
+                onClicked: {
+                    page.a.uiOpacity = 1;
+                    page.a.panelOpacity = 0.94;
+                    page.a.barOpacity = -1;
+                    page.a.popupOpacity = -1;
+                    page.a.switcherOpacity = -1;
+                    page.a.settingsOpacity = 1;
+                    Settings.data.dock.opacity = 1;
+                    Settings.data.desktop.opacity = 0.8;
+                }
+            }
+        }
+    }
+
+    Group {
         title: "Shape & surfaces"
+        ChoiceRow {
+            title: "Surface finish"
+            subtitle: page.a.finish === "gloss" ? "Glassy highlights, like Frutiger Aero" : page.a.finish === "chrome" ? "Metallic bands and an iridescent sheen, like Y2K" : "Plain surfaces"
+            icon: "texture"
+            target: page.a
+            key: "finish"
+            segWidth: 100
+            options: [{ value: "flat", label: "Flat" }, { value: "gloss", label: "Gloss" }, { value: "chrome", label: "Chrome" }]
+        }
         SliderRow { title: "Corner roundness"; icon: "rounded_corner"; target: page.a; key: "roundness"; from: 0; to: 1.6; factor: 100; suffix: "%" }
-        SliderRow { title: "Panel opacity"; icon: "opacity"; target: page.a; key: "panelOpacity"; from: 0.5; to: 1; factor: 100; suffix: "%" }
         SwitchRow { title: "Drop shadows"; icon: "shadow"; target: page.a; key: "shadows" }
         SwitchRow { title: "Dim screen behind panels"; icon: "gradient"; target: page.a; key: "dimBehindPanels" }
         SwitchRow {

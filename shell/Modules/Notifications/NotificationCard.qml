@@ -39,10 +39,13 @@ Item {
         height: content.height + root.pad * 2
         radius: Theme.rXl
         // in the center: soft cards like the dashboard's; urgent ones tinted
-        color: root.popup ? Theme.panelBg : root.critical ? Theme.alpha(Theme.error, 0.1) : Theme.alpha(Theme.text, 0.05)
+        color: root.popup ? Theme.popupBg : root.critical ? Theme.alpha(Theme.error, 0.1) : Theme.alpha(Theme.text, 0.05)
         border.width: root.critical ? 2 : 1
         border.color: root.critical ? Theme.error : root.popup ? Theme.alpha(Theme.border, 0.6) : Theme.alpha(Theme.text, 0.08)
         opacity: 1 - Math.min(1, Math.abs(x) / width * 1.4)
+
+        // the surface finish (gloss / chrome), under the content
+        Finish { visible: root.popup && (Settings.data.appearance.finish || "flat") !== "flat" }
 
         Behavior on x {
             enabled: !drag.active

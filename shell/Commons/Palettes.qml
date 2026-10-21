@@ -8,10 +8,15 @@ import Quickshell
 Singleton {
     id: root
 
-    readonly property var names: ["flamenco", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
+    // "noir" is shown as Flamenco (the shell's own black-and-grey look); "flamenco",
+    // the original rose palette, is shown as Material Design (ids stay, so settings keep working)
+    readonly property var names: ["noir", "flamenco", "y2k", "aero", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
 
     readonly property var labels: ({
-            flamenco: "Flamenco",
+            noir: "Flamenco",
+            flamenco: "Material Design",
+            y2k: "Y2K",
+            aero: "Frutiger Aero",
             breeze: "Breeze",
             catppuccin: "Catppuccin",
             rosepine: "Rosé Pine",
@@ -28,6 +33,52 @@ Singleton {
         })
 
     readonly property var schemes: ({
+            // Flamenco: near-black surfaces in steps of grey, a silver accent, and an
+            // ember (accent3) for the few things that should glow
+            noir: {
+                dark: {
+                    bg: "#0a0a0b", surface: "#141416", surfaceHigh: "#1d1d20", surfaceHighest: "#28282c",
+                    border: "#303035", text: "#ececef", textDim: "#9c9ca4",
+                    accent: "#d9d9df", onAccent: "#0e0e10", accent2: "#a7a7b0", accent3: "#ff7a5c",
+                    error: "#ff6b6b", warning: "#e5b567", success: "#8fd19e"
+                },
+                light: {
+                    bg: "#ececee", surface: "#f7f7f8", surfaceHigh: "#e4e4e7", surfaceHighest: "#d8d8dc",
+                    border: "#c6c6cc", text: "#151517", textDim: "#5f5f66",
+                    accent: "#26262a", onAccent: "#f7f7f8", accent2: "#55555c", accent3: "#d9532f",
+                    error: "#c62828", warning: "#a66f00", success: "#2e7d4f"
+                }
+            },
+            // Y2K: pearl and deep violet, hot pink, cyber cyan and lilac (with the chrome finish)
+            y2k: {
+                dark: {
+                    bg: "#140f2b", surface: "#1e1838", surfaceHigh: "#2a2350", surfaceHighest: "#372e64",
+                    border: "#4b4180", text: "#f3eeff", textDim: "#b6aee0",
+                    accent: "#ff5fd2", onAccent: "#2a0425", accent2: "#41e2ff", accent3: "#c9a7ff",
+                    error: "#ff5c7a", warning: "#ffd36b", success: "#7dffb2"
+                },
+                light: {
+                    bg: "#e9e7f7", surface: "#f8f7ff", surfaceHigh: "#ecebfa", surfaceHighest: "#dedcf3",
+                    border: "#c4c0e6", text: "#1d1838", textDim: "#5f5a86",
+                    accent: "#e0249f", onAccent: "#ffffff", accent2: "#0090c8", accent3: "#7b4fd6",
+                    error: "#d61d4a", warning: "#b37400", success: "#13915a"
+                }
+            },
+            // Frutiger Aero: sky, aqua and grass green; ocean blues in the dark (with the gloss finish)
+            aero: {
+                dark: {
+                    bg: "#06263a", surface: "#0b3350", surfaceHigh: "#114265", surfaceHighest: "#18537c",
+                    border: "#2a6d99", text: "#e8f7ff", textDim: "#9cc7df",
+                    accent: "#4cc3ff", onAccent: "#032033", accent2: "#7fe08f", accent3: "#4fe3d8",
+                    error: "#ff6b63", warning: "#ffc04d", success: "#6fe08a"
+                },
+                light: {
+                    bg: "#dff3ff", surface: "#f4fbff", surfaceHigh: "#e6f5ff", surfaceHighest: "#d2ecfb",
+                    border: "#a9d4ee", text: "#0b2a3d", textDim: "#4a6f86",
+                    accent: "#1e9bff", onAccent: "#ffffff", accent2: "#3cc85a", accent3: "#18c3c9",
+                    error: "#e0443e", warning: "#e69a12", success: "#2fb54f"
+                }
+            },
             flamenco: {
                 dark: {
                     bg: "#140f10", surface: "#1d1617", surfaceHigh: "#281e20", surfaceHighest: "#34272a",

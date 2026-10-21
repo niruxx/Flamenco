@@ -43,12 +43,12 @@ ColumnLayout {
     FText {
         id: heading
         visible: root.title !== ""
-        text: root.title.toUpperCase()
-        color: Theme.accent
-        font.pixelSize: Theme.fsXs
-        font.weight: Font.Bold
-        font.letterSpacing: 1.2
-        Layout.leftMargin: 4
+        // GNOME / macOS: a quiet title over a rounded list
+        text: root.title
+        color: Theme.textDim
+        font.pixelSize: Theme.fsSm
+        font.weight: Font.DemiBold
+        Layout.leftMargin: 6
         Layout.topMargin: Theme.sp2
 
         Rectangle {
@@ -71,8 +71,10 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: card.implicitHeight + 8
-        radius: Theme.rLg
-        color: Theme.surface
+        radius: Math.max(12, Theme.rLg)
+        color: Theme.alpha(Theme.surface, Math.min(1, Theme.settingsOp + 0.04))
+        border.width: 1
+        border.color: Theme.alpha(Theme.text, 0.05)
 
         ColumnLayout {
             id: card

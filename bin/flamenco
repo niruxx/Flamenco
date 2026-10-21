@@ -60,6 +60,8 @@
   flamenco niri-config [--print | --snippet]   write a complete ~/.config/niri/config.kdl (backs up the old one)
   flamenco hyprland-config [--lua|--conf] [--print]   write a complete Hyprland config (hyprland.lua or .conf; old one backed up)
   flamenco hypr-dispatch ACTION [ARGS]   run a niri-style action on Hyprland (used by the shell)
+  flamenco users list | name "Full Name" | avatar PICTURE | password [USER] | add USER "Name" [--admin] | remove USER | admin USER on|off
+                               your account and (as an administrator) the other accounts; root steps ask for sudo
   flamenco bar toggle|show|hide | mode never|auto|windows   hide the bar (by hand, automatically, or while windows are open)
   flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO
                                live (video) wallpapers: find them online (wikimedia, pexels, pixabay), download, API keys
@@ -78,7 +80,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.37.3"
+VERSION = "0.41.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1566,6 +1568,7 @@ SHELL_FUNCTIONS = {
     "dnd": ("Toggle Do Not Disturb", ["ipc", "notifs", "toggleDnd"]),
     "caffeine": ("Toggle caffeine", ["ipc", "toggles", "caffeine"]),
     "bar-toggle": ("Show / hide the bar", ["bar", "toggle"]),
+    "window-mode": ("Switch tiling / floating windows", ["ipc", "windows", "toggleMode"]),
     "night-light": ("Toggle night light", ["ipc", "toggles", "nightLight"]),
     "screenshot": ("Screenshot (select an area)", ["screenshot", "region"]),
     "screenshot-screen": ("Screenshot of the screen", ["screenshot", "screen"]),
@@ -4061,6 +4064,178 @@ def cmd_wallhaven(args: list[str]) -> int:
             die(f"download failed: {ai_http_error(e)}")
     print(dest)
     return 0
+
+
+# ─────────────────────────────── users ───────────────────────────────────────
+# Settings → Users: your name, picture and password, and (for administrators)
+# the other accounts. Your own name and picture go through AccountsService (no
+# password needed for your own account); anything needing root runs in a terminal
+# (sudo), and passwords are only ever typed into `passwd` there.
+#   flamenco users list [--json]
+#   flamenco users name "Full Name" [USER]      USER: someone else's (needs root)
+#   flamenco users avatar PICTURE | --remove
+#   flamenco users password [USER]
+#   flamenco users add USER "Full Name" [--admin]
+#   flamenco users remove USER [--keep-home]
+#   flamenco users admin USER on|off
+
+USER_NAME = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
+FACE = HOME / ".face"
+
+
+def admin_group() -> str:
+    import grp
+    for g in ("wheel", "sudo", "admin"):
+        try:
+            grp.getgrnam(g)
+            return g
+        except KeyError:
+            continue
+    return "wheel"
+
+
+def accounts_path(name: str) -> str:
+    """AccountsService's object for a user ("" without AccountsService)."""
+    if not shutil.which("busctl"):
+        return ""
+    r = subprocess.run(["busctl", "--system", "call", "org.freedesktop.Accounts", "/org/freedesktop/Accounts",
+                        "org.freedesktop.Accounts", "FindUserByName", "s", name], capture_output=True, text=True, timeout=10)
+    m = re.search(r'"(/org/freedesktop/Accounts/[^"]+)"', r.stdout) if r.returncode == 0 else None
+    return m.group(1) if m else ""
+
+
+def accounts_call(name: str, method: str, value: str) -> bool:
+    path = accounts_path(name)
+    if not path:
+        return False
+    r = subprocess.run(["busctl", "--system", "call", "org.freedesktop.Accounts", path, "org.freedesktop.Accounts.User",
+                        method, "s", value], capture_output=True, text=True, timeout=30)
+    return r.returncode == 0
+
+
+def users_list() -> dict:
+    import grp
+    import pwd
+    me = pwd.getpwuid(os.getuid()).pw_name
+    group = admin_group()
+    try:
+        g = grp.getgrnam(group)
+        admins = set(g.gr_mem) | {p.pw_name for p in pwd.getpwall() if p.pw_gid == g.gr_gid}
+    except KeyError:
+        admins = set()
+    out = []
+    for p in sorted(pwd.getpwall(), key=lambda p: p.pw_uid):
+        if not (1000 <= p.pw_uid < 60000) or p.pw_shell.endswith(("nologin", "false")):
+            continue
+        icon = Path("/var/lib/AccountsService/icons") / p.pw_name
+        face = Path(p.pw_dir) / ".face"
+        avatar = str(face) if p.pw_name == me and face.is_file() else str(icon) if os.access(icon, os.R_OK) else ""
+        out.append({"name": p.pw_name, "uid": p.pw_uid, "fullName": p.pw_gecos.split(",")[0], "home": p.pw_dir,
+                    "shell": p.pw_shell, "admin": p.pw_name in admins or p.pw_uid == 0, "me": p.pw_name == me, "avatar": avatar})
+    return {"me": me, "adminGroup": group, "isAdmin": me in admins, "accounts": bool(accounts_path(me)), "users": out}
+
+
+def pause_if_terminal() -> None:
+    if sys.stdin.isatty() and os.environ.get("FLAMENCO_PAUSE"):
+        try:
+            input("\nPress Enter to close… ")
+        except EOFError:
+            pass
+
+
+def cmd_users(args: list[str]) -> int:
+    sub = args[0] if args else "list"
+    me = users_list()["me"]
+    if sub == "list":
+        u = users_list()
+        if "--json" in args:
+            print(json.dumps(u))
+        else:
+            for x in u["users"]:
+                print(f"{x['name']:<16} {x['fullName']:<24} {'admin' if x['admin'] else 'standard'}{'  (you)' if x['me'] else ''}")
+        return 0
+    if sub == "name" and len(args) > 1:
+        full = args[1].strip().replace(",", " ").replace(":", " ")[:64]
+        who = args[2] if len(args) > 2 else me
+        if not USER_NAME.match(who):
+            die(f"not a user name: {who}")
+        if who == me and accounts_call(me, "SetRealName", full):
+            print("name changed")
+            return 0
+        # without AccountsService (or for someone else): usermod as root, in the terminal
+        rc = privileged(["usermod", "-c", full, who])
+        pause_if_terminal()
+        return rc
+    if sub == "avatar" and len(args) > 1:
+        if args[1] == "--remove":
+            FACE.unlink(missing_ok=True)
+            accounts_call(me, "SetIconFile", "")
+            print("picture removed")
+            return 0
+        src = Path(os.path.expanduser(args[1]))
+        if not src.is_file():
+            die(f"no such picture: {src}")
+        tmp = FACE.with_name(".face.flamenco-tmp.png")
+        # a square, 512 px picture (the middle of it), when ffmpeg is there; else as it is
+        if shutil.which("ffmpeg"):
+            r = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-i", str(src), "-frames:v", "1",
+                                "-vf", "crop=min(iw\\,ih):min(iw\\,ih),scale=512:512", str(tmp)], capture_output=True, timeout=60)
+            if r.returncode != 0 or not tmp.is_file():
+                shutil.copyfile(src, tmp)
+        else:
+            shutil.copyfile(src, tmp)
+        tmp.replace(FACE)
+        os.chmod(FACE, 0o644)
+        # the login screen and other apps read AccountsService's copy
+        accounts_call(me, "SetIconFile", str(FACE))
+        print(FACE)
+        return 0
+    if sub == "password":
+        who = args[1] if len(args) > 1 else me
+        if not USER_NAME.match(who):
+            die(f"not a user name: {who}")
+        print(f"Changing the password of {who}." + (" Type your current password first." if who == me else ""))
+        rc = subprocess.run(["passwd"]).returncode if who == me else privileged(["passwd", who])
+        print("\nPassword changed." if rc == 0 else "\nThe password wasn't changed.")
+        pause_if_terminal()
+        return rc
+    if sub == "add" and len(args) > 2:
+        name, full = args[1], args[2].strip().replace(",", " ").replace(":", " ")[:64]
+        if not USER_NAME.match(name):
+            die("user names are lowercase letters, digits, _ and -, starting with a letter (up to 32)")
+        if any(x["name"] == name for x in users_list()["users"]):
+            die(f"{name} already exists")
+        cmd = ["useradd", "-m", "-c", full, "-s", os.environ.get("SHELL", "/bin/bash")]
+        if "--admin" in args:
+            cmd += ["-G", admin_group()]
+        print(f"Adding {name} ({full}).")
+        rc = privileged(cmd + [name])
+        if rc == 0:
+            print(f"\nNow a password for {name}:")
+            rc = privileged(["passwd", name])
+        pause_if_terminal()
+        return rc
+    if sub == "remove" and len(args) > 1:
+        name = args[1]
+        if not USER_NAME.match(name):
+            die(f"not a user name: {name}")
+        if name == me:
+            die("you can't remove the account you're using")
+        keep = "--keep-home" in args
+        print(f"Removing {name}" + (" (keeping their home folder)." if keep else " and their home folder."))
+        rc = privileged(["userdel"] + ([] if keep else ["-r"]) + [name])
+        pause_if_terminal()
+        return rc
+    if sub == "admin" and len(args) > 2 and args[2] in ("on", "off"):
+        name = args[1]
+        if not USER_NAME.match(name):
+            die(f"not a user name: {name}")
+        g = admin_group()
+        print(("Making " + name + " an administrator" if args[2] == "on" else "Making " + name + " a standard user") + f" (group {g}).")
+        rc = privileged(["gpasswd", "-a" if args[2] == "on" else "-d", name, g])
+        pause_if_terminal()
+        return rc
+    die("usage: flamenco users list [--json] | name \"Full Name\" [USER] | avatar PICTURE|--remove | password [USER] | add USER \"Full Name\" [--admin] | remove USER [--keep-home] | admin USER on|off")
 
 
 # ─────────────────────────────── live wallpapers ─────────────────────────────
@@ -6651,6 +6826,10 @@ def cmd_hypr_dispatch(args: list[str]) -> int:
     elif a == "close-window":
         lua, legacy = (f'hl.dsp.window.close({{ window = "address:{win}" }})', ["closewindow", f"address:{win}"]) if win \
             else ("hl.dsp.window.close()", ["killactive"])
+    elif a in ("move-window-to-floating", "move-window-to-tiling") and win:
+        on = a == "move-window-to-floating"
+        lua, legacy = (f'hl.dsp.window.float({{ action = "{"set" if on else "unset"}", window = "address:{win}" }})',   # Lua form: best guess
+                       ["setfloating" if on else "settiled", f"address:{win}"])
     elif a == "power-off-monitors":
         lua, legacy = 'hl.dsp.dpms({ action = "off" })', ["dpms", "off"]                                      # Lua form: best guess
     elif a in LUA_DISPATCH:
@@ -6911,10 +7090,23 @@ def doctor_checks() -> list[dict]:
     if compositor() == "niri":
         add("Session", "Starts with niri", "spawn-at-startup \"flamenco\" \"run\" in the niri config",
             any("flamenco" in l for l in starts), "", True, hint="run `flamenco niri-config`")
+    try:
+        st = json.loads((CONFIG_DIR / "settings.json").read_text())
+    except (OSError, ValueError):
+        st = {}
+    notif_backend = (st.get("notifications") or {}).get("backend", "flamenco")
+    launch_backend = (st.get("launcher") or {}).get("backend", "flamenco")
+    # mako chosen in Settings → Notifications: Flamenco starts it itself, so it isn't a rival
     others = [x for x in ("dms", "waybar", "swaybg", "swww", "hyprpanel", "noctalia", "ags", "eww", "mako", "dunst", "swaync")
-              if any(re.search(r'\b' + x + r'\b', l) for l in starts)]
+              if any(re.search(r'\b' + x + r'\b', l) for l in starts) and not (x == "mako" and notif_backend == "mako")]
     add("Session", "No other shell", "nothing else drawing a bar, wallpaper or notifications",
         not others, "", True, hint=("also started: " + ", ".join(others)) if others else "")
+    # the launcher and notification apps picked in Settings, when they aren't Flamenco's own
+    if launch_backend == "fuzzel":
+        add("Features", "fuzzel", "the launcher you picked (Settings → Launcher); Flamenco's opens until it's installed", have("fuzzel"), "fuzzel")
+    if notif_backend == "mako":
+        add("Features", "mako", "the notification daemon you picked (Settings → Notifications); Flamenco's shows them until it's installed",
+            have("mako") and have("makoctl"), "mako")
     portals = {p["name"] for p in installed_portals()}
     sc = effective_portals().get("ScreenCast", "") or effective_portals().get("default", "")
     capable = portals & {"gnome", "wlr"}
@@ -7070,7 +7262,7 @@ DISTRO_PACKAGES = {
         "adw-gtk-theme": None, "bluez-utils": "bluez", "glib2": "libglib2.0-bin", "kvantum": "qt-style-kvantum",
         "libnotify": "libnotify-bin", "libsecret": "libsecret-tools", "matugen-bin": None, "mesa": "libgl1-mesa-dri",
         "networkmanager": "network-manager", "networkmanager-openvpn": "network-manager-openvpn",
-        "noto-fonts-emoji": "fonts-noto-color-emoji", "pacman-contrib": None, "pipewire": "pipewire-bin", "libpulse": "pulseaudio-utils",
+        "noto-fonts-emoji": "fonts-noto-color-emoji", "pacman-contrib": None, "pipewire": "pipewire-bin", "libpulse": "pulseaudio-utils", "mako": "mako-notifier",
         "python-anthropic": None, "python-gobject": "python3-gi", "qt6-imageformats": "qt6-image-formats-plugins",
         "quickshell": None, "xwayland-satellite": None, "hyprland": "hyprland",
         "qt6-multimedia": "qml6-module-qtmultimedia", "qt6-multimedia-ffmpeg": "libqt6multimedia6",
@@ -7868,6 +8060,10 @@ WINDOW_DEFAULTS = {
     "focusFollowsMouse": False, "warpMouse": False, "hideCursorTyping": False, "hideCursorAfter": 0,
     "preferNoCsd": True, "hotCorners": True, "skipHotkeyOverlay": True, "screenshotPath": SHOT_PATH,
     "workspaceBackForth": False, "workspaces": [], "overviewCorners": ["top-left"],
+    # window mode: every new window floats instead of tiling (Settings → Windows → Window mode)
+    "floating": False,
+    # blur behind the shell's see-through surfaces (Hyprland layer rules; Settings → Appearance → Transparency)
+    "blur": False,
 }
 HOT_CORNERS = ("top-left", "top-right", "bottom-left", "bottom-right")
 CENTER_MODES = ("never", "always", "on-overflow")
@@ -8054,6 +8250,8 @@ def niri_windows_get(text: str) -> dict:
     a = text.find(LAYOUT_BEGIN)
     m = re.search(r"(?m)^\s*geometry-corner-radius\s+([\d.]+)", text[a:] if a >= 0 else kdl_mask(text))
     out["cornerRadius"] = int(float(m.group(1))) if m else 0
+    region = text[a:text.find(LAYOUT_END, a)] if a >= 0 else ""
+    out["floating"] = bool(re.search(r"(?m)^\s*open-floating\s+true", region))
     out["preferNoCsd"] = bool(kdl_top_nodes(text, "prefer-no-csd"))
     ho = kdl_block(text, "hotkey-overlay")
     out["skipHotkeyOverlay"] = bool(ho and "skip-at-startup" in block_line_values(text, ho, ("skip-at-startup",)))
@@ -8188,6 +8386,9 @@ def niri_windows_apply(text: str, w: dict) -> str:
     text = kdl_drop(text, kdl_top_nodes(text, "workspace"))
     region = [LAYOUT_BEGIN, "window-rule {", f"    geometry-corner-radius {w['cornerRadius']}",
               f"    clip-to-geometry {'true' if w['cornerRadius'] else 'false'}", "}"]
+    if w["floating"]:
+        # window mode: floating (new windows open floating; Mod+V still tiles one)
+        region += ["window-rule {", "    open-floating true", "}"]
     for ws in w["workspaces"]:
         inner = f" {{ open-on-output {kdl_quote(ws['output'])}; }}" if ws["output"] else ""
         region.append(f"workspace {kdl_quote(ws['name'])}{inner}")
@@ -8221,6 +8422,12 @@ def hypr_layout_lines(w: dict) -> list[str]:
              f"    inactive_timeout = {w['hideCursorAfter'] / 1000:g}", f"    no_warps = {b(not w['warpMouse'])}", "}",
              "input {", f"    follow_mouse = {1 if w['focusFollowsMouse'] else 0}", "}",
              "binds {", f"    workspace_back_and_forth = {b(w['workspaceBackForth'])}", "}"]
+    if w["floating"]:
+        lines.append("windowrule = float, class:.*")
+    if w["blur"]:
+        # the shell's surfaces, not the wallpaper / desktop layers or the invisible ones
+        lines += ["layerrule = blur, ^(flamenco-.*)$", "layerrule = ignorealpha 0.2, ^(flamenco-.*)$",
+                  "layerrule = unset, ^(flamenco-(desktop|wallpaper|frame|frame-space|edge|identify))$"]
     for i, ws in enumerate(w["workspaces"], 1):
         rule = f"workspace = {i}, defaultName:{ws['name'].replace(',', ' ')}, persistent:true"
         if ws["output"]:
@@ -8244,6 +8451,10 @@ def lua_layout_lines(w: dict) -> list[str]:
              "    input = {", f"        follow_mouse = {1 if w['focusFollowsMouse'] else 0},", "    },",
              "    binds = {", f"        workspace_back_and_forth = {b(w['workspaceBackForth'])},", "    },",
              "})"]
+    if w["blur"]:
+        lines.append('if hl.layer_rule then pcall(hl.layer_rule, { name = "flamenco-blur", match = { namespace = "^flamenco-(bar|dock|osd|notifications|notification-shade|overview|power|switcher|wallpapers|widgets|display-confirm|control|calendar|volume|launcher|clipboard|notepad|assistant|keys|performance|wallpaper-grid|thirdparty|power-menu)$" }, blur = true, ignore_alpha = 0.2 }) end')
+    if w["floating"]:
+        lines += ["hl.window_rule({", '    name  = "flamenco-window-mode-floating",', '    match = { class = ".*" },', "    float = true,", "})"]
     for i, ws in enumerate(w["workspaces"], 1):
         fields = f"workspace = {lua_str(i)}, default_name = {lua_str(ws['name'])}, persistent = true"
         if ws["output"]:
@@ -8517,6 +8728,8 @@ def main(argv: list[str]) -> int:
         return cmd_wallhaven(rest)
     if cmd == "live":
         return cmd_live(rest)
+    if cmd == "users":
+        return cmd_users(rest)
     if cmd == "updates":
         return cmd_updates(rest)
     if cmd == "emoji":

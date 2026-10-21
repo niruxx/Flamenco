@@ -51,9 +51,22 @@ Singleton {
 
             property JsonObject appearance: JsonObject {
                 property string palette: "flamenco"   // see Palettes.qml, or "wallpaper"
+                // a frame around the screen in the bar's color, rounding the desktop's corners
+                property bool screenFrame: false
+                property int frameWidth: 6
+                property int frameRadius: 18
                 property string mode: "dark"          // dark | light
                 property real roundness: 1.0          // corner radius multiplier
+                // transparency (Appearance → Transparency): each part's opacity, all scaled by uiOpacity.
+                // -1 = the same as the panels (so older settings keep their look)
                 property real panelOpacity: 0.94
+                property real uiOpacity: 1.0
+                property real barOpacity: -1
+                property real popupOpacity: -1          // notifications, OSD, menus, pop-ups
+                property real switcherOpacity: -1       // app switcher, overview, wallpaper switcher
+                property real settingsOpacity: 1.0      // the Settings window
+                property bool blur: false               // blur behind the shell's surfaces (Hyprland)
+                property string finish: "flat"          // surfaces: flat | gloss (Frutiger Aero glass) | chrome (Y2K metal)
                 property real animSpeed: 1.0          // 0 disables animations
                 // motion style for every animation: expressive (springy) | smooth (no overshoot) | snappy | minimal
                 property string motionStyle: "expressive"
@@ -81,7 +94,14 @@ Singleton {
 
             property JsonObject bar: JsonObject {
                 property string position: "top"       // top | bottom | left | right
-                property string style: "islands"      // floating | attached | islands
+                // floating | attached | islands | framed (a solid bar with pill groups, the Flamenco look)
+                // | capsule (one pill hugging the widgets) | minimal (no bar, a soft shade) | outline (see-through, outlined)
+                property string style: "islands"
+                property int margin: -1               // px from the screen edge (-1: the windows' gap, so they line up)
+                property int radius: -1               // corner radius in px (-1: the theme's roundness)
+                property real spacing: 1              // between widgets: 0.6 compact · 1 normal · 1.5 roomy
+                property bool border: true            // a thin outline (floating, islands)
+                property bool shadow: true            // a drop shadow (with Appearance → Drop shadows on)
                 property int height: 40
                 property string workspaceStyle: "apps" // pills | numbers | dots | apps (each workspace's app icons)
                 property bool trayHidePassive: false  // hide tray icons whose app reports "passive"
@@ -225,6 +245,8 @@ Singleton {
 
             property JsonObject launcher: JsonObject {
                 property int maxResults: 8
+                // which launcher opens: flamenco (the shell's own) | fuzzel (themed from the shell's colors)
+                property string backend: "flamenco"
                 property string position: "center"    // center | top | bottom | top-left | top-right | bottom-left | bottom-right | bar
                 property int width: 600
                 property bool calculator: true
@@ -237,6 +259,8 @@ Singleton {
             property JsonObject notifications: JsonObject {
                 property bool popups: true
                 property bool dnd: false
+                // who shows notifications: flamenco (the shell's own, with history) | mako (themed from the shell's colors)
+                property string backend: "flamenco"
                 property string position: "top-right" // top-right | top-left | top-center | bottom-right | bottom-left
                 property int timeout: 6
                 property string style: "panel"        // the notification center: panel (drop-down) | shade (a full-height sheet from a side)
@@ -353,6 +377,7 @@ Singleton {
             property JsonObject windows: JsonObject {
                 property bool imported: false         // true once read from the compositor config
                 property int gaps: 12
+                property bool floating: false         // window mode: windows float (true) or tile (false)
                 property int struts: 0                // niri: px left and right where neighbour columns peek in
                 property string centerColumn: "never" // niri: never | always | on-overflow
                 property real defaultWidth: 0.5       // niri: new column width (0 = the app decides)
@@ -460,9 +485,15 @@ Singleton {
                 property bool showMedia: true
             }
 
+            // Night light (gammastep): warmer, optionally dimmer colors, by hand or on a schedule
             property JsonObject night: JsonObject {
-                property bool enabled: false
-                property int temperature: 4000
+                property bool enabled: false          // on by hand (with no schedule)
+                property int temperature: 4000        // K at full strength (6500 = neutral)
+                property real brightness: 1.0         // also dim the screen a little (0.5–1)
+                property string schedule: "off"       // off | sun (sunset → sunrise) | custom
+                property string from: "21:00"         // custom: on at
+                property string to: "07:00"           // custom: off at
+                property int fade: 30                 // minutes it takes to warm up / cool down on a schedule
             }
 
             // Theming of regular applications, applied by `flamenco apps-theme`.
