@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.44.1-E8466F?style=for-the-badge" alt="Version 0.44.1">
+  <img src="https://img.shields.io/badge/version-0.45.0-E8466F?style=for-the-badge" alt="Version 0.45.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -1188,6 +1188,7 @@ In **Settings → Appearance**:
   - *Classic*: a Windows-style taskbar at the bottom, with running apps
   - *Dock & menu bar*: a thin top bar and a dock, macOS-style
   - *Vertical*: a bar on the left side
+- **UI icons:** Flamenco's own (Material Symbols, the default), the icon theme your apps use, or any installed icon theme (Adwaita, Papirus, Breeze…) for the shell's icons everywhere: the bar, quick settings, Settings and the rest. One-color (symbolic) icons take the UI's colors; icons a theme doesn't have stay Flamenco's. **Flamenco** puts them all back.
 - **Transparency:** a **Whole UI** slider that scales everything at once, and one for each part: panels, the bar (and screen frame), notifications and pop-ups, switchers and the overview, the dock, desktop widgets and the Settings window. The bar, pop-ups and switchers follow the panels until you set them yourself. **Blur behind** (Hyprland) blurs what shows through.
 - **Shape and surfaces:** a **surface finish** (flat, gloss like Frutiger Aero, or chrome like Y2K) for the bar, panels, notifications, the dock, switcher and OSD; corner roundness, shadows, dimming behind panels, and **Connect panels to the bar**. With that last one, quick settings, the calendar and the other panels grow out of the bar as one surface, with curved joins and no gap showing the wallpaper. It doesn't apply to the Islands bar style. Panels opened from the bar open on the same side as the widget you clicked: a clock in the right section opens the calendar on the right, and one in the center opens it under the clock.
 - **Motion:**
