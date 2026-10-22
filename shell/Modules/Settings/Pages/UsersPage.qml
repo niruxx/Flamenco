@@ -263,8 +263,13 @@ Page {
     }
 
     Group {
-        visible: Users.isAdmin
         title: "Add a user"
+        SettingRow {
+            visible: !Users.isAdmin
+            title: "Needs an administrator"
+            subtitle: "You aren't in the " + Users.adminGroup + " group, so the terminal will ask for an administrator's password (sudo may refuse you)"
+            icon: "admin_panel_settings"
+        }
         SettingRow {
             title: "Full name"
             icon: "badge"
@@ -298,14 +303,34 @@ Page {
             FSwitch { id: newAdmin }
         }
         SettingRow {
+            title: "Login shell"
+            subtitle: "What their terminal runs (from /etc/shells)"
+            icon: "terminal"
+            FDropdown {
+                id: newShell
+                implicitWidth: 240
+                options: Users.shells.map(s => ({ value: s, label: s }))
+                current: Users.shells.includes("/bin/bash") ? "/bin/bash" : (Users.shells[0] ?? "")
+                onSelected: v => current = v
+            }
+        }
+        SettingRow {
+            title: "Extra groups"
+            subtitle: newGroups.text === "" || /^[a-z_][a-z0-9_-]*(\s*,\s*[a-z_][a-z0-9_-]*)*$/.test(newGroups.text.trim()) ? "Optional, comma-separated: e.g. video, audio, input, docker" : "Group names are lowercase letters, digits, _ and -, comma-separated"
+            icon: "group_add"
+            FTextField { id: newGroups; implicitWidth: 240; placeholder: "video, audio" }
+        }
+        SettingRow {
             title: "Create"
             subtitle: "Opens a terminal: your password (sudo), then a password for the new account"
             icon: "person_add"
             FButton {
                 text: "Add user"
                 disabled: !page.validName(newUser.text) || Users.users.some(u => u.name === newUser.text)
+                    || (newGroups.text.trim() !== "" && !/^[a-z_][a-z0-9_-]*(\s*,\s*[a-z_][a-z0-9_-]*)*$/.test(newGroups.text.trim()))
                 onClicked: {
-                    Users.add(newUser.text, newFull.text.trim() || newUser.text, newAdmin.checked);
+                    Users.add(newUser.text, newFull.text.trim() || newUser.text, newAdmin.checked, newShell.current, newGroups.text.replace(/\s+/g, ""));
+                    newGroups.text = "";
                     newUser.text = "";
                     newUser.touched = false;
                     newFull.text = "";

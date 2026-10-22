@@ -80,7 +80,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.42.0"
+VERSION = "0.43.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -89,6 +89,17 @@ XDG_DATA = Path(os.environ.get("XDG_DATA_HOME", HOME / ".local/share"))
 XDG_STATE = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local/state"))
 XDG_CACHE = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache"))
 CONFIG_DIR = XDG_CONFIG / "flamenco"
+# runtime files (recording state, a screenshot in flight): the session's own private
+# folder, or a private one of ours, never a guessable name in the shared /tmp
+if os.environ.get("XDG_RUNTIME_DIR") and Path(os.environ["XDG_RUNTIME_DIR"]).is_dir():
+    RUN_DIR = Path(os.environ["XDG_RUNTIME_DIR"])
+else:
+    RUN_DIR = XDG_CACHE / "flamenco" / "run"
+    try:
+        RUN_DIR.mkdir(parents=True, exist_ok=True)
+        os.chmod(RUN_DIR, 0o700)
+    except OSError:
+        pass
 STATE_DIR = XDG_STATE / "flamenco"
 BACKUP_DIR = STATE_DIR / "backup"
 MANIFEST = STATE_DIR / "generated.json"
@@ -2363,16 +2374,32 @@ def greeter_install_files(cfg: dict, files: dict, owner: str) -> int:
         os.chmod(stage, 0o755)
         for p in stage.rglob("*"):
             os.chmod(p, 0o755 if p.is_dir() else 0o644)
-        # the folder belongs to the greeter user so it can keep its own state
-        # (last user and session); what we put there is root's and read-only
-        script = r'''set -e
+        # The folder belongs to the greeter user so it can keep its own state (last user
+        # and session); what we put there is root's and read-only. Because the greeter
+        # account can write that folder, root never follows anything in it: the new
+        # files are made in a fresh root-only folder inside it (mktemp: never an existing
+        # name), get their permissions there, and are renamed into place. rename()
+        # replaces a planted symlink rather than writing through it, and a name that
+        # reappears between the rm and the mv makes `mv -T` fail (set -e) instead.
+        script = r'''set -eu
 stage=$1 dest=$2 owner=$3
-install -d -m 0755 "$dest" "$dest/avatars"
-if id -u "$owner" >/dev/null 2>&1; then chown "$owner:" "$dest"; fi
-rm -f "$dest"/wallpaper.* "$dest"/avatars/*
-cp -r --no-preserve=ownership "$stage"/. "$dest"/
-chown -R root:root "$dest/config.json" "$dest/avatars" $(ls "$dest"/wallpaper.* 2>/dev/null)
-chmod 0644 "$dest/config.json"
+install -d -m 0755 -o root -g root "$dest"
+if id -u "$owner" >/dev/null 2>&1; then chown -h "$owner:" "$dest"; fi
+new=$(mktemp -d -p "$dest" .flamenco-new.XXXXXX)
+trap 'rm -rf -- "$new"' EXIT
+cp -r --no-preserve=all -- "$stage"/. "$new"/
+find "$new" -type l -delete
+chown -R root:root -- "$new"
+find "$new" -type d -exec chmod 0755 {} +
+find "$new" -type f -exec chmod 0644 {} +
+chmod 0755 "$new"
+rm -f -- "$dest"/wallpaper.*
+rm -rf -- "$dest/avatars"
+mv -T -- "$new/avatars" "$dest/avatars"
+for f in "$new"/*; do
+    [ -e "$f" ] || continue
+    mv -fT -- "$f" "$dest/${f##*/}"
+done
 '''
         return privileged(["sh", "-c", script, "sh", str(stage), str(GREETER_DIR), owner])
     finally:
@@ -3390,8 +3417,8 @@ def cmd_privacy(args: list[str]) -> int:
 # finds it again after a shell restart, and `stop` sends it SIGINT so the file
 # is finished properly.
 
-RECORD_STATE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "flamenco-record.json"
-RECORD_LOG = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "flamenco-record.log"
+RECORD_STATE = RUN_DIR / "flamenco-record.json"
+RECORD_LOG = RUN_DIR / "flamenco-record.log"
 
 
 def record_settings() -> dict:
@@ -3992,13 +4019,46 @@ def acct_secret_set(aid: str, value: str) -> str:
     return "file"
 
 
+def dav_local(host: str) -> bool:
+    """A server on this computer or the home network (where http:// can be all there is)."""
+    import ipaddress
+    h = (host or "").strip("[]").lower()
+    if h in ("localhost",) or h.endswith((".local", ".lan", ".home.arpa", ".internal")):
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+        return ip.is_private or ip.is_loopback or ip.is_link_local
+    except ValueError:
+        return False
+
+
+def dav_same_site(a: str, b: str) -> bool:
+    """Whether a redirect stays with the same service (caldav.icloud.com → p12-caldav.icloud.com)."""
+    a, b = a.lower(), b.lower()
+    base = ".".join(a.split(".")[-2:])
+    return a == b or b == base or b.endswith("." + base)
+
+
 def dav_request(method: str, url: str, user: str, password: str, body: str = "", depth: str = "0"):
-    """(status, final url, text) of a WebDAV request, following redirects (urllib won't for PROPFIND)."""
+    """(status, final url, text) of a WebDAV request, following redirects (urllib won't for PROPFIND).
+    The password (Basic auth) never goes unencrypted to a server outside your network, never
+    down from https to http, and never along a redirect to another site."""
     import base64
     import urllib.error
+    import urllib.parse
     import urllib.request
     auth = "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()
+    first = urllib.parse.urlparse(url)
     for _ in range(6):
+        u = urllib.parse.urlparse(url)
+        if u.scheme not in ("https", "http"):
+            raise ValueError(f"not a web address: {url}")
+        if u.scheme == "http" and not dav_local(u.hostname or ""):
+            raise ValueError("refusing to send your password unencrypted (http://) to a server outside your network: use https://")
+        if first.scheme == "https" and u.scheme == "http":
+            raise ValueError("the server redirected from https to http; not sending your password that way")
+        if not dav_same_site(first.hostname or "", u.hostname or ""):
+            raise ValueError(f"the server redirected to another site ({u.hostname}); not sending your password there")
         req = urllib.request.Request(url, data=body.encode() if body else None, method=method,
                                      headers={"Authorization": auth, "Depth": depth, "User-Agent": UA,
                                               "Content-Type": "application/xml; charset=utf-8"})
@@ -4261,7 +4321,7 @@ def cmd_wallhaven(args: list[str]) -> int:
 #   flamenco users name "Full Name" [USER]      USER: someone else's (needs root)
 #   flamenco users avatar PICTURE | --remove
 #   flamenco users password [USER]
-#   flamenco users add USER "Full Name" [--admin]
+#   flamenco users add USER "Full Name" [--admin] [--shell PATH] [--groups a,b]
 #   flamenco users remove USER [--keep-home]
 #   flamenco users admin USER on|off
 
@@ -4304,11 +4364,13 @@ def users_list() -> dict:
     import pwd
     me = pwd.getpwuid(os.getuid()).pw_name
     group = admin_group()
-    try:
-        g = grp.getgrnam(group)
-        admins = set(g.gr_mem) | {p.pw_name for p in pwd.getpwall() if p.pw_gid == g.gr_gid}
-    except KeyError:
-        admins = set()
+    admins = set()
+    for gname in ("wheel", "sudo", "admin"):
+        try:
+            g = grp.getgrnam(gname)
+        except KeyError:
+            continue
+        admins |= set(g.gr_mem) | {p.pw_name for p in pwd.getpwall() if p.pw_gid == g.gr_gid}
     out = []
     for p in sorted(pwd.getpwall(), key=lambda p: p.pw_uid):
         if not (1000 <= p.pw_uid < 60000) or p.pw_shell.endswith(("nologin", "false")):
@@ -4318,7 +4380,13 @@ def users_list() -> dict:
         avatar = str(face) if p.pw_name == me and face.is_file() else str(icon) if os.access(icon, os.R_OK) else ""
         out.append({"name": p.pw_name, "uid": p.pw_uid, "fullName": p.pw_gecos.split(",")[0], "home": p.pw_dir,
                     "shell": p.pw_shell, "admin": p.pw_name in admins or p.pw_uid == 0, "me": p.pw_name == me, "avatar": avatar})
-    return {"me": me, "adminGroup": group, "isAdmin": me in admins, "accounts": bool(accounts_path(me)), "users": out}
+    shells = []
+    try:
+        shells = [l.strip() for l in Path("/etc/shells").read_text().splitlines() if l.strip().startswith("/") and Path(l.strip()).exists()]
+    except OSError:
+        pass
+    return {"me": me, "adminGroup": group, "isAdmin": me in admins, "accounts": bool(accounts_path(me)), "users": out,
+            "shells": sorted(set(shells)) or ["/bin/bash"], "canSudo": bool(shutil.which("sudo"))}
 
 
 def pause_if_terminal() -> None:
@@ -4341,7 +4409,7 @@ def cmd_users(args: list[str]) -> int:
                 print(f"{x['name']:<16} {x['fullName']:<24} {'admin' if x['admin'] else 'standard'}{'  (you)' if x['me'] else ''}")
         return 0
     if sub == "name" and len(args) > 1:
-        full = args[1].strip().replace(",", " ").replace(":", " ")[:64]
+        full = re.sub(r"[\x00-\x1f\x7f,:]", " ", args[1]).strip()[:64]
         who = args[2] if len(args) > 2 else me
         if not USER_NAME.match(who):
             die(f"not a user name: {who}")
@@ -4386,16 +4454,30 @@ def cmd_users(args: list[str]) -> int:
         pause_if_terminal()
         return rc
     if sub == "add" and len(args) > 2:
-        name, full = args[1], args[2].strip().replace(",", " ").replace(":", " ")[:64]
+        name, full = args[1], re.sub(r"[\x00-\x1f\x7f,:]", " ", args[2]).strip()[:64]
         if not USER_NAME.match(name):
             die("user names are lowercase letters, digits, _ and -, starting with a letter (up to 32)")
         if any(x["name"] == name for x in users_list()["users"]):
             die(f"{name} already exists")
-        cmd = ["useradd", "-m", "-c", full, "-s", os.environ.get("SHELL", "/bin/bash")]
+        opt = lambda flag: args[args.index(flag) + 1] if flag in args and args.index(flag) + 1 < len(args) else ""
+        shell = opt("--shell") or "/bin/bash"
+        if shell not in users_list()["shells"]:
+            die(f"not a login shell in /etc/shells: {shell}")
+        import grp
+        groups = [g for g in re.split(r"[,\s]+", opt("--groups")) if g]
+        for g in groups:
+            if not USER_NAME.match(g):
+                die(f"not a group name: {g}")
+            try:
+                grp.getgrnam(g)
+            except KeyError:
+                die(f"there's no group called {g}")
         if "--admin" in args:
-            cmd += ["-G", admin_group()]
-        print(f"Adding {name} ({full}).")
+            groups.append(admin_group())
+        cmd = ["useradd", "-m", "-c", full, "-s", shell] + (["-G", ",".join(dict.fromkeys(groups))] if groups else [])
+        print(f"Adding {name} ({full})" + (f", in {', '.join(dict.fromkeys(groups))}" if groups else "") + ".")
         rc = privileged(cmd + [name])
+        # always a password now: an account without one could be signed into as it is
         if rc == 0:
             print(f"\nNow a password for {name}:")
             rc = privileged(["passwd", name])
@@ -4422,6 +4504,165 @@ def cmd_users(args: list[str]) -> int:
         pause_if_terminal()
         return rc
     die("usage: flamenco users list [--json] | name \"Full Name\" [USER] | avatar PICTURE|--remove | password [USER] | add USER \"Full Name\" [--admin] | remove USER [--keep-home] | admin USER on|off")
+
+
+# ─────────────────────────────── date & time ─────────────────────────────────
+# Settings → Date & Time, through systemd (timedatectl, systemd-timesyncd).
+# Changes need root: they run with sudo (in the terminal the shell opens), except
+# the time zone when "automatic time zone" installed a polkit rule letting
+# administrators change just that without a password (as GNOME does).
+#   flamenco datetime status [--json]
+#   flamenco datetime timezones
+#   flamenco datetime detect                   the time zone of where you are (from your IP)
+#   flamenco datetime timezone ZONE
+#   flamenco datetime ntp on|off
+#   flamenco datetime server "a.example b.example" | --default
+#   flamenco datetime set "YYYY-MM-DD HH:MM[:SS]"
+#   flamenco datetime auto-rule on|off          the polkit rule for automatic time zones
+
+TZ_RULE = Path("/etc/polkit-1/rules.d/50-flamenco-timezone.rules")
+TIMESYNC_DROPIN = Path("/etc/systemd/timesyncd.conf.d/50-flamenco.conf")
+NTP_HOST = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$|^\[?[0-9A-Fa-f:.]{2,45}\]?$")
+
+
+def timedate_status() -> dict:
+    def show(*cmd):
+        r = subprocess.run(["timedatectl", *cmd], capture_output=True, text=True, timeout=10) if shutil.which("timedatectl") else None
+        return dict(l.split("=", 1) for l in r.stdout.splitlines() if "=" in l) if r and r.returncode == 0 else {}
+    t, sync = show("show"), show("show-timesync")
+    servers = ""
+    try:
+        if TIMESYNC_DROPIN.is_file():
+            m = re.search(r"(?m)^NTP=(.*)$", TIMESYNC_DROPIN.read_text())
+            servers = m.group(1).strip() if m else ""
+    except OSError:
+        pass
+    chrony = subprocess.run(["systemctl", "is-active", "chronyd"], capture_output=True, text=True).stdout.strip() == "active" if shutil.which("systemctl") else False
+    return {"timezone": t.get("Timezone", ""), "ntp": t.get("NTP", "no") == "yes", "synced": t.get("NTPSynchronized", "no") == "yes",
+            "canNtp": t.get("CanNTP", "no") == "yes", "localRtc": t.get("LocalRTC", "no") == "yes",
+            "server": sync.get("ServerName", ""), "customServers": servers, "chrony": chrony,
+            "autoRule": TZ_RULE.is_file(), "available": bool(t)}
+
+
+def detect_timezone() -> str:
+    """The time zone of where this computer seems to be (ipapi / Open-Meteo, by IP)."""
+    import urllib.request
+    for url in ("https://ipapi.co/timezone/", "https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&timezone=auto"):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                body = r.read(4096).decode("utf-8", errors="replace").strip()
+        except Exception:
+            continue
+        if body.startswith("{"):
+            # Open-Meteo answers for the coordinates, not the IP: only used as a sanity fallback
+            continue
+        if re.fullmatch(r"[A-Za-z_]+(/[A-Za-z0-9_+-]+){0,2}", body) and Path("/usr/share/zoneinfo", body).is_file():
+            return body
+    return ""
+
+
+def valid_timezone(z: str) -> bool:
+    return bool(re.fullmatch(r"[A-Za-z_]+(/[A-Za-z0-9_+-]+){0,2}|UTC", z)) and Path("/usr/share/zoneinfo", z).is_file()
+
+
+def cmd_datetime(args: list[str]) -> int:
+    sub = args[0] if args else "status"
+    if sub == "status":
+        st = timedate_status()
+        print(json.dumps(st) if "--json" in args else "\n".join(f"{k}: {v}" for k, v in st.items()))
+        return 0
+    if sub == "timezones":
+        zones = []
+        if shutil.which("timedatectl"):
+            r = subprocess.run(["timedatectl", "list-timezones"], capture_output=True, text=True, timeout=20)
+            zones = r.stdout.split()
+        if not zones:
+            # tzdata's own list
+            for tab in ("/usr/share/zoneinfo/tzdata.zi", "/usr/share/zoneinfo/zone1970.tab", "/usr/share/zoneinfo/zone.tab"):
+                try:
+                    text = Path(tab).read_text(errors="replace")
+                except OSError:
+                    continue
+                if tab.endswith(".zi"):
+                    zones = [l.split()[1] for l in text.splitlines() if l.startswith(("Z ", "L ")) and len(l.split()) > 1]
+                else:
+                    zones = [l.split("\t")[2] for l in text.splitlines() if l and not l.startswith("#") and len(l.split("\t")) > 2]
+                if zones:
+                    break
+        print("\n".join(sorted(set(zones) | {"UTC"})))
+        return 0
+    if sub == "detect":
+        z = detect_timezone()
+        if not z:
+            die("couldn't tell where you are (offline?)")
+        print(z)
+        return 0
+    if sub == "timezone" and len(args) > 1:
+        z = args[1]
+        if not valid_timezone(z):
+            die(f"not a time zone: {z}")
+        # without a password when the polkit rule allows it; else sudo in the terminal
+        r = subprocess.run(["timedatectl", "--no-ask-password", "set-timezone", z], capture_output=True, text=True)
+        rc = r.returncode if r.returncode == 0 else privileged(["timedatectl", "set-timezone", z])
+        pause_if_terminal()
+        return rc
+    if sub == "ntp" and len(args) > 1 and args[1] in ("on", "off"):
+        rc = privileged(["timedatectl", "set-ntp", "true" if args[1] == "on" else "false"])
+        pause_if_terminal()
+        return rc
+    if sub == "server" and len(args) > 1:
+        if args[1] == "--default":
+            rc = privileged(["rm", "-f", str(TIMESYNC_DROPIN)])
+        else:
+            hosts = args[1].split()
+            if not hosts or len(hosts) > 8 or not all(NTP_HOST.match(h) for h in hosts):
+                die("time servers are host names or IP addresses, separated by spaces")
+            body = f"# {MARKER}: Flamenco Settings → Date & Time\n[Time]\nNTP={' '.join(hosts)}\n"
+            # written through tee as root (no shell): the content is validated above
+            rc = privileged(["mkdir", "-p", str(TIMESYNC_DROPIN.parent)])
+            if rc == 0:
+                if os.geteuid() == 0:
+                    TIMESYNC_DROPIN.write_text(body)
+                else:
+                    rc = subprocess.run(["sudo", "tee", str(TIMESYNC_DROPIN)], input=body, text=True, stdout=subprocess.DEVNULL).returncode \
+                        if sys.stdin.isatty() and shutil.which("sudo") else privileged(["sh", "-c", 'printf "%s" "$1" > "$2"', "sh", body, str(TIMESYNC_DROPIN)])
+        if rc == 0:
+            rc = privileged(["systemctl", "restart", "systemd-timesyncd"])
+        print("Time servers updated." if rc == 0 else "The time servers weren't changed.")
+        pause_if_terminal()
+        return rc
+    if sub == "set" and len(args) > 1:
+        when = args[1].strip()
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?", when):
+            die('the time as "YYYY-MM-DD HH:MM"')
+        rc = privileged(["timedatectl", "set-ntp", "false"])
+        if rc == 0:
+            rc = privileged(["timedatectl", "set-time", when])
+        pause_if_terminal()
+        return rc
+    if sub == "auto-rule" and len(args) > 1 and args[1] in ("on", "off"):
+        if args[1] == "off":
+            rc = privileged(["rm", "-f", str(TZ_RULE)])
+        else:
+            group = admin_group()
+            rule = (f"// {MARKER}: Flamenco Settings → Date & Time → Automatic time zone.\n"
+                    "// Lets administrators at this computer change the time zone (only that) without a password.\n"
+                    "polkit.addRule(function(action, subject) {\n"
+                    '    if (action.id == "org.freedesktop.timedate1.set-timezone" &&\n'
+                    f'        subject.isInGroup("{group}") && subject.local && subject.active) {{\n'
+                    "        return polkit.Result.YES;\n    }\n});\n")
+            if os.geteuid() == 0:
+                TZ_RULE.write_text(rule)
+                rc = 0
+            elif sys.stdin.isatty() and shutil.which("sudo"):
+                rc = subprocess.run(["sudo", "tee", str(TZ_RULE)], input=rule, text=True, stdout=subprocess.DEVNULL).returncode
+            else:
+                rc = privileged(["sh", "-c", 'printf "%s" "$1" > "$2"', "sh", rule, str(TZ_RULE)])
+        print(("Automatic time zone can now change it without a password." if args[1] == "on" else "Removed.") if rc == 0 else "Nothing was changed.")
+        pause_if_terminal()
+        return rc
+    die('usage: flamenco datetime status [--json] | timezones | detect | timezone ZONE | ntp on|off | server "HOSTS"|--default | set "YYYY-MM-DD HH:MM" | auto-rule on|off')
 
 
 # ─────────────────────────────── live wallpapers ─────────────────────────────
@@ -4820,7 +5061,7 @@ def cmd_plugins(args: list[str]) -> int:
             if d.exists():
                 die(f"{d} already exists (remove it first, or `git -C {d} pull` to update)")
             PLUGIN_DIR.mkdir(parents=True, exist_ok=True)
-            if subprocess.run(["git", "clone", "--depth", "1", src, str(d)]).returncode != 0:
+            if subprocess.run(["git", "clone", "--depth", "1", "--", src, str(d)]).returncode != 0:
                 die("git clone failed")
         else:
             srcp = Path(os.path.expanduser(src)).resolve()
@@ -5192,6 +5433,12 @@ def compat_repo(url: str, branch: str = "", refresh: bool = False) -> Path:
     """A shallow clone of a git repository, kept in the cache and refreshed every 6 hours."""
     import hashlib
     import time
+    # addresses and branches come from plugin catalogs (other people's data): only https
+    # addresses, branch names that can't pass for git options, and "--" before them below
+    if not re.match(r"^https://[A-Za-z0-9.-]+(:\d+)?/\S+$", url):
+        die(f"not an https address: {url}")
+    if branch and not re.fullmatch(r"[A-Za-z0-9._][A-Za-z0-9._/-]{0,199}", branch):
+        die(f"not a branch name: {branch}")
     name = re.sub(r"[^A-Za-z0-9._-]", "_", re.sub(r"^https?://", "", url).rstrip("/"))[:80]
     d = COMPAT_REPOS / (name + ("@" + branch if branch else "") + "-" + hashlib.sha1(url.encode()).hexdigest()[:6])
     if not shutil.which("git"):
@@ -5200,14 +5447,14 @@ def compat_repo(url: str, branch: str = "", refresh: bool = False) -> Path:
         stamp = d / ".git" / "FETCH_HEAD"
         age = time.time() - (stamp.stat().st_mtime if stamp.exists() else (d / ".git").stat().st_mtime)
         if refresh or age > 6 * 3600:
-            r = subprocess.run(["git", "-C", str(d), "fetch", "--depth", "1", "origin", branch or "HEAD"], capture_output=True, text=True)
+            r = subprocess.run(["git", "-C", str(d), "fetch", "--depth", "1", "--", "origin", branch or "HEAD"], capture_output=True, text=True)
             if r.returncode == 0:
                 subprocess.run(["git", "-C", str(d), "reset", "--hard", "FETCH_HEAD"], capture_output=True)
             else:
                 print(f"compat: couldn't update {url}, using the copy from before", file=sys.stderr)
         return d
     COMPAT_REPOS.mkdir(parents=True, exist_ok=True)
-    cmd = ["git", "clone", "--depth", "1", *(["--branch", branch] if branch else []), url, str(d)]
+    cmd = ["git", "clone", "--depth", "1", *(["--branch", branch] if branch else []), "--", url, str(d)]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         shutil.rmtree(d, ignore_errors=True)
@@ -8100,7 +8347,7 @@ def autostart_run(delay: float = 0) -> int:
     if shutil.which("systemctl") and subprocess.run(
             ["systemctl", "--user", "-q", "is-active", "xdg-desktop-autostart.target"]).returncode == 0:
         return 0        # systemd already started them
-    runtime = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
+    runtime = RUN_DIR
     session = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") or os.environ.get("NIRI_SOCKET") or os.environ.get("WAYLAND_DISPLAY", "")
     stamp = runtime / "flamenco-autostart"
     try:
@@ -8421,12 +8668,14 @@ def window_norm(w: dict) -> dict:
         if out[k] and not HEX_RE.match(out[k]):
             out[k] = ""
     out["gradientAngle"] = max(0, min(360, out["gradientAngle"]))
-    out["screenshotPath"] = out["screenshotPath"].replace("\n", "").strip()
+    out["screenshotPath"] = re.sub(r"[\x00-\x1f\x7f]", "", out["screenshotPath"]).strip()
     ws = []
     for item in out["workspaces"]:
         if isinstance(item, dict) and str(item.get("name", "")).strip():
-            ws.append({"name": str(item["name"]).strip()[:64].replace("\n", " "),
-                       "output": str(item.get("output", "")).strip().replace("\n", "")})
+            # written into niri / Hyprland configs: no control characters (a line break would start
+            # a new config line), and an output name is just an output name
+            ws.append({"name": re.sub(r"[\x00-\x1f\x7f]", " ", str(item["name"])).strip()[:64],
+                       "output": re.sub(r"[^A-Za-z0-9._-]", "", str(item.get("output", "")))[:64]})
     out["workspaces"] = ws
     return out
 
@@ -8864,7 +9113,7 @@ def hypr_screenshot(mode: str, s: dict) -> int:
         cmd += ["-g", geo]
     path = Path(os.path.expanduser(time.strftime(s["path"])))
     if not s["saveToDisk"]:
-        path = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "flamenco-screenshot.png"
+        path = RUN_DIR / "flamenco-screenshot.png"
     path.parent.mkdir(parents=True, exist_ok=True)
     if subprocess.run(cmd + [str(path)]).returncode != 0:
         return 1
@@ -9043,6 +9292,8 @@ def main(argv: list[str]) -> int:
         return cmd_users(rest)
     if cmd == "accounts":
         return cmd_accounts(rest)
+    if cmd == "datetime":
+        return cmd_datetime(rest)
     if cmd == "updates":
         return cmd_updates(rest)
     if cmd == "emoji":

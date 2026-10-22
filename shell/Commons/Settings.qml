@@ -226,6 +226,8 @@ Singleton {
 
             // Package updates in the bar (`flamenco updates`)
             property JsonObject updates: JsonObject {
+                property bool enabled: true           // check for package updates at all
+                property bool showInBar: true         // the bar's updates icon (when there are some)
                 property int interval: 60             // minutes between checks
             }
 
@@ -490,6 +492,11 @@ Singleton {
             }
 
             // Night light (gammastep): warmer, optionally dimmer colors, by hand or on a schedule
+            // Date & Time (the system's own settings are in timedatectl; this is only what the shell does)
+            property JsonObject datetime: JsonObject {
+                property bool autoTimezone: false     // follow where you are (checked at start and every few hours)
+            }
+
             property JsonObject night: JsonObject {
                 property bool enabled: false          // on by hand (with no schedule)
                 property int temperature: 4000        // K at full strength (6500 = neutral)

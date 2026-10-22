@@ -17,6 +17,7 @@ Singleton {
     property bool isAdmin: false
     property bool accounts: false            // AccountsService is there
     property string adminGroup: "wheel"
+    property var shells: ["/bin/bash"]
     property bool loaded: false
     property string error: ""
     readonly property var self: users.find(u => u.me) ?? null
@@ -84,8 +85,8 @@ Singleton {
     function changePassword(user) {
         inTerminal(user && user !== me ? ["password", user] : ["password"]);
     }
-    function add(user, full, admin) {
-        inTerminal(["add", user, full].concat(admin ? ["--admin"] : []));
+    function add(user, full, admin, shell, groups) {
+        inTerminal(["add", user, full].concat(admin ? ["--admin"] : [], shell ? ["--shell", shell] : [], groups ? ["--groups", groups] : []));
     }
     function remove(user, keepHome) {
         inTerminal(["remove", user].concat(keepHome ? ["--keep-home"] : []));
@@ -110,6 +111,7 @@ Singleton {
                     root.isAdmin = !!d.isAdmin;
                     root.accounts = !!d.accounts;
                     root.adminGroup = d.adminGroup ?? "wheel";
+                    root.shells = d.shells ?? ["/bin/bash"];
                     root.loaded = true;
                 } catch (e) {}
             }

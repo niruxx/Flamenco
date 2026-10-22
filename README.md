@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.42.0-E8466F?style=for-the-badge" alt="Version 0.42.0">
+  <img src="https://img.shields.io/badge/version-0.43.0-E8466F?style=for-the-badge" alt="Version 0.43.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -207,6 +207,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **🛡️ Firewall** | Detects ufw or firewalld: turn it on/off, default policies or zones, add/remove ports, services and rules (applied with one sudo prompt) |
 | **🖥️ Screen sharing** | Choose the xdg-desktop-portal backend for screen sharing, screenshots and file pickers. The lightweight wlr setup avoids GNOME; also a screen picker and frame-rate limit |
 | **🖨️ Printers** | CUPS: start and enable the service, set the default printer, print test pages, manage the queue |
+| **🕒 Date & Time** | Time zone (search, or **automatic**: follows where you are), keeping the clock synced (systemd-timesyncd) with your distribution's time servers or your own (host names or IPs), setting the time by hand, 24-hour time. System changes ask for your password in a terminal; automatic time zone sets up a polkit rule once so administrators can change just the time zone without one |
 | **🔋 Power** | Power profiles, sleep on/off, idle suspend (battery / plugged in), lock before sleep, lid actions (battery / plugged in / docked) and the power button |
 | **🩺 System check** | Runs `flamenco doctor` in Settings, shows what's missing and gives the exact `pacman` command |
 | **ℹ️ About** | OS, hardware, memory, disk, kernel, compositor, Quickshell and package counts, with a copy button for bug reports |
@@ -215,7 +216,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 
 | | |
 |---|---|
-| **⚙️ Settings app** | Its own window (`flamenco settings`), laid out like GNOME Settings / macOS System Settings: your profile card (opens **Users**: your picture, full name and password, and for administrators the other accounts: add, remove, make administrator, set their password; anything needing root or a password opens a terminal), then the pages in a few sections (Personalize, Desktop & windows, Devices, Network & sharing, Apps, Privacy & security, System) with colored badges, back / forward (`Alt+←/→`), centered pages with rounded lists, and a search box (`Ctrl+F`) that finds any setting, opens its page and points it out. A narrow window shows the list and the page in turn. Every change applies live |
+| **⚙️ Settings app** | Its own window (`flamenco settings`), laid out like GNOME Settings / macOS System Settings: your profile card (opens **Users**: your picture, full name and password, and the other accounts: add one (name, user name, administrator or not, login shell, extra groups), remove, make administrator, set their password; anything needing root or a password opens a terminal), then the pages in a few sections (Personalize, Desktop & windows, Devices, Network & sharing, Apps, Privacy & security, System) with colored badges, back / forward (`Alt+←/→`), centered pages with rounded lists, and a search box (`Ctrl+F`) that finds any setting, opens its page and points it out. A narrow window shows the list and the page in turn. Every change applies live |
 | **🎨 App theming** | **Color scheme:** Flamenco (your palette), or **GNOME defaults** / **KDE defaults**, which take Flamenco's colors back out of GTK, GNOME and KDE settings (your own files come back) for when you use that desktop; `flamenco apps-theme --reset gnome` does the same from a terminal in GNOME or Plasma. Qt 5/6 (qt5ct/qt6ct palette and generated QSS stylesheet, KDE color scheme) and GTK 3/4 (libadwaita color overrides plus optional styling), with stylesheet options and custom QSS/CSS in Settings |
 | **📦 Default apps** | Browser, file manager, email, text editor, images, video, music, PDF, archives and terminal, written to `mimeapps.list` |
 | **🚀 Auto-start** | XDG autostart entries: turn them on or off, add apps or plain commands; Flamenco runs them at login unless systemd already does |
@@ -420,7 +421,7 @@ Every panel closes with `Esc` or a click outside it.
 | Taskbar | focus the app; click again to cycle through its windows | right-click opens the window menu (move to a workspace or monitor, float, fullscreen, pin, close all, force quit…), middle-click opens a new window |
 | Microphone | mute or unmute the mic. It appears while an app is recording (with a pulsing red dot) or while the mic is muted (crossed out, in red) | right-click opens the microphone page in quick settings; middle-click also mutes; scroll changes the mic volume |
 | Privacy | appears while the camera or screen sharing is in use (and the mic, if the Microphone widget isn't in the bar): a green camera, a red screen-share icon. Click to see which apps, and to mute the mic | camera use is read from which of your programs have `/dev/video*` open; screen sharing from the screencast stream in PipeWire |
-| Package updates | appears when updates are waiting, with the count. Click for the list (repo, AUR, Flatpak) and **Update now**, which runs `paru -Syu` / `yay -Syu` / `sudo pacman -Syu` in a terminal | checks every hour (Settings file: `updates.interval`); needs `pacman-contrib` |
+| Package updates | appears when updates are waiting, with the count (Settings → Bar → Package updates turns the checks off, or just hides it). Click for the list (repo, AUR, Flatpak) and **Update now**, which runs `paru -Syu` / `yay -Syu` / `sudo pacman -Syu` in a terminal | checks every hour (Settings file: `updates.interval`); needs `pacman-contrib` |
 | Notepad | opens the notepad | |
 | Audio visualizer | little bars that move with what's playing | needs `cava`; only runs while something plays |
 | Clock | dashboard (Overview, Media, Wallpapers, Weather) | |

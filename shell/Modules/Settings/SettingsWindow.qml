@@ -84,6 +84,7 @@ LazyLoader {
             { id: "lock", icon: "lock", label: "Lock & Login", comp: lockC },
             { id: "clock", icon: "schedule", label: "Clock & Weather", comp: clockC },
             { id: "users", icon: "manage_accounts", label: "Users", comp: usersC },
+            { id: "datetime", icon: "more_time", label: "Date & Time", comp: datetimeC },
             { id: "system", icon: "health_and_safety", label: "System check", comp: systemC },
             { id: "about", icon: "info", label: "About", comp: aboutC }
         ]
@@ -98,14 +99,14 @@ LazyLoader {
             { title: "Network & accounts", ids: ["network", "accounts", "sharing"] },
             { title: "Apps", ids: ["defaults", "autostart", "flatpak", "ai", "plugins", "thirdparty"] },
             { title: "Privacy & security", ids: ["firewall", "keyring"] },
-            { title: "System", ids: ["users", "system", "about"] }
+            { title: "System", ids: ["users", "datetime", "system", "about"] }
         ]
         readonly property var tints: ({
                 appearance: "#8e6cf0", wallpaper: "#36b3e8", bar: "#5b6cf0", dock: "#3d8ef0", desktop: "#e86fbf", clock: "#f0a03d", lock: "#6d7280", apps: "#d9668a",
                 windows: "#4f7cf0", workspaces: "#2fb0a0", overview: "#7b61e0", launcher: "#f06b4f", quicksettings: "#5f6b7a", notifications: "#ef4f5f", edges: "#8b8f99", screenshots: "#47a3d6",
                 displays: "#3d7cf0", night: "#f08a3d", sound: "#f0544f", keyboard: "#7d8592", pointer: "#7d8592", printers: "#6b7380", power: "#3fb855",
                 network: "#2f8ff0", sharing: "#35b5c9", accounts: "#4a90e2", defaults: "#7a6cf0", autostart: "#f08a3d", flatpak: "#4a90d9", ai: "#d4783a", plugins: "#9a5bd9", thirdparty: "#b45bd9",
-                firewall: "#4a5568", keyring: "#c9a227", users: "#5b7cf0", system: "#3fb855", about: "#6b7380"
+                firewall: "#4a5568", keyring: "#c9a227", users: "#5b7cf0", datetime: "#5f6b7a", system: "#3fb855", about: "#6b7380"
             })
         function tint(id) {
             return tints[id] ?? Theme.accent;
@@ -224,6 +225,7 @@ LazyLoader {
         Component { id: printersC; PrintersPage {} }
         Component { id: systemC; SystemCheckPage {} }
         Component { id: usersC; UsersPage {} }
+        Component { id: datetimeC; DateTimePage {} }
         Component { id: accountsC; AccountsPage {} }
         Component { id: wallpaperC; WallpaperPage {} }
         Component { id: notifC; NotificationsPage {} }

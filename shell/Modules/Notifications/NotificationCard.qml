@@ -163,7 +163,8 @@ Item {
                     FText {
                         width: parent.width
                         visible: text !== ""
-                        text: root.body
+                        // any app can send this: no images (they'd be fetched from anywhere)
+                        text: String(root.body).replace(/<img\b[^>]*>/gi, "")
                         textFormat: Text.StyledText
                         dim: true
                         font.pixelSize: Theme.fsSm
@@ -172,7 +173,11 @@ Item {
                         maximumLineCount: root.popup ? 4 : 8
                         elide: Text.ElideRight
                         lineHeight: 1.1
-                        onLinkActivated: link => Qt.openUrlExternally(link)
+                        // only web and mail links: a notification shouldn't open files or other handlers
+                        onLinkActivated: link => {
+                            if (/^(https?:|mailto:)/i.test(String(link)))
+                                Qt.openUrlExternally(link);
+                        }
                     }
                 }
             }

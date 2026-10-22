@@ -13,7 +13,7 @@ BarChip {
     required property var window             // the bar window, for the popup
     property string screenName
     property int barLevel: 0
-    property bool barVisible: Updates.count > 0
+    property bool barVisible: Updates.enabled && (Settings.data.updates.showInBar ?? true) && Updates.count > 0
     highlighted: pop.visible
 
     onClicked: {

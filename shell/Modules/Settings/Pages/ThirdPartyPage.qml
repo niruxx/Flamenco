@@ -205,7 +205,7 @@ Page {
                     FIconButton {
                         icon: "folder_open"
                         size: 32
-                        onClicked: Quickshell.execDetached(["xdg-open", row.modelData.source])
+                        onClicked: Quickshell.execDetached(["xdg-open", row.modelData.source])   // the plugin's folder (Flamenco made it)
                     }
                     FIconButton {
                         icon: "delete"

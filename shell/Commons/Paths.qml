@@ -10,6 +10,9 @@ Singleton {
     readonly property string user: Quickshell.env("USER") || "user"
     readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || home + "/.config") + "/flamenco"
     readonly property string cacheDir: (Quickshell.env("XDG_CACHE_HOME") || home + "/.cache") + "/flamenco"
+    // runtime files: the session's private folder; without one, a private folder of ours
+    // (the CLI makes it 0700), never a guessable name in the shared /tmp
+    readonly property string runDir: Quickshell.env("XDG_RUNTIME_DIR") || cacheDir + "/run"
     readonly property string stateDir: (Quickshell.env("XDG_STATE_HOME") || home + "/.local/state") + "/flamenco"
 
     // Path to the `flamenco` CLI, exported by `flamenco run`.

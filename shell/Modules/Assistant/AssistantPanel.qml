@@ -140,7 +140,8 @@ Variants {
                             selectByMouse: true
                             wrapMode: TextEdit.Wrap
                             textFormat: msg.mine ? TextEdit.PlainText : TextEdit.MarkdownText
-                            text: msg.content || (msg.streaming ? "…" : msg.error ? "(no reply)" : "")
+                            // replies are Markdown: images shown as their description only (they'd be fetched from anywhere)
+                            text: msg.mine ? (msg.content || "") : String(msg.content || (msg.streaming ? "…" : msg.error ? "(no reply)" : "")).replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/<img\b[^>]*>/gi, "")
                             color: msg.error ? Theme.textDim : Theme.text
                             selectionColor: Theme.alpha(Theme.accent, 0.4)
                             font.family: Theme.fontFamily

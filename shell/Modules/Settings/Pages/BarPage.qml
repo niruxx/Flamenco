@@ -226,6 +226,13 @@ Page {
     }
 
     Group {
+        title: "Package updates"
+        SwitchRow { title: "Check for updates"; subtitle: "Looks for system, AUR and Flatpak updates now and then. Off: no checks at all"; icon: "system_update"; target: Settings.data.updates; key: "enabled" }
+        SwitchRow { visible: Settings.data.updates.enabled; title: "Show in the bar"; subtitle: "An icon with the count, only while there are updates"; icon: "toolbar"; target: Settings.data.updates; key: "showInBar" }
+        SliderRow { visible: Settings.data.updates.enabled; title: "Check every"; icon: "schedule"; target: Settings.data.updates; key: "interval"; from: 15; to: 720; stepSize: 15; suffix: " min" }
+    }
+
+    Group {
         title: "Taskbar"
         SettingRow {
             visible: !page.used.includes("taskbar")

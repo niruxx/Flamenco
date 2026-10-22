@@ -17,6 +17,10 @@ Singleton {
     property bool found: false
     readonly property bool running: proc.running
 
+    // values from settings go in one line each: no line breaks (they'd add config lines)
+    function clean(v) {
+        return String(v ?? "").replace(/[\x00-\x1f\x7f]/g, " ").trim();
+    }
     // #rrggbbaa, as fuzzel wants it (no #)
     function hex(c, alpha) {
         const a = alpha === undefined ? c.a : alpha;
@@ -36,10 +40,10 @@ Singleton {
             "# Written by Flamenco from your theme (Settings → Launcher). Changes here are replaced;",
             "# ~/.config/fuzzel/fuzzel.ini is yours and isn't used while Flamenco opens fuzzel.",
             "[main]",
-            "font=" + t.fontFamily + ":size=" + Math.max(8, Math.round(t.fsMd * 0.75)),
+            "font=" + clean(t.fontFamily) + ":size=" + Math.max(8, Math.round(t.fsMd * 0.75)),
             "prompt=\"❯ \"",
             "placeholder=Search apps",
-            "terminal=" + (Settings.data.general.terminal || "kitty") + " -e",
+            "terminal=" + clean(Settings.data.general.terminal || "kitty") + " -e",
             "layer=overlay",
             "exit-on-keyboard-focus-loss=yes",
             "anchor=" + anchor,
@@ -55,7 +59,7 @@ Singleton {
             "icons-enabled=yes"
         ];
         if (Settings.data.apps.iconTheme)
-            lines.push("icon-theme=" + Settings.data.apps.iconTheme);
+            lines.push("icon-theme=" + clean(Settings.data.apps.iconTheme));
         lines.push("",
             "[colors]",
             "background=" + hex(t.surface, Math.max(0.6, t.panelOp)),

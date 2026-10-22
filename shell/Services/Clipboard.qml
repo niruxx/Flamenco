@@ -19,7 +19,7 @@ Singleton {
     // [{ id, line, text, image, kind, size }]: newest first
     property var entries: []
     property bool loading: lister.running
-    readonly property string previewDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/flamenco-clipboard"
+    readonly property string previewDir: Paths.runDir + "/flamenco-clipboard"
     property var previews: ({})                   // id → image file, once decoded
 
     function parse(text) {
@@ -63,7 +63,7 @@ Singleton {
         all[e.id] = "";
         previews = all;
         const file = previewDir + "/" + e.id + "." + (e.kind || "png");
-        const p = decoder.createObject(root, { command: ["sh", "-c", 'mkdir -p "$1" && printf "%s" "$2" | cliphist decode > "$3"', "sh", previewDir, e.line, file], entryId: e.id, file: file });
+        const p = decoder.createObject(root, { command: ["sh", "-c", 'mkdir -p -m 700 "$1" && printf "%s" "$2" | cliphist decode > "$3"', "sh", previewDir, e.line, file], entryId: e.id, file: file });
         p.running = true;
     }
 

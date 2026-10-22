@@ -18,6 +18,10 @@ Singleton {
     property bool found: false
     readonly property var n: Settings.data.notifications
 
+    // values from settings go in one line each: no line breaks (they'd add config lines)
+    function clean(v) {
+        return String(v ?? "").replace(/[\x00-\x1f\x7f]/g, " ").trim();
+    }
     function hex(c, alpha) {
         const a = alpha === undefined ? c.a : alpha;
         const h = v => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, "0");
@@ -32,7 +36,7 @@ Singleton {
         return [
             "# Written by Flamenco from your theme (Settings → Notifications). Changes here are replaced;",
             "# ~/.config/mako/config is yours and isn't used while Flamenco runs mako.",
-            "font=" + t.fontFamily + " " + Math.max(8, Math.round(t.fsMd * 0.75)),
+            "font=" + clean(t.fontFamily) + " " + Math.max(8, Math.round(t.fsMd * 0.75)),
             "background-color=" + hex(t.surface, Math.max(0.6, t.popupOp)),
             "text-color=" + hex(t.text, 1),
             "border-color=" + hex(t.border, 0.9),

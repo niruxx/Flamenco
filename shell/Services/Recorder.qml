@@ -33,7 +33,7 @@ Singleton {
     }
 
     FileView {
-        path: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/flamenco-record.json"
+        path: Paths.runDir + "/flamenco-record.json"
         watchChanges: true
         printErrors: false
         onFileChanged: reload()
@@ -64,7 +64,7 @@ Singleton {
     }
     Process {
         id: checker
-        command: ["sh", "-c", "test -e \"$1\"", "sh", (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/flamenco-record.json"]
+        command: ["sh", "-c", "test -e \"$1\"", "sh", Paths.runDir + "/flamenco-record.json"]
         onExited: code => {
             if (code !== 0)
                 root.recording = false;

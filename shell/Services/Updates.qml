@@ -17,8 +17,16 @@ Singleton {
     readonly property int count: repo.length + aur.length + flatpak.length
     readonly property bool checking: proc.running
 
+    // off in Settings → Bar → Package updates: no checks at all, and nothing shown
+    readonly property bool enabled: Settings.data.updates.enabled ?? true
+    onEnabledChanged: if (!enabled) {
+        repo = [];
+        aur = [];
+        flatpak = [];
+    }
+
     function check() {
-        if (!proc.running)
+        if (enabled && !proc.running)
             proc.running = true;
     }
 
@@ -29,7 +37,7 @@ Singleton {
     }
 
     Timer {
-        running: true
+        running: root.enabled
         interval: Math.max(10, Settings.data.updates.interval) * 60000
         repeat: true
         triggeredOnStart: true

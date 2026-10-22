@@ -42,13 +42,15 @@ Page {
     }
 
     // the other app: nm-connection-editor can open one connection or create one
+    // the editor command is yours (Settings); its arguments go separately ("$@"), never into the shell text
     function openExternal(extra) {
-        Quickshell.execDetached(["sh", "-c", page.external + (nmce && extra ? " " + extra : "")]);
+        Quickshell.execDetached(["sh", "-c", page.external + ' "$@"', "sh"].concat(nmce && extra ? extra : []));
     }
 
     function open(uuid) {
         if (!inShell) {
-            openExternal("--edit=" + uuid);
+            if (/^[0-9a-fA-F-]{8,64}$/.test(String(uuid)))
+                openExternal(["--edit=" + uuid]);
             return;
         }
         editing = uuid;
@@ -247,7 +249,7 @@ Page {
             FButton {
                 text: "Open"
                 variant: "tonal"
-                onClicked: page.openExternal("")
+                onClicked: page.openExternal([])
             }
         }
     }
@@ -331,7 +333,7 @@ Page {
                 icon: "add"
                 variant: "tonal"
                 disabled: runner.running
-                onClicked: if (!page.inShell) page.openExternal("--create --type=802-3-ethernet"); else page.run(["add-ethernet", "Wired connection " + (page.wired.length + 1)], out => {
+                onClicked: if (!page.inShell) page.openExternal(["--create", "--type=802-3-ethernet"]); else page.run(["add-ethernet", "Wired connection " + (page.wired.length + 1)], out => {
                     if (/^[0-9a-f-]{36}$/i.test(out))
                         page.open(out);
                 })
