@@ -21,7 +21,7 @@ Scope {
     readonly property color tone: Theme.barBg
     // the bar's edge: it draws that side itself while it holds its space
     readonly property string barEdge: Theme.barPos
-    readonly property bool barHolds: (Settings.data.bar.hide || "never") === "never" && !Panels.barHidden || Settings.data.bar.hideKeepSpace
+    readonly property bool barHolds: Settings.data.bar.position !== "free" && ((Settings.data.bar.hide || "never") === "never" && !Panels.barHidden || Settings.data.bar.hideKeepSpace)
     readonly property int barThick: Theme.barHeight + Theme.barMargin
 
     // grows in after login (with the bar), and when turned on

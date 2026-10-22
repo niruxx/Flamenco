@@ -45,10 +45,10 @@ ColumnLayout {
         visible: root.title !== ""
         // GNOME / macOS: a quiet title over a rounded list
         text: root.title
-        color: Theme.textDim
-        font.pixelSize: Theme.fsSm
-        font.weight: Font.DemiBold
-        Layout.leftMargin: 6
+        color: Theme.accent
+        font.pixelSize: Theme.fsMd
+        font.weight: Font.Medium
+        Layout.leftMargin: 8
         Layout.topMargin: Theme.sp2
 
         Rectangle {
@@ -70,19 +70,18 @@ ColumnLayout {
 
     Rectangle {
         Layout.fillWidth: true
-        implicitHeight: card.implicitHeight + 8
-        radius: Math.max(12, Theme.rLg)
-        color: Theme.alpha(Theme.surface, Math.min(1, Theme.settingsOp + 0.04))
-        border.width: 1
-        border.color: Theme.alpha(Theme.text, 0.05)
+        // the rows draw themselves (rounded at the ends of the list, 2 px apart);
+        // anything else in a group sits on this faint backing
+        implicitHeight: card.implicitHeight
+        radius: 20
+        color: Theme.alpha(Theme.text, 0.02)
 
         ColumnLayout {
             id: card
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.margins: 4
-            spacing: 0
+            spacing: 2
         }
     }
 }

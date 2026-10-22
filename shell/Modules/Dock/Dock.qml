@@ -60,7 +60,26 @@ Variants {
             }
             const pinned = cfg.pinned.filter(p => Apps.lookup(p) !== null || running.some(r => r.toLowerCase() === p.toLowerCase()));
             const extra = cfg.showRunning ? running.filter(id => !pinned.some(p => p.toLowerCase() === id.toLowerCase())) : [];
-            return pinned.concat(cfg.separator && pinned.length && extra.length ? ["|"] : [], extra);
+            const apps = pinned.concat(cfg.separator && pinned.length && extra.length ? ["|"] : [], extra);
+            if (!panelStyle)
+                return apps;
+            // the panel style: a start button and the overview first, the clock after the pinned
+            // apps, the weather at the end (Settings → Dock → Style)
+            const has = k => (cfg.parts || {})[k] !== false;
+            return [].concat(has("launcher") ? ["@launcher"] : [], has("overview") ? ["@overview"] : [], pinned,
+                has("clock") ? ["@clock"] : [], extra.length ? (cfg.separator ? ["|"] : []).concat(extra) : [],
+                has("weather") && Weather.ready ? ["@weather"] : []);
+        }
+        readonly property bool panelStyle: (cfg.style || "classic") === "panel"
+        // how long an item is along the dock (pills are wider than icons)
+        function itemLen(id) {
+            if (id === "|")
+                return sepSize;
+            if (id === "@clock")
+                return Math.round(iconSize * (Time.use24h ? 2 : 2.5));
+            if (id === "@weather")
+                return Math.round(iconSize * 2.1);
+            return iconSize;
         }
 
         // where each item starts with nothing magnified. Magnification is measured
@@ -71,11 +90,11 @@ Variants {
             let p = 0;
             for (const id of ids) {
                 out.push(p);
-                p += (id === "|" ? sepSize : iconSize) + spacing;
+                p += itemLen(id) + spacing;
             }
             return out;
         }
-        readonly property real restLength: ids.length ? restStarts[ids.length - 1] + (ids[ids.length - 1] === "|" ? sepSize : iconSize) : 0
+        readonly property real restLength: ids.length ? restStarts[ids.length - 1] + itemLen(ids[ids.length - 1]) : 0
         readonly property real restStart: ((vertical ? height : width) - restLength) / 2
         readonly property bool magnifying: hoverAmt > 0
 
@@ -190,17 +209,69 @@ Variants {
                         required property string modelData
                         required property int index
                         readonly property bool sep: modelData === "|"
-                        readonly property var entry: sep ? null : Apps.lookup(modelData)
+                        // the panel style's pills: launcher, overview, clock, weather
+                        readonly property string part: modelData.startsWith("@") ? modelData.slice(1) : ""
+                        readonly property var entry: sep || part ? null : Apps.lookup(modelData)
                         readonly property bool pinned: win.cfg.pinned.includes(modelData)
-                        readonly property var windows: sep ? [] : Niri.windows.filter(w => (w.app_id || "").toLowerCase() === modelData.toLowerCase())
+                        readonly property var windows: sep || part ? [] : Niri.windows.filter(w => (w.app_id || "").toLowerCase() === modelData.toLowerCase())
                         readonly property bool focused: windows.some(w => w.id === Niri.activeWindowId)
                         readonly property real center: win.restStart + (win.restStarts[index] ?? 0) + win.iconSize / 2
-                        readonly property real mag: !sep && win.magnifying ? Math.max(0, 1 - Math.abs(win.mouse - center) / (win.iconSize * 2.2)) : 0
+                        readonly property real mag: !sep && !part && win.magnifying ? Math.max(0, 1 - Math.abs(win.mouse - center) / (win.iconSize * 2.2)) : 0
                         readonly property real size: win.iconSize * (1 + win.zoom * mag * win.hoverAmt)
                         property int cycle: 0
 
-                        width: sep ? (win.vertical ? win.iconSize : win.sepSize) : size
-                        height: sep ? (win.vertical ? win.sepSize : win.iconSize) : size
+                        width: part ? (win.vertical ? win.iconSize : win.itemLen(modelData)) : sep ? (win.vertical ? win.iconSize : win.sepSize) : size
+                        height: part ? (win.vertical ? win.itemLen(modelData) : win.iconSize) : sep ? (win.vertical ? win.sepSize : win.iconSize) : size
+
+                        // ── a pill: the start button, the overview, the clock or the weather ──
+                        Rectangle {
+                            visible: app.part !== ""
+                            anchors.fill: parent
+                            radius: Math.min(width, height) / 2
+                            color: partArea.containsMouse ? Theme.alpha(Theme.text, 0.14) : app.part === "launcher" ? "transparent" : Theme.alpha(Theme.text, 0.07)
+                            Behavior on color { CAnim {} }
+                            scale: partArea.pressed ? 0.92 : 1
+                            Behavior on scale { Anim { easing.bezierCurve: Theme.curves.springFast } }
+                            FIcon {
+                                visible: app.part === "launcher" || app.part === "overview"
+                                anchors.centerIn: parent
+                                icon: app.part === "launcher" ? ((Settings.data.bar.startIcon || "apps") === "flamenco" ? "local_fire_department" : "apps") : "overview_key"
+                                size: Math.round(win.iconSize * (app.part === "launcher" ? 0.62 : 0.46))
+                                fill: 1
+                                color: app.part === "launcher" ? Theme.accent : Theme.text
+                            }
+                            FText {
+                                visible: app.part === "clock"
+                                anchors.centerIn: parent
+                                text: Qt.formatTime(Time.now, Time.use24h ? "HH:mm" : "h:mm AP")
+                                font.pixelSize: Math.round(win.iconSize * 0.32)
+                                font.weight: Font.Medium
+                            }
+                            Row {
+                                visible: app.part === "weather"
+                                anchors.centerIn: parent
+                                spacing: 4
+                                FIcon { anchors.verticalCenter: parent.verticalCenter; icon: Weather.icon; size: Math.round(win.iconSize * 0.42); color: Theme.text }
+                                FText { anchors.verticalCenter: parent.verticalCenter; text: Math.round(Weather.temp) + "°"; font.pixelSize: Math.round(win.iconSize * 0.32); font.weight: Font.Medium }
+                            }
+                            MouseArea {
+                                id: partArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    const s = win.modelData.name;
+                                    if (app.part === "launcher")
+                                        Panels.toggle("launcher", s);
+                                    else if (app.part === "overview")
+                                        Settings.data.overview.enabled ? Panels.toggle("overview", s) : Niri.action(Niri.hyprland ? "overview" : "toggle-overview");
+                                    else if (app.part === "clock")
+                                        Panels.openDashboard("calendar", s);
+                                    else
+                                        Panels.openDashboard("weather", s);
+                                }
+                            }
+                        }
                         z: area.containsMouse ? 1 : 0
                         // no Behavior on the size: it follows the pointer every frame
 
@@ -214,7 +285,7 @@ Variants {
                         }
 
                         AppIcon {
-                            visible: !app.sep
+                            visible: !app.sep && !app.part
                             anchors.fill: parent
                             anchors.margins: 2
                             implicitSize: win.iconSize * (1 + win.zoom)
@@ -227,7 +298,7 @@ Variants {
                         Rectangle {
                             readonly property bool dot: win.cfg.indicator === "dot"
                             readonly property real len: dot ? (app.windows.length > 0 ? 5 : 0) : app.focused ? 16 : app.windows.length > 0 ? 6 : 0
-                            visible: !app.sep && win.cfg.indicator !== "none"
+                            visible: !app.sep && !app.part && win.cfg.indicator !== "none"
                             anchors.top: win.edge === "bottom" ? parent.bottom : undefined
                             anchors.right: win.edge === "left" ? parent.left : undefined
                             anchors.left: win.edge === "right" ? parent.right : undefined
@@ -244,7 +315,7 @@ Variants {
 
                         // the app's name, on the side away from the edge
                         Rectangle {
-                            visible: win.cfg.labels && !app.sep && area.containsMouse
+                            visible: win.cfg.labels && !app.sep && !app.part && area.containsMouse
                             anchors.bottom: win.edge === "bottom" ? parent.top : undefined
                             anchors.left: win.edge === "left" ? parent.right : undefined
                             anchors.right: win.edge === "right" ? parent.left : undefined
@@ -267,7 +338,7 @@ Variants {
 
                         MouseArea {
                             id: area
-                            enabled: !app.sep
+                            enabled: !app.sep && !app.part
                             anchors.fill: parent
                             hoverEnabled: true
                             acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton

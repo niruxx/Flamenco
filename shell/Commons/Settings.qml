@@ -97,6 +97,7 @@ Singleton {
                 // floating | attached | islands | framed (a solid bar with pill groups, the Flamenco look)
                 // | capsule (one pill hugging the widgets) | minimal (no bar, a soft shade) | outline (see-through, outlined)
                 property string style: "islands"
+                property var freePos: ({ x: 0.3, y: 0.04 }) // freeroam: where the bar is (top-left, as shares of the screen)
                 property int margin: -1               // px from the screen edge (-1: the windows' gap, so they line up)
                 property int radius: -1               // corner radius in px (-1: the theme's roundness)
                 property real spacing: 1              // between widgets: 0.6 compact · 1 normal · 1.5 roomy
@@ -140,6 +141,9 @@ Singleton {
 
             property JsonObject dock: JsonObject {
                 property bool enabled: false
+                // classic (app icons) | panel (also a start button, the overview, a clock and the weather, as pills)
+                property string style: "classic"
+                property var parts: ({ launcher: true, overview: true, clock: true, weather: true })
                 property bool autoHide: true
                 property bool magnify: true
                 property bool showRunning: true       // also show running apps that aren't pinned
@@ -195,7 +199,9 @@ Singleton {
             // Quick settings (the control center): where it opens and what's in it
             property JsonObject control: JsonObject {
                 property string align: "auto"         // auto (next to its bar button) | left | center | right
-                property string style: "cards"        // tiles and sliders: cards (icon on top, big sliders) | classic
+                // grid (pill tiles in two columns, editable: press and hold) | cards (icon on top, big sliders) | classic
+                property string style: "grid"
+                property var grid: []                 // the grid's tiles in order: [{ id, w }] (w: 1 half, 2 whole row); [] = the default
                 property int width: 440
                 property int columns: 2
                 property var sections: ({ header: true, sliders: true, tiles: true, media: true })
@@ -492,6 +498,14 @@ Singleton {
             }
 
             // Night light (gammastep): warmer, optionally dimmer colors, by hand or on a schedule
+            // Digital wellbeing: screen time per app (kept on this computer only), limits and breaks
+            property JsonObject wellbeing: JsonObject {
+                property bool enabled: true
+                property var limits: ({})             // app id → minutes a day; a notification when it's reached
+                property int breakEvery: 0            // minutes of use before a reminder to take a break (0 = never)
+                property int idleAfter: 120           // seconds without input before time stops counting
+            }
+
             // Date & Time (the system's own settings are in timedatectl; this is only what the shell does)
             property JsonObject datetime: JsonObject {
                 property bool autoTimezone: false     // follow where you are (checked at start and every few hours)
@@ -553,7 +567,7 @@ Singleton {
         onTriggered: file.writeAdapter()
     }
 
-    readonly property int currentVersion: 8
+    readonly property int currentVersion: 9
 
     // One-time upgrades for settings files written by older versions.
     function migrate() {
@@ -648,6 +662,11 @@ Singleton {
                 b.right = ["sysstats", "separator", "recording", "privacy", "updates", "tray", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "quicksettings", "clock", "power"];
                 adapter.appearance.layoutPreset = "islands";
             }
+        }
+        if (v < 9) {
+            // 0.44: quick settings as the editable tile grid; "cards" was the old default
+            if ((adapter.control.style || "cards") === "cards")
+                adapter.control.style = "grid";
         }
         adapter.configVersion = currentVersion;
     }

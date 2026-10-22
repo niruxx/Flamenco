@@ -110,12 +110,12 @@ Page {
         title: "Layout"
         ChoiceRow {
             title: "Position"
-            subtitle: "Left and right give a vertical bar"
+            subtitle: page.b.position === "free" ? "Freeroam: a floating bar you move anywhere by dragging its grip (⋮⋮ at its left end). It doesn't keep space free, so windows can go under it" : "Left and right give a vertical bar; Freeroam floats wherever you drag it"
             icon: "screenshot_frame"
             target: page.b
             key: "position"
             segWidth: 84
-            options: [{ value: "top", label: "Top", icon: "border_top" }, { value: "bottom", label: "Bottom", icon: "border_bottom" }, { value: "left", label: "Left", icon: "border_left" }, { value: "right", label: "Right", icon: "border_right" }]
+            options: [{ value: "top", label: "Top", icon: "border_top" }, { value: "bottom", label: "Bottom", icon: "border_bottom" }, { value: "left", label: "Left", icon: "border_left" }, { value: "right", label: "Right", icon: "border_right" }, { value: "free", label: "Freeroam", icon: "open_with" }]
         }
         ChoiceRow { title: "Workspace indicator"; subtitle: page.b.workspaceStyle === "apps" ? "Each workspace shows its apps' icons; the active one is filled" : ""; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }, { value: "apps", label: "App icons" }] }
         ChoiceRow { title: "CPU / RAM"; icon: "memory"; target: page.b; key: "statsStyle"; segWidth: 120; options: [{ value: "text", label: "Icons" }, { value: "rings", label: "Ring gauges" }] }

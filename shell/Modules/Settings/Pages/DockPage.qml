@@ -16,6 +16,34 @@ Page {
     Group {
         SwitchRow { title: "Show dock"; icon: "dock_to_bottom"; target: page.d; key: "enabled" }
         ChoiceRow {
+            title: "Style"
+            subtitle: (page.d.style || "classic") === "panel" ? "Your apps with pills for the start button, overview, clock and weather" : "Just your apps"
+            icon: "view_day"
+            target: page.d
+            key: "style"
+            segWidth: 120
+            options: [{ value: "classic", label: "Classic" }, { value: "panel", label: "Panel" }]
+        }
+        Repeater {
+            model: (page.d.style || "classic") === "panel" ? [
+                { k: "launcher", t: "Start button", i: "apps" }, { k: "overview", t: "Overview button", i: "overview_key" },
+                { k: "clock", t: "Clock", i: "schedule" }, { k: "weather", t: "Weather", i: "partly_cloudy_day" }] : []
+            SettingRow {
+                id: prow
+                required property var modelData
+                title: modelData.t
+                icon: modelData.i
+                FSwitch {
+                    checked: (page.d.parts || {})[prow.modelData.k] !== false
+                    onToggled: c => {
+                        const p = Object.assign({}, page.d.parts || {});
+                        p[prow.modelData.k] = c;
+                        page.d.parts = p;
+                    }
+                }
+            }
+        }
+        ChoiceRow {
             title: "Position"
             icon: "picture_in_picture"
             target: page.d

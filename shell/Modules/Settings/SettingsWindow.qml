@@ -12,29 +12,27 @@ import "Pages"
 //
 // Laid out like GNOME Settings / macOS System Settings: a sidebar with your
 // profile card on top and the pages sorted into a few sections, each with a
-// colored badge; the page on the right under a header with back / forward,
-// centered, its settings in rounded lists. Narrow windows show one or the other.
+// pastel badge and a line on what it's for, grouped in cards under a search pill
+// (with you at its end); the page on a rounded panel beside it. Narrow windows
+// show one or the other.
 LazyLoader {
     active: Panels.settingsOpen
 
-    // a page's badge: its icon, white on a colored rounded square (macOS style)
+    // a page's badge: its icon, dark on a pastel circle tinted by its group
     component Badge: Rectangle {
         property color tint: Theme.accent
         property string glyph
-        property int size: 26
+        property int size: 32
         implicitWidth: size
         implicitHeight: size
-        radius: Math.round(size * 0.28)
-        gradient: Gradient {
-            GradientStop { position: 0; color: Qt.lighter(tint, 1.18) }
-            GradientStop { position: 1; color: tint }
-        }
+        radius: size / 2
+        color: Theme.mix(tint, "#ffffff", Theme.dark ? 0.35 : 0.55)
         FIcon {
             anchors.centerIn: parent
             icon: parent.glyph
-            size: Math.round(parent.size * 0.62)
-            fill: 1
-            color: "#ffffff"
+            size: Math.round(parent.size * 0.56)
+            fill: 0
+            color: "#1d1b22"
         }
     }
 
@@ -76,6 +74,7 @@ LazyLoader {
             { id: "printers", icon: "print", label: "Printers", comp: printersC },
             { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
             { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
+            { id: "wellbeing", icon: "self_improvement", label: "Digital wellbeing", comp: wellbeingC },
             { id: "launcher", icon: "apps", label: "Launcher", comp: launcherC },
             { id: "overview", icon: "overview_key", label: "Overview", comp: overviewC },
             { id: "defaults", icon: "open_in_new", label: "Default apps", comp: defaultsC },
@@ -93,21 +92,37 @@ LazyLoader {
 
         // the sidebar: sections of pages, and each page's badge color
         readonly property var sections: [
-            { title: "Personalize", ids: ["appearance", "wallpaper", "bar", "dock", "desktop", "clock", "lock", "apps"] },
-            { title: "Desktop & windows", ids: ["windows", "workspaces", "overview", "launcher", "quicksettings", "notifications", "edges", "screenshots"] },
-            { title: "Devices", ids: ["displays", "night", "sound", "keyboard", "pointer", "printers", "power"] },
-            { title: "Network & accounts", ids: ["network", "accounts", "sharing"] },
-            { title: "Apps", ids: ["defaults", "autostart", "flatpak", "ai", "plugins", "thirdparty"] },
-            { title: "Privacy & security", ids: ["firewall", "keyring"] },
-            { title: "System", ids: ["users", "datetime", "system", "about"] }
+            { tint: "#a993ff", ids: ["appearance", "wallpaper", "apps", "lock"] },
+            { tint: "#8fa6ff", ids: ["bar", "dock", "launcher", "quicksettings", "desktop", "overview", "edges", "clock"] },
+            { tint: "#6fcf8f", ids: ["notifications", "wellbeing", "sound", "screenshots"] },
+            { tint: "#ff9d6e", ids: ["displays", "night", "keyboard", "pointer", "power", "printers"] },
+            { tint: "#5fc9c2", ids: ["windows", "workspaces"] },
+            { tint: "#6fb6ff", ids: ["network", "accounts", "sharing"] },
+            { tint: "#e98fd0", ids: ["defaults", "autostart", "flatpak", "ai", "plugins", "thirdparty"] },
+            { tint: "#b8bcc8", ids: ["users", "datetime", "firewall", "keyring", "system", "about"] }
         ]
-        readonly property var tints: ({
-                appearance: "#8e6cf0", wallpaper: "#36b3e8", bar: "#5b6cf0", dock: "#3d8ef0", desktop: "#e86fbf", clock: "#f0a03d", lock: "#6d7280", apps: "#d9668a",
-                windows: "#4f7cf0", workspaces: "#2fb0a0", overview: "#7b61e0", launcher: "#f06b4f", quicksettings: "#5f6b7a", notifications: "#ef4f5f", edges: "#8b8f99", screenshots: "#47a3d6",
-                displays: "#3d7cf0", night: "#f08a3d", sound: "#f0544f", keyboard: "#7d8592", pointer: "#7d8592", printers: "#6b7380", power: "#3fb855",
-                network: "#2f8ff0", sharing: "#35b5c9", accounts: "#4a90e2", defaults: "#7a6cf0", autostart: "#f08a3d", flatpak: "#4a90d9", ai: "#d4783a", plugins: "#9a5bd9", thirdparty: "#b45bd9",
-                firewall: "#4a5568", keyring: "#c9a227", users: "#5b7cf0", datetime: "#5f6b7a", system: "#3fb855", about: "#6b7380"
+        // one line under each page's name
+        readonly property var descs: ({
+                appearance: "Theme, palette, dark mode", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", lock: "Lock screen, login, session",
+                bar: "Style, layout, widgets", dock: "Position, pinned apps, style", launcher: "Fuzzy search, fuzzel", quicksettings: "Tiles, sliders, layout",
+                desktop: "Clocks, photos, monitors", overview: "Workspaces at a glance", edges: "Hot corners and edges", clock: "Clock, weather, calendars",
+                notifications: "Popups, do not disturb, mako", wellbeing: "Screen time and app limits", sound: "Devices, sounds, app volumes", screenshots: "Capture, save, copy",
+                displays: "Layout, scale, refresh rate", night: "Warmth and schedule", keyboard: "Layouts and shortcuts", pointer: "Speed, scrolling, gestures",
+                power: "Profiles, sleep, battery", printers: "Printers and print jobs",
+                windows: "Tiling or floating, gaps, borders", workspaces: "Names and behaviour",
+                network: "Wi-Fi, wired, VPN", accounts: "Calendars from the web", sharing: "Screen sharing and the file picker",
+                defaults: "Browser, files, terminal", autostart: "Apps at login", flatpak: "Flatpak permissions", ai: "The AI assistant",
+                plugins: "Flamenco plugins", thirdparty: "Noctalia and DMS plugins",
+                users: "Your account and others", datetime: "Time zone and clock sync", firewall: "ufw or firewalld", keyring: "Passwords and secrets",
+                system: "What's installed and working", about: "This computer and Flamenco"
             })
+        readonly property var tints: {
+            const m = {};
+            for (const sec of sections)
+                for (const id of sec.ids)
+                    m[id] = sec.tint;
+            return m;
+        }
         function tint(id) {
             return tints[id] ?? Theme.accent;
         }
@@ -225,6 +240,7 @@ LazyLoader {
         Component { id: printersC; PrintersPage {} }
         Component { id: systemC; SystemCheckPage {} }
         Component { id: usersC; UsersPage {} }
+        Component { id: wellbeingC; WellbeingPage {} }
         Component { id: datetimeC; DateTimePage {} }
         Component { id: accountsC; AccountsPage {} }
         Component { id: wallpaperC; WallpaperPage {} }
@@ -242,72 +258,119 @@ LazyLoader {
         Component { id: autostartC; AutostartPage {} }
         Component { id: flatpakC; FlatpakPage {} }
 
-        RowLayout {
+        ColumnLayout {
             anchors.fill: parent
             spacing: 0
 
-            // ───────────────────────────── sidebar ─────────────────────────────
-            Rectangle {
-                id: sidebar
-                visible: win.showList
-                Layout.fillHeight: true
-                Layout.fillWidth: win.compact
-                Layout.preferredWidth: win.compact ? -1 : 288
-                color: Theme.alpha(Theme.surface, Theme.settingsOp)
-
-                // drag the window from the sidebar's top (Super+drag also works)
-                Item {
-                    id: dragTop
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    height: 56
-                    DragHandler {
-                        target: null
-                        onActiveChanged: {
-                            const w = dragTop.Window.window;
-                            if (active && w && typeof w.startSystemMove === "function")
-                                w.startSystemMove();
-                        }
+            // ── the title bar: back / forward, "Settings" centered, maximize and close; drag it to move ──
+            Item {
+                id: titleBar
+                Layout.fillWidth: true
+                Layout.preferredHeight: 54
+                DragHandler {
+                    target: null
+                    onActiveChanged: {
+                        const w = titleBar.Window.window;
+                        if (active && w && typeof w.startSystemMove === "function")
+                            w.startSystemMove();
                     }
                 }
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 14
-                    anchors.topMargin: 14
-                    spacing: 10
-
-                    // window title and close (the close button is here while the page is hidden)
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 4
-                        spacing: 8
-                        FText {
-                            Layout.fillWidth: true
-                            text: "Settings"
-                            font.pixelSize: Theme.fsXl
-                            font.weight: Font.Bold
-                        }
-                        FIconButton {
-                            visible: win.compact
-                            icon: "close"
-                            size: 32
-                            iconSize: 18
-                            onClicked: Panels.settingsOpen = false
-                        }
+                RowLayout {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+                    FIconButton {
+                        visible: win.compact
+                        icon: "menu"
+                        size: 34
+                        onClicked: win.listOpen = !win.listOpen
                     }
+                    FIconButton { icon: "chevron_left"; size: 34; iconSize: 22; disabled: win.histPos <= 0; opacity: disabled ? 0.3 : 1; onClicked: win.step(-1) }
+                    FIconButton { icon: "chevron_right"; size: 34; iconSize: 22; disabled: win.histPos >= win.history.length - 1; opacity: disabled ? 0.3 : 1; onClicked: win.step(1) }
+                }
+                FText {
+                    anchors.centerIn: parent
+                    text: "Settings"
+                    font.pixelSize: Theme.fsLg
+                    font.weight: Font.Medium
+                }
+                RowLayout {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 6
+                    // maximize: the compositor's own (niri: the column, Hyprland: the window)
+                    FIconButton {
+                        icon: "fullscreen"
+                        size: 34
+                        iconSize: 18
+                        onClicked: Niri.action(Niri.hyprland ? "fullscreen-window" : "maximize-column")
+                    }
+                    FIconButton {
+                        icon: "close"
+                        size: 34
+                        iconSize: 18
+                        flat: false
+                        iconColor: hovered ? Theme.onAccent : Theme.text
+                        activeColor: Theme.error
+                        active: hovered
+                        onClicked: Panels.settingsOpen = false
+                    }
+                }
+            }
 
-                    FTextField {
-                        id: search
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: 12
+                Layout.rightMargin: 12
+                Layout.bottomMargin: 12
+                spacing: 12
+
+                // ───────────────────────────── sidebar ─────────────────────────────
+                ColumnLayout {
+                    id: sidebar
+                    visible: win.showList
+                    Layout.fillHeight: true
+                    Layout.fillWidth: win.compact
+                    Layout.preferredWidth: win.compact ? -1 : 312
+                    spacing: 12
+
+                    // search, with you at its end (your account)
+                    Rectangle {
                         Layout.fillWidth: true
-                        implicitHeight: 40
-                        radius: 12
-                        icon: "search"
-                        placeholder: "Search settings"
-                        onEdited: t => win.query = t
-                        onTextChanged: win.query = text
-                        onAccepted: win.go(win.results[0])
-                        Keys.onEscapePressed: text = ""
+                        implicitHeight: 56
+                        radius: height / 2
+                        color: Theme.alpha(Theme.surfaceHigh, Theme.settingsOp)
+                        border.width: search.input.activeFocus ? 2 : 1
+                        border.color: search.input.activeFocus ? Theme.accent : Theme.alpha(Theme.text, 0.12)
+                        Behavior on border.color { CAnim {} }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 6
+                            anchors.rightMargin: 8
+                            spacing: 4
+                            FTextField {
+                                id: search
+                                Layout.fillWidth: true
+                                implicitHeight: 44
+                                radius: height / 2
+                                icon: "search"
+                                placeholder: "Search settings"
+                                onEdited: t => win.query = t
+                                onTextChanged: win.query = text
+                                onAccepted: win.go(win.results[0])
+                                Keys.onEscapePressed: text = ""
+                            }
+                            Avatar {
+                                size: 40
+                                path: Settings.data.general.avatar ? Paths.expand(Settings.data.general.avatar) : (Users.self?.avatar ?? "")
+                                name: Users.fullName
+                                TapHandler { onTapped: Panels.settingsPage = "users" }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            }
+                        }
                     }
 
                     // ── search results, in place of the list while there's a query ──
@@ -321,12 +384,12 @@ LazyLoader {
                         Column {
                             id: resultCol
                             width: resultScroll.width - resultScroll.gutter
-                            spacing: 2
+                            spacing: 3
 
                             FText {
                                 visible: win.results.length === 0
                                 width: parent.width
-                                leftPadding: 8
+                                leftPadding: 12
                                 topPadding: 8
                                 text: win.searchIndex.length ? "Nothing matches “" + win.query.trim() + "”" : "Loading…"
                                 dim: true
@@ -335,176 +398,125 @@ LazyLoader {
 
                             Repeater {
                                 model: win.results
-                                Item {
+                                Rectangle {
                                     id: hit
                                     required property var modelData
                                     required property int index
                                     width: resultCol.width
-                                    height: hitRow.implicitHeight + 14
-
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        radius: 10
-                                        color: Theme.alpha(Theme.accent, 0.14)
-                                        visible: hit.index === 0
-                                    }
+                                    height: hitRow.implicitHeight + 16
+                                    radius: 14
+                                    color: hit.index === 0 ? Theme.alpha(Theme.accent, 0.18) : Theme.alpha(Theme.surfaceHigh, Theme.settingsOp)
                                     RowLayout {
                                         id: hitRow
                                         anchors.fill: parent
-                                        anchors.leftMargin: 8
-                                        anchors.rightMargin: 8
-                                        spacing: 10
+                                        anchors.leftMargin: 12
+                                        anchors.rightMargin: 10
+                                        spacing: 12
                                         Badge {
                                             tint: win.tint(hit.modelData.page)
                                             glyph: hit.modelData.kind === "page" ? hit.modelData.icon : win.pageOf(hit.modelData.page)?.icon ?? "settings"
-                                            size: 24
+                                            size: 30
                                         }
                                         ColumnLayout {
                                             Layout.fillWidth: true
                                             spacing: 0
+                                            FText { Layout.fillWidth: true; text: hit.modelData.title; font.weight: hit.modelData.kind === "row" ? Font.Normal : Font.DemiBold; elide: Text.ElideRight }
                                             FText {
                                                 Layout.fillWidth: true
-                                                text: hit.modelData.title
-                                                font.weight: hit.modelData.kind === "row" ? Font.Normal : Font.DemiBold
-                                                elide: Text.ElideRight
-                                            }
-                                            FText {
-                                                Layout.fillWidth: true
-                                                visible: hit.modelData.kind !== "page"
-                                                text: hit.modelData.label + (hit.modelData.group && hit.modelData.kind === "row" ? " › " + hit.modelData.group : "")
+                                                text: hit.modelData.kind === "page" ? (win.descs[hit.modelData.page] ?? "") : hit.modelData.label + (hit.modelData.group && hit.modelData.kind === "row" ? " › " + hit.modelData.group : "")
                                                 dim: true
                                                 font.pixelSize: Theme.fsXs
                                                 elide: Text.ElideRight
                                             }
                                         }
                                     }
-                                    StateLayer {
-                                        radius: 10
-                                        onClicked: win.go(hit.modelData)
-                                    }
+                                    StateLayer { radius: 14; onClicked: win.go(hit.modelData) }
                                 }
                             }
                         }
                     }
 
-                    // ── profile card, then the sections ──
+                    // ── the pages: grouped cards ──
                     FScroll {
                         id: navScroll
                         visible: win.query.trim() === ""
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        contentHeight: nav.implicitHeight + 8
+                        contentHeight: nav.implicitHeight + 4
 
                         Column {
                             id: nav
                             width: navScroll.width - navScroll.gutter
-                            spacing: 2
-
-                            // you: your picture and name → Users
-                            Rectangle {
-                                id: me
-                                width: nav.width
-                                height: 64
-                                radius: 14
-                                readonly property bool sel: win.page.id === "users"
-                                color: sel ? Theme.alpha(Theme.accent, 0.16) : Theme.alpha(Theme.text, 0.04)
-                                Behavior on color { CAnim {} }
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 10
-                                    anchors.rightMargin: 10
-                                    spacing: 12
-                                    Avatar {
-                                        size: 44
-                                        path: Settings.data.general.avatar ? Paths.expand(Settings.data.general.avatar) : (Users.self?.avatar ?? "")
-                                        name: Users.fullName
-                                    }
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 0
-                                        FText {
-                                            Layout.fillWidth: true
-                                            text: Users.fullName
-                                            font.weight: Font.Bold
-                                            elide: Text.ElideRight
-                                        }
-                                        FText {
-                                            Layout.fillWidth: true
-                                            text: "@" + Users.me + " · your account"
-                                            dim: true
-                                            font.pixelSize: Theme.fsXs
-                                            elide: Text.ElideRight
-                                        }
-                                    }
-                                    FIcon { icon: "chevron_right"; size: 18; color: Theme.textDim }
-                                }
-                                StateLayer {
-                                    radius: 14
-                                    onClicked: Panels.settingsPage = "users"
-                                }
-                            }
+                            spacing: 10
 
                             Repeater {
                                 model: win.sections
-                                Column {
-                                    id: sect
+                                Rectangle {
+                                    id: card
                                     required property var modelData
                                     width: nav.width
-                                    spacing: 1
-                                    topPadding: 14
-
-                                    FText {
-                                        leftPadding: 10
-                                        bottomPadding: 4
-                                        text: sect.modelData.title
-                                        dim: true
-                                        font.pixelSize: Theme.fsXs
-                                        font.weight: Font.DemiBold
-                                    }
-                                    Repeater {
-                                        model: sect.modelData.ids.map(id => win.pageOf(id)).filter(p => p)
-                                        Item {
-                                            id: item
-                                            required property var modelData
-                                            readonly property bool sel: win.page.id === modelData.id
-                                            width: sect.width
-                                            height: 38
-
+                                    height: cardCol.implicitHeight
+                                    radius: 18
+                                    color: "transparent"
+                                    readonly property var items: modelData.ids.map(id => win.pageOf(id)).filter(p => p)
+                                    Column {
+                                        id: cardCol
+                                        width: parent.width
+                                        spacing: 2
+                                        Repeater {
+                                            model: card.items
                                             Rectangle {
-                                                anchors.fill: parent
-                                                radius: 10
-                                                color: item.sel ? Theme.alpha(Theme.accent, 0.16) : "transparent"
+                                                id: item
+                                                required property var modelData
+                                                required property int index
+                                                readonly property bool sel: win.page.id === modelData.id
+                                                readonly property bool first: index === 0
+                                                readonly property bool last: index === card.items.length - 1
+                                                width: cardCol.width
+                                                height: 58
+                                                topLeftRadius: first ? 18 : 6
+                                                topRightRadius: first ? 18 : 6
+                                                bottomLeftRadius: last ? 18 : 6
+                                                bottomRightRadius: last ? 18 : 6
+                                                color: sel ? Theme.mix(Theme.accent, Theme.surfaceHigh, Theme.dark ? 0.45 : 0.25) : Theme.alpha(Theme.surfaceHigh, Theme.settingsOp)
                                                 Behavior on color { CAnim {} }
-                                            }
-                                            RowLayout {
-                                                anchors.fill: parent
-                                                anchors.leftMargin: 8
-                                                anchors.rightMargin: 10
-                                                spacing: 11
-                                                Badge {
-                                                    tint: win.tint(item.modelData.id)
-                                                    glyph: item.modelData.icon
-                                                    scale: item.sel ? 1.06 : 1
-                                                    Behavior on scale { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }
+                                                RowLayout {
+                                                    anchors.fill: parent
+                                                    anchors.leftMargin: 14
+                                                    anchors.rightMargin: 12
+                                                    spacing: 14
+                                                    Badge {
+                                                        tint: card.modelData.tint
+                                                        glyph: item.modelData.icon
+                                                        scale: item.sel ? 1.06 : 1
+                                                        Behavior on scale { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }
+                                                    }
+                                                    ColumnLayout {
+                                                        Layout.fillWidth: true
+                                                        spacing: 0
+                                                        FText {
+                                                            Layout.fillWidth: true
+                                                            text: item.modelData.label
+                                                            elide: Text.ElideRight
+                                                            font.weight: Font.Medium
+                                                            color: Theme.text
+                                                        }
+                                                        FText {
+                                                            Layout.fillWidth: true
+                                                            text: win.descs[item.modelData.id] ?? ""
+                                                            font.pixelSize: Theme.fsXs
+                                                            elide: Text.ElideRight
+                                                            color: item.sel ? Theme.alpha(Theme.text, 0.8) : Theme.textDim
+                                                        }
+                                                    }
+                                                    FIcon { visible: win.compact; icon: "chevron_right"; size: 18; color: Theme.textDim }
                                                 }
-                                                FText {
-                                                    Layout.fillWidth: true
-                                                    text: item.modelData.label
-                                                    elide: Text.ElideRight
-                                                    font.weight: item.sel ? Font.DemiBold : Font.Normal
-                                                }
-                                                FIcon {
-                                                    visible: win.compact
-                                                    icon: "chevron_right"
-                                                    size: 18
-                                                    color: Theme.textDim
-                                                }
-                                            }
-                                            StateLayer {
-                                                radius: 10
-                                                onClicked: {
-                                                    Panels.settingsPage = item.modelData.id;
-                                                    win.listOpen = false;
+                                                StateLayer {
+                                                    radius: 6
+                                                    onClicked: {
+                                                        Panels.settingsPage = item.modelData.id;
+                                                        win.listOpen = false;
+                                                    }
                                                 }
                                             }
                                         }
@@ -513,150 +525,43 @@ LazyLoader {
                             }
                         }
                     }
-
-                    FText {
-                        Layout.leftMargin: 6
-                        text: "Changes apply right away"
-                        dim: true
-                        font.pixelSize: Theme.fsXs
-                    }
                 }
 
-                // the line between the sidebar and the page
+                // ───────────────────────────── the page, on its panel ─────────────────────────────
                 Rectangle {
-                    visible: !win.compact
-                    anchors.right: parent.right
-                    width: 1
-                    height: parent.height
-                    color: Theme.alpha(Theme.border, 0.6)
-                }
-            }
-
-            // ───────────────────────────── page ─────────────────────────────
-            ColumnLayout {
-                visible: win.showPage
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                spacing: 0
-
-                // header: back / forward, the page's name, close; drag it to move the window
-                Item {
-                    id: header
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 56
-
-                    DragHandler {
-                        target: null
-                        cursorShape: Qt.ClosedHandCursor
-                        onActiveChanged: {
-                            const w = header.Window.window;
-                            if (active && w && typeof w.startSystemMove === "function")
-                                w.startSystemMove();
-                        }
-                    }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 12
-                        anchors.rightMargin: 12
-                        spacing: 4
-
-                        FIconButton {
-                            visible: win.compact
-                            icon: "menu"
-                            size: 34
-                            iconSize: 20
-                            onClicked: win.listOpen = true
-                        }
-                        FIconButton {
-                            icon: "chevron_left"
-                            size: 34
-                            iconSize: 22
-                            disabled: win.histPos <= 0
-                            opacity: disabled ? 0.35 : 1
-                            onClicked: win.step(-1)
-                        }
-                        FIconButton {
-                            icon: "chevron_right"
-                            size: 34
-                            iconSize: 22
-                            disabled: win.histPos >= win.history.length - 1
-                            opacity: disabled ? 0.35 : 1
-                            onClicked: win.step(1)
-                        }
-                        // the page's name, cross-fading on change
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            Layout.leftMargin: 8
-                            FText {
-                                id: crumb
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: win.page.label
-                                font.pixelSize: Theme.fsLg
-                                font.weight: Font.Bold
-                                Behavior on text {
-                                    SequentialAnimation {
-                                        NumberAnimation { target: crumb; property: "opacity"; to: 0; duration: Theme.durShort }
-                                        PropertyAction {}
-                                        NumberAnimation { target: crumb; property: "opacity"; to: 1; duration: Theme.durShort }
-                                    }
-                                }
-                            }
-                        }
-                        FIconButton {
-                            icon: "close"
-                            size: 32
-                            iconSize: 18
-                            iconColor: hovered ? Theme.onAccent : Theme.text
-                            activeColor: Theme.error
-                            active: hovered
-                            onClicked: Panels.settingsOpen = false
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 1
-                        color: Theme.alpha(Theme.border, 0.6)
-                        opacity: loader.item && loader.item.contentY > 4 ? 1 : 0
-                        Behavior on opacity { Anim { duration: Theme.durShort } }
-                    }
-                }
-
-                Item {
+                    visible: win.showPage
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    clip: true
+                    radius: 26
+                    color: Theme.alpha(Theme.surface, Theme.settingsOp)
+                    border.width: 1
+                    border.color: Theme.alpha(Theme.text, 0.04)
 
-                    Loader {
-                        id: loader
+                    Item {
                         anchors.fill: parent
-                        sourceComponent: win.page.comp
-                        property real enter: 1
-                        opacity: enter
-                        transform: Translate { x: (1 - loader.enter) * 28 * loader.dir }
-                        property int dir: 1
-                        onLoaded: {
-                            // the page's hero: its badge, from the sidebar
-                            if (item.pageIcon !== undefined) {
-                                item.pageIcon = win.page.icon;
-                                item.pageTint = win.tint(win.page.id);
+                        anchors.margins: 1
+                        clip: true
+
+                        Loader {
+                            id: loader
+                            anchors.fill: parent
+                            sourceComponent: win.page.comp
+                            property real enter: 1
+                            opacity: enter
+                            transform: Translate { y: (1 - loader.enter) * 18 }
+                            onSourceComponentChanged: {
+                                enter = 0;
+                                enterAnim.restart();
                             }
-                        }
-                        onSourceComponentChanged: {
-                            enter = 0;
-                            enterAnim.restart();
-                        }
-                        NumberAnimation {
-                            id: enterAnim
-                            target: loader
-                            property: "enter"
-                            to: 1
-                            duration: Theme.durLong
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: Theme.curves.emphasizedDecel
+                            NumberAnimation {
+                                id: enterAnim
+                                target: loader
+                                property: "enter"
+                                to: 1
+                                duration: Theme.durLong
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: Theme.curves.emphasizedDecel
+                            }
                         }
                     }
                 }

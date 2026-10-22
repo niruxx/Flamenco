@@ -18,6 +18,8 @@ Variants {
 
         readonly property string detail: Panels.controlDetail
         readonly property var qs: Settings.data.control
+        // the grid: pill tiles, editable by pressing and holding (TileGrid)
+        readonly property bool grid: (qs.style || "grid") === "grid"
         readonly property var allTiles: ["wifi", "bluetooth", "dnd", "night", "caffeine", "power", "vpn", "dark", "record", "widgets", "wallpaper"]
         readonly property var tileIds: (qs.tiles && qs.tiles.length ? qs.tiles : allTiles).filter(t => allTiles.includes(t))
         readonly property var tileComps: ({ wifi: tile_wifi, bluetooth: tile_bluetooth, dnd: tile_dnd, night: tile_night, caffeine: tile_caffeine, power: tile_power, vpn: tile_vpn, dark: tile_dark, record: tile_record, widgets: tile_widgets, wallpaper: tile_wallpaper })
@@ -26,7 +28,7 @@ Variants {
             width: parent.width
             spacing: Theme.sp4
 
-            Header { Layout.fillWidth: true; visible: panel.qs.sections.header !== false }
+            Header { Layout.fillWidth: true; visible: !panel.grid && panel.qs.sections.header !== false }
 
             // ── pager: main page ⇄ detail page ──
             Item {
@@ -46,14 +48,21 @@ Variants {
                     visible: opacity > 0
                     spacing: Theme.sp4
 
+                    TileGrid {
+                        visible: panel.grid
+                        Layout.fillWidth: true
+                        screenName: panel.modelData.name
+                        onOpenDetail: d => Panels.controlDetail = d
+                    }
+
                     SlidersCard {
                         Layout.fillWidth: true
-                        visible: panel.qs.sections.sliders !== false
+                        visible: !panel.grid && panel.qs.sections.sliders !== false
                         onOpenDetail: d => Panels.controlDetail = d
                     }
 
                     GridLayout {
-                        visible: panel.qs.sections.tiles !== false
+                        visible: !panel.grid && panel.qs.sections.tiles !== false
                         Layout.fillWidth: true
                         columns: Math.max(1, panel.qs.columns || 2)
                         rowSpacing: Theme.gap
@@ -72,7 +81,7 @@ Variants {
 
                     MediaCard {
                         Layout.fillWidth: true
-                        visible: Media.active && panel.qs.sections.media !== false
+                        visible: !panel.grid && Media.active && panel.qs.sections.media !== false
                     }
                 }
 

@@ -22,7 +22,16 @@ Variants {
         readonly property bool attached: cfg.style === "attached" || framed
         // capsule: one pill hugging the widgets, centered; minimal: no bar at all, a soft
         // shade behind the widgets; outline: a see-through bar drawn as an outline
-        readonly property bool capsule: cfg.style === "capsule"
+        // freeroam (Settings → Bar → Position): a floating pill you drag anywhere by its grip;
+        // laid out like the capsule, sized to its widgets, reserving no space
+        readonly property bool free: cfg.position === "free"
+        readonly property int gripW: free ? Math.round(Theme.barItem * 0.7) : 0
+        readonly property real freeX: dragging ? dragX : Math.max(0, Math.min(modelData.width - width, (cfg.freePos?.x ?? 0.3) * modelData.width))
+        readonly property real freeY: dragging ? dragY : Math.max(0, Math.min(modelData.height - height, (cfg.freePos?.y ?? 0.04) * modelData.height))
+        property bool dragging: false
+        property real dragX: 0
+        property real dragY: 0
+        readonly property bool capsule: cfg.style === "capsule" || free
         readonly property bool minimal: cfg.style === "minimal"
         readonly property bool outline: cfg.style === "outline"
         // the room between the bar's ends and its first / last widget: the same as above and below them
@@ -63,14 +72,17 @@ Variants {
         readonly property int thickness: Theme.barHeight + Theme.barMargin
 
         anchors {
-            top: win.pos !== "bottom"
-            bottom: win.pos !== "top"
-            left: win.pos !== "right"
-            right: win.pos !== "left"
+            top: win.free || win.pos !== "bottom"
+            bottom: !win.free && win.pos !== "top"
+            left: win.free || win.pos !== "right"
+            right: !win.free && win.pos !== "left"
         }
-        implicitHeight: vertical ? 0 : thickness
-        implicitWidth: vertical ? thickness : 0
-        exclusiveZone: !hides || cfg.hideKeepSpace ? thickness : 0
+        margins.left: free ? Math.round(freeX) : 0
+        margins.top: free ? Math.round(freeY) : 0
+        implicitHeight: free ? Theme.barHeight : vertical ? 0 : thickness
+        implicitWidth: free ? Math.ceil(content.capLen + Theme.barInset * 2 + gripW) : vertical ? thickness : 0
+        exclusionMode: free ? ExclusionMode.Ignore : ExclusionMode.Normal
+        exclusiveZone: free ? 0 : !hides || cfg.hideKeepSpace ? thickness : 0
         WlrLayershell.layer: WlrLayer.Top
         WlrLayershell.namespace: "flamenco-bar"
 
@@ -82,7 +94,8 @@ Variants {
         readonly property string hideMode: cfg.hide || "never"
         readonly property var activeWs: Niri.workspaces.find(w => w.output === modelData.name && w.is_active) ?? null
         readonly property bool hasWindows: activeWs !== null && Niri.windows.some(w => w.workspace_id === activeWs.id)
-        readonly property bool hides: Panels.barHidden || hideMode === "auto" || hideMode === "windows" && hasWindows
+        // (a freeroam bar floats wherever you put it: hiding to an edge doesn't apply)
+        readonly property bool hides: !free && (Panels.barHidden || hideMode === "auto" || hideMode === "windows" && hasWindows)
         readonly property bool panelHere: Panels.current !== "" && Panels.screen === modelData.name
         readonly property bool revealed: !hides || barHover.hovered || hideDelay.running || panelHere
         Item {
@@ -189,10 +202,10 @@ Variants {
             id: content
             anchors.fill: parent
             // margin on the screen-edge side and both ends; none on the inner side
-            anchors.topMargin: win.pos === "bottom" ? 0 : Theme.barMargin
-            anchors.bottomMargin: win.pos === "top" ? 0 : Theme.barMargin
-            anchors.leftMargin: win.pos === "right" ? 0 : Theme.barMargin
-            anchors.rightMargin: win.pos === "left" ? 0 : Theme.barMargin
+            anchors.topMargin: win.free || win.pos === "bottom" ? 0 : Theme.barMargin
+            anchors.bottomMargin: win.free || win.pos === "top" ? 0 : Theme.barMargin
+            anchors.leftMargin: win.free || win.pos === "right" ? 0 : Theme.barMargin
+            anchors.rightMargin: win.free || win.pos === "left" ? 0 : Theme.barMargin
             opacity: win.enter
             transform: Translate {
                 readonly property real d: (1 - win.enter) * (Theme.barHeight + Theme.barMargin * 2)
@@ -202,7 +215,7 @@ Variants {
 
             // capsule: where the packed sections start (centered along the bar)
             readonly property real capLen: (startSec.visible ? startSec.size + win.sectionGap : 0) + (centerSec.visible ? centerSec.size + win.sectionGap : 0) + (endSec.visible ? endSec.size : 0) - (endSec.visible ? 0 : win.sectionGap)
-            readonly property real capStart: ((win.vertical ? height : width) - capLen) / 2
+            readonly property real capStart: win.free ? win.gripW + Theme.barInset : ((win.vertical ? height : width) - capLen) / 2
 
             // minimal: a soft shade from the screen edge, so the widgets read on any wallpaper
             Rectangle {
@@ -220,9 +233,9 @@ Variants {
                 id: bg
                 visible: !win.islands && !win.minimal
                 // the whole bar, or (capsule) just around the widgets
-                x: win.capsule && !win.vertical ? content.capStart - Theme.barInset : 0
+                x: win.free ? 0 : win.capsule && !win.vertical ? content.capStart - Theme.barInset : 0
                 y: win.capsule && win.vertical ? content.capStart - Theme.barInset : 0
-                width: win.capsule && !win.vertical ? content.capLen + Theme.barInset * 2 : parent.width
+                width: win.free ? parent.width : win.capsule && !win.vertical ? content.capLen + Theme.barInset * 2 : parent.width
                 height: win.capsule && win.vertical ? content.capLen + Theme.barInset * 2 : parent.height
                 Behavior on width { enabled: win.capsule; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
                 Behavior on x { enabled: win.capsule; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
@@ -233,6 +246,45 @@ Variants {
                 border.color: win.outline ? Theme.alpha(Theme.text, 0.28) : Theme.alpha(Theme.border, 0.5)
 
                 Finish { visible: !win.outline && (Settings.data.appearance.finish || "flat") !== "flat" }
+
+                // freeroam: the grip to drag the bar by (where it lands is kept as a share of the screen)
+                Item {
+                    visible: win.free
+                    width: win.gripW + Theme.barInset
+                    height: parent.height
+                    FIcon {
+                        anchors.centerIn: parent
+                        anchors.horizontalCenterOffset: Theme.barInset / 2
+                        icon: "drag_indicator"
+                        size: Math.round(Theme.barItem * 0.6)
+                        color: grip.active ? Theme.accent : Theme.textDim
+                    }
+                    HoverHandler { cursorShape: grip.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor }
+                    DragHandler {
+                        id: grip
+                        target: null
+                        property real sx: 0
+                        property real sy: 0
+                        onActiveChanged: {
+                            if (active) {
+                                sx = win.freeX;
+                                sy = win.freeY;
+                                win.dragX = sx;
+                                win.dragY = sy;
+                                win.dragging = true;
+                            } else {
+                                win.cfg.freePos = { x: win.dragX / win.modelData.width, y: win.dragY / win.modelData.height };
+                                win.dragging = false;
+                            }
+                        }
+                        onTranslationChanged: {
+                            if (!active)
+                                return;
+                            win.dragX = Math.max(0, Math.min(win.modelData.width - win.width, sx + translation.x));
+                            win.dragY = Math.max(0, Math.min(win.modelData.height - win.height, sy + translation.y));
+                        }
+                    }
+                }
 
                 layer.enabled: Settings.data.appearance.shadows && (win.cfg.shadow ?? true) && !win.attached && !win.outline
                 layer.effect: MultiEffect {
@@ -255,7 +307,7 @@ Variants {
                 id: fitTimer
                 interval: 80
                 onTriggered: {
-                    if (content.used > content.avail && win.level < 3) {
+                    if (!win.free && content.used > content.avail && win.level < 3) {
                         win.level++;
                         restart();
                     }

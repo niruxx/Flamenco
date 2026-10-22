@@ -30,12 +30,24 @@ Page {
         title: "Look"
         ChoiceRow {
             title: "Style"
-            subtitle: page.q.style === "classic" ? "Icon beside the text, slim sliders" : "Icon on top, tinted when on, big sliders (like the dashboard)"
+            subtitle: page.q.style === "classic" ? "Icon beside the text, slim sliders" : page.q.style === "cards" ? "Icon on top, tinted when on, big sliders (like the dashboard)" : "Pill tiles in two columns, half or full width, that you arrange yourself"
             icon: "view_module"
             target: page.q
             key: "style"
             segWidth: 120
-            options: [{ value: "cards", label: "Cards", icon: "grid_view" }, { value: "classic", label: "Classic", icon: "view_list" }]
+            options: [{ value: "grid", label: "Grid", icon: "dashboard_customize" }, { value: "cards", label: "Cards", icon: "grid_view" }, { value: "classic", label: "Classic", icon: "view_list" }]
+        }
+        SettingRow {
+            visible: (page.q.style || "grid") === "grid"
+            title: "Arranging the grid"
+            subtitle: "Press and hold any tile in quick settings: remove (−), make it half or full width, drag it, add widgets, then ✓. The tile choices below are for the Cards and Classic styles"
+            icon: "touch_app"
+            FButton {
+                text: "Reset the grid"
+                variant: "text"
+                disabled: !(page.q.grid || []).length
+                onClicked: page.q.grid = []
+            }
         }
     }
 

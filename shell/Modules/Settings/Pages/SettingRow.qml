@@ -24,6 +24,17 @@ Item {
         }
         return true;
     }
+    readonly property bool lastInList: {
+        const kids = parent ? parent.children : [];
+        for (let i = kids.length - 1; i >= 0; i--) {
+            const k = kids[i];
+            if (k === root)
+                return true;
+            if (k.isSettingRow && k.visible)
+                return false;
+        }
+        return true;
+    }
 
     Layout.fillWidth: true
     implicitHeight: Math.max(60, lay.implicitHeight + 24)
@@ -69,15 +80,16 @@ Item {
         }
     }
 
+    // its own rounded tile: the list's ends round off, the rows in between stay squarer,
+    // and the 2 px between them shows through (the segmented look)
     Rectangle {
-        visible: !root.firstInList
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.leftMargin: 16 + root.iconW
-        anchors.rightMargin: 16
-        height: 1
-        color: Theme.alpha(Theme.text, 0.07)
+        z: -1
+        anchors.fill: parent
+        topLeftRadius: root.firstInList ? 20 : 6
+        topRightRadius: root.firstInList ? 20 : 6
+        bottomLeftRadius: root.lastInList ? 20 : 6
+        bottomRightRadius: root.lastInList ? 20 : 6
+        color: Theme.alpha(Theme.surfaceHigh, Math.min(1, Theme.settingsOp + 0.06))
     }
 
     // controls too wide to leave the text room (big buttons, high scaling) go under it

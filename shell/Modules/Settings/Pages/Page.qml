@@ -3,9 +3,9 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Widgets
 
-// A settings page: centered (like GNOME Settings), with its badge, title and a
-// line on what it's for at the top, then its groups. The settings window sets
-// `pageIcon` / `pageTint` from the sidebar.
+// A settings page on the settings window's panel: a large, light title and a
+// line on what it's for, then its groups of rounded rows. (`pageIcon` /
+// `pageTint` are still set by the window, for pages that use them.)
 FScroll {
     id: root
     property string title
@@ -18,9 +18,9 @@ FScroll {
 
     ColumnLayout {
         id: col
-        width: Math.min(720, root.width - 64)
-        x: Math.max(32, (root.width - width) / 2)
-        y: 24
+        width: Math.min(820, root.width - 48)
+        x: 24
+        y: 22
         spacing: Theme.sp4
 
         // hero
@@ -29,7 +29,7 @@ FScroll {
             Layout.bottomMargin: Theme.sp2
             spacing: 16
             Rectangle {
-                visible: root.pageIcon !== ""
+                visible: false
                 Layout.preferredWidth: 52
                 Layout.preferredHeight: 52
                 Layout.alignment: Qt.AlignTop
@@ -45,8 +45,8 @@ FScroll {
                 spacing: 2
                 FText {
                     text: root.title
-                    font.pixelSize: Theme.fsXxl
-                    font.weight: Font.Bold
+                    font.pixelSize: Math.round(Theme.fsXxl * 1.1)
+                    font.weight: Font.Normal
                 }
                 FText {
                     Layout.fillWidth: true

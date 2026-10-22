@@ -29,15 +29,15 @@ Variants {
             { value: "calendar", label: "Calendar", icon: "calendar_month" },
             { value: "weather", label: "Weather", icon: "partly_cloudy_day" },
             { value: "wallpapers", label: "Wallpaper", icon: "wallpaper" },
-            { value: "system", label: "System", icon: "monitoring" },
-            { value: "settings", label: "Settings", icon: "settings", action: true }
-        ] : [
+            { value: "system", label: "System", icon: "monitoring" }
+        ].concat(Wellbeing.enabled ? [{ value: "wellbeing", label: "Wellbeing", icon: "self_improvement" }] : [],
+            [{ value: "settings", label: "Settings", icon: "settings", action: true }]) : [
             { value: "overview", label: "Overview", icon: "dashboard" },
             { value: "media", label: "Media", icon: "music_note" },
             { value: "wallpapers", label: "Wallpapers", icon: "wallpaper" },
-            { value: "weather", label: "Weather", icon: "partly_cloudy_day" },
-            { value: "settings", label: "Settings", icon: "settings", action: true }
-        ]
+            { value: "weather", label: "Weather", icon: "partly_cloudy_day" }
+        ].concat(Wellbeing.enabled ? [{ value: "wellbeing", label: "Wellbeing", icon: "self_improvement" }] : [],
+            [{ value: "settings", label: "Settings", icon: "settings", action: true }])
         readonly property var pageTabs: tabs.filter(t => !t.action)
         property string tab: "overview"
         readonly property int tabIndex: Math.max(0, pageTabs.findIndex(t => t.value === tab))
@@ -263,7 +263,7 @@ Variants {
 
                     // Home's height, kept from when it last showed (a hidden page can report 0)
                     property real homeH: 0
-                    readonly property var byTab: ({ home: home, calendar: calendar, overview: overview, media: panel.hub ? hubMedia : media, wallpapers: panel.hub ? hubWalls : walls, weather: panel.hub ? hubWeather : weather, system: system })
+                    readonly property var byTab: ({ home: home, calendar: calendar, overview: overview, media: panel.hub ? hubMedia : media, wallpapers: panel.hub ? hubWalls : walls, weather: panel.hub ? hubWeather : weather, system: system, wellbeing: wellbeing })
                     // the height the hub's full pages fill: Home's (or the rail's), but never
                     // more than fits on this screen under the bar
                     readonly property real fitH: panel.modelData.height - Theme.barHeight - Theme.gap * 6 - panel.cardPadding * 2
@@ -356,6 +356,19 @@ Variants {
                                 fillHeight: pages.hubH
                                 screenName: panel.modelData.name
                                 onOpenSettings: p => panel.openSettings(p)
+                            }
+                        }
+                    }
+                    DashboardPage {
+                        id: wellbeing
+                        width: pages.width
+                        currentIndex: panel.tabIndex
+                        index: panel.indexOf("wellbeing")
+                        open: panel.shouldShow
+                        page: Component {
+                            HubWellbeing {
+                                width: pages.width
+                                fillHeight: panel.hub ? pages.hubH : 520
                             }
                         }
                     }

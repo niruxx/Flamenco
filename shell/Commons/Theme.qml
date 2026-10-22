@@ -87,7 +87,7 @@ Singleton {
     readonly property color popupBg: alpha(surface, popupOp)
     readonly property color switcherBg: alpha(surface, switcherOp)
     // panels grow out of the bar as one surface (not with the islands bar style)
-    readonly property bool blendPanels: a.blendPanels && !["islands", "capsule", "minimal"].includes(Settings.data.bar.style)
+    readonly property bool blendPanels: a.blendPanels && !["islands", "capsule", "minimal"].includes(Settings.data.bar.style) && Settings.data.bar.position !== "free"
 
     function alpha(c, value) {
         return Qt.rgba(c.r, c.g, c.b, value);
