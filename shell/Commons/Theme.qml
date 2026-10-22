@@ -94,6 +94,11 @@ Singleton {
     }
 
     function mix(c1, c2, t) {
+        // colors given as text ("#ffffff") too: read as colors, or the result is no color at all
+        if (typeof c1 === "string")
+            c1 = Qt.color(c1);
+        if (typeof c2 === "string")
+            c2 = Qt.color(c2);
         return Qt.rgba(c1.r * (1 - t) + c2.r * t, c1.g * (1 - t) + c2.g * t, c1.b * (1 - t) + c2.b * t, c1.a * (1 - t) + c2.a * t);
     }
 

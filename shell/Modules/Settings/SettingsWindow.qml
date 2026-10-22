@@ -18,21 +18,23 @@ import "Pages"
 LazyLoader {
     active: Panels.settingsOpen
 
-    // a page's badge: its icon, dark on a pastel circle tinted by its group
+    // a page's badge: its icon on a pastel circle in its group's color, the icon in a
+    // deep shade of the same color (so it reads on the pastel and matches it)
     component Badge: Rectangle {
+        id: badge
         property color tint: Theme.accent
         property string glyph
         property int size: 32
         implicitWidth: size
         implicitHeight: size
         radius: size / 2
-        color: Theme.mix(tint, "#ffffff", Theme.dark ? 0.35 : 0.55)
+        color: Theme.mix(tint, Qt.color("#ffffff"), Theme.dark ? 0.3 : 0.5)
         FIcon {
             anchors.centerIn: parent
-            icon: parent.glyph
-            size: Math.round(parent.size * 0.56)
-            fill: 0
-            color: "#1d1b22"
+            icon: badge.glyph
+            size: Math.round(badge.size * 0.56)
+            fill: 1
+            color: Qt.darker(badge.tint, 2.6)
         }
     }
 
