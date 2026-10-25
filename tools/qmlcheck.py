@@ -103,6 +103,29 @@ for f in files:
             if here not in homes[t] and not homes[t] & visible:
                 report(f, f"{line(m.start())}: {t} is defined in {'/'.join(sorted(homes[t]))} but not imported")
 
+    # new properties named like ones Qt's types already have (the file fails: "Cannot override
+    # FINAL property", or the old one is silently shadowed)
+    BUILTIN = {"x", "y", "z", "width", "height", "top", "bottom", "left", "right", "parent", "children", "visible",
+               "opacity", "scale", "rotation", "anchors", "clip", "implicitWidth", "implicitHeight", "baseline",
+               "transform", "antialiasing", "smooth"}
+    # only inside visual objects: settings, services and the like don't have these
+    NON_ITEM = {"JsonObject", "JsonAdapter", "Singleton", "QtObject", "Scope", "Variants", "Timer", "Process",
+                "Connections", "IpcHandler", "FileView", "LazyLoader", "Component", "ShellRoot"}
+    if not f.relative_to(root).as_posix().startswith("Compat/"):
+        stack = []
+        for m in re.finditer(r'([A-Z][\w.]*)\s*(?:on\s+[\w.]+\s*)?\{|\{|\}|\bproperty\s+[\w<>.]+\s+(\w+)', code):
+            t = m.group(0)
+            if m.group(2):
+                if m.group(2) in BUILTIN and stack and stack[-1] not in NON_ITEM:
+                    report(f, f"{line(m.start())}: a new property can't be called '{m.group(2)}' in {stack[-1]} (it already has one)")
+            elif t == "}":
+                if stack:
+                    stack.pop()
+            elif t == "{":
+                stack.append(stack[-1] if stack else "")
+            else:
+                stack.append(m.group(1))
+
     # Variants and LazyLoader make one object: a second one inside fails the whole file
     # (it loads as nothing, so whatever it shows never appears)
     for m in re.finditer(r'(?<![\w.])(Variants|LazyLoader)\s*\{', code):

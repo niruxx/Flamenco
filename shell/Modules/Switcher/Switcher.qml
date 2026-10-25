@@ -216,11 +216,11 @@ Variants {
             Loader {
                 id: body
                 // full screen: the room under the header; otherwise its own size, at the sheet's bottom
-                readonly property real top: win.full ? (header.visible ? header.y + header.height + 32 : 40) : 0
+                readonly property real topY: win.full ? (header.visible ? header.y + header.height + 32 : 40) : 0
                 width: win.full ? sheet.width - (win.layout === "android" ? 0 : 112) : implicitWidth
-                height: win.full ? sheet.height - top - 48 : implicitHeight
+                height: win.full ? sheet.height - topY - 48 : implicitHeight
                 x: (sheet.width - width) / 2
-                y: win.full ? top : sheet.height - height - (sheet.slim ? 10 : 24)
+                y: win.full ? topY : sheet.height - height - (sheet.slim ? 10 : 24)
                 sourceComponent: ({ cards: cardsC, grid: gridC, list: listC, icons: iconsC, compact: compactC,
                         fullmaterial: fullMaterialC, fullcards: fullCardsC, android: androidC })[win.layout]
             }
