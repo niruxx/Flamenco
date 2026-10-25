@@ -11,12 +11,14 @@ Singleton {
     id: root
 
     property int users: 0
-    readonly property int bars: 16
+    // how finely the sound is split, and how often (Settings → Sound → Audio visualizer)
+    readonly property int bars: Math.max(8, Math.min(64, Settings.data.visualizer.bars || 24))
+    readonly property int fps: (Settings.data.visualizer.fps || 60) >= 60 ? 60 : 30
     property var values: []
     readonly property bool available: avail.ok
     readonly property bool running: proc.running
 
-    readonly property string config: "[general]\nbars = " + bars + "\nframerate = 30\nautosens = 1\n[input]\nmethod = pipewire\nsource = auto\n"
+    readonly property string config: "[general]\nbars = " + bars + "\nframerate = " + fps + "\nautosens = 1\n[input]\nmethod = pipewire\nsource = auto\n"
         + "[output]\nmethod = raw\nraw_target = /dev/stdout\ndata_format = ascii\nascii_max_range = 100\nbar_delimiter = 59\nframe_delimiter = 10\n"
         + "[smoothing]\nnoise_reduction = 60\n"
 
@@ -24,11 +26,16 @@ Singleton {
         id: proc
         running: root.users > 0 && Media.playing && root.available
         // the config goes in through a here-string; cava reads it from the path we give
-        command: ["sh", "-c", 'f="${XDG_RUNTIME_DIR:-/tmp}/flamenco-cava.conf"; printf "%s" "$1" > "$f"; exec cava -p "$f"', "sh", root.config]
+        command: ["sh", "-c", 'f="$2/flamenco-cava.conf"; printf "%s" "$1" > "$f"; exec cava -p "$f"', "sh", root.config, Paths.runDir]
         stdout: SplitParser {
             onRead: line => root.values = line.split(";").filter(x => x !== "").map(x => Math.min(1, Number(x) / 100))
         }
         onRunningChanged: if (!running) root.values = []
+    }
+    // new bars / frame rate: start cava again with them
+    onConfigChanged: if (proc.running) {
+        proc.running = false;
+        Qt.callLater(() => proc.running = Qt.binding(() => root.users > 0 && Media.playing && root.available));
     }
 
     // is cava installed?

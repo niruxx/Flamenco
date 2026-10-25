@@ -503,6 +503,20 @@ Singleton {
             }
 
             // Night light (gammastep): warmer, optionally dimmer colors, by hand or on a schedule
+            // The audio visualizer (cava): the bar's, the desktop widget's, the dashboard's and the big band's
+            property JsonObject visualizer: JsonObject {
+                property string style: "bars"         // bars | mirror | wave | dots | radial | peaks
+                property string colors: "accent"      // accent | palette | rainbow | fire | mono
+                property string motion: "smooth"      // smooth | snappy | bouncy | gravity (fast up, slow down)
+                property int bars: 24                 // how finely cava splits the sound (8–64)
+                property int fps: 60                  // 30 | 60
+                // the big one: a band across the desktop (under windows) while something plays
+                property bool band: false
+                property int bandHeight: 220
+                property string bandPosition: "bottom" // bottom | center | top
+                property real bandOpacity: 0.85
+            }
+
             // Digital wellbeing: screen time per app (kept on this computer only), limits and breaks
             property JsonObject wellbeing: JsonObject {
                 property bool enabled: true

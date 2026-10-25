@@ -66,6 +66,7 @@ ShellRoot {
 
     Background {}
     Desktop {}
+    VisualizerBand {}
     Bar {}
     ScreenFrame {}
     SharePicker {}

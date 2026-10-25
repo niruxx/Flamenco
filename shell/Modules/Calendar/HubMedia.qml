@@ -315,37 +315,15 @@ Rectangle {
         FText { Layout.alignment: Qt.AlignHCenter; text: "Play something in a music or video app and it shows up here"; dim: true }
     }
 
-    // ── the visualizer, across the bottom: cava's bars spread out, colored along the way ──
-    Row {
-        id: bars
+    // ── the visualizer, across the bottom (the shared one: Settings → Sound → Audio visualizer) ──
+    Spectrum {
+        readonly property bool round: (Settings.data.visualizer.style || "bars") === "radial"
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 20
         anchors.horizontalCenter: parent.horizontalCenter
-        spacing: 5
-        readonly property int n: Math.max(16, Math.floor((root.width - 40) / 23))
-        readonly property var src: Cava.values.length ? Cava.values : new Array(16).fill(0.04)
-        // n bars from cava's, in between ones blended
-        readonly property var values: {
-            const out = [];
-            for (let i = 0; i < n; i++) {
-                const t = i / Math.max(1, n - 1) * (src.length - 1);
-                const a = Math.floor(t), b = Math.min(src.length - 1, a + 1);
-                out.push(src[a] + (src[b] - src[a]) * (t - a));
-            }
-            return out;
-        }
-        Repeater {
-            model: bars.n
-            Rectangle {
-                required property int index
-                readonly property real t: index / Math.max(1, bars.n - 1)
-                anchors.bottom: parent.bottom
-                width: 18
-                height: 6 + (bars.values[index] ?? 0) * 96
-                radius: 3
-                color: Theme.alpha(t < 0.5 ? Theme.mix(Theme.accent, Theme.accent3, t * 2) : Theme.mix(Theme.accent3, Theme.warning, (t - 0.5) * 2), 0.85)
-                Behavior on height { NumberAnimation { duration: 90 } }
-            }
-        }
+        width: round ? 150 : parent.width - 40
+        height: round ? 150 : 110
+        count: round ? 48 : Math.max(16, Math.floor((root.width - 40) / 23))
+        active: root.live
     }
 }

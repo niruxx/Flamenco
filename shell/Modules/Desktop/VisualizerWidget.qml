@@ -4,8 +4,8 @@ import qs.Commons
 import qs.Services
 import qs.Widgets
 
-// An audio visualizer (cava) for whatever's playing, in the theme's colors;
-// resting bars when nothing is.
+// An audio visualizer (cava) for whatever's playing, in the visualizer's style,
+// colors and motion (Settings → Sound); resting when nothing is.
 ColumnLayout {
     id: root
     property real k: 1
@@ -17,27 +17,14 @@ ColumnLayout {
     Component.onDestruction: if (live) Cava.users = Math.max(0, Cava.users - 1)
     spacing: Math.round(Theme.sp2 * k)
 
-    Row {
-        id: bars
+    // the shared visualizer, in the style chosen in Settings → Sound → Audio visualizer
+    Spectrum {
+        readonly property bool round: (Settings.data.visualizer.style || "bars") === "radial"
         Layout.alignment: Qt.AlignHCenter
-        spacing: Math.round(4 * root.k)
-        height: Math.round(90 * root.k)
-        readonly property int n: 24
-        readonly property var src: Cava.values.length ? Cava.values : []
-        Repeater {
-            model: bars.n
-            Rectangle {
-                required property int index
-                readonly property real t: index / (bars.n - 1)
-                readonly property real v: bars.src.length ? (bars.src[Math.floor(t * (bars.src.length - 1))] ?? 0) : 0.06 + 0.04 * Math.sin(index * 0.7)
-                anchors.bottom: parent.bottom
-                width: Math.round(8 * root.k)
-                height: Math.max(Math.round(4 * root.k), v * bars.height)
-                radius: width / 2
-                color: Theme.mix(Theme.accent, Theme.accent3, t)
-                Behavior on height { NumberAnimation { duration: 90 } }
-            }
-        }
+        Layout.preferredWidth: Math.round((round ? 200 : 320) * root.k)
+        Layout.preferredHeight: Math.round((round ? 200 : 100) * root.k)
+        count: round ? 48 : 32
+        active: root.live
     }
     FText {
         Layout.alignment: Qt.AlignHCenter

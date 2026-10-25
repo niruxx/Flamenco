@@ -10,11 +10,12 @@ Singleton {
 
     // "noir" is shown as Flamenco (the shell's own black-and-grey look); "flamenco",
     // the original rose palette, is shown as Material Design (ids stay, so settings keep working)
-    readonly property var names: ["noir", "flamenco", "y2k", "aero", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
+    readonly property var names: ["noir", "flamenco", "glass", "y2k", "aero", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
 
     readonly property var labels: ({
             noir: "Flamenco",
             flamenco: "Material Design",
+            glass: "Liquid Glass",
             y2k: "Y2K",
             aero: "Frutiger Aero",
             breeze: "Breeze",
@@ -47,6 +48,21 @@ Singleton {
                     border: "#c6c6cc", text: "#151517", textDim: "#5f5f66",
                     accent: "#26262a", onAccent: "#f7f7f8", accent2: "#55555c", accent3: "#d9532f",
                     error: "#c62828", warning: "#a66f00", success: "#2e7d4f"
+                }
+            },
+            // Liquid Glass: Apple's system grays and blue (for the liquid glass finish, see-through panels)
+            glass: {
+                dark: {
+                    bg: "#1c1c1e", surface: "#2c2c2e", surfaceHigh: "#3a3a3c", surfaceHighest: "#48484a",
+                    border: "#545458", text: "#f5f5f7", textDim: "#a1a1a6",
+                    accent: "#0a84ff", onAccent: "#ffffff", accent2: "#5e5ce6", accent3: "#64d2ff",
+                    error: "#ff453a", warning: "#ff9f0a", success: "#30d158"
+                },
+                light: {
+                    bg: "#f2f2f7", surface: "#ffffff", surfaceHigh: "#f2f2f7", surfaceHighest: "#e5e5ea",
+                    border: "#c6c6c8", text: "#1d1d1f", textDim: "#6e6e73",
+                    accent: "#007aff", onAccent: "#ffffff", accent2: "#5856d6", accent3: "#32ade6",
+                    error: "#ff3b30", warning: "#ff9500", success: "#34c759"
                 }
             },
             // Y2K: pearl and deep violet, hot pink, cyber cyan and lilac (with the chrome finish)

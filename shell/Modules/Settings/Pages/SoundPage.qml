@@ -121,6 +121,8 @@ Page {
         }
     }
 
+    VisualizerSection {}
+
     Group {
         title: "App volumes"
         SwitchRow { title: "Allow up to 150%"; subtitle: "For quiet apps; above 100% can distort"; icon: "volume_up"; target: page.sd; key: "mixerBoost" }

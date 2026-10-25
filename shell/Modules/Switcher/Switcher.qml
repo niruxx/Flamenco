@@ -27,7 +27,9 @@ Variants {
         readonly property real p: pAnim.v
         readonly property int n: Switcher.list.length
         readonly property var cfg: Settings.data.switcher
-        readonly property string layout: ["cards", "grid", "list", "icons", "compact"].includes(cfg.layout) ? cfg.layout : "cards"
+        readonly property string layout: ["cards", "grid", "list", "icons", "compact", "fullmaterial", "fullcards", "android"].includes(cfg.layout) ? cfg.layout : "cards"
+        // the full-screen ones: the sheet becomes the whole screen
+        readonly property bool full: ["fullmaterial", "fullcards", "android"].includes(layout)
         readonly property string look: ["tonal", "filled", "outlined"].includes(cfg.look) ? cfg.look : "tonal"
         readonly property int cardW: Math.max(168, Math.min(212, (width - 200) / Math.max(1, n) - 14))
         readonly property int cardH: Math.round(cardW * 1.22)
@@ -114,6 +116,8 @@ Variants {
                     Switcher.step(rowStep);
                 else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space)
                     Switcher.activate();
+                else if (k === Qt.Key_Delete && win.picked)
+                    Niri.closeWindow(win.picked.id);
                 else
                     return;
                 event.accepted = true;
@@ -129,6 +133,7 @@ Variants {
 
         // the sheet's shadow
         RectangularShadow {
+            visible: !win.full
             anchors.fill: sheet
             radius: sheet.radius
             blur: 36
@@ -144,14 +149,15 @@ Variants {
             id: sheet
             readonly property bool slim: win.layout === "compact"
             anchors.centerIn: parent
-            width: Math.min(parent.width - 80, Math.max(body.implicitWidth, slim ? 0 : header.implicitWidth) + (slim ? 20 : 48))
-            height: (slim ? 0 : header.height + 24) + body.implicitHeight + (slim ? 20 : 48)
-            radius: slim ? height / 2 : 32
-            color: Theme.switcherBg
-            border.width: 1
+            width: win.full ? parent.width : Math.min(parent.width - 80, Math.max(body.implicitWidth, slim ? 0 : header.implicitWidth) + (slim ? 20 : 48))
+            height: win.full ? parent.height : (slim ? 0 : header.height + 24) + body.implicitHeight + (slim ? 20 : 48)
+            radius: win.full ? 0 : slim ? height / 2 : 32
+            // full screen: Material's surface (or Android's dim backdrop) over everything
+            color: win.layout === "android" ? Theme.alpha(Theme.shadow, 0.55) : win.full ? Theme.alpha(Theme.bg, Math.max(0.85, Theme.switcherOp)) : Theme.switcherBg
+            border.width: win.full ? 0 : 1
             border.color: Theme.alpha(Theme.border, 0.6)
             opacity: win.p
-            scale: 0.92 + 0.08 * win.p
+            scale: win.full ? 1.03 - 0.03 * win.p : 0.92 + 0.08 * win.p
 
             // the surface finish (gloss / chrome), under the content
             Finish {}
@@ -159,10 +165,11 @@ Variants {
             // header: what this is, how many, and the keys as chips
             RowLayout {
                 id: header
-                visible: !sheet.slim
-                x: 24
-                y: 20
-                width: sheet.width - 48
+                visible: !sheet.slim && win.layout !== "android"
+                readonly property int m: win.full ? 56 : 24
+                x: m
+                y: win.full ? 44 : 20
+                width: sheet.width - m * 2
                 spacing: 10
 
                 Rectangle {
@@ -208,10 +215,14 @@ Variants {
 
             Loader {
                 id: body
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: sheet.slim ? 10 : 24
-                anchors.horizontalCenter: parent.horizontalCenter
-                sourceComponent: ({ cards: cardsC, grid: gridC, list: listC, icons: iconsC, compact: compactC })[win.layout]
+                // full screen: the room under the header; otherwise its own size, at the sheet's bottom
+                readonly property real top: win.full ? (header.visible ? header.y + header.height + 32 : 40) : 0
+                width: win.full ? sheet.width - (win.layout === "android" ? 0 : 112) : implicitWidth
+                height: win.full ? sheet.height - top - 48 : implicitHeight
+                x: (sheet.width - width) / 2
+                y: win.full ? top : sheet.height - height - (sheet.slim ? 10 : 24)
+                sourceComponent: ({ cards: cardsC, grid: gridC, list: listC, icons: iconsC, compact: compactC,
+                        fullmaterial: fullMaterialC, fullcards: fullCardsC, android: androidC })[win.layout]
             }
         }
 
@@ -518,6 +529,200 @@ Variants {
                     spacing: 0
                     FText { Layout.alignment: Qt.AlignHCenter; Layout.maximumWidth: parent.Layout.maximumWidth; text: win.picked ? (win.picked.title || win.appName(win.picked)) : ""; font.pixelSize: Theme.fsLg; font.weight: Font.Bold; elide: Text.ElideRight }
                     FText { Layout.alignment: Qt.AlignHCenter; text: win.picked ? win.appName(win.picked) : ""; dim: true; font.pixelSize: Theme.fsSm }
+                }
+            }
+        }
+
+        // ── full-screen Material: the windows as big cards in a grid filling the screen ──
+        Component {
+            id: fullMaterialC
+            GridView {
+                id: fgrid
+                readonly property int cols: Math.max(1, Math.min(win.n, Math.max(2, Math.floor(width / 380))))
+                readonly property int rows: Math.max(1, Math.ceil(win.n / cols))
+                cellWidth: width / cols
+                // as tall as fits, up to a 16:11 card
+                cellHeight: Math.min(cellWidth * 0.69, height / Math.min(rows, 3))
+                model: Switcher.list
+                currentIndex: Switcher.index
+                highlightMoveDuration: Theme.durMed
+                interactive: rows > 3
+                clip: true
+                delegate: Item {
+                    required property var modelData
+                    required property int index
+                    width: fgrid.cellWidth
+                    height: fgrid.cellHeight
+                    WinCard {
+                        sw: win
+                        anchors.centerIn: parent
+                        w: parent.modelData
+                        i: parent.index
+                        cw: fgrid.cellWidth - 28
+                        ch: fgrid.cellHeight - 28
+                        radius: 28
+                        scale: sel ? 1 : 0.95
+                        // they arrive one after another
+                        opacity: win.p
+                        Behavior on scale { Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.springFast } }
+                    }
+                }
+            }
+        }
+
+        // ── full-screen cards: big cards in a row, the picked one forward, the rest set back ──
+        Component {
+            id: fullCardsC
+            ListView {
+                id: fcards
+                readonly property real ch: Math.min(height - 40, width * 0.42)
+                readonly property real cw: ch * 1.3
+                orientation: ListView.Horizontal
+                spacing: -cw * 0.12
+                model: Switcher.list
+                currentIndex: Switcher.index
+                highlightRangeMode: ListView.StrictlyEnforceRange
+                preferredHighlightBegin: width / 2 - cw / 2
+                preferredHighlightEnd: width / 2 + cw / 2
+                highlightMoveDuration: Theme.durMed
+                interactive: true
+                clip: false
+                delegate: Item {
+                    id: fslot
+                    required property var modelData
+                    required property int index
+                    readonly property int dist: Math.abs(index - Switcher.index)
+                    width: fcards.cw
+                    height: fcards.height
+                    z: 100 - dist
+                    WinCard {
+                        sw: win
+                        anchors.centerIn: parent
+                        w: fslot.modelData
+                        i: fslot.index
+                        cw: fcards.cw
+                        ch: fcards.ch
+                        radius: 32
+                        // depth: the further from the picked one, the smaller and dimmer
+                        scale: Math.max(0.7, 1 - fslot.dist * 0.1)
+                        opacity: Math.max(0.35, 1 - fslot.dist * 0.22)
+                        Behavior on scale { Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+                        Behavior on opacity { Anim { duration: Theme.durMed } }
+                    }
+                }
+            }
+        }
+
+        // ── Android: Recents. Tall cards side by side, the app above each; the picked one in the
+        //    middle at full size, the others peeking in smaller. Swipe a card up to close it. ──
+        Component {
+            id: androidC
+            ColumnLayout {
+                spacing: 12
+                ListView {
+                    id: recents
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    readonly property real ch: height - 52
+                    readonly property real cw: Math.min(width * 0.5, ch * 1.45)
+                    orientation: ListView.Horizontal
+                    spacing: 28
+                    model: Switcher.list
+                    currentIndex: Switcher.index
+                    highlightRangeMode: ListView.StrictlyEnforceRange
+                    preferredHighlightBegin: width / 2 - cw / 2
+                    preferredHighlightEnd: width / 2 + cw / 2
+                    highlightMoveDuration: Theme.durMed
+                    clip: false
+                    delegate: Item {
+                        id: rec
+                        required property var modelData
+                        required property int index
+                        readonly property bool sel: index === Switcher.index
+                        readonly property var toplevel: win.previews && win.shown ? (ToplevelManager.toplevels.values.find(t => t.appId === modelData.app_id && t.title === modelData.title) ?? null) : null
+                        width: recents.cw
+                        height: recents.height
+                        scale: sel ? 1 : 0.86
+                        opacity: sel ? 1 : 0.75
+                        Behavior on scale { Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+                        Behavior on opacity { Anim { duration: Theme.durMed } }
+
+                        // the app, above its card
+                        Row {
+                            id: appRow
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            spacing: 8
+                            AppIcon { anchors.verticalCenter: parent.verticalCenter; implicitSize: 30; name: Apps.iconFor(rec.modelData.app_id) }
+                            FText { anchors.verticalCenter: parent.verticalCenter; text: win.appName(rec.modelData); color: "#ffffff"; font.weight: Font.DemiBold; font.pixelSize: Theme.fsMd }
+                        }
+                        // the card: the window's picture, or its app on a soft wash; drag it up to close
+                        ClippingRectangle {
+                            id: rcard
+                            x: 0
+                            y: 44 + swipe.translation.y * (swipe.active ? 1 : 0)
+                            width: parent.width
+                            height: recents.ch
+                            radius: 28
+                            color: Theme.surfaceHigh
+                            border.width: rec.sel ? 2 : 0
+                            border.color: Theme.accent
+                            opacity: 1 - Math.max(0, -swipe.translation.y) / (recents.ch * 0.8)
+                            Behavior on y { enabled: !swipe.active; Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.springFast } }
+                            Rectangle {
+                                anchors.fill: parent
+                                gradient: Gradient {
+                                    GradientStop { position: 0; color: Theme.alpha(Theme.accent, 0.25) }
+                                    GradientStop { position: 1; color: Theme.alpha(Theme.accent3, 0.08) }
+                                }
+                            }
+                            ScreencopyView {
+                                anchors.fill: parent
+                                captureSource: rec.toplevel
+                                live: false
+                                visible: rec.toplevel !== null && hasContent
+                            }
+                            AppIcon {
+                                anchors.centerIn: parent
+                                visible: rec.toplevel === null
+                                implicitSize: Math.round(recents.cw * 0.22)
+                                name: Apps.iconFor(rec.modelData.app_id)
+                            }
+                            FText {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 16
+                                text: rec.modelData.title || ""
+                                elide: Text.ElideRight
+                                color: "#ffffff"
+                                style: Text.Outline
+                                styleColor: Theme.alpha(Theme.shadow, 0.5)
+                            }
+                            FIconButton {
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                anchors.margins: 10
+                                icon: "close"
+                                size: 34
+                                flat: false
+                                onClicked: Niri.closeWindow(rec.modelData.id)
+                            }
+                            TapHandler { onTapped: win.pick(rec.index) }
+                            DragHandler {
+                                id: swipe
+                                target: null
+                                xAxis.enabled: false
+                                // far enough up: the window closes
+                                onActiveChanged: if (!active && translation.y < -recents.ch * 0.28) Niri.closeWindow(rec.modelData.id)
+                            }
+                        }
+                    }
+                }
+                FText {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "Swipe a window up (or press Delete) to close it  ·  ← → to move  ·  release Alt to switch"
+                    color: Qt.rgba(1, 1, 1, 0.7)
+                    font.pixelSize: Theme.fsSm
                 }
             }
         }

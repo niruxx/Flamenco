@@ -22,6 +22,14 @@ ColumnLayout {
             size: Math.round(52 * root.k)
             fill: 1
             color: Theme.accent
+            // floats a few pixels up and down, slowly
+            transform: Translate { id: drift }
+            SequentialAnimation {
+                running: root.visible && !root.editing && Theme.speed > 0
+                loops: Animation.Infinite
+                NumberAnimation { target: drift; property: "y"; to: -3 * root.k; duration: 2200; easing.type: Easing.InOutSine }
+                NumberAnimation { target: drift; property: "y"; to: 3 * root.k; duration: 2200; easing.type: Easing.InOutSine }
+            }
         }
         ColumnLayout {
             spacing: 0

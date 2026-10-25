@@ -8,6 +8,8 @@ import qs.Commons
 //           along the top, a soft glow of the accent from below
 //   chrome  Y2K: metallic bands, a light bevel on top and a dark one below, and
 //           a faint iridescent sheen across
+//   liquid  Liquid Glass: a soft sheen falling from the top, a light rim and a faint
+//           inner edge, so see-through surfaces read as layered glass
 //   flat    nothing
 Item {
     id: root
@@ -36,6 +38,37 @@ Item {
         color: "transparent"
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.55 * root.strength)
+    }
+
+    // ── liquid glass ──
+    Rectangle {
+        visible: root.finish === "liquid"
+        anchors.fill: parent
+        radius: root.radius
+        gradient: Gradient {
+            GradientStop { position: 0; color: Qt.rgba(1, 1, 1, (Theme.dark ? 0.16 : 0.42) * root.strength) }
+            GradientStop { position: 0.32; color: Qt.rgba(1, 1, 1, (Theme.dark ? 0.04 : 0.12) * root.strength) }
+            GradientStop { position: 0.7; color: Qt.rgba(1, 1, 1, 0) }
+            GradientStop { position: 1; color: Qt.rgba(1, 1, 1, (Theme.dark ? 0.07 : 0.18) * root.strength) }
+        }
+    }
+    // the rim: bright glass edge, and a faint dark line just inside it for depth
+    Rectangle {
+        visible: root.finish === "liquid"
+        anchors.fill: parent
+        radius: root.radius
+        color: "transparent"
+        border.width: 1
+        border.color: Qt.rgba(1, 1, 1, (Theme.dark ? 0.28 : 0.7) * root.strength)
+    }
+    Rectangle {
+        visible: root.finish === "liquid"
+        anchors.fill: parent
+        anchors.margins: 1
+        radius: Math.max(0, root.radius - 1)
+        color: "transparent"
+        border.width: 1
+        border.color: Qt.rgba(0, 0, 0, (Theme.dark ? 0.25 : 0.06) * root.strength)
     }
 
     // ── chrome ──

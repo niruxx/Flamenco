@@ -276,7 +276,11 @@ Item {
         border.width: 1
         border.color: on ? Theme.alpha(Theme.accent, 0.55) : Theme.alpha(Theme.text, 0.05)
         Behavior on color { CAnim {} }
+        // pressed: it gives a little
+        scale: pillTap.pressed ? 0.97 : 1
+        Behavior on scale { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }
         StateLayer {
+            id: pillTap
             radius: pill.radius
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: mouse => mouse.button === Qt.RightButton && pill.hasDetail ? pill.detail() : pill.clicked()

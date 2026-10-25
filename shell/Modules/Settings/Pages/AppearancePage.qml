@@ -45,6 +45,16 @@ Page {
                  left: ["launcher", "taskbar"], center: [],
                  right: ["tray", "network", "bluetooth", "audio", "battery", "clock", "notifications", "quicksettings"] },
           dock: { enabled: false }, launcher: { position: "bottom-left" }, notifications: { position: "bottom-right" } },
+        { id: "liquidglass", label: "Liquid Glass", icon: "water_drop", hint: "A macOS-style menu bar and dock, see-through glass everywhere",
+          appearance: { palette: "glass", mode: "dark", accentOverride: "", finish: "liquid", roundness: 1.4, panelOpacity: 0.62, uiOpacity: 1,
+                        barOpacity: 0.55, popupOpacity: 0.7, switcherOpacity: 0.6, blur: true, screenFrame: false, blendPanels: false, shadows: true },
+          // the menu bar: the start button (the  menu), the app in front; status icons, then the clock last
+          bar: { position: "top", style: "attached", height: 32, border: false, hide: "never", workspaceStyle: "dots", batteryStyle: "pill", statsStyle: "text",
+                 statsTemp: false, clockLayout: "inline", clockAlign: "right", startIcon: "distro", startLabel: "",
+                 left: ["launcher", "window"], center: [],
+                 right: ["tray", "recording", "privacy", "battery", "network", "bluetooth", "audio", "quicksettings", "notifications", "clock"] },
+          dock: { enabled: true, position: "bottom", style: "classic", autoHide: false, magnify: true, zoom: 0.6, indicator: "dot", border: true, opacity: 0.85, roundness: 1.4 },
+          launcher: { position: "center" }, notifications: { position: "top-right" } },
         { id: "islands", label: "Islands", icon: "view_column_2", hint: "Three floating islands: app icons per workspace, ring gauges, battery shape, stacked clock",
           bar: { position: "top", style: "islands", height: 40, workspaceStyle: "apps", batteryStyle: "battery", statsStyle: "rings", statsTemp: true, clockLayout: "stacked", clockAlign: "center",
                  left: ["launcher", "separator", "workspaces", "window"], center: ["media", "visualizer"],
@@ -87,7 +97,7 @@ Page {
         // likewise the gloss / chrome finish and the rounder shapes of Aero and Y2K
         if (p.appearance?.finish === undefined)
             a.finish = "flat";
-        if (p.appearance?.roundness === undefined && (a.layoutPreset === "y2k" || a.layoutPreset === "aero"))
+        if (p.appearance?.roundness === undefined && ["y2k", "aero", "liquidglass"].includes(a.layoutPreset))
             a.roundness = 1;
         a.layoutPreset = p.id;
     }
@@ -372,12 +382,13 @@ Page {
         title: "Shape & surfaces"
         ChoiceRow {
             title: "Surface finish"
-            subtitle: page.a.finish === "gloss" ? "Glassy highlights, like Frutiger Aero" : page.a.finish === "chrome" ? "Metallic bands and an iridescent sheen, like Y2K" : "Plain surfaces"
+            subtitle: page.a.finish === "gloss" ? "Glassy highlights, like Frutiger Aero" : page.a.finish === "chrome" ? "Metallic bands and an iridescent sheen, like Y2K"
+                : page.a.finish === "liquid" ? "Layered glass: a soft sheen, a light rim and depth (best with see-through panels, Transparency)" : "Plain surfaces"
             icon: "texture"
             target: page.a
             key: "finish"
             segWidth: 100
-            options: [{ value: "flat", label: "Flat" }, { value: "gloss", label: "Gloss" }, { value: "chrome", label: "Chrome" }]
+            options: [{ value: "flat", label: "Flat" }, { value: "gloss", label: "Gloss" }, { value: "chrome", label: "Chrome" }, { value: "liquid", label: "Liquid glass" }]
         }
         SliderRow { title: "Corner roundness"; icon: "rounded_corner"; target: page.a; key: "roundness"; from: 0; to: 1.6; factor: 100; suffix: "%" }
         SwitchRow { title: "Drop shadows"; icon: "shadow"; target: page.a; key: "shadows" }

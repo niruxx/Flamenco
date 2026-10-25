@@ -21,6 +21,22 @@ ColumnLayout {
             font.pixelSize: Math.round(76 * root.k)
             font.weight: Font.Light
             font.letterSpacing: -2
+            // a new minute: the time slips up and fades back in
+            transform: Translate { id: tick }
+            Behavior on text {
+                SequentialAnimation {
+                    ParallelAnimation {
+                        NumberAnimation { target: hm; property: "opacity"; to: 0; duration: Theme.durShort }
+                        NumberAnimation { target: tick; property: "y"; to: -8 * root.k; duration: Theme.durShort }
+                    }
+                    PropertyAction {}
+                    PropertyAction { target: tick; property: "y"; value: 8 * root.k }
+                    ParallelAnimation {
+                        NumberAnimation { target: hm; property: "opacity"; to: 1; duration: Theme.durMed }
+                        NumberAnimation { target: tick; property: "y"; to: 0; duration: Theme.durMed; easing.type: Easing.OutCubic }
+                    }
+                }
+            }
         }
         FText {
             visible: !Time.use24h

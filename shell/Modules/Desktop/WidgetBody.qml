@@ -19,6 +19,33 @@ Item {
     implicitHeight: content.implicitHeight + pad * 2
     width: implicitWidth
     height: implicitHeight
+    // a size change (S / M / L) grows or shrinks it instead of jumping
+    Behavior on width { Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+    Behavior on height { Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+
+    // ── a little life: it pops in when it appears, lifts a touch under the pointer ──
+    // (on an inner layer: the desktop drives this item's own opacity and position at login)
+    property real appear: 0
+    Component.onCompleted: popIn.start()
+    NumberAnimation {
+        id: popIn
+        target: body
+        property: "appear"
+        from: 0
+        to: 1
+        duration: Theme.durLong
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Theme.curves.spring
+    }
+    HoverHandler { id: lift }
+    readonly property bool lifted: lift.hovered && !editing && Theme.hoverZoom
+
+    Item {
+        id: face
+        anchors.fill: parent
+        opacity: Math.min(1, body.appear)
+        scale: (0.92 + 0.08 * body.appear) * (body.lifted ? 1.025 : 1)
+        Behavior on scale { enabled: body.appear >= 1; Anim { duration: Theme.durMed; easing.bezierCurve: Theme.curves.springFast } }
 
     Rectangle {
         anchors.fill: parent
@@ -26,7 +53,9 @@ Item {
         radius: Theme.rXl
         color: body.cfg.style === "glass" ? Theme.alpha(Theme.bg, 0.15 + 0.3 * body.cfg.opacity) : Theme.alpha(Theme.surface, body.cfg.opacity)
         border.width: 1
-        border.color: body.cfg.style === "glass" ? Theme.alpha(Theme.text, 0.16) : Theme.alpha(Theme.border, 0.6)
+        // its edge brightens while the pointer is on it
+        border.color: body.lifted ? Theme.alpha(Theme.accent, 0.55) : body.cfg.style === "glass" ? Theme.alpha(Theme.text, 0.16) : Theme.alpha(Theme.border, 0.6)
+        Behavior on border.color { CAnim {} }
     }
 
     Loader {
@@ -47,6 +76,7 @@ Item {
             shadowBlur: 0.5
             blurMax: 16
         }
+    }
     }
 
     Component { id: clockC; ClockWidget {} }

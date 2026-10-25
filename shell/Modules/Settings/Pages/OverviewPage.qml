@@ -98,15 +98,19 @@ Page {
             subtitle: "Your windows as cards, most recent first. Hold Alt and press Tab to move, let go to switch."
             icon: "select_window"
         }
-        ChoiceRow {
+        DropdownRow {
             title: "Layout"
             subtitle: ({ cards: "Cards in a row, the picked one lifted", grid: "Bigger cards in rows (↑ ↓ move a row)", list: "One window per line, with its workspace",
-                    icons: "Big app icons, the picked window's title under them", compact: "A slim pill of icons; the picked one opens up with its title" })[Settings.data.switcher.layout || "cards"] ?? ""
+                    icons: "Big app icons, the picked window's title under them", compact: "A slim pill of icons; the picked one opens up with its title",
+                    fullmaterial: "The whole screen: a Material surface with your windows as big cards in a grid",
+                    fullcards: "The whole screen: big cards in a row, the picked one forward and the rest set back",
+                    android: "Like Android's Recents: tall cards side by side, the app above each; swipe one up (or Delete) to close it" })[Settings.data.switcher.layout || "cards"] ?? ""
             icon: "view_quilt"
             target: Settings.data.switcher
             key: "layout"
-            segWidth: 92
-            options: [{ value: "cards", label: "Cards" }, { value: "grid", label: "Grid" }, { value: "list", label: "List" }, { value: "icons", label: "Icons" }, { value: "compact", label: "Compact" }]
+            options: [{ value: "cards", label: "Cards" }, { value: "grid", label: "Grid" }, { value: "list", label: "List" }, { value: "icons", label: "Icons" },
+                { value: "compact", label: "Compact" }, { value: "fullmaterial", label: "Full screen · Material" }, { value: "fullcards", label: "Full screen · Cards" },
+                { value: "android", label: "Android (Recents)" }]
         }
         ChoiceRow {
             title: "Style"
