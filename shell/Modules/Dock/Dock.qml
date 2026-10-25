@@ -125,11 +125,11 @@ Variants {
             readonly property real along: win.revealed ? win.restLength + win.pad * 2 + win.iconSize * 2 + 24 : (win.vertical ? win.height : win.width)
             width: win.vertical ? across : along
             height: win.vertical ? along : across
-            anchors.bottom: win.edge === "bottom" ? parent.bottom : undefined
-            anchors.left: win.edge === "left" ? parent.left : undefined
-            anchors.right: win.edge === "right" ? parent.right : undefined
-            anchors.horizontalCenter: win.vertical ? undefined : parent.horizontalCenter
-            anchors.verticalCenter: win.vertical ? parent.verticalCenter : undefined
+            // placed with x / y, not anchors: anchors switched by bindings (bottom → left…) can
+            // briefly conflict when the dock moves to another edge, and Qt then drops one,
+            // leaving things where the old edge put them
+            x: win.edge === "left" ? 0 : win.edge === "right" ? parent.width - width : (parent.width - width) / 2
+            y: win.edge === "bottom" ? parent.height - height : (parent.height - height) / 2
         }
 
         HoverHandler {
@@ -157,12 +157,9 @@ Variants {
             property real shift: win.revealed ? 0 : win.thickness + win.margin * 2
             Behavior on shift { Anim { duration: Theme.durA("dock", 450); easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
-            anchors.bottom: win.edge === "bottom" ? parent.bottom : undefined
-            anchors.left: win.edge === "left" ? parent.left : undefined
-            anchors.right: win.edge === "right" ? parent.right : undefined
-            anchors.margins: win.margin
-            anchors.horizontalCenter: win.vertical ? undefined : parent.horizontalCenter
-            anchors.verticalCenter: win.vertical ? parent.verticalCenter : undefined
+            // x / y rather than anchors (see the hit area)
+            x: win.edge === "left" ? win.margin : win.edge === "right" ? parent.width - width - win.margin : (parent.width - width) / 2
+            y: win.edge === "bottom" ? parent.height - height - win.margin : (parent.height - height) / 2
             // after logging in it slides up from the edge (SessionFx.revealDock)
             readonly property real loginShift: (1 - SessionFx.revealDock) * (win.thickness + win.margin * 2 + 12)
             opacity: SessionFx.revealDock
@@ -193,12 +190,9 @@ Variants {
                 // icons grow away from the screen edge
                 verticalItemAlignment: Grid.AlignBottom
                 horizontalItemAlignment: win.edge === "right" ? Grid.AlignRight : Grid.AlignLeft
-                anchors.bottom: win.edge === "bottom" ? parent.bottom : undefined
-                anchors.left: win.edge === "left" ? parent.left : undefined
-                anchors.right: win.edge === "right" ? parent.right : undefined
-                anchors.margins: win.pad
-                anchors.horizontalCenter: win.vertical ? undefined : parent.horizontalCenter
-                anchors.verticalCenter: win.vertical ? parent.verticalCenter : undefined
+                // x / y rather than anchors (see the hit area): the icons sit on the dock's edge side
+                x: win.edge === "left" ? win.pad : win.edge === "right" ? parent.width - width - win.pad : (parent.width - width) / 2
+                y: win.edge === "bottom" ? parent.height - height - win.pad : (parent.height - height) / 2
 
                 Repeater {
                     // ScriptModel diffs by value, so unchanged ids keep their delegates
@@ -299,12 +293,8 @@ Variants {
                             readonly property bool dot: win.cfg.indicator === "dot"
                             readonly property real len: dot ? (app.windows.length > 0 ? 5 : 0) : app.focused ? 16 : app.windows.length > 0 ? 6 : 0
                             visible: !app.sep && !app.part && win.cfg.indicator !== "none"
-                            anchors.top: win.edge === "bottom" ? parent.bottom : undefined
-                            anchors.right: win.edge === "left" ? parent.left : undefined
-                            anchors.left: win.edge === "right" ? parent.right : undefined
-                            anchors.margins: 2
-                            anchors.horizontalCenter: win.vertical ? undefined : parent.horizontalCenter
-                            anchors.verticalCenter: win.vertical ? parent.verticalCenter : undefined
+                            x: win.edge === "left" ? -width - 2 : win.edge === "right" ? parent.width + 2 : (parent.width - width) / 2
+                            y: win.edge === "bottom" ? parent.height + 2 : (parent.height - height) / 2
                             width: win.vertical ? (dot ? len : 4) : len
                             height: win.vertical ? len : (dot ? len : 4)
                             radius: Math.min(width, height) / 2
@@ -316,12 +306,8 @@ Variants {
                         // the app's name, on the side away from the edge
                         Rectangle {
                             visible: win.cfg.labels && !app.sep && !app.part && area.containsMouse
-                            anchors.bottom: win.edge === "bottom" ? parent.top : undefined
-                            anchors.left: win.edge === "left" ? parent.right : undefined
-                            anchors.right: win.edge === "right" ? parent.left : undefined
-                            anchors.margins: 8
-                            anchors.horizontalCenter: win.vertical ? undefined : parent.horizontalCenter
-                            anchors.verticalCenter: win.vertical ? parent.verticalCenter : undefined
+                            x: win.edge === "left" ? parent.width + 8 : win.edge === "right" ? -width - 8 : (parent.width - width) / 2
+                            y: win.edge === "bottom" ? -height - 8 : (parent.height - height) / 2
                             width: label.implicitWidth + 20
                             height: label.implicitHeight + 10
                             radius: height / 2

@@ -19,6 +19,9 @@ Rectangle {
     implicitHeight: 40
     radius: height / 2
     color: Theme.alpha(Theme.text, 0.06)
+    // the same faint edge as the tiles beside it
+    border.width: 1
+    border.color: Theme.alpha(Theme.text, 0.05)
     clip: true
 
     Rectangle {
@@ -33,16 +36,19 @@ Rectangle {
         }
         Behavior on width { enabled: !drag.pressed; Anim { duration: Theme.durShort } }
 
-        // the handle
+        // the handle: a short bar, half the slider's height, inside the fill (hidden while
+        // the fill is just the circle under the icon, where it read as a stray line)
         Rectangle {
+            visible: parent.width > root.height + 6
             anchors.right: parent.right
-            anchors.rightMargin: 6
+            anchors.rightMargin: Math.round(root.height * 0.22)
             anchors.verticalCenter: parent.verticalCenter
             width: 4
-            height: parent.height - 14
+            height: Math.round(root.height * 0.45)
             radius: 2
             color: Theme.onAccent
-            opacity: 0.85
+            opacity: drag.pressed ? 0.95 : 0.7
+            Behavior on opacity { Anim { duration: Theme.durShort } }
         }
     }
 

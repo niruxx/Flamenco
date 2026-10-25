@@ -80,7 +80,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.44.1"
+VERSION = "0.46.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -7475,6 +7475,187 @@ def restore() -> int:
     return 0
 
 
+# ─────────────────────────────── UI icons from an icon theme ─────────────────
+# Settings → Appearance → UI icons: the shell's own icons (Material Symbols names)
+# drawn from an installed icon theme (Adwaita, Papirus, Breeze…) instead. Each
+# Material name maps to freedesktop / Adwaita names to try; `icons map THEME`
+# looks them up through the theme and what it inherits (hicolor last), the
+# "-symbolic" ones first (one color, so the shell tints them), and prints
+# {material: {p: path, s: symbolic}}. Names a theme lacks stay Material Symbols.
+
+UI_ICON_MAP = {
+    # system and status
+    "wifi": ["network-wireless-signal-excellent", "network-wireless"], "wifi_off": ["network-wireless-offline", "network-wireless-disabled"],
+    "signal_wifi_4_bar": ["network-wireless-signal-excellent"], "network_wifi_3_bar": ["network-wireless-signal-good"],
+    "network_wifi_2_bar": ["network-wireless-signal-ok"], "network_wifi_1_bar": ["network-wireless-signal-weak"],
+    "signal_wifi_statusbar_not_connected": ["network-wireless-no-route", "network-wireless-offline"],
+    "wifi_find": ["network-wireless-acquiring"], "wifi_password": ["network-wireless-encrypted"],
+    "lan": ["network-wired"], "settings_ethernet": ["network-wired"], "router": ["network-workgroup", "network-server"],
+    "network_check": ["network-transmit-receive"], "vpn_key": ["network-vpn"], "vpn_lock": ["network-vpn"], "vpn_key_off": ["network-vpn-disabled", "network-vpn"],
+    "bluetooth": ["bluetooth-active", "bluetooth"], "bluetooth_connected": ["bluetooth-active"], "bluetooth_disabled": ["bluetooth-disabled"],
+    "volume_up": ["audio-volume-high"], "volume_down": ["audio-volume-medium"], "volume_mute": ["audio-volume-low"], "volume_off": ["audio-volume-muted"],
+    "mic": ["audio-input-microphone"], "mic_off": ["microphone-sensitivity-muted", "audio-input-microphone-muted"],
+    "speaker": ["audio-speakers", "audio-card"], "headphones": ["audio-headphones"], "graphic_eq": ["audio-x-generic", "multimedia-equalizer"],
+    "battery_full": ["battery-full", "battery-level-100"], "battery_charging_full": ["battery-full-charging", "battery-level-100-charging"],
+    "battery_5_bar": ["battery-good"], "battery_alert": ["battery-caution", "battery-empty"], "battery_saver": ["power-profile-power-saver", "battery-good"],
+    "brightness_6": ["display-brightness"], "brightness_low": ["display-brightness-low", "display-brightness"], "brightness_4": ["display-brightness"],
+    "nightlight": ["night-light"], "bedtime": ["night-light", "weather-clear-night"], "dark_mode": ["weather-clear-night", "night-light"], "light_mode": ["weather-clear"],
+    "contrast": ["display-brightness", "applications-graphics"],
+    "power_settings_new": ["system-shutdown"], "power": ["system-shutdown"], "logout": ["system-log-out"], "exit_to_app": ["system-log-out"], "login": ["system-users"],
+    "restart_alt": ["system-reboot", "view-refresh"], "lock": ["system-lock-screen", "changes-prevent"], "lock_open": ["changes-allow"], "lock_clock": ["system-lock-screen"],
+    "bolt": ["power-profile-performance", "battery-full-charging"], "eco": ["power-profile-power-saver"], "balance": ["power-profile-balanced"], "speed": ["power-profile-performance"],
+    "rocket_launch": ["power-profile-performance"],
+    "notifications": ["preferences-system-notifications", "notification"], "notifications_active": ["preferences-system-notifications"],
+    "notifications_unread": ["notification-new", "preferences-system-notifications"], "notifications_off": ["notifications-disabled", "notification-disabled"],
+    "do_not_disturb_on": ["notifications-disabled", "action-unavailable"],
+    "coffee": ["caffeine-cup-full", "preferences-desktop-screensaver"], "screen_record": ["media-record"], "stop_circle": ["media-playback-stop"],
+    "screenshot_region": ["screenshot-recorded", "applets-screenshooter"], "screenshot_monitor": ["applets-screenshooter", "camera-photo"], "screenshot_frame": ["applets-screenshooter"],
+    "colorize": ["color-select", "applications-graphics"], "palette": ["preferences-desktop-theme", "applications-graphics"], "format_paint": ["preferences-desktop-theme"],
+    "wallpaper": ["preferences-desktop-wallpaper"], "image": ["image-x-generic"], "photo": ["image-x-generic"], "add_photo_alternate": ["insert-image"],
+    "photo_camera": ["camera-photo"], "videocam": ["camera-video", "camera-web"], "movie": ["video-x-generic"], "video_library": ["folder-videos"],
+    "monitor": ["video-display"], "desktop_windows": ["video-display", "computer"], "computer": ["computer"], "tv": ["video-display"], "developer_board": ["computer"],
+    "memory": ["computer", "drive-harddisk"], "memory_alt": ["computer"], "storage": ["drive-harddisk"], "hard_drive": ["drive-harddisk"],
+    "keyboard": ["input-keyboard"], "mouse": ["input-mouse"], "touch_app": ["input-touchpad"], "print": ["printer"], "print_add": ["printer"], "print_disabled": ["printer-error", "printer"],
+    "fingerprint": ["fingerprint", "auth-fingerprint"], "key": ["dialog-password", "channel-secure"], "password": ["dialog-password"], "shield": ["security-high"],
+    "verified_user": ["security-high"], "admin_panel_settings": ["security-high", "system-users"], "health_and_safety": ["security-high", "emblem-ok"],
+    "account_circle": ["avatar-default", "system-users"], "person": ["avatar-default"], "person_add": ["contact-new", "list-add"], "person_remove": ["list-remove"],
+    "group": ["system-users"], "group_add": ["system-users"], "manage_accounts": ["system-users", "preferences-system"], "badge": ["contact-new", "avatar-default"],
+    # apps, places and things
+    "apps": ["view-app-grid", "view-grid"], "grid_view": ["view-grid"], "dashboard": ["view-grid"], "dashboard_customize": ["view-grid"], "widgets": ["view-grid", "applications-other"],
+    "space_dashboard": ["view-grid"], "view_module": ["view-grid"], "view_list": ["view-list"], "view_column": ["view-dual", "view-paged"], "view_quilt": ["view-grid"],
+    "view_carousel": ["view-paged", "view-grid"], "workspaces": ["view-paged", "workspace-switcher"], "overview_key": ["view-app-grid", "view-grid"],
+    "select_window": ["preferences-system-windows", "window-new"], "picture_in_picture": ["view-restore", "window-restore"], "web_asset": ["window-new"],
+    "terminal": ["utilities-terminal"], "code": ["text-x-script", "applications-development"], "folder": ["folder"], "folder_open": ["folder-open"],
+    "description": ["text-x-generic"], "sticky_note_2": ["accessories-text-editor", "text-x-generic"], "content_paste": ["edit-paste"], "content_copy": ["edit-copy"],
+    "calendar_month": ["x-office-calendar"], "event": ["x-office-calendar"], "today": ["x-office-calendar"], "event_upcoming": ["x-office-calendar"], "edit_calendar": ["x-office-calendar"],
+    "date_range": ["x-office-calendar"], "schedule": ["preferences-system-time", "appointment-soon"], "more_time": ["preferences-system-time"], "timer": ["alarm", "preferences-system-time"],
+    "timer_off": ["alarm"], "hourglass_bottom": ["preferences-system-time"], "history": ["document-open-recent"], "update": ["software-update-available"],
+    "system_update": ["software-update-available", "system-software-update"], "system_update_alt": ["software-update-available"],
+    "music_note": ["audio-x-generic", "folder-music"], "music_off": ["audio-x-generic"], "library_music": ["folder-music"], "album": ["media-optical"],
+    "play_arrow": ["media-playback-start"], "pause": ["media-playback-pause"], "stop": ["media-playback-stop"], "skip_next": ["media-skip-forward"],
+    "skip_previous": ["media-skip-backward"], "shuffle": ["media-playlist-shuffle"], "play_circle": ["media-playback-start"],
+    "mail": ["mail-unread", "mail-message"], "send": ["mail-send"], "chat": ["user-available", "mail-message-new"], "chat_bubble": ["mail-message-new"], "forum": ["system-users"],
+    "language": ["preferences-desktop-locale", "web-browser"], "public": ["preferences-desktop-locale", "web-browser"], "web": ["web-browser"], "travel_explore": ["web-browser", "system-search"],
+    "cloud": ["weather-overcast"], "cloud_off": ["network-offline"], "cloud_sync": ["emblem-synchronizing", "weather-overcast"], "cloud_circle": ["weather-overcast"],
+    "sync": ["emblem-synchronizing", "view-refresh"], "sync_alt": ["emblem-synchronizing"], "autorenew": ["view-refresh"], "refresh": ["view-refresh"],
+    "download": ["folder-download", "document-save"], "downloading": ["folder-download"], "upload_file": ["document-send"], "publish": ["document-send"], "save": ["document-save"],
+    "inventory_2": ["package-x-generic"], "deployed_code": ["package-x-generic"], "deployed_code_history": ["package-x-generic"], "extension": ["application-x-addon", "applications-other"],
+    "extension_off": ["application-x-addon"], "category": ["applications-other"], "storefront": ["system-software-install"], "videogame_asset": ["applications-games", "input-gaming"],
+    "auto_awesome": ["starred", "emblem-favorite"], "star": ["starred"], "neurology": ["dialog-information"], "psychology": ["dialog-information"], "assistant": ["dialog-information"],
+    "location_on": ["mark-location", "find-location"], "location_off": ["mark-location"], "map": ["mark-location"],
+    "partly_cloudy_day": ["weather-few-clouds"], "partly_cloudy_night": ["weather-few-clouds-night"], "clear_night": ["weather-clear-night"], "wb_sunny": ["weather-clear"],
+    "wb_twilight": ["daytime-sunset", "weather-clear"], "weather_snowy": ["weather-snow"], "thunderstorm": ["weather-storm"], "rainy": ["weather-showers"], "foggy": ["weather-fog"],
+    "air": ["weather-windy"], "humidity_percentage": ["weather-showers"], "water_drop": ["weather-showers"], "thermostat": ["temperature", "sensors-temperature"],
+    # actions
+    "settings": ["emblem-system", "preferences-system"], "tune": ["preferences-other", "configure"], "settings_applications": ["preferences-system"],
+    "settings_backup_restore": ["document-revert"], "search": ["system-search", "edit-find"], "close": ["window-close"], "cancel": ["window-close"], "add": ["list-add"],
+    "add_circle": ["list-add"], "remove": ["list-remove"], "delete": ["user-trash", "edit-delete"], "delete_sweep": ["user-trash-full", "edit-clear-all"], "clear_all": ["edit-clear-all"],
+    "edit": ["document-edit", "edit"], "check": ["object-select", "emblem-ok"], "done": ["object-select"], "check_circle": ["emblem-ok", "object-select"],
+    "info": ["dialog-information"], "help": ["help-browser", "help-about"], "warning": ["dialog-warning"], "error": ["dialog-error"], "block": ["action-unavailable"],
+    "undo": ["edit-undo"], "redo": ["edit-redo"], "open_in_new": ["external-link", "window-new"], "link": ["insert-link"], "menu": ["open-menu"], "more_horiz": ["view-more-horizontal", "view-more"],
+    "more_vert": ["view-more"], "chevron_right": ["go-next"], "chevron_left": ["go-previous"], "arrow_back": ["go-previous"], "arrow_forward": ["go-next"],
+    "arrow_upward": ["go-up"], "arrow_downward": ["go-down"], "expand_more": ["pan-down", "go-down"], "expand_less": ["pan-up", "go-up"], "unfold_more": ["pan-down"],
+    "fullscreen": ["view-fullscreen"], "open_in_full": ["view-fullscreen"], "close_fullscreen": ["view-restore"], "zoom_in": ["zoom-in"], "zoom_out_map": ["zoom-fit-best"],
+    "visibility": ["view-reveal"], "visibility_off": ["view-conceal"], "push_pin": ["view-pin"], "pin": ["view-pin"], "filter_9_plus": ["view-filter"],
+    "drag_indicator": ["list-drag-handle"], "swap_horiz": ["object-flip-horizontal"], "swap_vert": ["object-flip-vertical"], "open_with": ["transform-move"],
+    "crop_free": ["transform-crop"], "crop": ["transform-crop"], "aspect_ratio": ["zoom-fit-best"], "rotate_right": ["object-rotate-right"], "screen_rotation": ["object-rotate-right"],
+    "content_cut": ["edit-cut"], "slideshow": ["media-playlist-repeat"], "casino": ["media-playlist-shuffle"], "toggle_on": ["object-select"], "list": ["view-list"],
+    "format_list_bulleted": ["view-list"], "font_download": ["preferences-desktop-font"], "format_size": ["preferences-desktop-font"], "title": ["preferences-desktop-font"],
+    "calculate": ["accessories-calculator"], "receipt_long": ["text-x-generic"], "menu_book": ["accessories-dictionary", "help-contents"], "dns": ["network-server"],
+    "hub": ["network-workgroup"], "radar": ["network-wireless-acquiring"], "share": ["emblem-shared"], "screen_share": ["emblem-shared", "video-display"],
+    "self_improvement": ["emblem-favorite", "face-smile"], "mood": ["face-smile"], "waving_hand": ["face-smile"], "celebration": ["face-smile"],
+    "accessibility_new": ["preferences-desktop-accessibility"], "emergency_home": ["dialog-warning"], "local_fire_department": ["starred"],
+}
+UI_ICON_CACHE = XDG_CACHE / "flamenco" / "ui-icons"
+
+
+def icon_theme_root(name: str) -> Path | None:
+    for base in [HOME / ".icons"] + [d / "icons" for d in data_dirs()]:
+        p = base / name
+        if (p / "index.theme").is_file() or p.is_dir():
+            return p
+    return None
+
+
+def icon_theme_chain(name: str) -> list[Path]:
+    chain, seen, todo = [], set(), [name]
+    while todo:
+        n = todo.pop(0)
+        if n in seen:
+            continue
+        seen.add(n)
+        root = icon_theme_root(n)
+        if not root:
+            continue
+        chain.append(root)
+        inh = read_index(root / "index.theme").get("Icon Theme", "Inherits", fallback="")
+        todo += [x.strip() for x in inh.split(",") if x.strip()]
+    for fallback in ("Adwaita", "hicolor"):
+        r = icon_theme_root(fallback) if fallback not in seen else None
+        if r:
+            chain.append(r)
+    return chain
+
+
+def icon_index(root: Path) -> dict[str, str]:
+    """name → the best file for it in one theme folder: SVG first, then the biggest PNG."""
+    best: dict[str, tuple[int, str]] = {}
+    for f in root.rglob("*"):
+        if f.suffix not in (".svg", ".png") or not f.is_file():
+            continue
+        parts = f.parent.parts
+        size = 10000 if f.suffix == ".svg" else next((int(x.split("x")[0]) for x in reversed(parts) if re.fullmatch(r"\d+x\d+(@\d+)?", x)), 1)
+        if f.stem not in best or size > best[f.stem][0]:
+            best[f.stem] = (size, str(f))
+    return {k: v[1] for k, v in best.items()}
+
+
+def ui_icon_map(theme: str) -> dict:
+    chain = icon_theme_chain(theme)
+    if not chain:
+        return {}
+    # cached per theme until one of its folders changes
+    stamp = max((p.stat().st_mtime for p in chain), default=0)
+    cache = UI_ICON_CACHE / (re.sub(r"[^\w.-]", "_", theme) + ".json")
+    try:
+        c = json.loads(cache.read_text())
+        if c.get("stamp") == stamp and c.get("version") == 1:
+            return c["map"]
+    except (OSError, ValueError, KeyError):
+        pass
+    indexes = [icon_index(r) for r in chain]
+    out = {}
+    for material, names in UI_ICON_MAP.items():
+        hit = None
+        # symbolic (one color) first, through the whole chain; then the full-color ones
+        for symbolic in (True, False):
+            for n in names:
+                want = n + "-symbolic" if symbolic else n
+                for idx in indexes:
+                    if want in idx:
+                        hit = {"p": idx[want], "s": symbolic or idx[want].endswith("-symbolic.svg")}
+                        break
+                if hit:
+                    break
+            if hit:
+                break
+        if hit:
+            out[material] = hit
+    UI_ICON_CACHE.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps({"version": 1, "stamp": stamp, "map": out}))
+    return out
+
+
+def cmd_icons(args: list[str]) -> int:
+    if args[:1] == ["map"] and len(args) > 1:
+        print(json.dumps(ui_icon_map(args[1])))
+        return 0
+    if args[:1] == ["names"]:
+        print("\n".join(sorted(UI_ICON_MAP)))
+        return 0
+    die("usage: flamenco icons map THEME | names")
+
+
 # ─────────────────────────────── installed themes ────────────────────────────
 
 def data_dirs() -> list[Path]:
@@ -9294,6 +9475,8 @@ def main(argv: list[str]) -> int:
         return cmd_accounts(rest)
     if cmd == "datetime":
         return cmd_datetime(rest)
+    if cmd == "icons":
+        return cmd_icons(rest)
     if cmd == "updates":
         return cmd_updates(rest)
     if cmd == "emoji":

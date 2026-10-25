@@ -549,9 +549,22 @@ Page {
             }
         }
         SliderRow { title: "Scale"; icon: "format_size"; target: page.a; key: "uiScale"; from: 0.8; to: 1.4; stepSize: 0.05; factor: 100; suffix: "%" }
+        DropdownRow {
+            title: "UI icons"
+            subtitle: (page.a.uiIcons || "flamenco") === "flamenco" ? "Flamenco's own (Material Symbols) in the bar, quick settings, Settings and everywhere else"
+                : UiIcons.loading ? "Looking up " + UiIcons.theme + "'s icons…"
+                : UiIcons.theme === "" ? "No icon theme is set for apps yet (App Theming → Icon theme)"
+                : UiIcons.count + " of the shell's icons come from " + UiIcons.theme + "; the rest stay Flamenco's. Back to Flamenco to undo"
+            icon: "category"
+            target: page.a
+            key: "uiIcons"
+            options: [{ value: "flamenco", label: "Flamenco (built in)" }, { value: "apps", label: "Same as apps" + (Settings.data.apps.iconTheme ? " (" + Settings.data.apps.iconTheme + ")" : "") }]
+                .concat((AppTheming.installed.icons || []).filter(t => t.value))
+            Component.onCompleted: AppTheming.refreshInstalled()
+        }
         ChoiceRow {
             title: "Icons"
-            subtitle: "Material Symbols. Filled is the newer Material 3 look; outlined fills only what's active."
+            subtitle: (page.a.uiIcons || "flamenco") === "flamenco" ? "Material Symbols. Filled is the newer Material 3 look; outlined fills only what's active." : "For Flamenco's own icons (the ones the icon theme doesn't have)"
             icon: "interests"
             target: page.a
             key: "iconStyle"

@@ -40,7 +40,7 @@ Scope {
         width: Math.max(1, Math.ceil(size))
         height: width
         visible: size > 0.5
-        readonly property color c: root.tone
+        property color c: "black"     // the bar's color (inline components can't see this file's ids)
         onCChanged: requestPaint()
         onWidthChanged: requestPaint()
         onPaint: {
@@ -90,10 +90,10 @@ Scope {
             Rectangle { visible: !(root.barEdge === "right" && root.barHolds); x: win.width - win.iR; y: win.iT; width: win.iR; height: win.height - win.iT - win.iB; color: root.tone }
 
             // the rounded corners of the desktop, inside the frame
-            Corner { size: win.fr; x: win.iL; y: win.iT; rotation: 0 }
-            Corner { size: win.fr; x: win.width - win.iR - width; y: win.iT; rotation: 90 }
-            Corner { size: win.fr; x: win.width - win.iR - width; y: win.height - win.iB - height; rotation: 180 }
-            Corner { size: win.fr; x: win.iL; y: win.height - win.iB - height; rotation: 270 }
+            Corner { c: root.tone; size: win.fr; x: win.iL; y: win.iT; rotation: 0 }
+            Corner { c: root.tone; size: win.fr; x: win.width - win.iR - width; y: win.iT; rotation: 90 }
+            Corner { c: root.tone; size: win.fr; x: win.width - win.iR - width; y: win.height - win.iB - height; rotation: 180 }
+            Corner { c: root.tone; size: win.fr; x: win.iL; y: win.height - win.iB - height; rotation: 270 }
         }
     }
 

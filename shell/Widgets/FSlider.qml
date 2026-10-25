@@ -59,10 +59,11 @@ Item {
 
             Behavior on color { CAnim {} }
 
-            // handle line
+            // handle line: half the track's height, inside the fill (hidden at its minimum)
             Rectangle {
+                visible: parent.width > parent.height + 6
                 width: 4
-                height: parent.height - 12
+                height: Math.max(6, Math.round(parent.height * 0.5))
                 radius: 2
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.right: parent.right

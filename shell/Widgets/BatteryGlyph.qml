@@ -48,11 +48,13 @@ Item {
     implicitHeight: lay.implicitHeight
 
     // ── a sweep of light through a fill while charging ──
+    // (inline components can't see this file's ids: whether it runs is passed in)
     component Sweep: Item {
         id: sweep
+        property bool on: false
         anchors.fill: parent
         clip: true
-        visible: root.charging && root.animate
+        visible: on
         Rectangle {
             width: sweep.width * 0.6
             height: sweep.height
@@ -63,7 +65,7 @@ Item {
                 GradientStop { position: 1; color: "transparent" }
             }
             NumberAnimation on x {
-                running: sweep.visible && root.visible
+                running: sweep.visible
                 from: -sweep.width * 0.6
                 to: sweep.width
                 duration: 1600
@@ -129,7 +131,7 @@ Item {
                     radius: Math.max(1, parent.radius - 2)
                     color: root.fill
                     Behavior on width { Anim {} }
-                    Sweep {}
+                    Sweep { on: root.charging && root.animate && root.visible }
                 }
                 Row {
                     visible: !body.parent.slim
@@ -349,7 +351,7 @@ Item {
                     radius: cap.radius
                     color: root.fill
                     Behavior on width { Anim {} }
-                    Sweep {}
+                    Sweep { on: root.charging && root.animate && root.visible }
                 }
             }
             Row {
@@ -442,7 +444,7 @@ Item {
                     radius: parent.radius
                     color: root.fill
                     Behavior on width { Anim {} }
-                    Sweep {}
+                    Sweep { on: root.charging && root.animate && root.visible }
                 }
             }
         }

@@ -80,6 +80,9 @@ Singleton {
                 property string fontFamily: "Google Sans Flex"
                 property string monoFamily: "Google Sans Code"
                 property string iconStyle: "filled"     // filled | outlined
+                // the shell's own icons: flamenco (Material Symbols, built in) | apps (the icon theme
+                // apps use, App Theming) | any installed icon theme's name
+                property string uiIcons: "flamenco"
                 property bool blendPanels: false        // panels connect to the bar, no gap (like DMS)
                 // switch dark ↔ light by itself: off | sun (sunset / sunrise) | schedule
                 property string autoMode: "off"
@@ -223,6 +226,8 @@ Singleton {
             // The app switcher (Alt+Tab)
             property JsonObject switcher: JsonObject {
                 property bool previews: false         // pictures of the windows on the cards, where the compositor allows it
+                property string layout: "cards"       // cards | grid | list | icons | compact
+                property string look: "tonal"         // Material 3: tonal | filled | outlined
             }
 
             // Noctalia and DMS plugins turned on (Settings → Plugins (3rd party)): "noctalia/<id>", "dms/<id>"

@@ -298,18 +298,18 @@ Variants {
                 editing: true
             }
         }
-    }
 
-    // the photo frame's picture chooser
-    Process {
-        id: photoPick
-        property string target
-        command: [Paths.bin, "pick", "image", Paths.home + "/Pictures"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const p = text.trim();
-                if (p && photoPick.target)
-                    Desk.update(photoPick.target, { path: p });
+        // the photo frame's picture chooser
+        Process {
+            id: photoPick
+            property string target
+            command: [Paths.bin, "pick", "image", Paths.home + "/Pictures"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const p = text.trim();
+                    if (p && photoPick.target)
+                        Desk.update(photoPick.target, { path: p });
+                }
             }
         }
     }

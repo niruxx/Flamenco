@@ -103,6 +103,53 @@ for f in files:
             if here not in homes[t] and not homes[t] & visible:
                 report(f, f"{line(m.start())}: {t} is defined in {'/'.join(sorted(homes[t]))} but not imported")
 
+    # Variants and LazyLoader make one object: a second one inside fails the whole file
+    # (it loads as nothing, so whatever it shows never appears)
+    for m in re.finditer(r'(?<![\w.])(Variants|LazyLoader)\s*\{', code):
+        depth, i, kids = 0, m.end() - 1, []
+        while i < len(code):
+            c = code[i]
+            if c == "{":
+                depth += 1
+                if depth == 2:
+                    head = code[max(0, i - 60):i]
+                    t = re.search(r'([A-Z][\w.]*)\s*(?:on\s+[\w.]+\s*)?$', head)
+                    pre = head[:t.start()] if t else ""
+                    # an object, not a property's value (`foo: Bar {`), a handler or an inline component
+                    if t and not re.search(r'(:|component\s+\w+\s*:)\s*$', pre):
+                        kids.append((t.group(1), i))
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        if len(kids) > 1:
+            report(f, f"{line(kids[1][1])}: {m.group(1)} can hold one object, but {', '.join(k for k, _ in kids)} are inside it")
+
+    # inline components can't see the ids of the file they're in: `root.x` inside one is
+    # undefined at runtime (it loads fine and just doesn't work)
+    for m in re.finditer(r'\bcomponent\s+(\w+)\s*:\s*[\w.]+\s*\{', code if not f.relative_to(root).as_posix().startswith("Compat/") else ""):
+        start = m.end() - 1
+        depth, i = 0, start
+        while i < len(code):
+            if code[i] == "{":
+                depth += 1
+            elif code[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        block = code[start:i]
+        outside = code[:m.start()] + code[i:]
+        outer_ids = set(re.findall(r'\bid\s*:\s*(\w+)', outside))
+        inner_ids = set(re.findall(r'\bid\s*:\s*(\w+)', block))
+        props = set(re.findall(r'\bproperty\s+[\w<>.]+\s+(\w+)', block))
+        for u in re.finditer(r'(?<![\w.])(\w+)\.', block):
+            name = u.group(1)
+            if name in outer_ids and name not in inner_ids and name not in props:
+                report(f, f"{line(start + u.start())}: inline component {m.group(1)} uses '{name}', an id from outside it (not visible there)")
+                break
+
     # JavaScript Quickshell's engine doesn't have (a TypeError at runtime)
     if not f.relative_to(root).as_posix().startswith("Compat/"):
         for m in re.finditer(r'Object\.fromEntries|\.flatMap\(|\.flat\(\)|\.replaceAll\(', code):

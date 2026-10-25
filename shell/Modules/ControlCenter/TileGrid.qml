@@ -260,8 +260,10 @@ Item {
     // ───────────────────────────── tiles ─────────────────────────────
 
     // a pill: an icon in a circle, a title and a line under it; tinted while on
+    // (inline components can't see this file's ids: the grid comes in as `host`)
     component Pill: Rectangle {
         id: pill
+        property var host: null
         property string icon
         property string title
         property string subtitle
@@ -278,7 +280,7 @@ Item {
             radius: pill.radius
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             onClicked: mouse => mouse.button === Qt.RightButton && pill.hasDetail ? pill.detail() : pill.clicked()
-            onPressAndHold: root.startEdit()
+            onPressAndHold: pill.host?.startEdit()
         }
         RowLayout {
             anchors.fill: parent
@@ -394,6 +396,7 @@ Item {
     Component {
         id: wifiC
         Pill {
+            host: root
             icon: Network.icon
             title: Network.ssid || (Network.ethernet ? "Ethernet" : "Wi-Fi")
             subtitle: Network.ethernet ? "Wired" : Network.ssid ? Network.signal + "%" : Network.wifiEnabled ? "Not connected" : "Off"
@@ -409,6 +412,7 @@ Item {
     Component {
         id: btC
         Pill {
+            host: root
             icon: BluetoothState.icon
             title: BluetoothState.enabled ? "Enabled" : "Bluetooth"
             subtitle: BluetoothState.label
@@ -421,6 +425,7 @@ Item {
     Component {
         id: outputC
         Pill {
+            host: root
             icon: Audio.icon
             title: Audio.sink ? Audio.nodeName(Audio.sink) : "No output"
             subtitle: Audio.muted ? "Muted" : Math.round(Audio.volume * 100) + "%"
@@ -433,6 +438,7 @@ Item {
     Component {
         id: inputC
         Pill {
+            host: root
             icon: Audio.micMuted ? "mic_off" : "mic"
             title: Audio.source ? Audio.nodeName(Audio.source) : "No microphone"
             subtitle: Audio.micMuted ? "Muted" : Math.round(Audio.micVolume * 100) + "%"
@@ -445,6 +451,7 @@ Item {
     Component {
         id: vpnC
         Pill {
+            host: root
             icon: Network.vpnActive ? "vpn_lock" : "vpn_key"
             title: Network.vpnActive ? Network.activeVpns.map(v => v.name).join(", ") : "VPN"
             subtitle: Network.vpnActive ? "Connected" : Network.vpns.length ? "Off" : "Not set up"
@@ -464,6 +471,7 @@ Item {
     Component {
         id: diskC
         Pill {
+            host: root
             id: dp
             property string usage: ""
             icon: "storage"
@@ -486,6 +494,7 @@ Item {
     Component {
         id: pickerC
         Pill {
+            host: root
             icon: "colorize"
             title: "Color picker"
             subtitle: "Choose a color"
@@ -498,6 +507,7 @@ Item {
     Component {
         id: caffeineC
         Pill {
+            host: root
             icon: "coffee"
             title: "Keep awake"
             subtitle: Toggles.caffeine ? "On" : "Off"
@@ -508,6 +518,7 @@ Item {
     Component {
         id: captureC
         Pill {
+            host: root
             icon: "screenshot_region"
             title: "Quick capture"
             subtitle: "An area of the screen"
@@ -520,6 +531,7 @@ Item {
     Component {
         id: dndC
         Pill {
+            host: root
             icon: "do_not_disturb_on"
             title: "Do not disturb"
             subtitle: Notifs.dnd ? "On" : "Off"
@@ -530,6 +542,7 @@ Item {
     Component {
         id: powerC
         Pill {
+            host: root
             icon: Power.profileIcon
             title: "Power profile"
             subtitle: Power.profileName
@@ -542,6 +555,7 @@ Item {
     Component {
         id: nightC
         Pill {
+            host: root
             icon: "nightlight"
             title: "Night light"
             subtitle: Toggles.status
@@ -554,6 +568,7 @@ Item {
     Component {
         id: darkC
         Pill {
+            host: root
             icon: "contrast"
             title: "Dark mode"
             subtitle: Theme.dark ? "On" : "Off"
@@ -564,6 +579,7 @@ Item {
     Component {
         id: recordC
         Pill {
+            host: root
             icon: Recorder.recording ? "stop_circle" : "screen_record"
             title: Recorder.recording ? "Stop recording" : "Record screen"
             subtitle: Recorder.recording ? Recorder.clock : "This screen"
@@ -577,6 +593,7 @@ Item {
     Component {
         id: widgetsC
         Pill {
+            host: root
             icon: "widgets"
             title: "Desktop widgets"
             subtitle: Settings.data.desktop.enabled ? (Settings.data.desktop.widgets.length ? Settings.data.desktop.widgets.length + " on the desktop" : "Add some") : "Off"
@@ -590,6 +607,7 @@ Item {
     Component {
         id: wallpaperC
         Pill {
+            host: root
             icon: "wallpaper"
             title: "Wallpaper"
             subtitle: Paths.fileName(Wallpapers.current) || "None"
@@ -599,6 +617,7 @@ Item {
     Component {
         id: mixerC
         Pill {
+            host: root
             icon: "tune"
             title: "App mixer"
             subtitle: Audio.streamGroups.length ? Audio.streamGroups.length + " playing" : "Nothing playing"
@@ -609,6 +628,7 @@ Item {
     Component {
         id: wellbeingC
         Pill {
+            host: root
             icon: "hourglass_bottom"
             title: "Screen time"
             subtitle: Wellbeing.enabled ? Wellbeing.fmt(Wellbeing.todayTotal) + " today" : "Off"

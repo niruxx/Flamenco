@@ -98,6 +98,25 @@ Page {
             subtitle: "Your windows as cards, most recent first. Hold Alt and press Tab to move, let go to switch."
             icon: "select_window"
         }
+        ChoiceRow {
+            title: "Layout"
+            subtitle: ({ cards: "Cards in a row, the picked one lifted", grid: "Bigger cards in rows (↑ ↓ move a row)", list: "One window per line, with its workspace",
+                    icons: "Big app icons, the picked window's title under them", compact: "A slim pill of icons; the picked one opens up with its title" })[Settings.data.switcher.layout || "cards"] ?? ""
+            icon: "view_quilt"
+            target: Settings.data.switcher
+            key: "layout"
+            segWidth: 92
+            options: [{ value: "cards", label: "Cards" }, { value: "grid", label: "Grid" }, { value: "list", label: "List" }, { value: "icons", label: "Icons" }, { value: "compact", label: "Compact" }]
+        }
+        ChoiceRow {
+            title: "Style"
+            subtitle: ({ tonal: "Material 3 tonal: the picked one tinted in your accent", filled: "Material 3 filled: the picked one in your accent, solid", outlined: "Material 3 outlined: see-through, outlined, the picked one in your accent" })[Settings.data.switcher.look || "tonal"] ?? ""
+            icon: "style"
+            target: Settings.data.switcher
+            key: "look"
+            segWidth: 100
+            options: [{ value: "tonal", label: "Tonal" }, { value: "filled", label: "Filled" }, { value: "outlined", label: "Outlined" }]
+        }
         SwitchRow {
             title: "Window previews"
             subtitle: "A picture of each window on its card, where the compositor allows capturing windows (Hyprland does; niri may show icons). Not in a nested niri window."
