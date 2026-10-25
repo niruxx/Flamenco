@@ -80,7 +80,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.46.0"
+VERSION = "0.47.1"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -5800,7 +5800,7 @@ PORTAL_IFACES = {
 PORTAL_NIRI = {
     "gnome": ("works", "screens and single windows (needs GNOME libraries)"),
     "wlr": ("works", "whole screens only, very lightweight"),
-    "kde": ("no", "screen capture only works under KWin; its file chooser is fine"),
+    "kde": ("no", "its screen capture needs KWin (Plasma's own compositor); its file chooser and other dialogs are fine"),
     "cosmic": ("no", "relies on COSMIC compositor protocols niri doesn't implement"),
     "hyprland": ("works" if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") else "no", "screens and windows on Hyprland" if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE") else "Hyprland only"),
     "gtk": ("n/a", "file chooser, settings and other basics; no screen capture"),
@@ -5846,6 +5846,83 @@ def effective_portals() -> dict:
         if f.is_file():
             return {"source": str(f), **read_portal_conf(f)}
     return {"source": ""}
+
+
+def portals_diagnose() -> int:
+    """What's actually serving screen sharing, and what the portals logged: for a frozen
+    or failing share, run it while sharing (or right after)."""
+    def run(*cmd, timeout=10):
+        try:
+            r = subprocess.run(list(cmd), capture_output=True, text=True, timeout=timeout)
+            return (r.stdout + r.stderr).strip()
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return f"({e})"
+    print("== Flamenco", VERSION, "on", compositor())
+    print("== portal config:", effective_portals())
+    if XDPW_CONF.is_file():
+        print("== xdg-desktop-portal-wlr config:\n" + XDPW_CONF.read_text().strip())
+    print("== installed backends:", ", ".join(p["name"] for p in installed_portals()) or "none")
+    # which backends are running right now (two answering ScreenCast is the classic problem)
+    procs = "\n".join(l[:140] for l in run("ps", "-eo", "comm=,args=").splitlines() if l.startswith(("xdg-desktop-por", ".xdg-desktop-po")))
+    print("== running portal processes:\n" + (procs or "(none)"))
+    for unit in ("xdg-desktop-portal", "xdg-desktop-portal-wlr", "xdg-desktop-portal-gnome", "plasma-xdg-desktop-portal-kde"):
+        print(f"== {unit}: " + run("systemctl", "--user", "is-active", unit + ".service"))
+    for b in ("niri", "Hyprland"):
+        if shutil.which(b):
+            print(f"== {b}:", run(b, "--version").splitlines()[0] if run(b, "--version") else "?")
+    xdpw = next((p for p in ("/usr/lib/xdg-desktop-portal-wlr", "/usr/libexec/xdg-desktop-portal-wlr") if Path(p).exists()), "")
+    if xdpw:
+        print("== xdpw:", run(xdpw, "--version") or "?")
+    if shutil.which("lspci"):
+        print("== GPUs:\n" + run("sh", "-c", "lspci | grep -Ei 'vga|3d|display'"))
+    if shutil.which("pw-cli"):
+        print("== PipeWire:", run("pw-cli", "info", "0").splitlines()[0:4])
+    if shutil.which("journalctl"):
+        print("== recent portal logs:")
+        print(run("journalctl", "--user", "-b", "--no-pager", "-n", "60", "-u", "xdg-desktop-portal-wlr.service",
+                  "-u", "xdg-desktop-portal.service", "-u", "xdg-desktop-portal-gnome.service", timeout=20))
+    return 0
+
+
+def portals_choose() -> int:
+    """xdg-desktop-portal-wlr's screen chooser (chooser_type=dmenu): the screens' names come in
+    on stdin; print the chosen one (exit 1 to cancel). Flamenco's window asks, through the
+    running shell; without the shell, slurp's click (or the first screen) does."""
+    import secrets
+    import time
+    outs = [l.strip() for l in sys.stdin.read().splitlines() if l.strip()]
+    if not outs:
+        return 1
+    # it asks even with one screen: sharing your screen should never happen silently
+    rid = secrets.token_hex(8)
+    answer = RUN_DIR / f"flamenco-share-{rid}.answer"
+    try:
+        r = qs("ipc", "call", "share", "pick", rid, ",".join(outs), capture=True)
+        asked = r.returncode == 0
+    except (SystemExit, OSError):
+        asked = False
+    if asked:
+        deadline = time.time() + 120
+        while time.time() < deadline:
+            if answer.exists():
+                got = answer.read_text(errors="replace").strip()
+                answer.unlink(missing_ok=True)
+                # only a screen the portal offered
+                if got in outs:
+                    print(got)
+                    return 0
+                return 1                      # cancelled
+            time.sleep(0.15)
+        return 1
+    # no shell: click a screen with slurp, else the first one
+    if shutil.which("slurp"):
+        s = subprocess.run(["slurp", "-f", "%o", "-or"], capture_output=True, text=True)
+        if s.returncode == 0 and s.stdout.strip() in outs:
+            print(s.stdout.strip())
+            return 0
+        return 1
+    print(outs[0])
+    return 0
 
 
 def cmd_portals(args: list[str]) -> int:
@@ -5898,11 +5975,19 @@ def cmd_portals(args: list[str]) -> int:
             sc = ["[screencast]"]
             if pick:
                 sc += [f"output_name={pick}", "chooser_type=none"]
+            elif (spec.get("wlrChooser") or "flamenco") == "flamenco":
+                # Flamenco's "Share your screen" window (`flamenco portals choose`): the portal
+                # sends the screens' names in, the chosen one comes back out
+                sc += ["chooser_type=dmenu", "chooser_cmd=" + shlex.quote(self_path()) + " portals choose"]
             else:
                 # click the screen to share (falls back to the first screen without slurp)
                 sc += ["chooser_type=simple", "chooser_cmd=slurp -f %o -or"]
             if fps > 0:
                 sc.append(f"max_fps={fps}")
+            # compatibility: plain (linear) buffers, for GPUs / drivers / apps that get a frozen
+            # picture from xdpw's default buffers (the man page's experimental option)
+            if spec.get("forceLinear"):
+                sc.append("force_mod_linear=1")
             put(XDPW_CONF, f"# {MARKER}\n" + "\n".join(sc) + "\n")
 
         # optional: route every GTK app's file dialogs through the portal (niri environment)
@@ -5917,11 +6002,16 @@ def cmd_portals(args: list[str]) -> int:
             write_niri_config(new, NIRI_CONFIG.read_text())
 
         if shutil.which("systemctl"):
-            for unit in ("xdg-desktop-portal.service", "xdg-desktop-portal-wlr.service", "xdg-desktop-portal-gnome.service"):
+            for unit in ("xdg-desktop-portal.service", "xdg-desktop-portal-wlr.service", "xdg-desktop-portal-gnome.service",
+                         "plasma-xdg-desktop-portal-kde.service", "xdg-desktop-portal-hyprland.service"):
                 subprocess.run(["systemctl", "--user", "try-restart", unit], capture_output=True)
         print(f"portals: wrote {PORTAL_CONF}; restarted xdg-desktop-portal (apps opened before may need a restart)")
         return 0
-    die("usage: flamenco portals get | apply --json SPEC")
+    if sub == "choose":
+        return portals_choose()
+    if sub == "diagnose":
+        return portals_diagnose()
+    die("usage: flamenco portals get | apply --json SPEC | choose")
 
 
 # ─────────────────────────────── fonts & sounds ──────────────────────────────

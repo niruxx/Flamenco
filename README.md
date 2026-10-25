@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.46.0-E8466F?style=for-the-badge" alt="Version 0.46.0">
+  <img src="https://img.shields.io/badge/version-0.47.1-E8466F?style=for-the-badge" alt="Version 0.47.1">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -206,7 +206,7 @@ Flamenco Shell is a complete desktop shell built with [Quickshell](https://quick
 | **🔊 Sound** | Pick an installed sound theme (shared with GTK, GNOME and KDE apps), notification, volume and brightness sounds, output/input devices |
 | **🔑 Keyring** | Choose which keyring stores app passwords: GNOME Keyring, KDE Wallet, KeePassXC, oo7, or none. Shows what's running and whether it unlocks at login |
 | **🛡️ Firewall** | Detects ufw or firewalld: turn it on/off, default policies or zones, add/remove ports, services and rules (applied with one sudo prompt) |
-| **🖥️ Screen sharing** | Choose the xdg-desktop-portal backend for screen sharing, screenshots and file pickers. The lightweight wlr setup avoids GNOME; also a screen picker and frame-rate limit |
+| **🖥️ Screen sharing** | Choose the xdg-desktop-portal backend for screen sharing, screenshots and file pickers. **Plasma apps** setup: KDE's portal for file pickers and other dialogs and, for sharing, wlr with Flamenco's **Share your screen** window (each screen with a live picture) on niri, or Hyprland's own portal; no GNOME packages. (KDE's own sharing window needs KWin, so it can't work on niri or Hyprland.) The lightweight wlr setup avoids GNOME; also a screen picker and frame-rate limit |
 | **🖨️ Printers** | CUPS: start and enable the service, set the default printer, print test pages, manage the queue |
 | **🕒 Date & Time** | Time zone (search, or **automatic**: follows where you are), keeping the clock synced (systemd-timesyncd) with your distribution's time servers or your own (host names or IPs), setting the time by hand, 24-hour time. System changes ask for your password in a terminal; automatic time zone sets up a polkit rule once so administrators can change just the time zone without one |
 | **🔋 Power** | Power profiles, sleep on/off, idle suspend (battery / plugged in), lock before sleep, lid actions (battery / plugged in / docked) and the power button |

@@ -23,7 +23,12 @@ Page {
     property string fileChooser: ""
     property string fallback: "gtk"
     property string wlrOutput: ""
+    property string wlrChooser: "flamenco"   // flamenco (the "Share your screen" window) | slurp (click a screen)
+    readonly property bool hypr: Niri.hyprland
+    // the capture backend that works here without GNOME: wlr on niri, Hyprland's own on Hyprland
+    readonly property string lightCapture: hypr ? "hyprland" : "wlr"
     property int maxFps: 0
+    property bool forceLinear: false
     property bool gtkUsePortal: false
 
     readonly property var pickers: [
@@ -54,7 +59,7 @@ Page {
     }
 
     function apply() {
-        const spec = { default: fallback, ScreenCast: screenCast, Screenshot: screenshot, FileChooser: fileChooser, wlrOutput: wlrOutput, maxFps: maxFps, gtkUsePortal: gtkUsePortal };
+        const spec = { default: fallback, ScreenCast: screenCast, Screenshot: screenshot, FileChooser: fileChooser, wlrOutput: wlrOutput, wlrChooser: wlrChooser, maxFps: maxFps, forceLinear: forceLinear, gtkUsePortal: gtkUsePortal };
         applier.command = [Paths.bin, "portals", "apply", "--json", JSON.stringify(spec)];
         applier.running = true;
     }
@@ -83,7 +88,9 @@ Page {
                     page.fileChooser = ours ? (d.current.FileChooser ?? "") : "";
                     page.fallback = ours ? (d.current.default || "gtk") : "gtk";
                     page.wlrOutput = d.wlr.output_name ?? "";
+                    page.wlrChooser = (d.wlr.chooser_type ?? "dmenu") === "simple" ? "slurp" : "flamenco";
                     page.maxFps = parseInt(d.wlr.max_fps ?? "0") || 0;
+                    page.forceLinear = (d.wlr.force_mod_linear ?? "0") === "1";
                     page.gtkUsePortal = d.gtkUsePortal ?? false;
                     page.loaded = true;
                 } catch (e) {
@@ -157,6 +164,58 @@ Page {
     // ── what's installed ──
     Group {
         title: "Screen sharing setups"
+        SettingRow {
+            title: "Plasma apps"
+            subtitle: "KDE's portal for file pickers and the rest (Dolphin-style, Qt), and " + (page.hypr ? "Hyprland's own portal (with its Qt picker)" : "wlr with Flamenco's \"Share your screen\" window") + " for sharing. No GNOME, no Nautilus." + (page.hypr ? "" : " Whole screens; sharing one window needs the GNOME portal")
+            icon: "desktop_windows"
+            Row {
+                spacing: 6
+                FButton {
+                    visible: !page.names.includes("kde") || !page.names.includes(page.lightCapture)
+                    text: "Install"
+                    variant: "tonal"
+                    onClicked: page.install(["xdg-desktop-portal-kde", page.hypr ? "xdg-desktop-portal-hyprland" : "xdg-desktop-portal-wlr"])
+                }
+                FButton {
+                    text: "Use"
+                    disabled: !page.names.includes("kde") || !page.names.includes(page.lightCapture)
+                    onClicked: {
+                        page.screenCast = page.lightCapture;
+                        page.screenshot = page.lightCapture;
+                        page.fileChooser = "kde";
+                        page.fallback = "kde";
+                        page.wlrChooser = "flamenco";
+                        page.apply();
+                    }
+                }
+            }
+        }
+        SettingRow {
+            visible: !page.hypr
+            title: "Plasma apps + GNOME capture"
+            subtitle: "The most reliable on niri: the GNOME portal only captures the screen (niri's supported way, single windows too) and KDE's portal does file pickers and the rest, so Nautilus is never opened. Use this if the wlr picture freezes"
+            icon: "verified"
+            Row {
+                spacing: 6
+                FButton {
+                    visible: !page.names.includes("kde") || !page.names.includes("gnome")
+                    text: "Install"
+                    variant: "tonal"
+                    onClicked: page.install(["xdg-desktop-portal-kde", "xdg-desktop-portal-gnome"])
+                }
+                FButton {
+                    text: "Use"
+                    disabled: !page.names.includes("kde") || !page.names.includes("gnome")
+                    onClicked: {
+                        page.screenCast = "gnome";
+                        page.screenshot = "gnome";
+                        page.fileChooser = "kde";
+                        page.fallback = "kde";
+                        page.apply();
+                    }
+                }
+            }
+        }
         SettingRow {
             title: "Lightweight"
             subtitle: "wlr for screen sharing and screenshots (whole screens), gtk for file pickers. No GNOME libraries."
@@ -269,14 +328,35 @@ Page {
         visible: page.usesWlr
         title: "wlr screen picker"
         SettingRow {
+            visible: !page.wlrOutput
+            title: "Ask with"
+            subtitle: page.wlrChooser === "flamenco" ? "Flamenco's \"Share your screen\" window: every screen with a live picture, pick one (or Esc to refuse)" : "Click the screen to share (needs slurp)"
+            icon: "ads_click"
+            FSegmented {
+                implicitWidth: 300
+                options: [{ value: "flamenco", label: "Flamenco window" }, { value: "slurp", label: "Click a screen" }]
+                current: page.wlrChooser
+                onSelected: v => page.wlrChooser = v
+            }
+        }
+        SettingRow {
             title: "Screen to share"
-            subtitle: page.wlrOutput ? "Always shares this screen, no prompt" : "Click the screen to share when an app asks (needs slurp)"
+            subtitle: page.wlrOutput ? "Always shares this screen, no prompt" : "Asks each time an app wants to share"
             icon: "monitor"
             FDropdown {
                 implicitWidth: 300
                 options: [{ value: "", label: "Ask each time" }].concat(Displays.outputs.filter(o => o.enabled).map(o => ({ value: o.name, label: o.name + (o.make || o.model ? " · " + (o.make + " " + o.model).trim() : "") })))
                 current: page.wlrOutput
                 onSelected: v => page.wlrOutput = v
+            }
+        }
+        SettingRow {
+            title: "Compatibility mode"
+            subtitle: "If the shared screen freezes on its first picture: plain (linear) video buffers, which more GPUs, drivers and apps accept (xdg-desktop-portal-wlr's force_mod_linear). Press Apply, then start sharing again"
+            icon: "build"
+            FSwitch {
+                checked: page.forceLinear
+                onToggled: c => page.forceLinear = c
             }
         }
         SettingRow {
@@ -304,6 +384,13 @@ Page {
             icon: "refresh"
             onClicked: page.load()
         }
+        // what's actually serving screen sharing, and the portals' logs (for a frozen or failing share)
+        FButton {
+            text: "Diagnose"
+            icon: "troubleshoot"
+            variant: "text"
+            onClicked: Quickshell.execDetached(Paths.termHold(Paths.shellQuote(Paths.bin) + " portals diagnose"))
+        }
         FText {
             Layout.fillWidth: true
             text: page.status
@@ -314,7 +401,7 @@ Page {
 
     FText {
         Layout.fillWidth: true
-        text: "kde and cosmic are listed when installed, but their screen capture only works with their own compositors (KWin and cosmic-comp). The kde file chooser works fine on niri."
+        text: "Why not KDE's own screen sharing window? xdg-desktop-portal-kde doesn't capture the screen itself: it asks KWin (Plasma's compositor) through a protocol only KWin has, so on " + (page.hypr ? "Hyprland" : "niri") + " it can't share anything. The same goes for cosmic. Their file pickers and other dialogs work fine here, which is what the Plasma apps setup uses."
         dim: true
         wrapMode: Text.Wrap
         font.pixelSize: Theme.fsSm

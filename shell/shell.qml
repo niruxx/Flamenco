@@ -11,6 +11,7 @@ import qs.Services
 import qs.Modules.Assistant
 import qs.Modules.Background
 import qs.Modules.Frame
+import qs.Modules.Share
 import qs.Modules.Keys
 import qs.Modules.Notepad
 import qs.Modules.Clipboard
@@ -67,6 +68,7 @@ ShellRoot {
     Desktop {}
     Bar {}
     ScreenFrame {}
+    SharePicker {}
     Dock {}
     HotCorners {}
     Popups {}
@@ -141,6 +143,12 @@ ShellRoot {
             if (!lock.locked)
                 Panels.toggle("overview", "");
         }
+    }
+
+    // screen sharing's "which screen?" (`flamenco portals choose`, from the wlr portal)
+    IpcHandler {
+        target: "share"
+        function pick(id: string, outputs: string): void { Share.ask(id, outputs); }
     }
 
     IpcHandler {
