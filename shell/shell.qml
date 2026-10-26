@@ -37,6 +37,7 @@ import qs.Modules.Displays
 import qs.Modules.Performance
 import qs.Modules.Volume
 import qs.Modules.Setup
+import qs.Modules.Windows
 
 ShellRoot {
     id: shell
@@ -88,6 +89,7 @@ ShellRoot {
     WidgetEditor {}
     AssistantPanel {}
     KeysPanel {}
+    ResizePanel {}
     NotepadPanel {}
     ClipboardPanel {}
     Switcher {}
@@ -158,6 +160,7 @@ ShellRoot {
         function toggleMode(): void { Compositor.setFloating(!Settings.data.windows.floating); }
         function floating(): void { Compositor.setFloating(true); }
         function tiling(): void { Compositor.setFloating(false); }
+        function resize(): void { Resize.open(null, ""); }
     }
 
     IpcHandler {

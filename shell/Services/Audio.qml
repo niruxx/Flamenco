@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pipewire
 import qs.Commons
 
@@ -23,12 +24,21 @@ Singleton {
     // Apps recording audio: capture streams, minus ones that only listen to an
     // output's monitor (volume meters, visualizers like cava) and the shell itself.
     readonly property var captures: Pipewire.nodes.values.filter(n => n.isStream && n.isSink && n.audio)
-    readonly property var recorders: captures.filter(n => {
+    // Not "recording you" either: effects and filters that sit on the mic all the time
+    // (EasyEffects, echo cancelling, noise suppression), volume meters (pavucontrol's
+    // "Peak detect", Plasma's applet…), and streams an app holds open but has paused
+    // (corked: a call app between calls, a browser tab that asked once)
+    readonly property var candidates: captures.filter(n => {
         const p = n.properties ?? {};
-        if (p["stream.monitor"] === "true" || p["stream.capture.sink"] === "true")
+        if (p["stream.monitor"] === "true" || p["stream.capture.sink"] === "true" || p["node.passive"] === "true")
             return false;
-        return !/quickshell/i.test(p["application.name"] ?? "") && !/quickshell/i.test(p["application.process.binary"] ?? "");
+        const who = [p["application.name"], p["application.id"], p["application.process.binary"], p["node.name"]].join(" ");
+        if (/quickshell|easyeffects|pavucontrol|pwvucontrol|plasma-pa|kmix|helvum|qpwgraph|echo-cancel|noise|filter-chain|effect_input/i.test(who))
+            return false;
+        return !/peak detect|level ?meter/i.test(p["media.name"] ?? "");
     })
+    property var corked: []                  // node ids of paused capture streams (pactl)
+    readonly property var recorders: candidates.filter(n => !corked.includes(String(n.id)) && !corked.includes(String((n.properties ?? {})["object.serial"] ?? "")))
     readonly property bool micInUse: recorders.length > 0
     readonly property string micUsers: [...new Set(recorders.map(n => streamName(n)))].join(", ")
 
@@ -164,5 +174,35 @@ Singleton {
     // and capture streams, so their properties (who's recording) can be read
     PwObjectTracker {
         objects: root.captures
+    }
+
+    // ── paused capture streams: PipeWire nodes don't say, pulse's source-outputs do ──
+    // (checked only while something has a capture stream open)
+    Timer {
+        interval: 3000
+        repeat: true
+        triggeredOnStart: true
+        running: root.candidates.length > 0
+        onRunningChanged: if (!running) root.corked = []
+        onTriggered: if (!corkedProc.running) corkedProc.running = true
+    }
+    Process {
+        id: corkedProc
+        command: ["pactl", "-f", "json", "list", "source-outputs"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const ids = [];
+                    for (const o of JSON.parse(text)) {
+                        const p = o.properties ?? {};
+                        if (o.corked)
+                            ids.push(String(p["object.id"] ?? ""), String(p["object.serial"] ?? o.index ?? ""));
+                    }
+                    const next = ids.filter(x => x !== "");
+                    if (JSON.stringify(next) !== JSON.stringify(root.corked))
+                        root.corked = next;
+                } catch (e) {}
+            }
+        }
     }
 }

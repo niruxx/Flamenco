@@ -67,6 +67,9 @@ Singleton {
             s.activeColor = hex(Theme.palette.accent);
             s.inactiveColor = hex(Theme.palette.border);
         }
+        // floating: apps draw their own frames, so their edges resize (with the resize cursor)
+        // the way they would on any desktop; prefer-no-csd takes those away
+        s.preferNoCsd = cfg.preferNoCsd && !(cfg.floating && (cfg.floatingFrames ?? true));
         s.overviewCorners = S.Edges.overviewCorners();
         s.hotCorners = s.overviewCorners.length > 0;
         s.workspaces = Settings.data.workspaces.named || [];

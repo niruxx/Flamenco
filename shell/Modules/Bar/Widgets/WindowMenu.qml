@@ -193,6 +193,12 @@ PopupWindow {
                 }
                 MenuRow {
                     visible: root.page === "main" && !!root.live
+                    label: "Resize…"
+                    leadIcon: "open_in_full"
+                    onActivated: root.run(w => Resize.open(w.id, ""))
+                }
+                MenuRow {
+                    visible: root.page === "main" && !!root.live
                     label: "Fullscreen"
                     leadIcon: "fullscreen"
                     onActivated: root.run(w => Niri.toggleFullscreen(w))

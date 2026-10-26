@@ -84,7 +84,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.54.0"
+VERSION = "0.55.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1782,6 +1782,7 @@ SHELL_FUNCTIONS = {
     "caffeine": ("Toggle caffeine", ["ipc", "toggles", "caffeine"]),
     "bar-toggle": ("Show / hide the bar", ["bar", "toggle"]),
     "window-mode": ("Switch tiling / floating windows", ["ipc", "windows", "toggleMode"]),
+    "window-resize": ("Resize the window (resize panel)", ["ipc", "windows", "resize"]),
     "night-light": ("Toggle night light", ["ipc", "toggles", "nightLight"]),
     "screenshot": ("Screenshot (select an area)", ["screenshot", "region"]),
     "screenshot-screen": ("Screenshot of the screen", ["screenshot", "screen"]),

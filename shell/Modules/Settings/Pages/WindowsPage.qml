@@ -48,7 +48,20 @@ Page {
             options: [{ value: "never", label: "Never" }, { value: "on-overflow", label: "If it overflows" }, { value: "always", label: "Always" }]
             onEdited: Compositor.queue()
         }
-        SwitchRow { title: "Ask apps to skip their own title bars"; subtitle: "Most GTK and Qt apps then draw a plain window instead"; icon: "web_asset_off"; target: page.w; key: "preferNoCsd"; onEdited: Compositor.queue() }
+        SwitchRow { title: "Ask apps to skip their own title bars"; subtitle: page.w.floating && (page.w.floatingFrames ?? true) ? "In tiling mode. While windows float, apps keep their frames (below)" : "Most GTK and Qt apps then draw a plain window instead"; icon: "web_asset_off"; target: page.w; key: "preferNoCsd"; onEdited: Compositor.queue() }
+        SwitchRow {
+            title: "Window frames when floating"
+            subtitle: "Apps draw their own frames while windows float, so you can resize them by their edges, with the resize cursor. Takes effect for apps opened afterwards"
+            icon: "open_in_full"
+            target: page.w
+            key: "floatingFrames"
+            onEdited: Compositor.queue()
+        }
+        SettingRow {
+            title: "Resizing and moving"
+            subtitle: "Super + right-drag resizes any window, Super + left-drag moves it. Without the edges (or on a touchpad): Resize… in a window's menu (right-click its title in the bar, or its dock icon), or give \"Resize the window\" a shortcut in Keyboard → Flamenco functions"
+            icon: "drag_pan"
+        }
     }
 
     Group {

@@ -281,12 +281,21 @@ Page {
         }
         ChoiceRow {
             title: "Show it"
-            subtitle: Audio.micInUse ? "In use now by " + Audio.micUsers : "Nothing is recording right now"
+            subtitle: Audio.micInUse ? "In use now by " + Audio.micUsers : "Nothing is recording right now" + (Audio.micMuted ? " (the mic is muted)" : "")
             icon: "mic"
             target: page.b
             key: "micIndicator"
-            segWidth: 150
-            options: [{ value: "inuse", label: "While in use or muted" }, { value: "always", label: "Always" }]
+            segWidth: 130
+            options: [{ value: "inuse", label: "While in use" }, { value: "inuse-muted", label: "In use or muted" }, { value: "always", label: "Always" }]
+        }
+        ChoiceRow {
+            title: "Look"
+            subtitle: ({ icon: "The mic, highlighted while recording", dot: "A small dot: amber while recording, a red ring while muted", pill: "The mic and the app listening", ring: "The mic with a ring that breathes while recording", text: "MIC or MUTED" })[page.b.micStyle || "icon"]
+            icon: "interests"
+            target: page.b
+            key: "micStyle"
+            segWidth: 72
+            options: [{ value: "icon", label: "Icon" }, { value: "dot", label: "Dot" }, { value: "pill", label: "Pill" }, { value: "ring", label: "Ring" }, { value: "text", label: "Text" }]
         }
     }
 

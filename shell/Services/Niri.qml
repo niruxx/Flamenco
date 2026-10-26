@@ -166,6 +166,13 @@ Singleton {
             windows = copy;
             if (win.is_focused)
                 focusedWindowId = win.id;
+        } else if (ev.WindowLayoutsChanged) {
+            // sizes and places (niri 25.05+), e.g. for the resize panel
+            const lay = {};
+            for (const c of ev.WindowLayoutsChanged.changes ?? [])
+                lay[c[0]] = c[1];
+            if (Object.keys(lay).length)
+                windows = windows.map(w => lay[w.id] ? Object.assign({}, w, { layout: lay[w.id] }) : w);
         } else if (ev.WindowClosed) {
             windows = windows.filter(w => w.id !== ev.WindowClosed.id);
         } else if (ev.WindowFocusChanged) {

@@ -120,7 +120,8 @@ Singleton {
                 property bool trayNativeMenus: false  // use Qt's native menus instead of themed ones
                 property int trayMaxVisible: 6        // extra icons go into an overflow drawer
                 property string taskbarScope: "all"   // taskbar widget: all | screen | workspace
-                property string micIndicator: "inuse" // microphone widget: inuse (while recording or muted) | always
+                property string micIndicator: "inuse" // microphone widget: inuse (while recording) | inuse-muted (also while muted) | always
+                property string micStyle: "icon"      // microphone widget: icon | dot | pill | ring | text
                 property var perScreen: ({})          // screens with their own widgets: { "DP-1": { left, center, right } }
                 property bool taskbarTitles: false    // window titles next to the taskbar's icons
                 property string clockLayout: "stacked" // clock: inline (time • date) | stacked (time over date) | time
@@ -435,6 +436,7 @@ Singleton {
                 property bool hideCursorTyping: false
                 property int hideCursorAfter: 0       // ms idle before hiding the pointer (0 = never)
                 property bool preferNoCsd: true       // ask apps not to draw their own title bars
+                property bool floatingFrames: true    // floating mode: apps keep their frames (resize edges and cursors) anyway
                 property bool hotCorners: true        // niri's own corner (before Screen edges took it over)
                 property bool skipHotkeyOverlay: true // niri: don't show the shortcut cheat sheet at login
                 property bool workspaceBackForth: false // switching to the current workspace goes back
