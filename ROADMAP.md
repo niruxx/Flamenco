@@ -1,8 +1,2 @@
 ## Fixes
-Scrolling is a bit bugged, reverting to default scrolling by niri. (Done in 0.52.1: standard scrolling by default, Appearance → Smooth scrolling brings the gliding back; wheel steps add up to whole notches)
-
-Icons show black and purple indicating no icon pack found, will show a question mark going forward. (Done in 0.52.1)
-
-When using the floating tiling method it will not allow you to resize certain windows, the cursor won't show the resize cursor and on touchpads for laptops makes it hard to use the two finger gesture, so an alternative needs to be implemented. (Done in 0.55.0: apps keep their own frames while windows float (Windows → Window frames when floating), and a Resize… panel in the window menu with presets, sliders, arrow keys and moving)
-
-When the Microphone status symbol is enabled it'll stay showing up - even when not in use - even though the option to only show up when in use is selected. This will get looked at but also include other design replacements for it, not just a microphone symbol but possibly replace it with Dots instead, a few others as well to change the indicator UI. (Done in 0.55.0: paused streams, effects and level meters no longer count as in use; "While in use" no longer includes muted; looks: icon, dot, pill, ring, text)
+Bluetooth Settings Options - Bluetooth does not scan from the quicksettings and no way to pair - this will get fixed.
