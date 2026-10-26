@@ -28,7 +28,7 @@ BarChip {
 
     BarFlow {
         spacing: 4
-        FIcon { icon: "system_update_alt"; size: 17; color: Theme.accent }
+        FIcon { icon: "system_update_alt"; size: Theme.barIconSm; color: Theme.accent }
         FText {
             visible: !Theme.barVertical || Updates.count < 100
             text: Updates.count

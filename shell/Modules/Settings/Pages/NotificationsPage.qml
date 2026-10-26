@@ -52,6 +52,43 @@ Page {
     }
 
     Group {
+        title: "Devices"
+        SwitchRow {
+            title: "Plugging in and taking out"
+            subtitle: "A pop-up when a drive or an accessory is connected or disconnected, like GNOME's. Drives get Open and Eject"
+            icon: "usb"
+            target: Settings.data.devices
+            key: "enabled"
+        }
+        ChoiceRow {
+            visible: Settings.data.devices.enabled
+            title: "Where"
+            subtitle: "Its own spot, apart from other notifications"
+            icon: "picture_in_picture"
+            target: Settings.data.devices
+            key: "position"
+            segWidth: 64
+            options: [{ value: "top-left", label: "↖" }, { value: "top-center", label: "↑" }, { value: "top-right", label: "↗" }, { value: "bottom-left", label: "↙" }, { value: "bottom-center", label: "↓" }, { value: "bottom-right", label: "↘" }]
+        }
+        SwitchRow { visible: Settings.data.devices.enabled; title: "Drives and memory cards"; subtitle: "USB sticks, external disks, SD cards"; icon: "hard_drive"; target: Settings.data.devices; key: "drives" }
+        SwitchRow { visible: Settings.data.devices.enabled; title: "Accessories"; subtitle: "Keyboards, mice, phones, cameras, headsets and other USB devices"; icon: "devices"; target: Settings.data.devices; key: "accessories" }
+        SwitchRow { visible: Settings.data.devices.enabled; title: "When they're taken out"; icon: "eject"; target: Settings.data.devices; key: "removals" }
+        SwitchRow { visible: Settings.data.devices.enabled; title: "Sound"; subtitle: "The sound theme's device sounds"; icon: "volume_up"; target: Settings.data.devices; key: "sound" }
+        SliderRow { visible: Settings.data.devices.enabled; title: "Stays for"; subtitle: "Drives twice as long (they have buttons); the pointer on one keeps it"; icon: "timer"; target: Settings.data.devices; key: "timeout"; from: 2; to: 20; stepSize: 1; suffix: "s" }
+        SettingRow {
+            visible: Settings.data.devices.enabled
+            title: "Try it"
+            subtitle: Settings.data.notifications.dnd ? "Do not disturb is on: device pop-ups wait until it's off" : "Shows a pop-up the way a USB drive would"
+            icon: "science"
+            FButton {
+                text: "Show a test"
+                variant: "tonal"
+                onClicked: Devices.test()
+            }
+        }
+    }
+
+    Group {
         id: center
         title: "Notification center"
         readonly property var b: Settings.data.bar

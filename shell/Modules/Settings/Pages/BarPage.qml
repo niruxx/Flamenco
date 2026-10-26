@@ -76,19 +76,29 @@ Page {
         l.splice(at, 0, id);
         setList(to, l);
     }
+    // the edge (or freeroam), and in a corner of it
+    readonly property string edge: b.position === "free" ? "free" : Theme.barPos
+    function setEdge(v) {
+        b.position = (v === "top" || v === "bottom") && Theme.barCorner ? v + "-" + Theme.barCorner : v;
+    }
+    readonly property bool vert: Theme.barVertical
     readonly property var places: [{ value: "left", label: "Left", icon: "align_horizontal_left" }, { value: "center", label: "Center", icon: "align_horizontal_center" }, { value: "right", label: "Right", icon: "align_horizontal_right" }, { value: "off", label: "Off", icon: "block" }]
 
     BarStyleSection {}
 
+    property bool placeAll: false
+    readonly property var mainPlaces: [
+        { id: "tray", title: "App indicators (system tray)", icon: "apps" },
+        { id: "launcher", title: "Start button", icon: "rocket_launch" },
+        { id: "window", title: "Active window", icon: "select_window" },
+        { id: "clock", title: "Clock", icon: "schedule" }
+    ]
     Group {
         title: "Placement"
         Repeater {
-            model: [
-                { id: "tray", title: "App indicators (system tray)", icon: "apps" },
-                { id: "launcher", title: "Start button", icon: "rocket_launch" },
-                { id: "window", title: "Active window", icon: "select_window" },
-                { id: "clock", title: "Clock", icon: "schedule" }
-            ]
+            // the main ones, or every widget (the order inside a section is in the lists further down)
+            model: page.placeAll ? page.mainPlaces.concat(Object.keys(page.builtinWidgets).filter(k => k !== "separator" && !page.mainPlaces.some(m => m.id === k))
+                    .map(k => ({ id: k, title: page.builtinWidgets[k], icon: "widgets" }))) : page.mainPlaces
             SettingRow {
                 id: prow
                 required property var modelData
@@ -104,19 +114,74 @@ Page {
                 }
             }
         }
+        SettingRow {
+            title: page.placeAll ? "Fewer" : "Every widget"
+            subtitle: page.placeAll ? "Back to the main four" : "Place any of the bar's widgets on the left, center or right, or leave it out"
+            icon: page.placeAll ? "expand_less" : "expand_more"
+            FButton {
+                text: page.placeAll ? "Show fewer" : "Show all"
+                variant: "tonal"
+                onClicked: page.placeAll = !page.placeAll
+            }
+        }
     }
 
     Group {
         title: "Layout"
-        ChoiceRow {
+        SettingRow {
             title: "Position"
-            subtitle: page.b.position === "free" ? "Freeroam: a floating bar you move anywhere by dragging its grip (⋮⋮ at its left end). It doesn't keep space free, so windows can go under it" : "Left and right give a vertical bar; Freeroam floats wherever you drag it"
+            subtitle: page.edge === "free" ? "Freeroam: a floating bar you move anywhere by dragging its grip (⋮⋮ at its left end). It doesn't keep space free, so windows can go under it" : "Left and right give a vertical bar; Freeroam floats wherever you drag it"
             icon: "screenshot_frame"
-            target: page.b
-            key: "position"
-            segWidth: 84
-            options: [{ value: "top", label: "Top", icon: "border_top" }, { value: "bottom", label: "Bottom", icon: "border_bottom" }, { value: "left", label: "Left", icon: "border_left" }, { value: "right", label: "Right", icon: "border_right" }, { value: "free", label: "Freeroam", icon: "open_with" }]
+            FSegmented {
+                implicitWidth: 5 * 84
+                options: [{ value: "top", label: "Top", icon: "border_top" }, { value: "bottom", label: "Bottom", icon: "border_bottom" }, { value: "left", label: "Left", icon: "border_left" }, { value: "right", label: "Right", icon: "border_right" }, { value: "free", label: "Freeroam", icon: "open_with" }]
+                current: page.edge
+                onSelected: v => page.setEdge(v)
+            }
         }
+        SettingRow {
+            visible: page.edge === "top" || page.edge === "bottom"
+            title: "Corner"
+            subtitle: Theme.barCorner ? "Just around its widgets, in the " + page.edge + "-" + Theme.barCorner + " corner. Windows still keep clear of the edge" : "Along the whole edge, or tucked into one of its corners"
+            icon: "picture_in_picture"
+            FSegmented {
+                implicitWidth: 3 * 110
+                options: [{ value: "", label: "Whole edge" }, { value: "left", label: "Left corner" }, { value: "right", label: "Right corner" }]
+                current: Theme.barCorner
+                onSelected: v => page.b.position = v ? page.edge + "-" + v : page.edge
+            }
+        }
+        ChoiceRow {
+            visible: !Theme.barCorner && page.edge !== "free" && page.b.style !== "capsule"
+            title: "Length"
+            subtitle: (page.b.length || "full") === "fit" ? "Just as long as its widgets" : "Edge to edge"
+            icon: page.vert ? "height" : "width"
+            target: page.b
+            key: "length"
+            segWidth: 120
+            options: [{ value: "full", label: "Full" }, { value: "fit", label: "Fit widgets" }]
+        }
+        ChoiceRow {
+            visible: Theme.barFit && !Theme.barCorner && page.edge !== "free"
+            title: "Where on the edge"
+            icon: page.vert ? "vertical_align_center" : "align_horizontal_center"
+            target: page.b
+            key: "align"
+            segWidth: 96
+            options: [{ value: "start", label: page.vert ? "Top" : "Left" }, { value: "center", label: page.vert ? "Middle" : "Center" }, { value: "end", label: page.vert ? "Bottom" : "Right" }]
+        }
+        ChoiceRow {
+            visible: !Theme.barFit
+            title: "Widgets"
+            subtitle: (page.b.arrange || "spread") === "spread" ? "Each section at its own spot: " + (page.vert ? "top, middle and bottom" : "left, center and right")
+                : "All sections side by side, " + ({ start: page.vert ? "at the top" : "on the left", center: "in the middle", end: page.vert ? "at the bottom" : "on the right" })[page.b.arrange]
+            icon: "view_column"
+            target: page.b
+            key: "arrange"
+            segWidth: 86
+            options: [{ value: "spread", label: "Spread" }, { value: "start", label: page.vert ? "Top" : "Left" }, { value: "center", label: page.vert ? "Middle" : "Center" }, { value: "end", label: page.vert ? "Bottom" : "Right" }]
+        }
+        SliderRow { title: "Icon size"; subtitle: "The bar's icons (they never outgrow its thickness)"; icon: "format_size"; target: page.b; key: "iconScale"; from: 0.8; to: 1.4; stepSize: 0.05; factor: 100; suffix: "%" }
         ChoiceRow { title: "Workspace indicator"; subtitle: page.b.workspaceStyle === "apps" ? "Each workspace shows its apps' icons; the active one is filled" : ""; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }, { value: "apps", label: "App icons" }] }
         ChoiceRow { title: "CPU / RAM"; icon: "memory"; target: page.b; key: "statsStyle"; segWidth: 120; options: [{ value: "text", label: "Icons" }, { value: "rings", label: "Ring gauges" }] }
         SwitchRow { title: "Temperature with CPU / RAM"; icon: "thermostat"; target: page.b; key: "statsTemp" }

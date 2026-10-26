@@ -31,7 +31,13 @@ Variants {
         property bool dragging: false
         property real dragX: 0
         property real dragY: 0
+        // drawn as one rounded pill (the capsule style, freeroam)
         readonly property bool capsule: cfg.style === "capsule" || free
+        // only as long as its widgets (Settings → Bar → Length, a corner, the capsule style),
+        // sitting at the start, middle or end of its edge (Theme.barAlign)
+        readonly property bool fit: Theme.barFit
+        // the sections packed together rather than spread to the ends and middle
+        readonly property bool packed: fit || Theme.barArrange !== "spread"
         readonly property bool minimal: cfg.style === "minimal"
         readonly property bool outline: cfg.style === "outline"
         // the room between the bar's ends and its first / last widget: the same as above and below them
@@ -63,6 +69,8 @@ Variants {
             function onPerScreenChanged() { win.refit(); }
             function onHeightChanged() { win.refit(); }
             function onPositionChanged() { win.refit(); }
+            function onLengthChanged() { win.refit(); }
+            function onArrangeChanged() { win.refit(); }
         }
         Connections {
             target: Settings.data.appearance
@@ -112,7 +120,8 @@ Variants {
             onHoveredChanged: if (!hovered) hideDelay.restart()
         }
         // input: the whole bar while it's out, else the strip along the edge
-        mask: Region { item: hitArea }
+        // (a fitted bar: just the bar, so the rest of the edge stays clickable)
+        mask: Region { item: win.fit && !win.free && win.revealed ? bg : hitArea }
         Item {
             id: hitArea
             readonly property real across: win.revealed || hideAnim.v > 0.01 ? win.thickness : Math.max(1, win.cfg.revealSize ?? 3)
@@ -186,7 +195,7 @@ Variants {
         Component { id: separatorC; Separator {} }
         Component { id: clipboardC; ClipboardButton { screenName: win.modelData.name } }
         Component { id: visualizerC; Visualizer { screenName: win.modelData.name } }
-        Component { id: notepadC; FIconButton { id: noteBtn; icon: "sticky_note_2"; size: Theme.barItem; iconSize: 18; active: Panels.current === "notepad"; onClicked: Panels.toggle("notepad", win.modelData.name, noteBtn) } }
+        Component { id: notepadC; FIconButton { id: noteBtn; icon: "sticky_note_2"; size: Theme.barItem; iconSize: Theme.barIcon; active: Panels.current === "notepad"; onClicked: Panels.toggle("notepad", win.modelData.name, noteBtn) } }
         Component { id: updatesC; UpdatesIndicator { window: win; screenName: win.modelData.name } }
         Component { id: recordC; RecordIndicator { screenName: win.modelData.name } }
         Component { id: privacyC; PrivacyIndicator { window: win; screenName: win.modelData.name } }
@@ -194,8 +203,8 @@ Variants {
         Component { id: batteryC; Battery { screenName: win.modelData.name } }
         Component { id: notifC; NotifBell { screenName: win.modelData.name } }
         Component { id: weatherC; WeatherChip { screenName: win.modelData.name } }
-        Component { id: quickC; FIconButton { id: qsBtn; icon: "menu"; size: Theme.barItem; iconSize: 18; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name, qsBtn) } }
-        Component { id: assistantC; FIconButton { id: aiBtn; property bool barVisible: Settings.data.ai.enabled; icon: "auto_awesome"; size: Theme.barItem; iconSize: 18; active: Panels.current === "assistant"; onClicked: Panels.toggle("assistant", win.modelData.name, aiBtn) } }
+        Component { id: quickC; FIconButton { id: qsBtn; icon: "menu"; size: Theme.barItem; iconSize: Theme.barIcon; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name, qsBtn) } }
+        Component { id: assistantC; FIconButton { id: aiBtn; property bool barVisible: Settings.data.ai.enabled; icon: "auto_awesome"; size: Theme.barItem; iconSize: Theme.barIcon; active: Panels.current === "assistant"; onClicked: Panels.toggle("assistant", win.modelData.name, aiBtn) } }
         Component { id: powerC; FIconButton { id: powerBtn; icon: "power_settings_new"; size: Theme.barItem; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name, powerBtn) } }
 
         Item {
@@ -213,9 +222,13 @@ Variants {
                 y: win.pos === "top" ? -d : win.pos === "bottom" ? d : 0
             }
 
-            // capsule: where the packed sections start (centered along the bar)
+            // packed: how long the sections are together, and where they start
             readonly property real capLen: (startSec.visible ? startSec.size + win.sectionGap : 0) + (centerSec.visible ? centerSec.size + win.sectionGap : 0) + (endSec.visible ? endSec.size : 0) - (endSec.visible ? 0 : win.sectionGap)
-            readonly property real capStart: win.free ? win.gripW + Theme.barInset : ((win.vertical ? height : width) - capLen) / 2
+            readonly property real len: win.vertical ? height : width
+            readonly property string packAt: win.fit ? Theme.barAlign : Theme.barArrange
+            readonly property real packPad: win.fit ? Theme.barInset : win.edgePad
+            readonly property real capStart: win.free ? win.gripW + Theme.barInset
+                : packAt === "start" ? packPad : packAt === "end" ? len - capLen - packPad : (len - capLen) / 2
 
             // minimal: a soft shade from the screen edge, so the widgets read on any wallpaper
             Rectangle {
@@ -233,14 +246,16 @@ Variants {
                 id: bg
                 visible: !win.islands && !win.minimal
                 // the whole bar, or (capsule) just around the widgets
-                x: win.free ? 0 : win.capsule && !win.vertical ? content.capStart - Theme.barInset : 0
-                y: win.capsule && win.vertical ? content.capStart - Theme.barInset : 0
-                width: win.free ? parent.width : win.capsule && !win.vertical ? content.capLen + Theme.barInset * 2 : parent.width
-                height: win.capsule && win.vertical ? content.capLen + Theme.barInset * 2 : parent.height
-                Behavior on width { enabled: win.capsule; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
-                Behavior on x { enabled: win.capsule; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
+                x: win.free ? 0 : win.fit && !win.vertical ? content.capStart - Theme.barInset : 0
+                y: win.fit && win.vertical ? content.capStart - Theme.barInset : 0
+                width: win.free ? parent.width : win.fit && !win.vertical ? content.capLen + Theme.barInset * 2 : parent.width
+                height: win.fit && win.vertical ? content.capLen + Theme.barInset * 2 : parent.height
+                Behavior on width { enabled: win.fit; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
+                Behavior on x { enabled: win.fit; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
+                Behavior on height { enabled: win.fit; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
+                Behavior on y { enabled: win.fit; Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
                 color: win.outline ? Theme.alpha(Theme.bg, Theme.barOp * 0.3) : Theme.barBg
-                radius: win.attached ? 0 : win.capsule ? Math.floor(Theme.barHeight / 2) : Theme.barRadius
+                radius: win.attached && !win.fit ? 0 : win.capsule ? Math.floor(Theme.barHeight / 2) : Theme.barRadius
                 // no outline when panels blend into the bar: it would show as a seam
                 border.width: win.outline ? 1.5 : win.attached || Theme.blendPanels || !(win.cfg.border ?? true) ? 0 : 1
                 border.color: win.outline ? Theme.alpha(Theme.text, 0.28) : Theme.alpha(Theme.border, 0.5)
@@ -324,7 +339,7 @@ Variants {
                 vertical: win.vertical
                 level: win.level
                 ids: win.layout.left ?? win.cfg.left
-                readonly property real along: win.capsule ? content.capStart : win.edgePad
+                readonly property real along: win.packed ? content.capStart : win.edgePad
                 x: win.vertical ? (parent.width - width) / 2 : along
                 y: win.vertical ? along : (parent.height - height) / 2
             }
@@ -343,7 +358,7 @@ Variants {
                 readonly property real lo: startSec.visible ? (win.vertical ? startSec.y + startSec.height : startSec.x + startSec.width) + win.sectionGap : 0
                 readonly property real hi: (endSec.visible ? (win.vertical ? endSec.y : endSec.x) - win.sectionGap : (win.vertical ? parent.height : parent.width)) - size
                 readonly property real ideal: ((win.vertical ? parent.height : parent.width) - size) / 2
-                readonly property real pos: win.capsule ? content.capStart + (startSec.visible ? startSec.size + win.sectionGap : 0) : Math.max(lo, Math.min(hi, ideal))
+                readonly property real pos: win.packed ? content.capStart + (startSec.visible ? startSec.size + win.sectionGap : 0) : Math.max(lo, Math.min(hi, ideal))
 
                 x: win.vertical ? (parent.width - width) / 2 : pos
                 y: win.vertical ? pos : (parent.height - height) / 2
@@ -359,7 +374,7 @@ Variants {
                 vertical: win.vertical
                 level: win.level
                 ids: win.layout.right ?? win.cfg.right
-                readonly property real along: win.capsule ? centerSec.pos + (centerSec.visible ? centerSec.size + win.sectionGap : 0)
+                readonly property real along: win.packed ? centerSec.pos + (centerSec.visible ? centerSec.size + win.sectionGap : 0)
                     : (win.vertical ? parent.height : parent.width) - size - win.edgePad
                 x: win.vertical ? (parent.width - width) / 2 : along
                 y: win.vertical ? along : (parent.height - height) / 2

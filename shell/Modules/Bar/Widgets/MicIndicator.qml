@@ -21,7 +21,7 @@ Item {
     FIconButton {
         id: btn
         size: Theme.barItem
-        iconSize: 18
+        iconSize: Theme.barIcon
         icon: Audio.micMuted ? "mic_off" : "mic"
         // in use: highlighted; muted: the error color, so it stands out
         active: root.live

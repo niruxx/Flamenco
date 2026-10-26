@@ -10,7 +10,7 @@ Singleton {
 
     // "noir" is shown as Flamenco (the shell's own black-and-grey look); "flamenco",
     // the original rose palette, is shown as Material Design (ids stay, so settings keep working)
-    readonly property var names: ["noir", "flamenco", "glass", "y2k", "aero", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
+    readonly property var names: ["noir", "flamenco", "glass", "y2k", "aero", "unity", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
 
     readonly property var labels: ({
             noir: "Flamenco",
@@ -18,6 +18,7 @@ Singleton {
             glass: "Liquid Glass",
             y2k: "Y2K",
             aero: "Frutiger Aero",
+            unity: "Unity",
             breeze: "Breeze",
             catppuccin: "Catppuccin",
             rosepine: "Rosé Pine",
@@ -78,6 +79,22 @@ Singleton {
                     border: "#c4c0e6", text: "#1d1838", textDim: "#5f5a86",
                     accent: "#e0249f", onAccent: "#ffffff", accent2: "#0090c8", accent3: "#7b4fd6",
                     error: "#d61d4a", warning: "#b37400", success: "#13915a"
+                }
+            },
+            // Unity: Ubuntu's Ambiance (dark) and Radiance (light): warm greys, Ubuntu orange,
+            // aubergine for the launcher's glass and the second accent
+            unity: {
+                dark: {
+                    bg: "#2c2b28", surface: "#3c3b37", surfaceHigh: "#47463f", surfaceHighest: "#55534c",
+                    border: "#5f5d55", text: "#f2f1f0", textDim: "#aea79f",
+                    accent: "#e95420", onAccent: "#ffffff", accent2: "#77216f", accent3: "#5e2750",
+                    error: "#df382c", warning: "#efb73e", success: "#38b44a"
+                },
+                light: {
+                    bg: "#f2f1f0", surface: "#ffffff", surfaceHigh: "#e8e6e3", surfaceHighest: "#dfdbd2",
+                    border: "#cdc8c1", text: "#3c3b37", textDim: "#7a776f",
+                    accent: "#e95420", onAccent: "#ffffff", accent2: "#77216f", accent3: "#5e2750",
+                    error: "#c7162b", warning: "#f99b11", success: "#0e8420"
                 }
             },
             // Frutiger Aero: sky, aqua and grass green; ocean blues in the dark (with the gloss finish)

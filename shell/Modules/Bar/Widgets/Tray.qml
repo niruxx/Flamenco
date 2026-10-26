@@ -63,14 +63,14 @@ BarFlow {
                 visible: it.missing
                 anchors.centerIn: parent
                 icon: "question_mark"
-                size: 16
+                size: Theme.barIconSm
                 color: Theme.textDim
             }
             IconImage {
                 id: img
                 visible: !it.missing
                 anchors.centerIn: parent
-                implicitSize: 18
+                implicitSize: Theme.barIcon
                 source: {
                     const icon = it.modelData.icon;
                     if (icon.includes("?path=")) {
@@ -133,7 +133,7 @@ BarFlow {
     FIconButton {
         visible: root.overflowing
         size: Theme.barItem - 4
-        iconSize: 16
+        iconSize: Theme.barIconSm
         icon: Theme.barVertical ? (root.expanded ? "keyboard_arrow_up" : "keyboard_arrow_down") : (root.expanded ? "chevron_left" : "chevron_right")
         onClicked: root.expanded = !root.expanded
     }

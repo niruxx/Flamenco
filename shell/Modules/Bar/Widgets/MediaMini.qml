@@ -56,7 +56,7 @@ BarChip {
         FIcon {
             icon: Media.playing ? "pause" : "play_arrow"
             fill: 1
-            size: 18
+            size: Theme.barIcon
             color: Theme.accent
         }
     }

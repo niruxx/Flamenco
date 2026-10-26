@@ -41,7 +41,7 @@ Item {
         anchors.centerIn: parent
         visible: loader.status === Loader.Error
         icon: "extension_off"
-        size: 18
+        size: Theme.barIcon
         color: Theme.error
     }
 }

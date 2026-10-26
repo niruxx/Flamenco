@@ -73,6 +73,7 @@ ShellRoot {
     Dock {}
     HotCorners {}
     Popups {}
+    DevicePopups {}
     Osd { id: osd }
 
     ControlCenter {}

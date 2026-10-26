@@ -12,7 +12,7 @@ BarChip {
 
     BarFlow {
         spacing: Theme.barVertical ? 0 : 4
-        FIcon { icon: Weather.icon; size: 18; fill: 1; color: Theme.accent2 }
+        FIcon { icon: Weather.icon; size: Theme.barIcon; fill: 1; color: Theme.accent2 }
         FText { text: Math.round(Weather.temp) + "°"; font.pixelSize: Theme.barVertical ? Theme.fsXs : Theme.fsSm }
     }
 }

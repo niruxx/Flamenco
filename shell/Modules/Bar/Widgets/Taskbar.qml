@@ -71,7 +71,7 @@ BarFlow {
             BarFlow {
                 spacing: 8
                 AppIcon {
-                    implicitSize: 18
+                    implicitSize: Theme.barIcon
                     name: chip.entry?.icon ?? Apps.iconFor(chip.modelData)
                 }
                 FText {

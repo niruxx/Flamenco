@@ -33,7 +33,7 @@ BarChip {
         spacing: 8
 
         AppIcon {
-            implicitSize: 18
+            implicitSize: Theme.barIcon
             name: Apps.iconFor(root.win?.app_id ?? "")
         }
 

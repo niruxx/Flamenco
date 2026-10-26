@@ -99,7 +99,7 @@ Item {
         anchors.centerIn: parent
         visible: root.failed
         icon: "extension_off"
-        size: 18
+        size: Theme.barIcon
         color: Theme.error
     }
 }

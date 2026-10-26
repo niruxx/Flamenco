@@ -65,6 +65,8 @@
   flamenco bar toggle|show|hide | mode never|auto|windows   hide the bar (by hand, automatically, or while windows are open)
   flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO
                                live (video) wallpapers: find them online (wikimedia, pexels, pixabay), download, API keys
+  flamenco devices watch | open /dev/DISK | eject /dev/DISK
+                               drives and accessories plugged in or taken out (JSON lines); open or safely remove a drive
   flamenco get search KIND [QUERY] [PAGE] [SORT] | install KIND ID [FILE] | remove KIND ID | list
                                get new icon, cursor and GTK themes, color schemes, wallpapers (KDE Store) and fonts (Fontsource)
   flamenco logs [-f]           show the shell's log (~/.cache/flamenco/shell.log)
@@ -82,7 +84,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.52.1"
+VERSION = "0.54.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -5138,6 +5140,291 @@ def cmd_live(args: list[str]) -> int:
     die("usage: flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO")
 
 
+# ─────────────────────────────── devices plugged in ──────────────────────────
+# Settings → Notifications → Devices: a pop-up when a drive or an accessory is
+# plugged in or taken out, like GNOME's. `devices watch` follows udev and prints
+# one JSON line per thing a person would call a device: a USB stick is one "drive"
+# (not a USB device, a disk and its partitions), hubs and the computer's own
+# devices (webcam, fingerprint reader… on fixed ports, which come back after sleep)
+# are left out. `devices open` mounts a drive and opens it; `devices eject` makes it
+# safe to pull out (udisks, as GNOME does).
+
+DEV_SETTLE = 1.2          # s to wait for a USB device's disk to show up (then it's a drive)
+
+
+def dev_name(p: dict) -> str:
+    def clean(v):
+        return re.sub(r"\s+", " ", str(v or "").replace("_", " ").replace("\\x20", " ")).strip()
+    model = clean(p.get("ID_MODEL_FROM_DATABASE") or p.get("ID_MODEL"))
+    vendor = clean(p.get("ID_VENDOR_FROM_DATABASE") or p.get("ID_VENDOR"))
+    if vendor and model and not model.lower().startswith(vendor.split(" ")[0].lower()):
+        return f"{vendor} {model}"[:80]
+    return (model or vendor or "USB device")[:80]
+
+
+def dev_kind(p: dict) -> str:
+    """What a USB device is, from its interface classes (and what udev knows)."""
+    ifs = str(p.get("ID_USB_INTERFACES") or "")
+    classes = {x[:2] for x in ifs.strip(":").split(":") if len(x) >= 2}
+    if p.get("ID_MTP_DEVICE") == "1" or p.get("ID_MEDIA_PLAYER") or "06" in classes:
+        return "phone"
+    if ":030101" in ifs:
+        return "keyboard"
+    if ":030102" in ifs:
+        return "mouse"
+    if "03" in classes:
+        return "input"
+    if "0e" in classes:
+        return "camera"
+    if "01" in classes:
+        return "audio"
+    if "e0" in classes:
+        return "bluetooth"
+    if "07" in classes:
+        return "printer"
+    if "02" in classes or "0a" in classes:
+        return "network"
+    if "08" in classes:
+        return "storage"
+    return "device"
+
+
+def dev_fixed(devpath: str) -> bool:
+    """A device on one of the computer's own ports (sysfs says "fixed")."""
+    try:
+        return (Path("/sys") / devpath.lstrip("/") / "removable").read_text().strip() == "fixed"
+    except OSError:
+        return False
+
+
+def dev_size(dev: str) -> str:
+    r = subprocess.run(["lsblk", "-bdno", "SIZE", dev], capture_output=True, text=True) if shutil.which("lsblk") else None
+    try:
+        n = int(r.stdout.strip()) if r and r.returncode == 0 else 0
+    except ValueError:
+        n = 0
+    if not n:
+        return ""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1000 or unit == "TB":
+            return f"{n:.0f} {unit}" if unit == "B" or n >= 100 else f"{n:.1f} {unit}"
+        n /= 1000
+    return ""
+
+
+def dev_block_wanted(p: dict) -> bool:
+    name = Path(str(p.get("DEVNAME") or "")).name
+    if re.match(r"(loop|ram|zram|dm-|nbd|md|sr)", name):
+        return False
+    return p.get("ID_BUS") == "usb" or "usb" in str(p.get("ID_PATH") or "") or name.startswith("mmcblk") or p.get("ID_DRIVE_FLASH_SD") == "1"
+
+
+class DevWatch:
+    """udev events in (one dict each), device events out (to `emit`)."""
+
+    def __init__(self, emit, fixed: set[str] | None = None, now=None):
+        import time
+        self.emit = emit
+        self.now = now or time.monotonic
+        self.fixed = set(fixed or ())          # devpaths on fixed ports (from sysfs, kept for their removal)
+        self.pending: list[tuple[float, dict]] = []    # USB devices waiting to see if they're a drive
+        self.drives: dict[str, dict] = {}      # disk devpath → what was said about it
+        self.recent: list[tuple[float, str]] = []      # disks seen lately (devpath), to drop their USB events
+
+    def event(self, p: dict) -> None:
+        action, sub, path = p.get("ACTION"), p.get("SUBSYSTEM"), str(p.get("DEVPATH") or "")
+        if action not in ("add", "remove") or not path:
+            return
+        t = self.now()
+        if sub == "usb" and p.get("DEVTYPE") == "usb_device":
+            ifs = str(p.get("ID_USB_INTERFACES") or "")
+            if re.search(r":09", ifs) or str(p.get("DEVPATH")).rstrip("/").split("/")[-1].startswith("usb"):
+                return                                     # a hub, or the controller's own root hub
+            if action == "add" and dev_fixed(path):
+                self.fixed.add(path)
+            if path in self.fixed:
+                if action == "remove":
+                    self.fixed.discard(path)
+                return
+            if any(d.startswith(path + "/") for _, d in self.recent):
+                return                                     # its disk already said it
+            self.pending.append((t, p))
+            return
+        if sub == "block" and p.get("DEVTYPE") == "disk" and dev_block_wanted(p):
+            self.recent.append((t, path))
+            self.pending = [(pt, pp) for pt, pp in self.pending if not path.startswith(str(pp.get("DEVPATH")) + "/")]
+            dev = str(p.get("DEVNAME") or "")
+            if action == "add":
+                self.drives[path] = {"dev": dev, "name": dev_name(p), "t": t, "said": False, "label": ""}
+            else:
+                d = self.drives.pop(path, None)
+                if d and not d["said"]:
+                    return                                 # in and out within a second: nothing to say
+                self.emit({"action": "removed", "kind": "drive", "name": (d or {}).get("label") or (d or {}).get("name") or dev_name(p),
+                           "detail": "", "dev": dev})
+            return
+        if sub == "block" and p.get("DEVTYPE") == "partition" and action == "add":
+            parent = path.rsplit("/", 1)[0]
+            d = self.drives.get(parent)
+            if d and not d["label"] and p.get("ID_FS_LABEL"):
+                d["label"] = str(p.get("ID_FS_LABEL")).replace("\\x20", " ")[:80]
+                d.setdefault("part", str(p.get("DEVNAME") or ""))
+
+    def tick(self) -> None:
+        """Says what has settled: drives (after their partitions came), other devices."""
+        t = self.now()
+        self.recent = [(rt, d) for rt, d in self.recent if t - rt < 10]
+        for path, d in self.drives.items():
+            if not d["said"] and t - d["t"] >= DEV_SETTLE:
+                d["said"] = True
+                self.emit({"action": "added", "kind": "drive", "name": d["label"] or d["name"],
+                           "detail": " · ".join(x for x in (d["name"] if d["label"] else "", dev_size(d["dev"]) if d["dev"] else "") if x),
+                           "dev": d["dev"]})
+        keep = []
+        for pt, p in self.pending:
+            if t - pt < DEV_SETTLE:
+                keep.append((pt, p))
+                continue
+            kind = dev_kind(p)
+            if kind == "storage":
+                continue                                   # a drive whose disk didn't come: nothing to open
+            self.emit({"action": "added" if p.get("ACTION") == "add" else "removed", "kind": kind, "name": dev_name(p), "detail": "", "dev": ""})
+        self.pending = keep
+
+
+def dev_records(stream):
+    """udevadm monitor --property output → one dict per event."""
+    cur: dict = {}
+    for line in stream:
+        line = line.rstrip("\n")
+        if not line.strip():
+            if cur:
+                yield cur
+            cur = {}
+        elif "=" in line and not line.startswith(("UDEV", "KERNEL", "monitor")):
+            k, _, v = line.partition("=")
+            cur[k] = v
+    if cur:
+        yield cur
+
+
+def dev_watch(stdin: bool = False) -> int:
+    import select
+    import threading
+    import queue
+    out = lambda e: print(json.dumps(e), flush=True)
+    fixed = set()
+    for f in Path("/sys/bus/usb/devices").glob("*/removable"):
+        try:
+            if f.read_text().strip() == "fixed":
+                fixed.add("/" + str(f.parent.resolve().relative_to("/sys")))
+        except (OSError, ValueError):
+            pass
+    w = DevWatch(out, fixed)
+    if stdin:
+        src = sys.stdin
+        proc = None
+    else:
+        if not shutil.which("udevadm"):
+            die("udevadm isn't installed (it comes with systemd)")
+        proc = subprocess.Popen(["udevadm", "monitor", "--udev", "--property", "--subsystem-match=usb/usb_device", "--subsystem-match=block"],
+                                stdout=subprocess.PIPE, text=True, bufsize=1)
+        src = proc.stdout
+    q: queue.Queue = queue.Queue()
+
+    def reader():
+        for rec in dev_records(src):
+            q.put(rec)
+        q.put(None)
+    threading.Thread(target=reader, daemon=True).start()
+    try:
+        while True:
+            try:
+                rec = q.get(timeout=0.25)
+            except queue.Empty:
+                rec = False
+            if rec is None:
+                break
+            if rec:
+                w.event(rec)
+            w.tick()
+        # what's still waiting when the input ends (tests)
+        import time
+        time.sleep(DEV_SETTLE + 0.05) if stdin else None
+        w.tick()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if proc:
+            proc.terminate()
+    return 0
+
+
+def dev_partitions(dev: str) -> list[dict]:
+    r = subprocess.run(["lsblk", "-Jpo", "NAME,FSTYPE,MOUNTPOINT,TYPE", dev], capture_output=True, text=True)
+    if r.returncode != 0:
+        die(f"no such drive: {dev}")
+    out = []
+
+    def walk(n):
+        out.append(n)
+        for c in n.get("children") or []:
+            walk(c)
+    for n in json.loads(r.stdout).get("blockdevices") or []:
+        walk(n)
+    return out
+
+
+def dev_open(dev: str) -> str:
+    """Mounts the drive's first filesystem (if it isn't) and gives back where."""
+    parts = dev_partitions(dev)
+    for p in parts:
+        if p.get("mountpoint"):
+            return p["mountpoint"]
+    fs = next((p for p in parts if p.get("fstype") and p.get("fstype") not in ("swap", "crypto_LUKS")), None)
+    if not fs:
+        die("nothing on it to open (no filesystem Flamenco can mount)")
+    if not shutil.which("udisksctl"):
+        die("udisksctl isn't installed (udisks2), so drives can't be mounted from here")
+    r = subprocess.run(["udisksctl", "mount", "-b", fs["name"], "--no-user-interaction"], capture_output=True, text=True, timeout=60)
+    m = re.search(r" at (.+?)\.?$", r.stdout.strip())
+    if r.returncode != 0 or not m:
+        die("couldn't mount it: " + (r.stderr.strip() or r.stdout.strip()))
+    return m.group(1)
+
+
+def dev_eject(dev: str) -> None:
+    if not shutil.which("udisksctl"):
+        die("udisksctl isn't installed (udisks2)")
+    for p in reversed(dev_partitions(dev)):
+        if p.get("mountpoint"):
+            r = subprocess.run(["udisksctl", "unmount", "-b", p["name"], "--no-user-interaction"], capture_output=True, text=True, timeout=120)
+            if r.returncode != 0:
+                die("it's still in use: " + (r.stderr.strip() or r.stdout.strip()))
+    r = subprocess.run(["udisksctl", "power-off", "-b", dev, "--no-user-interaction"], capture_output=True, text=True, timeout=60)
+    if r.returncode != 0:
+        # some card readers can't be powered off; unmounted is safe enough to pull
+        print("unmounted (it can't be powered off, but it's safe to remove)")
+        return
+    print("safe to remove")
+
+
+def cmd_devices(args: list[str]) -> int:
+    sub = args[0] if args else ""
+    if sub == "watch":
+        return dev_watch("--stdin" in args)
+    if sub in ("open", "eject") and len(args) > 1:
+        dev = args[1]
+        if not re.fullmatch(r"/dev/[\w.-]+", dev):
+            die("not a device (/dev/…)")
+        if sub == "open":
+            print(dev_open(dev))
+        else:
+            dev_eject(dev)
+        return 0
+    die("usage: flamenco devices watch | open /dev/DISK | eject /dev/DISK")
+
+
 # ─────────────────────────────── get new stuff ───────────────────────────────
 # Settings → Get themes: like KDE's "Get New…", one place to find and install icon
 # and cursor themes, GTK themes, KDE color schemes and wallpapers (from the KDE
@@ -8383,6 +8670,8 @@ UI_ICON_MAP.update({
     "alternate_email": ["mail-message"], "css": ["text-css", "text-x-generic"], "feather": ["draw-freehand", "applications-graphics"], "percent": ["accessories-calculator"],
     "looks_3": ["view-grid"], "looks_4": ["view-grid"], "border_style": ["format-border-style", "draw-rectangle"], "border_outer": ["draw-rectangle"], "border_top": ["draw-rectangle"],
     "border_bottom": ["draw-rectangle"], "border_left": ["draw-rectangle"], "border_right": ["draw-rectangle"], "download_done": ["emblem-ok", "folder-download"],
+    "usb": ["drive-removable-media-usb", "drive-removable-media", "media-removable"], "smartphone": ["phone", "smartphone"],
+    "devices": ["computer", "drive-removable-media"], "eject": ["media-eject"], "science": ["applications-science"],
     "format_color_text": ["format-text-color", "format-fill-color"], "text_select_end": ["edit-select-text", "insert-text"],
 })
 UI_ICON_CACHE = XDG_CACHE / "flamenco" / "ui-icons"
@@ -8739,6 +9028,7 @@ def doctor_checks() -> list[dict]:
 
     # ── features ──
     add("Features", "NetworkManager", "Wi-Fi, Ethernet and VPN", have("nmcli"), "networkmanager")
+    add("Features", "udisks2", "Open and Eject in the pop-ups for drives you plug in (Settings → Notifications → Devices)", have("udisksctl"), "udisks2")
     add("Features", "OpenVPN plugin", "import and connect .ovpn VPNs",
         exists("/usr/lib/NetworkManager/VPN/nm-openvpn-service.name"), "networkmanager-openvpn")
     add("Features", "WireGuard tools", "WireGuard VPNs", have("wg"), "wireguard-tools")
@@ -10328,6 +10618,8 @@ def main(argv: list[str]) -> int:
         return cmd_live(rest)
     if cmd == "get":
         return cmd_get(rest)
+    if cmd == "devices":
+        return cmd_devices(rest)
     if cmd == "users":
         return cmd_users(rest)
     if cmd == "accounts":

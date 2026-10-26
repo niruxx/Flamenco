@@ -11,7 +11,7 @@ BarChip {
 
     BarFlow {
         spacing: 4
-        FIcon { visible: !Theme.barVertical && root.barLevel < 1; icon: "keyboard"; size: 16 }
+        FIcon { visible: !Theme.barVertical && root.barLevel < 1; icon: "keyboard"; size: Theme.barIconSm }
         FText {
             text: {
                 const l = Niri.currentLayout;

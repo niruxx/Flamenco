@@ -55,6 +55,20 @@ Page {
                  right: ["tray", "recording", "privacy", "battery", "network", "bluetooth", "audio", "quicksettings", "notifications", "clock"] },
           dock: { enabled: true, position: "bottom", style: "classic", autoHide: false, magnify: true, zoom: 0.6, indicator: "dot", border: true, opacity: 0.85, roundness: 1.4 },
           launcher: { position: "center" }, notifications: { position: "top-right" } },
+        { id: "unity", label: "Unity", icon: "dock_to_left", hint: "Ubuntu Unity: a thin dark top panel, the launcher down the left with the Dash button, Ubuntu orange",
+          appearance: { palette: "unity", mode: "dark", accentOverride: "", roundness: 0.6, panelOpacity: 0.92, blur: true, screenFrame: false, blendPanels: false, shadows: true },
+          // the Ubuntu font when it's installed (ttf-ubuntu-font-family, or Get themes → Fonts)
+          fonts: ["Ubuntu", "Ubuntu Sans"], monoFonts: ["Ubuntu Mono", "Ubuntu Sans Mono"],
+          // the top panel: the app in front on the left; indicators, the clock and the session menu on the right
+          bar: { position: "top", style: "attached", length: "full", arrange: "spread", height: 28, iconScale: 0.9, border: false, hide: "never", workspaceStyle: "dots",
+                 batteryStyle: "icon", statsStyle: "text", statsTemp: false, clockLayout: "inline", clockAlign: "right",
+                 left: ["window"], center: [],
+                 right: ["recording", "privacy", "updates", "tray", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "notifications", "clock", "power"] },
+          // the launcher: down the whole left edge, always there
+          dock: { enabled: true, style: "unity", position: "left", autoHide: false, magnify: false, iconSize: 44, spacing: 6, opacity: 1, labels: true, showRunning: true,
+                  parts: { launcher: true, overview: true, clock: true, weather: true } },
+          // the Dash opens next to the launcher, notifications (NotifyOSD) at the top right
+          launcher: { position: "top-left", width: 760 }, notifications: { position: "top-right" } },
         { id: "islands", label: "Islands", icon: "view_column_2", hint: "Three floating islands: app icons per workspace, ring gauges, battery shape, stacked clock",
           bar: { position: "top", style: "islands", height: 40, workspaceStyle: "apps", batteryStyle: "battery", statsStyle: "rings", statsTemp: true, clockLayout: "stacked", clockAlign: "center",
                  left: ["launcher", "separator", "workspaces", "window"], center: ["media", "visualizer"],
@@ -88,6 +102,29 @@ Page {
 
     function applyPreset(p) {
         const d = Settings.data;
+        // leaving Unity: its launcher style and font aren't part of the other layouts
+        if (a.layoutPreset === "unity" && p.id !== "unity") {
+            if (p.dock?.style === undefined) {
+                d.dock.style = "classic";
+                d.dock.position = "bottom";
+            }
+            if (!p.fonts && ["Ubuntu", "Ubuntu Sans"].includes(a.fontFamily))
+                a.fontFamily = "Google Sans Flex";
+            if (!p.monoFonts && ["Ubuntu Mono", "Ubuntu Sans Mono"].includes(a.monoFamily))
+                a.monoFamily = "Google Sans Code";
+        }
+        // the bar's shape options go back to their defaults unless the layout sets them
+        const barDefaults = { length: "full", align: "center", arrange: "spread", iconScale: 1 };
+        for (const k in barDefaults)
+            if ((p.bar ?? {})[k] === undefined)
+                d.bar[k] = barDefaults[k];
+        // a layout's own font, when it's installed
+        const font = (p.fonts || []).find(f => Sounds.fonts.includes(f));
+        if (font)
+            a.fontFamily = font;
+        const mono = (p.monoFonts || []).find(f => Sounds.fonts.includes(f));
+        if (mono)
+            a.monoFamily = mono;
         for (const section of ["appearance", "bar", "dock", "launcher", "notifications"])
             for (const k in (p[section] ?? {}))
                 d[section][k] = Array.isArray(p[section][k]) ? p[section][k].slice() : p[section][k];
@@ -97,7 +134,7 @@ Page {
         // likewise the gloss / chrome finish and the rounder shapes of Aero and Y2K
         if (p.appearance?.finish === undefined)
             a.finish = "flat";
-        if (p.appearance?.roundness === undefined && ["y2k", "aero", "liquidglass"].includes(a.layoutPreset))
+        if (p.appearance?.roundness === undefined && ["y2k", "aero", "liquidglass", "unity"].includes(a.layoutPreset))
             a.roundness = 1;
         a.layoutPreset = p.id;
     }

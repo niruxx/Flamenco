@@ -11,7 +11,7 @@ Item {
     FIconButton {
         id: btn
         size: Theme.barItem
-        iconSize: 18
+        iconSize: Theme.barIcon
         icon: Notifs.dnd ? "notifications_off" : Notifs.unread > 0 ? "notifications_unread" : "notifications"
         active: Panels.current === "notifications"
         // with mako showing them, there's no history here: the bell brings mako's last one back

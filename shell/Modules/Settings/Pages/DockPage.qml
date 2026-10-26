@@ -17,17 +17,20 @@ Page {
         SwitchRow { title: "Show dock"; icon: "dock_to_bottom"; target: page.d; key: "enabled" }
         ChoiceRow {
             title: "Style"
-            subtitle: (page.d.style || "classic") === "panel" ? "Your apps with pills for the start button, overview, clock and weather" : "Just your apps"
+            subtitle: (page.d.style || "classic") === "panel" ? "Your apps with pills for the start button, overview, clock and weather"
+                : page.d.style === "unity" ? "Ubuntu Unity's launcher: along the whole edge, the Dash button first, apps on tiles lit in their colors, pips for open windows"
+                : "Just your apps"
             icon: "view_day"
             target: page.d
             key: "style"
             segWidth: 120
-            options: [{ value: "classic", label: "Classic" }, { value: "panel", label: "Panel" }]
+            options: [{ value: "classic", label: "Classic" }, { value: "panel", label: "Panel" }, { value: "unity", label: "Unity" }]
         }
         Repeater {
             model: (page.d.style || "classic") === "panel" ? [
                 { k: "launcher", t: "Start button", i: "apps" }, { k: "overview", t: "Overview button", i: "overview_key" },
-                { k: "clock", t: "Clock", i: "schedule" }, { k: "weather", t: "Weather", i: "partly_cloudy_day" }] : []
+                { k: "clock", t: "Clock", i: "schedule" }, { k: "weather", t: "Weather", i: "partly_cloudy_day" }]
+                : page.d.style === "unity" ? [{ k: "launcher", t: "Dash button", i: "apps" }] : []
             SettingRow {
                 id: prow
                 required property var modelData
@@ -59,9 +62,10 @@ Page {
             options: [{ value: "", label: "Every screen" }].concat(Quickshell.screens.map(s => ({ value: s.name, label: s.name + (s.model ? " · " + s.model : "") })))
         }
         SwitchRow { title: "Show running apps"; subtitle: "Apps with open windows appear even when not pinned"; icon: "apps"; target: page.d; key: "showRunning" }
-        SwitchRow { visible: page.d.showRunning; title: "Separate pinned apps"; subtitle: "A line between pinned apps and the other running ones"; icon: "more_vert"; target: page.d; key: "separator" }
+        SwitchRow { visible: page.d.showRunning && page.d.style !== "unity"; title: "Separate pinned apps"; subtitle: "A line between pinned apps and the other running ones"; icon: "more_vert"; target: page.d; key: "separator" }
         SwitchRow { title: "App names on hover"; icon: "label"; target: page.d; key: "labels" }
         ChoiceRow {
+            visible: page.d.style !== "unity"
             title: "Running indicator"
             icon: "more_horiz"
             target: page.d
@@ -81,16 +85,16 @@ Page {
         title: "Size"
         SliderRow { title: "Icon size"; icon: "photo_size_select_large"; target: page.d; key: "iconSize"; from: 24; to: 96; stepSize: 2; suffix: " px" }
         SliderRow { title: "Icon spacing"; icon: "space_bar"; target: page.d; key: "spacing"; from: 0; to: 24; stepSize: 1; suffix: " px" }
-        SwitchRow { title: "Magnification"; subtitle: "Icons grow under the pointer"; icon: "zoom_in"; target: page.d; key: "magnify" }
-        SliderRow { visible: page.d.magnify; title: "Magnification amount"; icon: "zoom_out_map"; target: page.d; key: "zoom"; from: 0.1; to: 1.5; stepSize: 0.05; factor: 100; suffix: "%" }
+        SwitchRow { visible: page.d.style !== "unity"; title: "Magnification"; subtitle: "Icons grow under the pointer"; icon: "zoom_in"; target: page.d; key: "magnify" }
+        SliderRow { visible: page.d.magnify && page.d.style !== "unity"; title: "Magnification amount"; icon: "zoom_out_map"; target: page.d; key: "zoom"; from: 0.1; to: 1.5; stepSize: 0.05; factor: 100; suffix: "%" }
     }
 
     Group {
         title: "Look"
-        SliderRow { title: "Distance from the edge"; subtitle: "0 sits flush against the screen edge"; icon: "border_bottom"; target: page.d; key: "margin"; from: 0; to: 48; stepSize: 1; suffix: " px" }
+        SliderRow { visible: page.d.style !== "unity"; title: "Distance from the edge"; subtitle: "0 sits flush against the screen edge"; icon: "border_bottom"; target: page.d; key: "margin"; from: 0; to: 48; stepSize: 1; suffix: " px" }
         SliderRow { title: "Background opacity"; subtitle: "0% leaves only the icons"; icon: "opacity"; target: page.d; key: "opacity"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
-        SliderRow { title: "Corner roundness"; icon: "rounded_corner"; target: page.d; key: "roundness"; from: 0; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
-        SwitchRow { title: "Border"; icon: "border_style"; target: page.d; key: "border" }
+        SliderRow { visible: page.d.style !== "unity"; title: "Corner roundness"; icon: "rounded_corner"; target: page.d; key: "roundness"; from: 0; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
+        SwitchRow { visible: page.d.style !== "unity"; title: "Border"; icon: "border_style"; target: page.d; key: "border" }
     }
 
     Group {

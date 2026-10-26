@@ -33,6 +33,6 @@ BarChip {
             font.pixelSize: Theme.fsSm
             color: Theme.error
         }
-        FIcon { icon: "stop"; size: 16; fill: 1; color: Theme.error }
+        FIcon { icon: "stop"; size: Theme.barIconSm; fill: 1; color: Theme.error }
     }
 }

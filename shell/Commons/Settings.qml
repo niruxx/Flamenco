@@ -103,6 +103,7 @@ Singleton {
                 property string position: "top"       // top | bottom | left | right | top-left | top-right | bottom-left | bottom-right | free
                 property string length: "full"        // full (edge to edge) | fit (just around its widgets)
                 property string align: "center"       // fit: where on its edge: start | center | end
+                property real iconScale: 1            // bar icons: 0.8 small … 1.4 large
                 property string arrange: "spread"     // full: spread (sections at the ends and middle) | start | center | end (packed together)
                 // floating | attached | islands | framed (a solid bar with pill groups, the Flamenco look)
                 // | capsule (one pill hugging the widgets) | minimal (no bar, a soft shade) | outline (see-through, outlined)
@@ -280,6 +281,16 @@ Singleton {
                 property var recentEmoji: []
             }
 
+            // a pop-up when a drive or an accessory is plugged in or taken out (Settings → Notifications → Devices)
+            property JsonObject devices: JsonObject {
+                property bool enabled: true
+                property string position: "top-center" // top-left | top-center | top-right | bottom-left | bottom-center | bottom-right
+                property int timeout: 5               // seconds a pop-up stays (drives with buttons: twice that)
+                property bool drives: true            // USB drives and memory cards (with Open and Eject)
+                property bool accessories: true       // keyboards, mice, phones, cameras, audio and other USB devices
+                property bool removals: true          // also when they're taken out
+                property bool sound: true             // the sound theme's device-added / device-removed
+            }
             property JsonObject notifications: JsonObject {
                 property bool popups: true
                 property bool dnd: false

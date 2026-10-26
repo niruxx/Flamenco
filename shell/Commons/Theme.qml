@@ -220,6 +220,9 @@ Singleton {
     readonly property int barGroup: barPills ? barHeight - 2 * barPillPad : barHeight
     readonly property int barItem: barPills ? barGroup - 2 * barPillPad : barHeight - 2 * barInset
     // space between items in a section
+    // bar icons (Settings → Bar → Icon size), never bigger than the item they sit in
+    readonly property int barIcon: Math.min(barItem, Math.round(18 * (barCfg.iconScale ?? 1)))
+    readonly property int barIconSm: Math.min(barItem, Math.round(16 * (barCfg.iconScale ?? 1)))
     readonly property int barSpacing: Math.round(Math.max(2, barInset * 0.8) * ((barCfg.spacing ?? 1) > 0 ? barCfg.spacing : 1))
     // the bar's own corner radius: its setting (px), else the theme's, never more than a full round end
     readonly property int barRadius: Math.min((barCfg.radius ?? -1) >= 0 ? Math.round(barCfg.radius * scale) : rLg, Math.floor(barHeight / 2))

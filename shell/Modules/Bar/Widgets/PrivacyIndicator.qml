@@ -35,9 +35,9 @@ BarChip {
 
     BarFlow {
         spacing: 4
-        FIcon { visible: root.showMic; icon: Audio.micMuted ? "mic_off" : "mic"; size: 16; fill: 1; color: Theme.warning }
-        FIcon { visible: Privacy.camera; icon: "videocam"; size: 16; fill: 1; color: Theme.success }
-        FIcon { visible: Privacy.screen; icon: "screen_share"; size: 16; fill: 1; color: Theme.error }
+        FIcon { visible: root.showMic; icon: Audio.micMuted ? "mic_off" : "mic"; size: Theme.barIconSm; fill: 1; color: Theme.warning }
+        FIcon { visible: Privacy.camera; icon: "videocam"; size: Theme.barIconSm; fill: 1; color: Theme.success }
+        FIcon { visible: Privacy.screen; icon: "screen_share"; size: Theme.barIconSm; fill: 1; color: Theme.error }
     }
 
     PopupWindow {
