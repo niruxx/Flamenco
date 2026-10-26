@@ -283,6 +283,9 @@ class Spec:
         self.buttons = o.get("buttons", "soft")
         self.scrollbars = o.get("scrollbars", "thin")
         self.accent_sel = bool(o.get("accentSelection", True))
+        # the text cursor (Appearance → Text cursor): GTK's caret, terminals' cursor
+        caret = str(raw.get("caret") or "")
+        self.caret = caret if re.fullmatch(r"#[0-9a-fA-F]{6}", caret) else c["accent"]
 
         # Derived app-level surfaces. "contrast" pushes view/base further from window.
         k = 0.06 + 0.06 * self.contrast
@@ -692,6 +695,7 @@ def gtk_css(s: Spec, gtk4: bool) -> str:
     }
     lines = [f"/* {MARKER}: Flamenco GTK {'4' if gtk4 else '3'} theme, palette '{s.name}'. */", ""]
     lines += [f"@define-color {k} {v};" for k, v in defs.items() if not k.endswith("_classic")]
+    lines += ["", f"* {{ caret-color: {s.caret}; }}"]
 
     if s.o.get("gtkExtras", True):
         r = s.radius
@@ -990,6 +994,200 @@ def niri_validate(path: Path) -> bool:
         return True
     r = subprocess.run(["niri", "validate", "-c", str(path)], capture_output=True, text=True)
     return r.returncode == 0
+
+
+# ── the pointer recolored (App Theming → Cursor color) ──
+# Cursor themes are pictures (Xcursor files), so a color takes a copy: each picture's
+# fill is tinted and its outline kept readable, written as ~/.local/share/icons/
+# flamenco-cursor-RRGGBB (Inherits the original for anything it lacks). The color is
+# in the name because niri and apps load a cursor theme once per name.
+
+CURSOR_TINT_PREFIX = "flamenco-cursor-"
+XCURSOR_IMAGE = 0xFFFD0002
+
+
+def xcursor_images(data: bytes) -> list[tuple[int, int, int]]:
+    """(offset of the pixels, width, height) of each picture in an Xcursor file."""
+    import struct
+    if len(data) < 16 or data[:4] != b"Xcur":
+        return []
+    hsize, _, ntoc = struct.unpack_from("<III", data, 4)
+    out = []
+    for i in range(min(ntoc, 4096)):
+        at = hsize + i * 12
+        if at + 12 > len(data):
+            break
+        typ, _, pos = struct.unpack_from("<III", data, at)
+        if typ != XCURSOR_IMAGE or pos + 36 > len(data):
+            continue
+        chsize, ctyp, _, _, w, h = struct.unpack_from("<IIIIII", data, pos)
+        if ctyp != XCURSOR_IMAGE or not (0 < w <= 1024 and 0 < h <= 1024) or pos + chsize + w * h * 4 > len(data):
+            continue
+        out.append((pos + chsize, w, h))
+    return out
+
+
+def cursor_tint_pixels(data: bytes, tint: str, outline: str, dark_fill: bool) -> bytes:
+    """The same Xcursor file, recolored: how light each pixel is decides how much of the
+    tint (the fill) or the outline color it gets; transparency stays as it was."""
+    from array import array
+    tr, tg, tb = hex_to_rgb(tint)
+    orr, og, ob = hex_to_rgb(outline)
+    out = bytearray(data)
+    cache: dict[int, int] = {}
+    for off, w, h in xcursor_images(data):
+        px = array("I")
+        px.frombytes(bytes(data[off:off + w * h * 4]))
+        if sys.byteorder == "big":
+            px.byteswap()
+        for i, v in enumerate(px):
+            a = v >> 24
+            if a == 0:
+                continue
+            nv = cache.get(v)
+            if nv is None:
+                # premultiplied: back to the plain color first
+                r, g, b = ((v >> 16) & 255) * 255 / a, ((v >> 8) & 255) * 255 / a, (v & 255) * 255 / a
+                lum = min(1.0, (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255)
+                t = lum if dark_fill else 1 - lum
+                k = a / 255
+                nr, ng, nb = (round((x * (1 - t) + y * t) * k) for x, y in ((tr, orr), (tg, og), (tb, ob)))
+                nv = cache[v] = (a << 24) | (min(nr, a) << 16) | (min(ng, a) << 8) | min(nb, a)
+            px[i] = nv
+        if sys.byteorder == "big":
+            px.byteswap()
+        out[off:off + w * h * 4] = px.tobytes()
+    return bytes(out)
+
+
+def cursor_theme_dir(name: str) -> Path | None:
+    """The folder with the cursors of `name` (or of the theme it builds on)."""
+    for root in icon_theme_chain(name, fallbacks=False):
+        if (root / "cursors").is_dir():
+            return root / "cursors"
+    return None
+
+
+def current_cursor_theme() -> str:
+    """What the pointer is now, when App Theming doesn't pick a cursor theme."""
+    if os.environ.get("XCURSOR_THEME") and not os.environ["XCURSOR_THEME"].startswith(CURSOR_TINT_PREFIX):
+        return os.environ["XCURSOR_THEME"]
+    if shutil.which("gsettings"):
+        r = subprocess.run(["gsettings", "get", "org.gnome.desktop.interface", "cursor-theme"], capture_output=True, text=True)
+        v = r.stdout.strip().strip("'")
+        if r.returncode == 0 and v and not v.startswith(CURSOR_TINT_PREFIX):
+            return v
+    return "Adwaita"
+
+
+def cursor_tint_cleanup(keep: str = "") -> None:
+    """Removes Flamenco's earlier tinted copies (only folders it made)."""
+    icons = XDG_DATA / "icons"
+    if not icons.is_dir():
+        return
+    for d in icons.iterdir():
+        if d.name != keep and re.fullmatch(CURSOR_TINT_PREFIX + r"[0-9a-f]{6}", d.name) and (d / ".flamenco").is_file() and not d.is_symlink():
+            shutil.rmtree(d, ignore_errors=True)
+
+
+def cursor_tint(base: str, tint: str) -> str:
+    """Makes (or reuses) the tinted copy of cursor theme `base`; gives back its name."""
+    import tempfile
+    tint = tint.lower()
+    src = cursor_theme_dir(base)
+    if not src:
+        raise ValueError(f"no cursors in the theme {base!r}")
+    name = CURSOR_TINT_PREFIX + tint.lstrip("#")
+    dest = XDG_DATA / "icons" / name
+    stamp = json.dumps({"v": 2, "base": base, "src": str(src), "tint": tint, "mtime": src.stat().st_mtime})
+    try:
+        if (dest / ".flamenco").read_text() == stamp:
+            return name
+    except OSError:
+        pass
+    # is the theme's fill dark (Adwaita, Bibata Classic) or light (Bibata Ice, Breeze Light)?
+    probe = next((src / n for n in ("left_ptr", "default", "arrow") if (src / n).is_file()), None)
+    dark_fill = True
+    if probe:
+        from array import array
+        data = probe.read_bytes()
+        tot = lum = 0.0
+        for off, w, h in xcursor_images(data)[:1]:
+            px = array("I")
+            px.frombytes(data[off:off + w * h * 4])
+            for v in px:
+                a = v >> 24
+                if a > 200:
+                    tot += 1
+                    lum += (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / a
+        dark_fill = not tot or lum / tot < 0.5
+    # the theme's own outline (light around a dark fill, dark around a light one),
+    # unless it would hardly show against the new color
+    def contrast(x: str, y: str) -> float:
+        def lum(h):
+            return sum(k * ((v / 255) / 12.92 if v / 255 <= 0.03928 else ((v / 255 + 0.055) / 1.055) ** 2.4)
+                       for k, v in zip((0.2126, 0.7152, 0.0722), hex_to_rgb(h)))
+        la, lb = lum(x), lum(y)
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    outline = "#ffffff" if dark_fill else "#1b1b1b"
+    if contrast(tint, outline) < 2.2:
+        outline = "#1b1b1b" if outline == "#ffffff" else "#ffffff"
+    (XDG_DATA / "icons").mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(prefix=".flamenco-cursor-", dir=XDG_DATA / "icons"))
+    try:
+        (tmp / "cursors").mkdir()
+        done: dict[str, str] = {}               # the same file under several names: tinted once
+        for f in sorted(src.iterdir()):
+            if not re.fullmatch(r"[\w.+-]{1,128}", f.name):
+                continue
+            target = tmp / "cursors" / f.name
+            if f.is_symlink():
+                link = os.readlink(f)
+                if "/" not in link and (src / link).exists():
+                    os.symlink(link, target)
+                    continue
+            if not f.is_file():
+                continue
+            real = os.path.realpath(f)
+            if real in done:
+                os.symlink(done[real], target)
+                continue
+            data = Path(real).read_bytes()
+            if len(data) > 64 * 1024 * 1024:
+                continue
+            target.write_bytes(cursor_tint_pixels(data, tint, outline, dark_fill) if data[:4] == b"Xcur" else data)
+            done[real] = f.name
+        (tmp / "index.theme").write_text(f"# {MARKER}\n[Icon Theme]\nName={base} ({tint})\n"
+                                         f"Comment={base}, recolored by Flamenco\nInherits={base}\n")
+        (tmp / ".flamenco").write_text(stamp)
+        if dest.exists() and (dest / ".flamenco").is_file():
+            shutil.rmtree(dest)
+        elif dest.exists():
+            raise ValueError(f"{dest} is there already and isn't Flamenco's")
+        tmp.replace(dest)
+    finally:
+        if tmp.exists():
+            shutil.rmtree(tmp, ignore_errors=True)
+    return name
+
+
+def apply_cursor_tint(s: "Spec") -> list[str]:
+    """With a cursor color set: the cursor theme becomes its tinted copy for everything after."""
+    tint = str(s.o.get("cursorTint") or "")
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", tint):
+        if s.o.get("cursorTheme", "").startswith(CURSOR_TINT_PREFIX):
+            s.o["cursorTheme"] = ""
+        cursor_tint_cleanup()
+        return []
+    base = s.o.get("cursorTheme") or current_cursor_theme()
+    try:
+        name = cursor_tint(base, tint)
+    except (OSError, ValueError) as e:
+        print(f"flamenco: couldn't recolor the cursor: {e}", file=sys.stderr)
+        return []
+    cursor_tint_cleanup(keep=name)
+    s.o["cursorTheme"] = name
+    return ["cursor-color"]
 
 
 def apply_cursor(s: "Spec", m: dict) -> list[str]:
@@ -6676,7 +6874,7 @@ def ansi_palette(s: "Spec") -> dict:
     normal = [c["surfaceHigh"] if dark else c["text"], c["error"], c["success"], c["warning"],
               hue(215), hue(300), hue(185), mix(c["text"], c["bg"], 0.2) if dark else c["surfaceHighest"]]
     bright = [c["textDim"]] + [shade(x, 0.18 if dark else -0.18) for x in normal[1:7]] + [c["text"] if dark else c["surface"]]
-    return {"fg": c["text"], "bg": c["bg"], "cursor": c["accent"], "selBg": mix(c["bg"], c["accent"], 0.35),
+    return {"fg": c["text"], "bg": c["bg"], "cursor": s.caret, "selBg": mix(c["bg"], c["accent"], 0.35),
             "selFg": c["text"], "colors": normal + bright}
 
 
@@ -8013,7 +8211,7 @@ def cmd_apps_theme(args: list[str]) -> int:
         die(f"invalid theme JSON: {e}")
 
     m = load_manifest()
-    done = []
+    done = apply_cursor_tint(spec)          # first: the cursor theme may become its tinted copy
     try:
         if spec.o.get("qt", True):
             done += apply_qt(spec, m)
@@ -8185,6 +8383,7 @@ UI_ICON_MAP.update({
     "alternate_email": ["mail-message"], "css": ["text-css", "text-x-generic"], "feather": ["draw-freehand", "applications-graphics"], "percent": ["accessories-calculator"],
     "looks_3": ["view-grid"], "looks_4": ["view-grid"], "border_style": ["format-border-style", "draw-rectangle"], "border_outer": ["draw-rectangle"], "border_top": ["draw-rectangle"],
     "border_bottom": ["draw-rectangle"], "border_left": ["draw-rectangle"], "border_right": ["draw-rectangle"], "download_done": ["emblem-ok", "folder-download"],
+    "format_color_text": ["format-text-color", "format-fill-color"], "text_select_end": ["edit-select-text", "insert-text"],
 })
 UI_ICON_CACHE = XDG_CACHE / "flamenco" / "ui-icons"
 

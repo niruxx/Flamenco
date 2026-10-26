@@ -176,6 +176,16 @@ Page {
         DropdownRow { title: "Icon theme"; subtitle: "Used by Qt and GTK apps"; icon: "category"; target: page.o; key: "iconTheme"; options: page.keep.concat(page.inst.icons) }
         DropdownRow { title: "Cursor theme"; icon: "arrow_selector_tool"; target: page.o; key: "cursorTheme"; options: page.keep.concat(page.inst.cursors) }
         SliderRow { visible: page.o.cursorTheme !== ""; title: "Cursor size"; icon: "straighten"; target: page.o; key: "cursorSize"; from: 16; to: 64; stepSize: 4; suffix: "px" }
+        ColorChoiceRow {
+            title: "Cursor color"
+            subtitle: page.o.cursorTint === "" ? "As the cursor theme draws it"
+                : "A recolored copy of " + (page.o.cursorTheme || "the current cursor theme") + " (works best with two-tone themes: Adwaita, Breeze, Bibata). Apps opened before pick it up when restarted"
+            icon: "arrow_selector_tool"
+            target: page.o
+            key: "cursorTint"
+            choices: [{ value: "", label: "Theme's" }, { value: "accent", label: "Accent" }]
+            swatches: ["#ff5d73", "#ff8a4c", "#f5c542", "#7bd88f", "#3ec7c2", "#5b9cff", "#9b7bff"]
+        }
         SettingRow {
             title: "Get more themes"
             subtitle: "Icon, cursor and GTK themes from the KDE Store, installed in one click"

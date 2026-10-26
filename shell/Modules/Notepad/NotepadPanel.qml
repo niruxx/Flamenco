@@ -125,6 +125,7 @@ Variants {
                         boundsBehavior: Flickable.StopAtBounds
 
                         TextEdit {
+                            cursorDelegate: Component { Caret {} }
                             id: editor
                             visible: !panel.preview
                             width: flick.width
@@ -150,6 +151,7 @@ Variants {
                             dim: true
                         }
                         TextEdit {
+                            cursorDelegate: Component { Caret {} }
                             id: md
                             visible: panel.preview
                             width: flick.width

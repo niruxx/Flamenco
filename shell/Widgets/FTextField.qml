@@ -47,6 +47,7 @@ Rectangle {
             Layout.fillHeight: true
 
             TextInput {
+                cursorDelegate: Component { Caret {} }
                 id: input
                 anchors.fill: parent
                 verticalAlignment: TextInput.AlignVCenter

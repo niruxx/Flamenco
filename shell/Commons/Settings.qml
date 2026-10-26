@@ -92,6 +92,9 @@ Singleton {
                 property bool shadows: true
                 property bool dimBehindPanels: true
                 property string accentOverride: ""    // "#rrggbb" replaces the palette's accent ("" = palette)
+                property string textColor: ""         // "" = the palette's | "accent" | "#rrggbb"
+                property bool textColorApps: true     // apps get that text color too (App Theming)
+                property string caretColor: "accent"  // the text cursor: "accent" | "text" | "#rrggbb"
                 property string layoutPreset: "islands" // last preset picked in Appearance → Layout presets
             }
 
@@ -551,6 +554,9 @@ Singleton {
                 property string cursorTheme: ""
                 property string gtkTheme: ""          // "" = adw-gtk3 when installed, else untouched
                 property int cursorSize: 24
+                // the mouse pointer recolored: "" = as the theme draws it | "accent" | "#rrggbb"
+                // (Flamenco writes a tinted copy of the cursor theme, "flamenco-cursor")
+                property string cursorTint: ""
 
                 // Shared stylesheet options (used by both the QSS and GTK CSS generators)
                 property bool matchRoundness: true    // follow shell roundness

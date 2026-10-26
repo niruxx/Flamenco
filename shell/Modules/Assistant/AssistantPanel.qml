@@ -132,6 +132,7 @@ Variants {
                         color: msg.mine ? Theme.alpha(Theme.accent, 0.18) : Theme.alpha(Theme.text, 0.05)
 
                         TextEdit {
+                            cursorDelegate: Component { Caret {} }
                             id: body
                             x: Theme.sp3
                             y: Theme.sp3

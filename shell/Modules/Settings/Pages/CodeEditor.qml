@@ -24,6 +24,7 @@ Rectangle {
     }
 
     TextEdit {
+        cursorDelegate: Component { Caret {} }
         id: edit
         anchors.fill: parent
         anchors.margins: 14

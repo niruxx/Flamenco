@@ -11,7 +11,9 @@ Singleton {
     readonly property bool dark: a.mode !== "light"
     readonly property string paletteName: a.palette
     readonly property var basePalette: (paletteName === "wallpaper" && ColorGen.available) ? (dark ? ColorGen.dark : ColorGen.light) : Palettes.get(paletteName, dark)
-    readonly property var palette: withAccent(basePalette, a.accentOverride)
+    readonly property var palette: withText(withAccent(basePalette, a.accentOverride), a.textColor)
+    // what apps get (App Theming): the same, or without the shell's own text color
+    readonly property var appPalette: (a.textColorApps ?? true) ? palette : withAccent(basePalette, a.accentOverride)
 
     // Appearance → Accent color: swap the palette's accent (and pick readable text on it)
     function withAccent(p, c) {
@@ -22,6 +24,27 @@ Singleton {
         o.accent = c;
         o.onAccent = (0.2126 * q.r + 0.7152 * q.g + 0.0722 * q.b) > 0.55 ? "#161616" : "#ffffff";
         return o;
+    }
+
+    // Appearance → Text color: the palette's text (and its dimmer one, mixed toward the background)
+    function withText(p, c) {
+        const col = c === "accent" ? p.accent : c;
+        if (!/^#[0-9a-fA-F]{6}$/.test(col || ""))
+            return p;
+        const o = Object.assign({}, p);
+        o.text = col;
+        o.textDim = String(mix(Qt.color(col), Qt.color(p.bg), 0.38));
+        return o;
+    }
+    // how far apart two colors' lightness is (WCAG contrast, 1–21)
+    function contrast(x, y) {
+        const lum = c => {
+            const f = v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            const q = Qt.color(c);
+            return 0.2126 * f(q.r) + 0.7152 * f(q.g) + 0.0722 * f(q.b);
+        };
+        const a1 = lum(x), b1 = lum(y);
+        return (Math.max(a1, b1) + 0.05) / (Math.min(a1, b1) + 0.05);
     }
 
     // ── Colors ──
@@ -70,6 +93,8 @@ Singleton {
     readonly property color warning: role("warning")
     readonly property color success: role("success")
     readonly property color shadow: "#000000"
+    // the text cursor (Appearance → Text cursor)
+    readonly property color caret: a.caretColor === "text" ? text : /^#[0-9a-fA-F]{6}$/.test(a.caretColor || "") ? a.caretColor : accent
 
     // ── transparency (Appearance → Transparency) ──
     // each part's opacity (-1: the panels'), all scaled by the whole-UI slider

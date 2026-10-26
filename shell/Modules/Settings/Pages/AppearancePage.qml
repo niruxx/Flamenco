@@ -269,6 +269,40 @@ Page {
     }
 
     Group {
+        title: "Text"
+        ColorChoiceRow {
+            title: "Text color"
+            subtitle: {
+                const c = page.a.textColor;
+                if (!c)
+                    return "The palette's own";
+                return Theme.contrast(Theme.text, Theme.bg) < 4.5 ? "Hard to read on this background: try a lighter or darker one" : "Text across the shell" + ((page.a.textColorApps ?? true) ? " and apps" : "") + "; dimmer text is mixed from it";
+            }
+            icon: "format_color_text"
+            target: page.a
+            key: "textColor"
+            choices: [{ value: "", label: "Palette" }, { value: "accent", label: "Accent" }]
+            swatches: ["#ffffff", "#f2ede4", "#ffd8a8", "#c8e6c9", "#b3d4ff", "#e1c8ff", "#1b1b1b"]
+        }
+        SwitchRow {
+            visible: page.a.textColor !== ""
+            title: "Apps use it too"
+            subtitle: "Qt, GTK and the other apps App Theming colors (needs App Theming on)"
+            icon: "format_paint"
+            target: page.a
+            key: "textColorApps"
+        }
+        ColorChoiceRow {
+            title: "Text cursor"
+            subtitle: "The blinking line where you type: in the shell, GTK apps and terminals (Qt apps draw it in the text color)"
+            icon: "text_select_end"
+            target: page.a
+            key: "caretColor"
+            choices: [{ value: "accent", label: "Accent" }, { value: "text", label: "Text" }]
+        }
+    }
+
+    Group {
         title: "Layout presets"
         FText {
             Layout.fillWidth: true

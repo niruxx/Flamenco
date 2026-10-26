@@ -23,6 +23,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: Math.max(Math.round(110 * root.k), edit.contentHeight)
         TextEdit {
+            cursorDelegate: Component { Caret {} }
             id: edit
             anchors.fill: parent
             readOnly: root.editing

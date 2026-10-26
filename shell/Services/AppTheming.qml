@@ -17,7 +17,8 @@ Singleton {
     readonly property var spec: ({
             name: Theme.paletteName,
             dark: Theme.dark,
-            colors: Theme.palette,
+            colors: Theme.appPalette,
+            caret: String(Theme.caret),
             radius: cfg.matchRoundness ? Theme.rSm : cfg.radius,
             fontFamily: Theme.fontFamily,
             monoFamily: Theme.monoFamily,
@@ -26,6 +27,7 @@ Singleton {
                 syncFonts: cfg.syncFonts,
                 iconTheme: cfg.iconTheme,
                 cursorTheme: cfg.cursorTheme,
+                cursorTint: cfg.cursorTint === "accent" ? String(Theme.accent) : (cfg.cursorTint || ""),
                 gtkTheme: cfg.gtkTheme,
                 soundTheme: Settings.data.sound.theme,
                 eventSounds: Settings.data.sound.eventSounds,

@@ -150,6 +150,7 @@ Item {
             }
 
             TextInput {
+                cursorDelegate: Component { Caret {} }
                 id: input
                 anchors.fill: parent
                 opacity: 0
