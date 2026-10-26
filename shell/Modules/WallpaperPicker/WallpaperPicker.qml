@@ -15,7 +15,7 @@ Variants {
         name: Settings.data.wallpaper.picker === "grid" ? "wallpaper" : "wallpaper-grid"
         cardWidth: Math.min(980, modelData.width - 80)
         onOpened: Wallpapers.rescan()
-        property string source: "folder"        // folder | wallhaven | live
+        property string source: "folder"        // folder | wallhaven | kde | live
 
         ColumnLayout {
             width: parent.width
@@ -24,9 +24,9 @@ Variants {
             RowLayout {
                 Layout.fillWidth: true
                 FSegmented {
-                    implicitWidth: 300
+                    implicitWidth: 400
                     implicitHeight: 34
-                    options: [{ value: "folder", label: "Your folder" }, { value: "wallhaven", label: "Wallhaven" }, { value: "live", label: "Live" }]
+                    options: [{ value: "folder", label: "Your folder" }, { value: "wallhaven", label: "Wallhaven" }, { value: "kde", label: "KDE Store" }, { value: "live", label: "Live" }]
                     current: panel.source
                     onSelected: v => panel.source = v
                 }
@@ -64,6 +64,14 @@ Variants {
                 sourceComponent: WallhavenGrid {
                     screenName: panel.modelData.name
                     minSize: Qt.size(panel.modelData.width, panel.modelData.height)
+                }
+            }
+            Loader {
+                Layout.fillWidth: true
+                active: panel.source === "kde"
+                visible: active
+                sourceComponent: KdeStoreGrid {
+                    screenName: panel.modelData.name
                 }
             }
             Loader {

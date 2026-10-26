@@ -564,7 +564,8 @@ Page {
             title: "UI icons"
             subtitle: (page.a.uiIcons || "flamenco") === "flamenco" ? "Flamenco's own (Material Symbols) in the bar, quick settings, Settings and everywhere else"
                 : UiIcons.loading ? "Looking up " + UiIcons.theme + "'s icons…"
-                : UiIcons.theme === "" ? "No icon theme is set for apps yet (App Theming → Icon theme)"
+                : UiIcons.theme === "" ? "Flamenco's own until an icon theme is picked for apps (App Theming → Icon theme, or Settings → Get themes)"
+                : !UiIcons.loading && UiIcons.count === 0 ? UiIcons.theme + " has none of the icons the shell uses, so they stay Flamenco's"
                 : UiIcons.count + " of the shell's icons come from " + UiIcons.theme + "; the rest stay Flamenco's. Back to Flamenco to undo"
             icon: "category"
             target: page.a

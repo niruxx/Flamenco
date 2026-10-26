@@ -177,6 +177,16 @@ Page {
         DropdownRow { title: "Cursor theme"; icon: "arrow_selector_tool"; target: page.o; key: "cursorTheme"; options: page.keep.concat(page.inst.cursors) }
         SliderRow { visible: page.o.cursorTheme !== ""; title: "Cursor size"; icon: "straighten"; target: page.o; key: "cursorSize"; from: 16; to: 64; stepSize: 4; suffix: "px" }
         SettingRow {
+            title: "Get more themes"
+            subtitle: "Icon, cursor and GTK themes from the KDE Store, installed in one click"
+            icon: "download"
+            FButton {
+                text: "Get themes"
+                variant: "tonal"
+                onClicked: Panels.settingsPage = "get"
+            }
+        }
+        SettingRow {
             title: AppTheming.scanning ? "Scanning installed themes…" : "Installed themes"
             subtitle: page.inst.icons.length + " icon · " + page.inst.cursors.length + " cursor · " + page.inst.gtk.length + " GTK · " + page.inst.qtStyles.length + " Qt styles"
             icon: "inventory_2"

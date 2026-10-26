@@ -51,6 +51,7 @@ LazyLoader {
         readonly property var pages: [
             { id: "appearance", icon: "palette", label: "Appearance", comp: appearanceC },
             { id: "apps", icon: "format_paint", label: "App Theming", comp: appsC },
+            { id: "get", icon: "download", label: "Get themes", comp: getC },
             { id: "bar", icon: "toolbar", label: "Bar", comp: barC },
             { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
             { id: "quicksettings", icon: "tune", label: "Quick settings", comp: quickC },
@@ -94,7 +95,7 @@ LazyLoader {
 
         // the sidebar: sections of pages, and each page's badge color
         readonly property var sections: [
-            { tint: "#a993ff", ids: ["appearance", "wallpaper", "apps", "lock"] },
+            { tint: "#a993ff", ids: ["appearance", "wallpaper", "apps", "get", "lock"] },
             { tint: "#8fa6ff", ids: ["bar", "dock", "launcher", "quicksettings", "desktop", "overview", "edges", "clock"] },
             { tint: "#6fcf8f", ids: ["notifications", "wellbeing", "sound", "screenshots"] },
             { tint: "#ff9d6e", ids: ["displays", "night", "keyboard", "pointer", "power", "printers"] },
@@ -105,7 +106,7 @@ LazyLoader {
         ]
         // one line under each page's name
         readonly property var descs: ({
-                appearance: "Theme, palette, dark mode", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", lock: "Lock screen, login, session",
+                appearance: "Theme, palette, dark mode", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session",
                 bar: "Style, layout, widgets", dock: "Position, pinned apps, style", launcher: "Fuzzy search, fuzzel", quicksettings: "Tiles, sliders, layout",
                 desktop: "Clocks, photos, monitors", overview: "Workspaces at a glance", edges: "Hot corners and edges", clock: "Clock, weather, calendars",
                 notifications: "Popups, do not disturb, mako", wellbeing: "Screen time and app limits", sound: "Devices, sounds, app volumes", screenshots: "Capture, save, copy",
@@ -222,6 +223,7 @@ LazyLoader {
 
         Component { id: appearanceC; AppearancePage {} }
         Component { id: appsC; AppThemingPage {} }
+        Component { id: getC; GetPage {} }
         Component { id: barC; BarPage {} }
         Component { id: dockC; DockPage {} }
         Component { id: quickC; QuickSettingsPage {} }

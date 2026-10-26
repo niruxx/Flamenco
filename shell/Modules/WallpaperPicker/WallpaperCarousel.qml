@@ -11,7 +11,7 @@ import qs.Modules.Background
 
 // The wallpaper switcher as a carousel (Settings → Wallpaper → Switcher): the
 // wallpapers in a 3D cover flow over the selected one, blurred, with its colors
-// and name below. ← → browse, Enter applies, / searches, ↑ ↓ switch to Wallhaven / Live,
+// and name below. ← → browse, Enter applies, / searches, ↑ ↓ switch to Wallhaven / KDE Store / Live,
 // Esc closes. Click the centre card to apply it, another to bring it to the centre.
 Variants {
     model: Quickshell.screens
@@ -24,7 +24,7 @@ Variants {
         readonly property bool shown: Panels.current === "wallpaper" && Panels.screen === screenName && Settings.data.wallpaper.picker !== "grid"
         readonly property real p: pAnim.v
 
-        property string source: "folder"           // folder | wallhaven | live
+        property string source: "folder"           // folder | wallhaven | kde | live
         property string query: ""
         readonly property var files: {
             const q = query.trim().toLowerCase();
@@ -135,7 +135,7 @@ Variants {
                 else if (k === Qt.Key_Return || k === Qt.Key_Enter)
                     win.apply();
                 else if (k === Qt.Key_Up || k === Qt.Key_Down)
-                    win.source = (k === Qt.Key_Down ? { folder: "wallhaven", wallhaven: "live", live: "folder" } : { folder: "live", live: "wallhaven", wallhaven: "folder" })[win.source];
+                    win.source = (k === Qt.Key_Down ? { folder: "wallhaven", wallhaven: "kde", kde: "live", live: "folder" } : { folder: "live", live: "kde", kde: "wallhaven", wallhaven: "folder" })[win.source];
                 else if (k === Qt.Key_Slash || k === Qt.Key_F && event.modifiers & Qt.ControlModifier)
                     search.focusInput();
                 else if (k === Qt.Key_R)
@@ -160,8 +160,8 @@ Variants {
                 spacing: 12
 
                 FSegmented {
-                    implicitWidth: 420
-                    options: [{ value: "folder", label: "Wallpapers · " + Wallpapers.files.length, icon: "image" }, { value: "wallhaven", label: "Wallhaven", icon: "travel_explore" }, { value: "live", label: "Live", icon: "animated_images" }]
+                    implicitWidth: 560
+                    options: [{ value: "folder", label: "Wallpapers · " + Wallpapers.files.length, icon: "image" }, { value: "wallhaven", label: "Wallhaven", icon: "travel_explore" }, { value: "kde", label: "KDE Store", icon: "storefront" }, { value: "live", label: "Live", icon: "animated_images" }]
                     current: win.source
                     onSelected: v => win.source = v
                 }
@@ -423,6 +423,28 @@ Variants {
                 }
             }
 
+            // ── the KDE Store ──
+            Rectangle {
+                visible: win.source === "kde"
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: top.bottom
+                anchors.topMargin: 24
+                width: Math.min(1100, parent.width - 160)
+                height: Math.min(620, parent.height - top.y - top.height - 120)
+                radius: Theme.rXl
+                color: Theme.switcherBg
+                border.width: 1
+                border.color: Theme.border
+                Loader {
+                    anchors.fill: parent
+                    anchors.margins: Theme.sp4
+                    active: win.source === "kde"
+                    sourceComponent: KdeStoreGrid {
+                        screenName: win.screenName
+                    }
+                }
+            }
+
             // ── live wallpapers online ──
             Rectangle {
                 visible: win.source === "live"
@@ -512,7 +534,7 @@ Variants {
                 }
                 FText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "← → browse  ·  ↑ ↓ wallpapers / Wallhaven / Live  ·  Enter apply  ·  / search  ·  R shuffle  ·  click the centre card to apply"
+                    text: "← → browse  ·  ↑ ↓ wallpapers / Wallhaven / KDE Store / Live  ·  Enter apply  ·  / search  ·  R shuffle  ·  click the centre card to apply"
                     color: Qt.rgba(1, 1, 1, 0.6)
                     font.pixelSize: Theme.fsXs
                 }

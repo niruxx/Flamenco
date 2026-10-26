@@ -65,6 +65,8 @@
   flamenco bar toggle|show|hide | mode never|auto|windows   hide the bar (by hand, automatically, or while windows are open)
   flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO
                                live (video) wallpapers: find them online (wikimedia, pexels, pixabay), download, API keys
+  flamenco get search KIND [QUERY] [PAGE] [SORT] | install KIND ID [FILE] | remove KIND ID | list
+                               get new icon, cursor and GTK themes, color schemes, wallpapers (KDE Store) and fonts (Fontsource)
   flamenco logs [-f]           show the shell's log (~/.cache/flamenco/shell.log)
 """
 
@@ -80,7 +82,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.50.1"
+VERSION = "0.51.1"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -4687,6 +4689,20 @@ LIVE_MAX_BYTES = 600 * 1024 * 1024
 UA = "flamenco-shell/" + VERSION + " (https://github.com/niruxx/flamenco-shell)"
 
 
+def _ipv4_first():
+    """Web requests try IPv4 addresses first: Python waits out the whole timeout on each
+    address in turn, so a network with broken IPv6 made every download hang."""
+    import socket
+    real = socket.getaddrinfo
+
+    def ordered(*a, **kw):
+        return sorted(real(*a, **kw), key=lambda r: r[0] != socket.AF_INET)
+    socket.getaddrinfo = ordered
+
+
+_ipv4_first()
+
+
 def wallpaper_dir() -> Path:
     try:
         wp = json.loads((CONFIG_DIR / "settings.json").read_text()).get("wallpaper", {}).get("dir") or "~/Pictures/Wallpapers"
@@ -4922,6 +4938,486 @@ def cmd_live(args: list[str]) -> int:
         print(p)
         return 0
     die("usage: flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO")
+
+
+# ─────────────────────────────── get new stuff ───────────────────────────────
+# Settings → Get themes: like KDE's "Get New…", one place to find and install icon
+# and cursor themes, GTK themes, KDE color schemes and wallpapers (from the KDE
+# Store, store.kde.org / pling) and fonts (from Fontsource, the Google Fonts
+# catalog and more). Everything goes into your home folder only, unpacked in a
+# private staging folder first (no paths or links outside it), and is recorded in
+# ~/.local/share/flamenco/get.json so it can be removed again.
+
+GET_KINDS = {
+    "icons": {"name": "Icon themes", "cat": "132"},
+    "cursors": {"name": "Cursors", "cat": "107"},
+    "gtk": {"name": "GTK themes", "cat": "135"},
+    "colors": {"name": "Color schemes", "cat": "112"},
+    "wallpapers": {"name": "Wallpapers", "cat": "299"},
+    "fonts": {"name": "Fonts", "cat": ""},
+}
+GET_OCS = "https://api.kde-look.org/ocs/v1/content/data"
+GET_MANIFEST = XDG_DATA / "flamenco" / "get.json"
+GET_MAX_DOWNLOAD = 400 * 1024 * 1024
+GET_MAX_UNPACKED = 2 * 1024 * 1024 * 1024
+GET_MAX_FILES = 250_000
+GET_NAME = re.compile(r"^[\w][\w.+ ()@,'-]{0,99}$")
+GET_IMAGES = (".jpg", ".jpeg", ".png", ".webp", ".jxl", ".avif")
+GET_POPULAR_FONTS = ["inter", "roboto", "open-sans", "lato", "montserrat", "poppins", "noto-sans", "jetbrains-mono", "fira-code",
+                     "source-sans-3", "nunito", "raleway", "work-sans", "ibm-plex-sans", "manrope", "outfit", "dm-sans",
+                     "space-grotesk", "ubuntu", "rubik", "playfair-display", "merriweather", "lora", "fira-sans", "geist"]
+
+
+def get_dirs() -> dict[str, Path]:
+    return {"icons": XDG_DATA / "icons", "cursors": XDG_DATA / "icons", "gtk": XDG_DATA / "themes",
+            "colors": XDG_DATA / "color-schemes", "wallpapers": wallpaper_dir() / "kde-store", "fonts": XDG_DATA / "fonts" / "flamenco"}
+
+
+def get_stage() -> Path:
+    """Where downloads are unpacked before they're installed: only you can get in.
+    Left-overs of an install that was cut off (over an hour old) are cleared."""
+    import time
+    d = XDG_CACHE / "flamenco" / "get"
+    d.mkdir(parents=True, exist_ok=True)
+    os.chmod(d, 0o700)
+    for old in d.iterdir():
+        try:
+            if time.time() - old.lstat().st_mtime > 3600:
+                shutil.rmtree(old) if old.is_dir() and not old.is_symlink() else old.unlink()
+        except OSError:
+            pass
+    return d
+
+
+def get_manifest() -> dict:
+    try:
+        m = json.loads(GET_MANIFEST.read_text())
+        return m if isinstance(m, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def get_manifest_save(m: dict) -> None:
+    GET_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    tmp = GET_MANIFEST.with_name(GET_MANIFEST.name + ".tmp")
+    tmp.write_text(json.dumps(m, indent=1))
+    tmp.replace(GET_MANIFEST)
+
+
+def get_plain(text: str, limit: int = 400) -> str:
+    """Store descriptions are BBCode/HTML: just the words."""
+    t = re.sub(r"<[^>]*>|\[/?[a-zA-Z*][^\]]*\]", " ", str(text or ""))
+    t = re.sub(r"&(amp|lt|gt|quot|#39|nbsp);", lambda x: {"amp": "&", "lt": "<", "gt": ">", "quot": '"', "#39": "'", "nbsp": " "}[x.group(1)], t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t[:limit] + ("…" if len(t) > limit else "")
+
+
+def get_https(url: str) -> str:
+    import urllib.parse
+    u = urllib.parse.urlparse(url)
+    if u.scheme != "https" or not u.hostname or dav_local(u.hostname):
+        die(f"won't download from {u.hostname or url!r} (only https:// on the internet)")
+    # store links can have spaces and such in their file names
+    return urllib.parse.urlunparse(u._replace(path=urllib.parse.quote(urllib.parse.unquote(u.path), safe="/@:+,;=~!$&'()*"),
+                                               query=urllib.parse.quote(u.query, safe="=&/:+,;%@~!$'()*")))
+
+
+def get_pick(kind: str, files: list[dict]) -> dict:
+    """The file to install when none is chosen: the first that looks installable here
+    (for wallpapers: the biggest picture, one without a logo if there is one)."""
+    if kind == "wallpapers":
+        pics = [f for f in files if f["name"].lower().endswith(GET_IMAGES)]
+        if pics:
+            return max(pics, key=lambda f: (not re.search(r"with[ _-]?logo", f["name"], re.I), f["size"]))
+    want = {"colors": (".colors",), "wallpapers": GET_IMAGES}.get(kind, ())
+    archives = (".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz2", ".tar.zst", ".tar", ".zip")
+    for f in files:
+        low = f["name"].lower()
+        if low.endswith(want + archives) and not re.search(r"windows|\bwin\b|macos|\.exe", low):
+            return f
+    return files[0]
+
+
+def get_files(item: dict) -> list[dict]:
+    out = []
+    for n in range(1, 40):
+        link = item.get(f"downloadlink{n}")
+        if not link:
+            if n > 1 and not item.get(f"downloadlink{n + 1}"):
+                break
+            continue
+        name = str(item.get(f"downloadname{n}") or Path(str(link).split("?")[0]).name)
+        out.append({"n": n, "name": name, "size": int(float(item.get(f"downloadsize{n}") or 0)) * 1024,
+                    "url": str(link), "md5": str(item.get(f"downloadmd5sum{n}") or "")})
+    return out
+
+
+def get_ocs(kind: str, query: str, page: int, sort: str) -> dict:
+    import urllib.parse
+    per = 24
+    params = {"categories": GET_KINDS[kind]["cat"], "format": "json", "pagesize": per, "page": page - 1,
+              "sortmode": {"new": "new", "rating": "high", "downloads": "down"}.get(sort, "high")}
+    if query.strip():
+        params["search"] = query.strip()
+    d = live_fetch_json(GET_OCS + "?" + urllib.parse.urlencode(params))
+    done = get_manifest().get(kind, {})
+    out = []
+    for it in d.get("data") or []:
+        sid = str(it.get("id", ""))
+        files = get_files(it)
+        out.append({"id": sid, "name": get_plain(it.get("name"), 80), "author": str(it.get("personid") or ""),
+                    "summary": get_plain(it.get("summary") or it.get("description"), 240),
+                    "thumb": str(it.get("smallpreviewpic1") or it.get("previewpic1") or ""),
+                    "preview": str(it.get("previewpic1") or ""), "page": str(it.get("detailpage") or ""),
+                    "downloads": int(it.get("downloads") or 0), "score": round(int(it.get("score") or 0) / 10, 1),
+                    "updated": str(it.get("changed") or "")[:10], "version": str(it.get("version") or ""),
+                    "files": [{k: f[k] for k in ("n", "name", "size")} for f in files],
+                    "installed": sid in done, "ours": sid in done, "names": (done.get(sid) or {}).get("names", []),
+                    "paths": (done.get(sid) or {}).get("paths", [])})
+    total = int(d.get("totalitems") or 0)
+    return {"results": out, "more": page * per < total, "total": total}
+
+
+def get_font_list(refresh: bool = False) -> list[dict]:
+    import time
+    cache = XDG_CACHE / "flamenco" / "fontsource.json"
+    try:
+        if not refresh and time.time() - cache.stat().st_mtime < 86400:
+            return json.loads(cache.read_text())
+    except (OSError, ValueError):
+        pass
+    data = live_fetch_json("https://api.fontsource.org/v1/fonts?subsets=latin")
+    if not isinstance(data, list):
+        die("Fontsource sent something unexpected")
+    data = [f for f in data if isinstance(f, dict) and GET_NAME.match(str(f.get("id", ""))) and f.get("type") in ("google", "other")]
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps(data))
+    return data
+
+
+def get_fonts(query: str, page: int, category: str) -> dict:
+    fonts = get_font_list()
+    q = query.strip().lower()
+    have = {f.lower() for f in font_families()}
+    done = get_manifest().get("fonts", {})
+    if category and category != "all":
+        fonts = [f for f in fonts if f.get("category") == category]
+    if q:
+        fonts = sorted((f for f in fonts if q in str(f.get("family", "")).lower()),
+                       key=lambda f: (not str(f.get("family", "")).lower().startswith(q), str(f.get("family", "")).lower()))
+    else:
+        rank = {fid: i for i, fid in enumerate(GET_POPULAR_FONTS)}
+        fonts = sorted(fonts, key=lambda f: (rank.get(f.get("id"), len(rank)), str(f.get("family", "")).lower()))
+    per = 30
+    chunk = fonts[(page - 1) * per: page * per]
+    out = [{"id": f["id"], "name": f.get("family", f["id"]), "author": f.get("license", ""), "summary": f.get("category", ""),
+            "weights": f.get("weights") or [], "italic": "italic" in (f.get("styles") or []), "category": f.get("category", ""),
+            "installed": f["id"] in done or str(f.get("family", "")).lower() in have, "ours": f["id"] in done,
+            "names": [f.get("family", "")], "page": f"https://fontsource.org/fonts/{f['id']}"} for f in chunk]
+    return {"results": out, "more": page * per < len(fonts), "total": len(fonts)}
+
+
+def get_download(url: str, dest: Path, limit: int = GET_MAX_DOWNLOAD) -> str:
+    """Saves `url` to `dest`; gives back the file name the server suggested."""
+    import urllib.parse
+    import urllib.request
+    class Checked(urllib.request.HTTPRedirectHandler):
+        # every redirect is checked too: https, and not to this computer or the home network
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            get_https(newurl)
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    req = urllib.request.Request(get_https(url), headers={"User-Agent": UA})
+    try:
+        r = urllib.request.build_opener(Checked).open(req, timeout=60)
+    except Exception as e:
+        die(f"download failed: {ai_http_error(e)}")
+    with r:
+        if int(r.headers.get("Content-Length") or 0) > limit:
+            die(f"too big (the limit is {limit // 1048576} MB)")
+        cd = r.headers.get("Content-Disposition") or ""
+        m = re.search(r"filename\*?=(?:UTF-8'')?\"?([^\";]+)", cd)
+        name = urllib.parse.unquote(m.group(1)) if m else Path(urllib.parse.unquote(urllib.parse.urlparse(r.geturl()).path)).name
+        got = 0
+        with open(dest, "wb") as f:
+            while chunk := r.read(1 << 16):
+                got += len(chunk)
+                if got > limit:
+                    die(f"too big (over {limit // 1048576} MB)")
+                f.write(chunk)
+    return Path(name).name
+
+
+def get_unpack(archive: Path, name: str, into: Path) -> None:
+    """Unpacks into `into` only: no absolute paths, no `..`, no links or devices leading out, a size and count cap."""
+    import tarfile
+    import zipfile
+    into.mkdir()
+    low = name.lower()
+    if zipfile.is_zipfile(archive):
+        total = 0
+        with zipfile.ZipFile(archive) as z:
+            infos = z.infolist()
+            if len(infos) > GET_MAX_FILES:
+                die("too many files in the archive")
+            for zi in infos:
+                total += zi.file_size
+                if total > GET_MAX_UNPACKED:
+                    die("the archive unpacks too big")
+                dest = (into / zi.filename).resolve()
+                if not dest.is_relative_to(into.resolve()) or dest == into.resolve():
+                    continue
+                if (zi.external_attr >> 16) & 0o170000 == 0o120000:
+                    continue                      # a link: skipped
+                if zi.is_dir():
+                    dest.mkdir(parents=True, exist_ok=True)
+                    continue
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with z.open(zi) as src, open(dest, "wb") as out:
+                    shutil.copyfileobj(src, out)
+        return
+    src = archive
+    with open(archive, "rb") as fh:
+        magic = fh.read(4)
+    if low.endswith((".zst", ".tzst")) or magic == b"\x28\xb5\x2f\xfd":
+        if not shutil.which("zstd"):
+            die("this archive is zstd-compressed and zstd isn't installed")
+        src = archive.with_suffix(".tar")
+        subprocess.run(["zstd", "-q", "-d", "-f", "-o", str(src), "--", str(archive)], check=True, timeout=600)
+    try:
+        tf = tarfile.open(src, "r:*")
+    except tarfile.TarError:
+        die(f"can't unpack {name} (not a tar or zip archive)")
+    with tf:
+        members, total = [], 0
+        for ti in tf:
+            if len(members) >= GET_MAX_FILES:
+                die("too many files in the archive")
+            total += max(0, ti.size)
+            if total > GET_MAX_UNPACKED:
+                die("the archive unpacks too big")
+            if ti.isfile() or ti.isdir() or ti.issym() or ti.islnk():
+                members.append(ti)
+        def safe(ti, path):
+            # tar's "data" rules (nothing outside, no devices, no setuid…); what breaks them is left out
+            try:
+                return tarfile.data_filter(ti, path)
+            except tarfile.FilterError:
+                return None
+        tf.extractall(into, members=members, filter=safe)
+
+
+def get_safe_links(root: Path) -> None:
+    """Drops any link that points outside `root` (or nowhere)."""
+    base = root.resolve()
+    for dirpath, dirnames, filenames in os.walk(root):
+        for n in dirnames + filenames:
+            p = Path(dirpath) / n
+            if p.is_symlink():
+                try:
+                    ok = p.resolve(strict=True).is_relative_to(base)
+                except (OSError, RuntimeError):
+                    ok = False
+                if not ok:
+                    p.unlink()
+
+
+def get_find(kind: str, root: Path) -> list[Path]:
+    """The theme folders (or files) inside what was unpacked."""
+    found = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        d = Path(dirpath)
+        dirnames[:] = [x for x in dirnames if not x.startswith(".") and x != "__MACOSX"]
+        if kind in ("icons", "cursors"):
+            if "index.theme" not in filenames and not (kind == "cursors" and "cursors" in dirnames):
+                continue
+            idx = read_index(d / "index.theme")
+            has_icons = idx.has_section("Icon Theme") and idx.get("Icon Theme", "Directories", fallback="").strip()
+            if (kind == "icons" and has_icons) or (kind == "cursors" and (d / "cursors").is_dir()):
+                found.append(d)
+                dirnames[:] = []
+        elif kind == "gtk":
+            if any((d / g / f).is_file() for g in ("gtk-3.0", "gtk-4.0") for f in ("gtk.css", "gtk-dark.css", "gtk.gresource")):
+                found.append(d)
+                dirnames[:] = []
+        elif kind == "colors":
+            found += [d / f for f in filenames if f.lower().endswith(".colors")]
+        elif kind == "wallpapers":
+            found += [d / f for f in filenames if f.lower().endswith(GET_IMAGES)]
+    if kind == "wallpapers" and found:
+        # a KDE wallpaper package has the picture in several sizes: keep the biggest
+        found = [max(found, key=lambda p: p.stat().st_size)]
+    return found
+
+
+def get_place(src: Path, dest_dir: Path, owned: set[str]) -> Path | None:
+    """Moves `src` into `dest_dir` under its own name; replaces only what Flamenco put there."""
+    name = src.name
+    if not GET_NAME.match(name):
+        name = re.sub(r"[^\w.+ ()@,'-]+", "-", name).strip("-. ()@,'+")[:100]
+        if not GET_NAME.match(name):
+            name = "theme" + src.suffix.lower()
+    dest = dest_dir / name
+    if dest.exists() or dest.is_symlink():
+        if str(dest) not in owned:
+            # someone else's: left alone (the same file counts as there already)
+            same = src.is_file() and dest.is_file() and not dest.is_symlink() and dest.read_bytes() == src.read_bytes()
+            return dest if same else None
+        shutil.rmtree(dest) if dest.is_dir() and not dest.is_symlink() else dest.unlink()
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(src), str(dest))
+    return dest
+
+
+def get_install_ocs(kind: str, sid: str, n: int) -> dict:
+    import hashlib
+    import tempfile
+    import urllib.parse
+    if not sid.isdigit():
+        die("not a KDE Store id")
+    d = live_fetch_json(f"{GET_OCS}/{sid}?" + urllib.parse.urlencode({"format": "json"}))
+    items = d.get("data") or []
+    if not items:
+        die("not found in the KDE Store")
+    item = items[0] if isinstance(items, list) else items
+    files = get_files(item)
+    if not files:
+        die("it has no files to download")
+    f = next((x for x in files if x["n"] == n), None) if n else get_pick(kind, files)
+    if not f:
+        die(f"it has no file {n}")
+    with tempfile.TemporaryDirectory(dir=get_stage()) as tmp:
+        tmp = Path(tmp)
+        dl = tmp / "download"
+        name = get_download(f["url"], dl) or f["name"]
+        if f["md5"] and re.fullmatch(r"[0-9a-fA-F]{32}", f["md5"]):
+            h = hashlib.md5()
+            with open(dl, "rb") as fh:
+                for chunk in iter(lambda: fh.read(1 << 20), b""):
+                    h.update(chunk)
+            if h.hexdigest().lower() != f["md5"].lower():
+                die("the download doesn't match the store's checksum: not installed")
+        low = (name or f["name"]).lower()
+        files_dir = tmp / "files"
+        if kind == "colors" and low.endswith(".colors"):
+            files_dir.mkdir()
+            shutil.move(str(dl), str(files_dir / Path(name).name))
+        elif kind == "wallpapers" and low.endswith(GET_IMAGES):
+            files_dir.mkdir()
+            shutil.move(str(dl), str(files_dir / Path(name).name))
+        else:
+            get_unpack(dl, name or f["name"], files_dir)
+        get_safe_links(files_dir)
+        found = get_find(kind, files_dir)
+        if not found:
+            die({"icons": "no icon theme (a folder with an index.theme) in that download",
+                 "cursors": "no cursor theme (a folder with cursors/) in that download",
+                 "gtk": "no GTK 3/4 theme in that download",
+                 "colors": "no .colors file in that download",
+                 "wallpapers": "no picture in that download"}[kind])
+        m = get_manifest()
+        owned = {p for e in m.get(kind, {}).values() for p in e.get("paths", [])}
+        placed, skipped = [], []
+        for src in found:
+            dest = get_place(src, get_dirs()[kind], owned)
+            (placed if dest else skipped).append(dest or src.name)
+    if not placed:
+        die("already there from somewhere else (not replaced): " + ", ".join(str(s) for s in skipped))
+    names = [p.name if kind in ("icons", "cursors", "gtk") else p.stem if kind == "colors" else p.name for p in placed]
+    m.setdefault(kind, {})[sid] = {"name": get_plain(item.get("name"), 80), "names": names, "paths": [str(p) for p in placed],
+                                   "file": f["name"], "version": str(item.get("version") or ""), "changed": str(item.get("changed") or "")}
+    get_manifest_save(m)
+    return {"installed": True, "names": names, "paths": [str(p) for p in placed], "skipped": [str(s) for s in skipped]}
+
+
+def get_install_font(fid: str) -> dict:
+    import tempfile
+    fonts = {f["id"]: f for f in get_font_list()}
+    f = fonts.get(fid)
+    if not f:
+        die(f"no font {fid!r} on Fontsource")
+    styles = ["normal"] + (["italic"] if "italic" in (f.get("styles") or []) else [])
+    weights = [int(w) for w in f.get("weights") or [400] if str(w).isdigit()][:9]
+    dest = XDG_DATA / "fonts" / "flamenco" / fid
+    with tempfile.TemporaryDirectory(dir=get_stage()) as tmp:
+        tmp = Path(tmp)
+        got = []
+        for w in weights:
+            for s in styles:
+                fn = f"{fid}-latin-{w}-{s}.ttf"
+                get_download(f"https://cdn.jsdelivr.net/fontsource/fonts/{fid}@latest/latin-{w}-{s}.ttf", tmp / fn, 20 * 1024 * 1024)
+                if (tmp / fn).read_bytes()[:4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true"):
+                    die("Fontsource sent something that isn't a font")
+                got.append(fn)
+        if dest.exists():
+            shutil.rmtree(dest)
+        dest.mkdir(parents=True)
+        for fn in got:
+            shutil.move(str(tmp / fn), str(dest / fn))
+    if shutil.which("fc-cache"):
+        subprocess.run(["fc-cache", "-f", str(dest)], capture_output=True, timeout=120)
+    m = get_manifest()
+    m.setdefault("fonts", {})[fid] = {"name": f.get("family", fid), "names": [f.get("family", fid)], "paths": [str(dest)], "file": f"{len(got)} files"}
+    get_manifest_save(m)
+    return {"installed": True, "names": [f.get("family", fid)], "paths": [str(dest)], "skipped": []}
+
+
+def get_remove(kind: str, sid: str) -> dict:
+    m = get_manifest()
+    e = m.get(kind, {}).pop(sid, None)
+    if not e:
+        die("that wasn't installed from here")
+    # where it may be: its folder (wallpapers went straight into the wallpaper folder before 0.51.1)
+    roots = {get_dirs()[kind].resolve()} | ({wallpaper_dir().resolve()} if kind == "wallpapers" else set())
+    gone = []
+    for p in map(Path, e.get("paths", [])):
+        # only straight inside the folder it was put in
+        if p.parent.resolve() not in roots or not GET_NAME.match(p.name):
+            continue
+        if p.is_symlink() or p.is_file():
+            p.unlink()
+        elif p.is_dir():
+            shutil.rmtree(p)
+        else:
+            continue
+        gone.append(str(p))
+    get_manifest_save(m)
+    if kind == "fonts" and shutil.which("fc-cache"):
+        subprocess.run(["fc-cache", "-f"], capture_output=True, timeout=300)
+    return {"removed": gone, "names": e.get("names", [])}
+
+
+def cmd_get(args: list[str]) -> int:
+    sub = args[0] if args else ""
+    kind = args[1] if len(args) > 1 else ""
+    if sub == "kinds":
+        print(json.dumps([{"id": k, "name": v["name"]} for k, v in GET_KINDS.items()]))
+        return 0
+    if sub == "list":
+        print(json.dumps(get_manifest()))
+        return 0
+    if sub not in ("search", "install", "remove") or kind not in GET_KINDS:
+        die("usage: flamenco get search KIND [QUERY] [PAGE] [SORT|CATEGORY] | install KIND ID [FILE] | remove KIND ID | list | kinds\n"
+            "  KIND: " + ", ".join(GET_KINDS) + "; SORT (store): rating, downloads, new; CATEGORY (fonts): sans-serif, serif, monospace, display, handwriting")
+    if sub == "search":
+        query = args[2] if len(args) > 2 else ""
+        page = max(1, int(args[3])) if len(args) > 3 and args[3].isdigit() else 1
+        extra = args[4] if len(args) > 4 else ""
+        try:
+            res = get_fonts(query, page, extra) if kind == "fonts" else get_ocs(kind, query, page, extra)
+        except Exception as e:
+            res = {"results": [], "more": False, "error": f"{'Fontsource' if kind == 'fonts' else 'KDE Store'}: {ai_http_error(e)}"}
+        print(json.dumps(res))
+        return 0
+    if len(args) < 3:
+        die(f"usage: flamenco get {sub} KIND ID")
+    if sub == "remove":
+        print(json.dumps(get_remove(kind, args[2])))
+        return 0
+    n = int(args[3]) if len(args) > 3 and args[3].isdigit() else 0
+    res = get_install_font(args[2]) if kind == "fonts" else get_install_ocs(kind, args[2], n)
+    print(json.dumps(res))
+    return 0
 
 
 # ─────────────────────────────── plugins ─────────────────────────────────────
@@ -7656,6 +8152,40 @@ UI_ICON_MAP = {
     "self_improvement": ["emblem-favorite", "face-smile"], "mood": ["face-smile"], "waving_hand": ["face-smile"], "celebration": ["face-smile"],
     "accessibility_new": ["preferences-desktop-accessibility"], "emergency_home": ["dialog-warning"], "local_fire_department": ["starred"],
 }
+UI_ICON_MAP.update({
+    # more of what the bar, quick settings and Settings show
+    "battery_2_bar": ["battery-low", "battery-level-30"], "battery_4_bar": ["battery-good", "battery-level-60"], "battery_6_bar": ["battery-full", "battery-level-90"],
+    "battery_std": ["battery-full", "battery"], "battery_charging_20": ["battery-low-charging", "battery-level-20-charging"],
+    "battery_charging_50": ["battery-good-charging", "battery-level-50-charging"], "battery_charging_80": ["battery-full-charging", "battery-level-80-charging"],
+    "notifications_paused": ["notifications-disabled", "notification-disabled"], "wifi_lock": ["network-wireless-encrypted"],
+    "animated_images": ["video-x-generic"], "animation": ["media-playlist-repeat"], "transition_fade": ["view-presentation", "media-playlist-repeat"],
+    "arrow_selector_tool": ["input-mouse", "pointer"], "ads_click": ["input-mouse"], "back_hand": ["input-touchpad"], "touchpad_mouse": ["input-touchpad"],
+    "build": ["applications-engineering", "preferences-other"], "troubleshoot": ["system-search", "applications-engineering"], "rule": ["view-list"],
+    "dock_to_bottom": ["view-split-top-bottom", "view-dual"], "dock_to_left": ["view-split-left-right", "view-dual"], "view_sidebar": ["sidebar-show", "view-split-left-right"],
+    "side_navigation": ["sidebar-show"], "toolbar": ["view-split-top-bottom"], "tab": ["tab-new"], "web_asset_off": ["window-close"],
+    "view_column_2": ["view-dual"], "view_day": ["view-list"], "view_week": ["view-calendar-week", "x-office-calendar"],
+    "equalizer": ["multimedia-equalizer", "audio-x-generic"], "monitoring": ["utilities-system-monitor"], "data_usage": ["utilities-system-monitor"],
+    "trending_up": ["utilities-system-monitor"], "inbox": ["mail-inbox", "mail-folder-inbox"], "label": ["tag"], "style": ["preferences-desktop-theme"],
+    "colors": ["preferences-desktop-color", "color-select"], "gradient": ["color-select"], "format_color_fill": ["color-fill", "color-select"],
+    "format_color_reset": ["edit-clear"], "border_color": ["color-select"], "blur_on": ["preferences-desktop-effects"], "motion_blur": ["preferences-desktop-effects"],
+    "motion_mode": ["preferences-desktop-effects"], "shadow": ["preferences-desktop-effects"], "texture": ["preferences-desktop-theme"], "opacity": ["preferences-desktop-effects"],
+    "interests": ["preferences-desktop-icons", "applications-other"], "rounded_corner": ["transform-crop"], "crop_square": ["transform-crop"], "select_all": ["edit-select-all"],
+    "fit_screen": ["zoom-fit-best"], "photo_size_select_large": ["zoom-fit-best"], "preview": ["view-preview", "view-reveal"], "highlight": ["format-text-highlight", "draw-highlight"],
+    "straighten": ["measure", "zoom-original"], "width": ["object-flip-horizontal"], "height": ["object-flip-vertical"], "padding": ["zoom-fit-best"], "line_weight": ["format-stroke-width", "draw-line"],
+    "format_align_left": ["format-justify-left"], "format_align_center": ["format-justify-center"], "format_align_right": ["format-justify-right"],
+    "align_horizontal_left": ["align-horizontal-left", "format-justify-left"], "align_horizontal_center": ["align-horizontal-center", "format-justify-center"],
+    "align_horizontal_right": ["align-horizontal-right", "format-justify-right"], "vertical_align_bottom": ["align-vertical-bottom", "go-bottom"],
+    "vertical_align_center": ["align-vertical-center"], "format_list_numbered": ["format-list-ordered"], "space_bar": ["input-keyboard"], "keyboard_return": ["input-keyboard"],
+    "keyboard_capslock": ["input-keyboard"], "keyboard_command_key": ["input-keyboard"], "keyboard_option_key": ["input-keyboard"], "keyboard_keys": ["input-keyboard"],
+    "keyboard_hide": ["input-keyboard"], "north_east": ["go-up"], "north_west": ["go-up"], "south_east": ["go-down"], "south_west": ["go-down"],
+    "call_made": ["go-up"], "call_received": ["go-down"], "start": ["go-last"], "low_priority": ["go-down"], "jump_to_element": ["go-jump"], "join": ["merge"],
+    "alt_route": ["merge"], "stack": ["view-list"], "event_available": ["x-office-calendar"], "pending_actions": ["appointment-soon", "x-office-calendar"], "routine": ["preferences-system-time"],
+    "verified": ["emblem-ok", "security-high"], "check_box_outline_blank": ["checkbox"], "arrow_drop_down_circle": ["pan-down"], "smart_button": ["preferences-other"],
+    "center_focus_strong": ["zoom-fit-best"], "flip": ["object-flip-horizontal"], "settings_input_antenna": ["network-wireless"], "desktop_access_disabled": ["video-display"],
+    "alternate_email": ["mail-message"], "css": ["text-css", "text-x-generic"], "feather": ["draw-freehand", "applications-graphics"], "percent": ["accessories-calculator"],
+    "looks_3": ["view-grid"], "looks_4": ["view-grid"], "border_style": ["format-border-style", "draw-rectangle"], "border_outer": ["draw-rectangle"], "border_top": ["draw-rectangle"],
+    "border_bottom": ["draw-rectangle"], "border_left": ["draw-rectangle"], "border_right": ["draw-rectangle"], "download_done": ["emblem-ok", "folder-download"],
+})
 UI_ICON_CACHE = XDG_CACHE / "flamenco" / "ui-icons"
 
 
@@ -7667,7 +8197,7 @@ def icon_theme_root(name: str) -> Path | None:
     return None
 
 
-def icon_theme_chain(name: str) -> list[Path]:
+def icon_theme_chain(name: str, fallbacks: bool = True) -> list[Path]:
     chain, seen, todo = [], set(), [name]
     while todo:
         n = todo.pop(0)
@@ -7680,7 +8210,7 @@ def icon_theme_chain(name: str) -> list[Path]:
         chain.append(root)
         inh = read_index(root / "index.theme").get("Icon Theme", "Inherits", fallback="")
         todo += [x.strip() for x in inh.split(",") if x.strip()]
-    for fallback in ("Adwaita", "hicolor"):
+    for fallback in ("Adwaita", "hicolor") if fallbacks else ():
         r = icon_theme_root(fallback) if fallback not in seen else None
         if r:
             chain.append(r)
@@ -7688,28 +8218,65 @@ def icon_theme_chain(name: str) -> list[Path]:
 
 
 def icon_index(root: Path) -> dict[str, str]:
-    """name → the best file for it in one theme folder: SVG first, then the biggest PNG."""
+    """name → the best file for it in one theme folder: SVG first, then the biggest PNG.
+    Linked folders are followed (Papirus-Dark, Tela's colors… are mostly links to the main theme)."""
     best: dict[str, tuple[int, str]] = {}
-    for f in root.rglob("*"):
-        if f.suffix not in (".svg", ".png") or not f.is_file():
+    seen: set[str] = set()
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
+        real = os.path.realpath(dirpath)
+        if real in seen:
+            dirnames[:] = []
             continue
-        parts = f.parent.parts
-        size = 10000 if f.suffix == ".svg" else next((int(x.split("x")[0]) for x in reversed(parts) if re.fullmatch(r"\d+x\d+(@\d+)?", x)), 1)
-        if f.stem not in best or size > best[f.stem][0]:
-            best[f.stem] = (size, str(f))
+        seen.add(real)
+        parts = Path(dirpath).relative_to(root).parts
+        px = next((int(m.group(1)) for x in reversed(parts) if (m := re.fullmatch(r"(\d+)(?:x\d+)?(?:@\d+x?)?", x))), 1)
+        for fn in filenames:
+            stem, ext = os.path.splitext(fn)
+            if ext not in (".svg", ".png"):
+                continue
+            f = os.path.join(dirpath, fn)
+            size = 10000 if ext == ".svg" else px
+            if (stem not in best or size > best[stem][0]) and os.path.isfile(f):
+                best[stem] = (size, f)
     return {k: v[1] for k, v in best.items()}
 
 
+def icon_one_color(path: str) -> bool:
+    """A one-color SVG that isn't named -symbolic: KDE's (Breeze's small icons draw in
+    ColorScheme-Text) or a plain single gray. The shell tints these like symbolic ones,
+    or they'd be dark on a dark bar."""
+    if not path.endswith(".svg"):
+        return False
+    try:
+        with open(path, "rb") as fh:
+            svg = fh.read(200_000).decode("utf-8", errors="replace").lower()
+    except OSError:
+        return False
+    if "<image" in svg or "gradient" in svg:
+        return False
+    colors = set(re.findall(r"#[0-9a-f]{6}\b|#[0-9a-f]{3}\b", svg))
+    if ("colorscheme-" in svg or "currentcolor" in svg) and len(colors) <= 3:
+        return True
+    if len(colors) == 1:
+        c = colors.pop().lstrip("#")
+        c = "".join(ch * 2 for ch in c) if len(c) == 3 else c
+        r, g, b = (int(c[i:i + 2], 16) for i in (0, 2, 4))
+        return max(r, g, b) - min(r, g, b) < 24
+    return False
+
+
 def ui_icon_map(theme: str) -> dict:
-    chain = icon_theme_chain(theme)
+    # the theme and what it says it builds on; not Adwaita or hicolor behind its back,
+    # so what a pack lacks stays Flamenco's instead of turning into another theme's
+    chain = [p for p in icon_theme_chain(theme, fallbacks=False) if p.name != "hicolor"]
     if not chain:
         return {}
     # cached per theme until one of its folders changes
-    stamp = max((p.stat().st_mtime for p in chain), default=0)
+    stamp = max((max(p.stat().st_mtime, (p / "index.theme").stat().st_mtime if (p / "index.theme").exists() else 0) for p in chain), default=0)
     cache = UI_ICON_CACHE / (re.sub(r"[^\w.-]", "_", theme) + ".json")
     try:
         c = json.loads(cache.read_text())
-        if c.get("stamp") == stamp and c.get("version") == 1:
+        if c.get("stamp") == stamp and c.get("version") == 2 and c.get("chain") == [str(p) for p in chain]:
             return c["map"]
     except (OSError, ValueError, KeyError):
         pass
@@ -7717,13 +8284,14 @@ def ui_icon_map(theme: str) -> dict:
     out = {}
     for material, names in UI_ICON_MAP.items():
         hit = None
-        # symbolic (one color) first, through the whole chain; then the full-color ones
-        for symbolic in (True, False):
+        # the theme's own first, then what it inherits; in each, the one-color (-symbolic)
+        # version of a name before its full-color one
+        for idx in indexes:
             for n in names:
-                want = n + "-symbolic" if symbolic else n
-                for idx in indexes:
+                for want in (n + "-symbolic", n):
                     if want in idx:
-                        hit = {"p": idx[want], "s": symbolic or idx[want].endswith("-symbolic.svg")}
+                        p = idx[want]
+                        hit = {"p": p, "s": want.endswith("-symbolic") or icon_one_color(p)}
                         break
                 if hit:
                     break
@@ -7732,7 +8300,7 @@ def ui_icon_map(theme: str) -> dict:
         if hit:
             out[material] = hit
     UI_ICON_CACHE.mkdir(parents=True, exist_ok=True)
-    cache.write_text(json.dumps({"version": 1, "stamp": stamp, "map": out}))
+    cache.write_text(json.dumps({"version": 2, "stamp": stamp, "chain": [str(p) for p in chain], "map": out}))
     return out
 
 
@@ -9559,6 +10127,8 @@ def main(argv: list[str]) -> int:
         return cmd_wallhaven(rest)
     if cmd == "live":
         return cmd_live(rest)
+    if cmd == "get":
+        return cmd_get(rest)
     if cmd == "users":
         return cmd_users(rest)
     if cmd == "accounts":

@@ -82,7 +82,7 @@ Singleton {
                 property string iconStyle: "filled"     // filled | outlined
                 // the shell's own icons: flamenco (Material Symbols, built in) | apps (the icon theme
                 // apps use, App Theming) | any installed icon theme's name
-                property string uiIcons: "flamenco"
+                property string uiIcons: "apps"
                 property bool blendPanels: false        // panels connect to the bar, no gap (like DMS)
                 // switch dark ↔ light by itself: off | sun (sunset / sunrise) | schedule
                 property string autoMode: "off"
@@ -586,7 +586,7 @@ Singleton {
         onTriggered: file.writeAdapter()
     }
 
-    readonly property int currentVersion: 9
+    readonly property int currentVersion: 10
 
     // One-time upgrades for settings files written by older versions.
     function migrate() {
@@ -686,6 +686,12 @@ Singleton {
             // 0.44: quick settings as the editable tile grid; "cards" was the old default
             if ((adapter.control.style || "cards") === "cards")
                 adapter.control.style = "grid";
+        }
+        if (v < 10) {
+            // 0.51.1: the shell's icons follow the icon theme apps use (picking a pack in App
+            // Theming or Get themes shows everywhere); "flamenco" was the old default
+            if ((adapter.appearance.uiIcons || "flamenco") === "flamenco")
+                adapter.appearance.uiIcons = "apps";
         }
         adapter.configVersion = currentVersion;
     }
