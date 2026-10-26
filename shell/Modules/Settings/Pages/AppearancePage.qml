@@ -464,6 +464,7 @@ Page {
         }
         SwitchRow { title: "Ripple where you click"; icon: "touch_app"; target: page.a; key: "ripple" }
         SwitchRow { title: "Grow under the pointer"; subtitle: "Workspace dots, launcher icons…"; icon: "zoom_in"; target: page.a; key: "hoverZoom" }
+        SwitchRow { title: "Smooth scrolling"; subtitle: page.a.smoothScroll ? "Lists glide and keep a little momentum (Flamenco's own scrolling)" : "Off: lists scroll the standard way, with niri's scroll speed and direction (Mouse & Touchpad)"; icon: "swap_vert"; target: page.a; key: "smoothScroll" }
         SettingRow {
             title: "Speed of each part"
             subtitle: "On top of the overall speed. Off removes that part's animations."

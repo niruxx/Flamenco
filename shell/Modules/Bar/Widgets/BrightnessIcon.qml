@@ -6,5 +6,10 @@ import qs.Widgets
 StatusIcon {
     barVisible: Brightness.available
     icon: "brightness_6"
-    onWheel: event => Brightness.step(event.angleDelta.y > 0 ? 0.05 : -0.05)
+    onWheel: event => {
+        const n = notches.take(event);
+        if (n !== 0)
+            Brightness.step(0.05 * n);
+    }
+    WheelSteps { id: notches }
 }

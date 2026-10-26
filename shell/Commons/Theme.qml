@@ -112,7 +112,7 @@ Singleton {
     readonly property color popupBg: alpha(surface, popupOp)
     readonly property color switcherBg: alpha(surface, switcherOp)
     // panels grow out of the bar as one surface (not with the islands bar style)
-    readonly property bool blendPanels: a.blendPanels && !["islands", "capsule", "minimal"].includes(Settings.data.bar.style) && Settings.data.bar.position !== "free"
+    readonly property bool blendPanels: a.blendPanels && !["islands", "capsule", "minimal"].includes(Settings.data.bar.style) && Settings.data.bar.position !== "free" && !barFit
 
     function alpha(c, value) {
         return Qt.rgba(c.r, c.g, c.b, value);
@@ -186,7 +186,17 @@ Singleton {
 
     // ── Bar ──
     readonly property var barCfg: Settings.data.bar
-    readonly property string barPos: ["top", "bottom", "left", "right"].includes(barCfg.position) ? barCfg.position : "top"
+    // the edge it's on: a corner (top-left…) is on the top or bottom edge
+    readonly property string barPos: ["top", "bottom", "left", "right"].includes(barCfg.position) ? barCfg.position
+        : String(barCfg.position).startsWith("bottom-") ? "bottom" : "top"
+    // in a corner: which end of the edge ("" when not)
+    readonly property string barCorner: /^(top|bottom)-(left|right)$/.test(barCfg.position) ? barCfg.position.split("-")[1] : ""
+    // the bar's length: the whole edge, or (fit) just around its widgets, at the start / center / end of the edge
+    readonly property bool barFit: barCorner !== "" || barCfg.position === "free" || barCfg.style === "capsule" || barCfg.length === "fit"
+    readonly property string barAlign: barCorner === "left" ? "start" : barCorner === "right" ? "end" : barCfg.style === "capsule" && barCfg.length !== "fit" ? "center" : (barCfg.align || "center")
+    // how the widgets sit on a full-length bar: spread (left / center / right sections at
+    // the ends and the middle) or packed together at the start, center or end
+    readonly property string barArrange: barFit ? "packed" : (barCfg.arrange || "spread")
     readonly property bool barVertical: barPos === "left" || barPos === "right"
     // panels hang from the top unless the bar is at the bottom
     readonly property bool barTop: barPos !== "bottom"

@@ -120,9 +120,13 @@ Item {
                 root.setFromX(mouse.x);
         }
         onWheel: wheel => {
+            const n = notches.take(wheel);
+            if (n === 0)
+                return;
             const step = root.stepSize > 0 ? root.stepSize : (root.to - root.from) / 20;
-            const v = Math.max(root.from, Math.min(root.to, root.value + (wheel.angleDelta.y > 0 ? step : -step)));
+            const v = Math.max(root.from, Math.min(root.to, root.value + n * step));
             root.moved(v);
         }
+        WheelSteps { id: notches }
     }
 }

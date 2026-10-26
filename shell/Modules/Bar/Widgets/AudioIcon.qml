@@ -9,5 +9,10 @@ StatusIcon {
     panel: "volume"
     iconColor: Audio.muted ? Theme.textDim : Theme.text
     onMiddleClicked: Audio.toggleMute()
-    onWheel: event => Audio.step(event.angleDelta.y > 0 ? 0.05 : -0.05)
+    onWheel: event => {
+        const n = notches.take(event);
+        if (n !== 0)
+            Audio.step(0.05 * n);
+    }
+    WheelSteps { id: notches }
 }

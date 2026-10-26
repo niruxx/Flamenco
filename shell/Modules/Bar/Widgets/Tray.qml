@@ -51,8 +51,24 @@ BarFlow {
             width: Theme.barItem
             height: width
 
+            // an icon the theme doesn't have (Qt would draw its black and purple checkerboard)
+            readonly property bool missing: {
+                const src = String(img.source);
+                if (img.backer.status === Image.Error || src === "")
+                    return true;
+                const m = src.match(/^image:\/\/icon\/([^?]+)/);
+                return m !== null && Quickshell.iconPath(decodeURIComponent(m[1]), true) === "";
+            }
+            FIcon {
+                visible: it.missing
+                anchors.centerIn: parent
+                icon: "question_mark"
+                size: 16
+                color: Theme.textDim
+            }
             IconImage {
                 id: img
+                visible: !it.missing
                 anchors.centerIn: parent
                 implicitSize: 18
                 source: {

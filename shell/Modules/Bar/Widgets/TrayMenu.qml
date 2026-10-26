@@ -164,7 +164,11 @@ PopupWindow {
                 color: mr.check === "check_box" || mr.check === "radio_button_checked" ? Theme.accent : Theme.text
             }
             IconImage {
-                visible: mr.image !== "" && mr.check === ""
+                id: mrImg
+                // hidden when the theme doesn't have it, rather than Qt's checkerboard
+                readonly property var named: mr.image.match(/^image:\/\/icon\/([^?]+)/)
+                visible: mr.image !== "" && mr.check === "" && backer.status !== Image.Error
+                    && (named === null || Quickshell.iconPath(decodeURIComponent(named[1]), true) !== "")
                 implicitSize: 16
                 source: mr.image
             }

@@ -273,8 +273,13 @@ Variants {
                 }
 
                 WheelHandler {
-                    onWheel: event => (event.angleDelta.y || -event.angleDelta.x) > 0 ? view.decrementCurrentIndex() : view.incrementCurrentIndex()
+                    onWheel: event => {
+                        const n = cardNotches.take(event);
+                        for (let i = 0; i < Math.abs(n); i++)
+                            n > 0 ? view.decrementCurrentIndex() : view.incrementCurrentIndex();
+                    }
                 }
+                WheelSteps { id: cardNotches; sideways: true }
 
                 delegate: Item {
                     id: card

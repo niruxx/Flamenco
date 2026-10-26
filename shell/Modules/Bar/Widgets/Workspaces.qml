@@ -224,6 +224,12 @@ Rectangle {
 
     WheelHandler {
         enabled: root.wcfg.scrollSwitch
-        onWheel: event => Niri.action((event.angleDelta.y > 0) !== root.wcfg.invertScroll ? "focus-workspace-up" : "focus-workspace-down")
+        onWheel: event => {
+            // one workspace per notch (a touchpad swipe adds up to one)
+            const n = notches.take(event);
+            for (let i = 0; i < Math.min(3, Math.abs(n)); i++)
+                Niri.action((n > 0) !== root.wcfg.invertScroll ? "focus-workspace-up" : "focus-workspace-down");
+        }
     }
+    WheelSteps { id: notches }
 }

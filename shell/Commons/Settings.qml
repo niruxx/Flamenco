@@ -75,6 +75,7 @@ Singleton {
                 property string panelEffect: "rise"     // how panels open: rise | fade | slide | zoom | none
                 property string notifEffect: "slide"    // how notifications arrive: slide | fade | pop
                 property bool ripple: true              // ripple where you click
+                property bool smoothScroll: false       // Flamenco's gliding wheel scrolling; off: standard (niri's settings)
                 property bool hoverZoom: true           // things grow a little under the pointer
                 property real uiScale: 1.0
                 property string fontFamily: "Google Sans Flex"
@@ -99,7 +100,10 @@ Singleton {
             }
 
             property JsonObject bar: JsonObject {
-                property string position: "top"       // top | bottom | left | right
+                property string position: "top"       // top | bottom | left | right | top-left | top-right | bottom-left | bottom-right | free
+                property string length: "full"        // full (edge to edge) | fit (just around its widgets)
+                property string align: "center"       // fit: where on its edge: start | center | end
+                property string arrange: "spread"     // full: spread (sections at the ends and middle) | start | center | end (packed together)
                 // floating | attached | islands | framed (a solid bar with pill groups, the Flamenco look)
                 // | capsule (one pill hugging the widgets) | minimal (no bar, a soft shade) | outline (see-through, outlined)
                 property string style: "islands"

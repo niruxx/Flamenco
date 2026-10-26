@@ -30,7 +30,12 @@ Item {
         onClicked: Audio.toggleMicMute()
         onMiddleClicked: Audio.toggleMicMute()
         onRightClicked: Panels.openControl("mic", root.screenName, root)
-        onWheel: event => Audio.setMicVolume(Audio.micVolume + (event.angleDelta.y > 0 ? 0.05 : -0.05))
+        onWheel: event => {
+            const n = notches.take(event);
+            if (n !== 0)
+                Audio.setMicVolume(Audio.micVolume + 0.05 * n);
+        }
+        WheelSteps { id: notches }
     }
 
     // a small pulsing dot while something is listening

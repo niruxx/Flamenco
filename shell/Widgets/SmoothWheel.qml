@@ -1,4 +1,5 @@
 import QtQuick
+import qs.Commons
 
 // Wheel and touchpad scrolling with momentum for a Flickable, ListView or GridView.
 // Put it inside the view: SmoothWheel { view: myList }
@@ -11,8 +12,12 @@ import QtQuick
 // matters for fast wheels: they send events faster than the screen redraws, and
 // restarting an animation on each one kept it from ever taking a step, so the
 // list stalled while the wheel spun and only caught up after it stopped.
+//
+// Off unless Settings → Appearance → Smooth scrolling is on: then the view scrolls
+// the standard way, as niri sends it (its scroll speed and direction settings).
 WheelHandler {
     id: root
+    enabled: Settings.data.appearance.smoothScroll ?? false
 
     required property Flickable view
     property real step: 110             // pixels per wheel notch
@@ -74,6 +79,10 @@ WheelHandler {
 
     // also usable from a MouseArea's onWheel (e.g. a scrollbar on top of the view)
     function scroll(event) {
+        if (!enabled) {
+            event.accepted = false;         // the view scrolls it itself
+            return;
+        }
         if (!view.interactive || view.contentHeight <= view.height)
             return;
         const touch = event.pixelDelta.y !== 0;

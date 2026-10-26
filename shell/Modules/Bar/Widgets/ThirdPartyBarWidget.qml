@@ -57,7 +57,7 @@ Item {
             } : {
                 pluginId: plugin.id,
                 pluginService: ThirdParty.dms(),
-                axis: { isVertical: Theme.barVertical, edge: Settings.data.bar.position },
+                axis: { isVertical: Theme.barVertical, edge: Theme.barPos },
                 section: sec,
                 parentScreen: screenObj,
                 widgetThickness: Theme.barItem,

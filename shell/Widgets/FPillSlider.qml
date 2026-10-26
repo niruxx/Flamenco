@@ -70,7 +70,12 @@ Rectangle {
                 root.moved(live);
             }
         }
-        onWheel: wheel => root.moved(Math.max(0, Math.min(1, root.value + (wheel.angleDelta.y > 0 ? 0.05 : -0.05))))
+        onWheel: wheel => {
+            const n = notches.take(wheel);
+            if (n !== 0)
+                root.moved(Math.max(0, Math.min(1, root.value + 0.05 * n)));
+        }
+        WheelSteps { id: notches }
     }
 
     FIconButton {

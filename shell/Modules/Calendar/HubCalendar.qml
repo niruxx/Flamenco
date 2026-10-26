@@ -204,8 +204,9 @@ Item {
                 }
             }
             WheelHandler {
-                onWheel: event => event.angleDelta.y > 0 ? root.monthOffset-- : root.monthOffset++
+                onWheel: event => root.monthOffset -= monthNotches.take(event)
             }
+            WheelSteps { id: monthNotches }
         }
 
         ColumnLayout {
