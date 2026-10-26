@@ -65,6 +65,8 @@
   flamenco bar toggle|show|hide | mode never|auto|windows   hide the bar (by hand, automatically, or while windows are open)
   flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO
                                live (video) wallpapers: find them online (wikimedia, pexels, pixabay), download, API keys
+  flamenco bluetooth scan [SECONDS] | pair MAC | connect MAC | disconnect MAC | remove MAC | unblock
+                               find, pair (with passkey / PIN questions as JSON lines), connect and forget devices
   flamenco devices watch | open /dev/DISK | eject /dev/DISK
                                drives and accessories plugged in or taken out (JSON lines); open or safely remove a drive
   flamenco get search KIND [QUERY] [PAGE] [SORT] | install KIND ID [FILE] | remove KIND ID | list
@@ -84,7 +86,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.55.0"
+VERSION = "0.56.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -5141,6 +5143,153 @@ def cmd_live(args: list[str]) -> int:
     die("usage: flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO")
 
 
+# ─────────────────────────────── bluetooth ───────────────────────────────────
+# Scanning and pairing for quick settings and Settings → Bluetooth. Pairing needs a
+# BlueZ agent (to show or confirm a passkey, or ask for a PIN), which the shell
+# doesn't have, so `bluetooth pair` runs bluetoothctl with its agent and passes its
+# questions on as JSON lines; the answers come back on stdin ("yes", "no", a PIN).
+
+BT_MAC = re.compile(r"^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$")
+ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x01|\x02|\r")
+
+
+def bt_need() -> str:
+    b = shutil.which("bluetoothctl")
+    if not b:
+        die("bluetoothctl isn't installed (bluez-utils)")
+    return b
+
+
+def bt_emit(**kw) -> None:
+    print(json.dumps(kw), flush=True)
+
+
+def bt_pair(mac: str, timeout: float = 90) -> int:
+    """Pairs, trusts and connects `mac`, asking (JSON lines out, answers in) what the device asks."""
+    import select
+    import time
+    proc = subprocess.Popen([bt_need()], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
+    os.set_blocking(proc.stdout.fileno(), False)
+
+    def send(line: str) -> None:
+        try:
+            proc.stdin.write((line + "\n").encode())
+            proc.stdin.flush()
+        except (BrokenPipeError, OSError):
+            pass
+
+    def answer() -> str:
+        """The shell's answer to a question (a line on our stdin), or "" if it gave up."""
+        end = time.monotonic() + 60
+        while time.monotonic() < end:
+            r, _, _ = select.select([sys.stdin], [], [], 0.5)
+            if r:
+                return sys.stdin.readline().strip()
+            if proc.poll() is not None:
+                return ""
+        return ""
+
+    for c in ("agent KeyboardDisplay", "default-agent", "pairable on", f"pair {mac}"):
+        send(c)
+    bt_emit(event="pairing", mac=mac)
+    buf, stage, deadline = "", "pair", time.monotonic() + timeout
+    rules = [
+        (r"Confirm passkey (\d+)|Request confirmation.*?(\d{6})", "confirm"),
+        (r"Enter PIN code:", "pin"),
+        (r"Enter passkey[^:]*:", "passkey"),
+        (r"\[agent\] (?:Passkey|PIN code): (\d+)", "display"),
+        (r"Authorize service", "authorize"),
+        (r"Pairing successful|AlreadyExists", "paired"),
+        (r"Failed to pair: (\S+)", "failed"),
+        (r"Device [0-9A-F:]+ not available", "missing"),
+        (r"Connection successful", "connected"),
+        (r"Failed to connect: (\S+)", "noconnect"),
+    ]
+    try:
+        while time.monotonic() < deadline and proc.poll() is None:
+            r, _, _ = select.select([proc.stdout], [], [], 0.3)
+            if r:
+                try:
+                    chunk = proc.stdout.read(4096) or b""
+                except BlockingIOError:
+                    chunk = b""
+                buf += ANSI.sub("", chunk.decode("utf-8", errors="replace"))
+            while True:
+                hits = [(m.start(), kind, m) for rx, kind in rules if (m := re.search(rx, buf))]
+                if not hits:
+                    break
+                _, kind, m = min(hits, key=lambda h: h[0])
+                buf = buf[m.end():]
+                code = next((g for g in m.groups() if g), "") if m.groups() else ""
+                if kind == "confirm":
+                    bt_emit(event="confirm", passkey=code)
+                    send("yes" if answer() == "yes" else "no")
+                elif kind in ("pin", "passkey"):
+                    bt_emit(event=kind)
+                    a = answer()
+                    send(a if re.fullmatch(r"[0-9A-Za-z]{1,16}", a) else "")
+                elif kind == "display":
+                    bt_emit(event="display", passkey=code)
+                elif kind == "authorize":
+                    send("yes")
+                elif kind == "paired" and stage == "pair":
+                    stage = "connect"
+                    bt_emit(event="paired")
+                    send(f"trust {mac}")
+                    send(f"connect {mac}")
+                    deadline = time.monotonic() + 30
+                elif kind == "failed":
+                    bt_emit(event="error", message={"org.bluez.Error.AuthenticationFailed": "Pairing was refused or the code didn't match",
+                                                    "org.bluez.Error.AuthenticationCanceled": "Pairing was canceled",
+                                                    "org.bluez.Error.AuthenticationRejected": "Pairing was declined",
+                                                    "org.bluez.Error.ConnectionAttemptFailed": "Couldn't reach it: is it in pairing mode and close by?",
+                                                    "org.bluez.Error.AuthenticationTimeout": "It took too long"}.get(code, "Pairing failed (" + code + ")"))
+                    return 1
+                elif kind == "missing":
+                    bt_emit(event="error", message="It isn't nearby any more: scan again and put it in pairing mode")
+                    return 1
+                elif kind == "connected" and stage == "connect":
+                    bt_emit(event="done", connected=True)
+                    return 0
+                elif kind == "noconnect" and stage == "connect":
+                    bt_emit(event="done", connected=False, message="Paired, but it didn't connect: try connecting it again")
+                    return 0
+        bt_emit(event="error", message="It took too long: put it in pairing mode and try again" if stage == "pair" else "Paired, but it didn't connect")
+        return 1
+    finally:
+        send("quit")
+        try:
+            proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+
+
+def cmd_bluetooth(args: list[str]) -> int:
+    sub = args[0] if args else ""
+    if sub == "scan":
+        secs = int(args[1]) if len(args) > 1 and args[1].isdigit() else 30
+        # discovery lasts while this runs; the devices show up in the shell as BlueZ finds them
+        subprocess.run([bt_need(), "--timeout", str(max(5, min(300, secs))), "scan", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return 0
+    if sub == "unblock":
+        if shutil.which("rfkill"):
+            subprocess.run(["rfkill", "unblock", "bluetooth"], capture_output=True)
+        subprocess.run([bt_need(), "power", "on"], capture_output=True, timeout=15)
+        return 0
+    if sub in ("pair", "remove", "connect", "disconnect") and len(args) > 1:
+        mac = args[1]
+        if not BT_MAC.match(mac):
+            die("not a Bluetooth address (AA:BB:CC:DD:EE:FF)")
+        if sub == "pair":
+            return bt_pair(mac.upper())
+        r = subprocess.run([bt_need(), sub, mac.upper()], capture_output=True, text=True, timeout=30)
+        ok = re.search(r"successful|removed", r.stdout, re.I) is not None
+        last = (ANSI.sub("", r.stdout).strip().splitlines() or [""])[-1]
+        print(json.dumps({"ok": ok, "message": "" if ok else last}))
+        return 0 if ok else 1
+    die("usage: flamenco bluetooth scan [SECONDS] | pair MAC | connect MAC | disconnect MAC | remove MAC | unblock")
+
+
 # ─────────────────────────────── devices plugged in ──────────────────────────
 # Settings → Notifications → Devices: a pop-up when a drive or an accessory is
 # plugged in or taken out, like GNOME's. `devices watch` follows udev and prints
@@ -9029,6 +9178,7 @@ def doctor_checks() -> list[dict]:
 
     # ── features ──
     add("Features", "NetworkManager", "Wi-Fi, Ethernet and VPN", have("nmcli"), "networkmanager")
+    add("Features", "bluez-utils", "Bluetooth scanning and pairing (quick settings, Settings → Bluetooth)", have("bluetoothctl"), "bluez-utils")
     add("Features", "udisks2", "Open and Eject in the pop-ups for drives you plug in (Settings → Notifications → Devices)", have("udisksctl"), "udisks2")
     add("Features", "OpenVPN plugin", "import and connect .ovpn VPNs",
         exists("/usr/lib/NetworkManager/VPN/nm-openvpn-service.name"), "networkmanager-openvpn")
@@ -10621,6 +10771,8 @@ def main(argv: list[str]) -> int:
         return cmd_get(rest)
     if cmd == "devices":
         return cmd_devices(rest)
+    if cmd == "bluetooth":
+        return cmd_bluetooth(rest)
     if cmd == "users":
         return cmd_users(rest)
     if cmd == "accounts":

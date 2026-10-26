@@ -49,64 +49,66 @@ LazyLoader {
         onVisibleChanged: if (!visible) Panels.settingsOpen = false
 
         readonly property var pages: [
+            { id: "network", icon: "wifi", label: "Wi-Fi & Network", comp: networkC },
+            { id: "bluetooth", icon: "bluetooth", label: "Bluetooth", comp: bluetoothC },
+            { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
+            { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
+            { id: "power", icon: "battery_charging_full", label: "Power", comp: powerC },
             { id: "appearance", icon: "palette", label: "Appearance", comp: appearanceC },
+            { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
+            { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
             { id: "apps", icon: "format_paint", label: "App Theming", comp: appsC },
             { id: "get", icon: "download", label: "Get themes", comp: getC },
             { id: "bar", icon: "toolbar", label: "Bar", comp: barC },
             { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
             { id: "quicksettings", icon: "tune", label: "Quick settings", comp: quickC },
-            { id: "windows", icon: "select_window", label: "Windows & Layout", comp: windowsC },
-            { id: "workspaces", icon: "view_carousel", label: "Workspaces", comp: workspacesC },
-            { id: "edges", icon: "select_all", label: "Screen edges", comp: edgesC },
+            { id: "launcher", icon: "apps", label: "Launcher", comp: launcherC },
             { id: "desktop", icon: "widgets", label: "Desktop widgets", comp: desktopC },
-            { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
-            { id: "night", icon: "nightlight", label: "Night light", comp: nightC },
+            { id: "overview", icon: "overview_key", label: "Overview", comp: overviewC },
+            { id: "edges", icon: "select_all", label: "Screen edges", comp: edgesC },
+            { id: "clock", icon: "schedule", label: "Clock & Weather", comp: clockC },
             { id: "keyboard", icon: "keyboard", label: "Keyboard", comp: keyboardC },
             { id: "pointer", icon: "mouse", label: "Mouse & Touchpad", comp: pointerC },
-            { id: "network", icon: "wifi", label: "Network", comp: networkC },
-            { id: "ai", icon: "auto_awesome", label: "AI", comp: aiC },
-            { id: "plugins", icon: "extension", label: "Plugins", comp: pluginsC },
-            { id: "thirdparty", icon: "deployed_code", label: "Plugins (3rd party)", comp: thirdPartyC },
-            { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
-            { id: "accounts", icon: "cloud_sync", label: "Online Accounts", comp: accountsC },
-            { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
-            { id: "screenshots", icon: "screenshot_monitor", label: "Screenshots", comp: screenshotC },
-            { id: "power", icon: "battery_charging_full", label: "Power", comp: powerC },
-            { id: "firewall", icon: "shield", label: "Firewall", comp: firewallC },
-            { id: "keyring", icon: "key", label: "Keyring", comp: keyringC },
+            { id: "night", icon: "nightlight", label: "Night light", comp: nightC },
             { id: "printers", icon: "print", label: "Printers", comp: printersC },
-            { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
-            { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
+            { id: "screenshots", icon: "screenshot_monitor", label: "Screenshots", comp: screenshotC },
+            { id: "windows", icon: "select_window", label: "Windows & Layout", comp: windowsC },
+            { id: "workspaces", icon: "view_carousel", label: "Workspaces", comp: workspacesC },
+            { id: "users", icon: "manage_accounts", label: "Users", comp: usersC },
+            { id: "accounts", icon: "cloud_sync", label: "Online Accounts", comp: accountsC },
+            { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
+            { id: "datetime", icon: "more_time", label: "Date & Time", comp: datetimeC },
             { id: "wellbeing", icon: "self_improvement", label: "Digital wellbeing", comp: wellbeingC },
-            { id: "launcher", icon: "apps", label: "Launcher", comp: launcherC },
-            { id: "overview", icon: "overview_key", label: "Overview", comp: overviewC },
+            { id: "lock", icon: "lock", label: "Lock & Login", comp: lockC },
             { id: "defaults", icon: "open_in_new", label: "Default apps", comp: defaultsC },
             { id: "autostart", icon: "rocket_launch", label: "Auto-start", comp: autostartC },
             { id: "flatpak", icon: "inventory_2", label: "Flatpak permissions", comp: flatpakC },
-            { id: "lock", icon: "lock", label: "Lock & Login", comp: lockC },
-            { id: "clock", icon: "schedule", label: "Clock & Weather", comp: clockC },
-            { id: "users", icon: "manage_accounts", label: "Users", comp: usersC },
-            { id: "datetime", icon: "more_time", label: "Date & Time", comp: datetimeC },
+            { id: "ai", icon: "auto_awesome", label: "AI", comp: aiC },
+            { id: "plugins", icon: "extension", label: "Plugins", comp: pluginsC },
+            { id: "thirdparty", icon: "deployed_code", label: "Plugins (3rd party)", comp: thirdPartyC },
+            { id: "firewall", icon: "shield", label: "Firewall", comp: firewallC },
+            { id: "keyring", icon: "key", label: "Keyring", comp: keyringC },
             { id: "system", icon: "health_and_safety", label: "System check", comp: systemC },
             { id: "about", icon: "info", label: "About", comp: aboutC }
         ]
         readonly property int index: Math.max(0, pages.findIndex(p => p.id === Panels.settingsPage))
         readonly property var page: pages[index]
 
-        // the sidebar: sections of pages, and each page's badge color
+        // the sidebar: sections of pages, and each page's badge color. The most used come
+        // first (connections and hardware, then the look, the desktop…), About last
         readonly property var sections: [
-            { tint: "#a993ff", ids: ["appearance", "wallpaper", "apps", "get", "lock"] },
-            { tint: "#8fa6ff", ids: ["bar", "dock", "launcher", "quicksettings", "desktop", "overview", "edges", "clock"] },
-            { tint: "#6fcf8f", ids: ["notifications", "wellbeing", "sound", "screenshots"] },
-            { tint: "#ff9d6e", ids: ["displays", "night", "keyboard", "pointer", "power", "printers"] },
+            { tint: "#6fb6ff", ids: ["network", "bluetooth", "displays", "sound", "power"] },
+            { tint: "#a993ff", ids: ["appearance", "wallpaper", "notifications", "apps", "get"] },
+            { tint: "#8fa6ff", ids: ["bar", "dock", "quicksettings", "launcher", "desktop", "overview", "edges", "clock"] },
+            { tint: "#ff9d6e", ids: ["keyboard", "pointer", "night", "printers", "screenshots"] },
             { tint: "#5fc9c2", ids: ["windows", "workspaces"] },
-            { tint: "#6fb6ff", ids: ["network", "accounts", "sharing"] },
+            { tint: "#6fcf8f", ids: ["users", "accounts", "sharing", "datetime", "wellbeing", "lock"] },
             { tint: "#e98fd0", ids: ["defaults", "autostart", "flatpak", "ai", "plugins", "thirdparty"] },
-            { tint: "#b8bcc8", ids: ["users", "datetime", "firewall", "keyring", "system", "about"] }
+            { tint: "#b8bcc8", ids: ["firewall", "keyring", "system", "about"] }
         ]
         // one line under each page's name
         readonly property var descs: ({
-                appearance: "Theme, palette, dark mode", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session",
+                appearance: "Theme, palette, dark mode", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", bluetooth: "Devices, pairing", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session",
                 bar: "Style, layout, widgets", dock: "Position, pinned apps, style", launcher: "Fuzzy search, fuzzel", quicksettings: "Tiles, sliders, layout",
                 desktop: "Clocks, photos, monitors", overview: "Workspaces at a glance", edges: "Hot corners and edges", clock: "Clock, weather, calendars",
                 notifications: "Popups, do not disturb, mako", wellbeing: "Screen time and app limits", sound: "Devices, sounds, app volumes", screenshots: "Capture, save, copy",
@@ -224,6 +226,7 @@ LazyLoader {
         Component { id: appearanceC; AppearancePage {} }
         Component { id: appsC; AppThemingPage {} }
         Component { id: getC; GetPage {} }
+        Component { id: bluetoothC; BluetoothSettingsPage {} }
         Component { id: barC; BarPage {} }
         Component { id: dockC; DockPage {} }
         Component { id: quickC; QuickSettingsPage {} }

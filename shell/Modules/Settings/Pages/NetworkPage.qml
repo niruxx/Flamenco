@@ -10,7 +10,7 @@ import qs.Widgets
 // edited right here (`flamenco net`), no nm-connection-editor needed.
 Page {
     id: page
-    title: "Network"
+    title: "Wi-Fi & Network"
     subtitle: page.editing ? "" : "Wi-Fi, wired and VPN connections, through NetworkManager."
 
     property var st: ({ connections: [], devices: [] })

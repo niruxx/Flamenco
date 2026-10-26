@@ -7,7 +7,7 @@
 </picture>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.55.0-E8466F?style=for-the-badge" alt="Version 0.55.0">
+  <img src="https://img.shields.io/badge/version-0.56.0-E8466F?style=for-the-badge" alt="Version 0.56.0">
   <img src="https://img.shields.io/badge/Quickshell-0.3.2-FF5722?style=for-the-badge&logo=qt&logoColor=white" alt="Quickshell 0.3.2">
   <img src="https://img.shields.io/badge/niri%20%7C%20Hyprland-supported-00BCD4?style=for-the-badge" alt="niri and Hyprland">
   <img src="https://img.shields.io/badge/Material%20Design-3-6750A4?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3">
@@ -260,7 +260,7 @@ Flamenco (black and grey, with an ember accent), Material Design, Liquid Glass (
 | `adw-gtk-theme` | GTK 3 apps that look like libadwaita apps |
 | `qt6-imageformats` | `.webp` wallpapers |
 | `qt6-multimedia`, `qt6-multimedia-ffmpeg`, `ffmpeg` | live (video) wallpapers: playing them, and their stills for thumbnails and colors |
-| `power-profiles-daemon`, `upower`, `bluez` | power profile tile, battery, Bluetooth |
+| `power-profiles-daemon`, `upower`, `bluez`, `bluez-utils` | power profile tile, battery, Bluetooth (bluetoothctl: scanning and pairing) |
 | `python-gobject` + `xdg-desktop-portal-gtk` (or `-gnome` / `-kde`) | the **Browse** folder picker (falls back to kdialog, zenity or yad) |
 | `fprintd` | fingerprints: enrolling, and unlocking the lock screen |
 
@@ -336,7 +336,7 @@ The first time the shell starts, the **Flamenco Setup** window opens just after 
 - **Icons & cursors**
 - **Wallpaper**
 - **Sound**
-- **Bluetooth** (turn it on, scan, connect)
+- **Bluetooth** (turn it on; it searches while its page is open; pair nearby devices, with the passkey or PIN they ask for, connect, disconnect and forget them), in quick settings and **Settings → Bluetooth**
 - **Screen sharing & files**
 - **Keyring**
 - **All set:** "Welcome to Flamenco", with your shortcuts shown as keycaps, and **Start using Flamenco** plays the login animation.
