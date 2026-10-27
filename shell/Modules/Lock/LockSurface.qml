@@ -182,7 +182,7 @@ Item {
             FText {
                 anchors.centerIn: parent
                 visible: root.ctx.buffer.length === 0
-                text: root.ctx.authenticating ? "Checking…" : root.ctx.errorText || "Enter password"
+                text: root.ctx.authenticating ? I18n.tr("Checking…") : root.ctx.errorText || "Enter password"
                 dim: !root.ctx.errorText
                 color: root.ctx.errorText ? Theme.error : Theme.textDim
             }

@@ -87,7 +87,7 @@ FCard {
                     font.pixelSize: Theme.fsSm
                     elide: Text.ElideRight
                 }
-                FText { text: "Mixer"; color: Theme.accent; font.pixelSize: Theme.fsSm; font.weight: Font.DemiBold }
+                FText { text: I18n.tr("Mixer"); color: Theme.accent; font.pixelSize: Theme.fsSm; font.weight: Font.DemiBold }
                 FIcon { icon: "chevron_right"; size: 18; color: Theme.accent }
             }
             StateLayer { onClicked: root.openDetail("mixer") }

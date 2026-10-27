@@ -22,8 +22,8 @@ ColumnLayout {
         Layout.bottomMargin: Theme.sp5
         spacing: Theme.sp2
         FIcon { Layout.alignment: Qt.AlignHCenter; icon: "location_off"; size: 48; color: Theme.textDim }
-        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.w.enabled ? "No location set" : "Weather is turned off"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
-        FButton { Layout.alignment: Qt.AlignHCenter; text: "Weather settings"; icon: "settings"; variant: "tonal"; onClicked: root.openSettings("clock") }
+        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: root.w.enabled ? I18n.tr("No location set") : I18n.tr("Weather is turned off"); font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+        FButton { Layout.alignment: Qt.AlignHCenter; text: I18n.tr("Weather settings"); icon: "settings"; variant: "tonal"; onClicked: root.openSettings("clock") }
     }
 
     ColumnLayout {
@@ -47,7 +47,7 @@ ColumnLayout {
                 FText {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: Weather.ready ? Math.round(Weather.temp) + Weather.unit : "Loading…"
+                    text: Weather.ready ? Math.round(Weather.temp) + Weather.unit : I18n.tr("Loading…")
                     font.pixelSize: 44
                     font.weight: Font.Bold
                 }
@@ -61,7 +61,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
                     visible: root.w.showFeelsLike && Weather.ready
-                    text: "Feels like " + Math.round(Weather.feelsLike) + Weather.unit
+                    text: I18n.tr("Feels like ") + Math.round(Weather.feelsLike) + Weather.unit
                     dim: true
                 }
                 Row {
@@ -105,7 +105,7 @@ ColumnLayout {
                         required property var modelData
                         Layout.fillWidth: true
                         spacing: 2
-                        FText { Layout.alignment: Qt.AlignHCenter; text: Qt.formatTime(new Date(modelData.time), Time.use24h ? "HH" : "h AP"); dim: true; font.pixelSize: Theme.fsXs }
+                        FText { Layout.alignment: Qt.AlignHCenter; text: Qt.formatTime(new Date(modelData.time), Time.use24h ? I18n.tr("HH") : "h AP"); dim: true; font.pixelSize: Theme.fsXs }
                         FIcon { Layout.alignment: Qt.AlignHCenter; icon: Weather.iconFor(modelData.code, modelData.day); size: 20 }
                         FText { Layout.alignment: Qt.AlignHCenter; text: Math.round(modelData.temp) + "°"; font.pixelSize: Theme.fsSm }
                         FText { Layout.alignment: Qt.AlignHCenter; text: modelData.rain > 0 ? modelData.rain + "%" : " "; color: Theme.accent; font.pixelSize: Theme.fsXs }
@@ -133,7 +133,7 @@ ColumnLayout {
                         required property int index
                         Layout.fillWidth: true
                         spacing: 10
-                        FText { Layout.preferredWidth: 48; text: index === 0 ? "Today" : Qt.formatDate(new Date(modelData.date + "T12:00"), "ddd"); font.weight: index === 0 ? Font.Bold : Font.Normal }
+                        FText { Layout.preferredWidth: 48; text: index === 0 ? I18n.tr("Today") : I18n.locale.toString(new Date(modelData.date + "T12:00"), "ddd"); font.weight: index === 0 ? Font.Bold : Font.Normal }
                         FIcon { icon: Weather.iconFor(modelData.code, true); size: 20 }
                         FText { Layout.preferredWidth: 36; text: modelData.rain > 0 ? modelData.rain + "%" : ""; color: Theme.accent; font.pixelSize: Theme.fsXs }
                         FText { Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight; text: Math.round(modelData.min) + "°"; dim: true }
@@ -165,7 +165,7 @@ ColumnLayout {
             Layout.fillWidth: true
             FText {
                 Layout.fillWidth: true
-                text: Weather.ready ? "Open-Meteo · updated " + Qt.formatTime(Weather.updated, Time.use24h ? "HH:mm" : "h:mm AP") : ""
+                text: Weather.ready ? I18n.tr("Open-Meteo · updated ") + Qt.formatTime(Weather.updated, Time.use24h ? I18n.tr("HH:mm") : "h:mm AP") : ""
                 dim: true
                 font.pixelSize: Theme.fsXs
             }

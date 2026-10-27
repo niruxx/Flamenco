@@ -219,7 +219,7 @@ Rectangle {
                         spacing: 4
                         FIcon { Layout.alignment: Qt.AlignHCenter; icon: Weather.iconFor(modelData.code, modelData.day); size: 24; fill: 1; color: root.ink }
                         FText { Layout.alignment: Qt.AlignHCenter; text: modelData.rain > 0 ? modelData.rain + "%" : " "; color: root.ink_(0.7); font.pixelSize: Theme.fsXs }
-                        FText { Layout.alignment: Qt.AlignHCenter; text: Qt.formatTime(new Date(modelData.time), Settings.data.general.use24h ? "HH:mm" : "h AP"); color: root.ink_(0.8); font.pixelSize: Theme.fsXs }
+                        FText { Layout.alignment: Qt.AlignHCenter; text: Qt.formatTime(new Date(modelData.time), Settings.data.general.use24h ? I18n.tr("HH:mm") : "h AP"); color: root.ink_(0.8); font.pixelSize: Theme.fsXs }
                     }
                 }
             }
@@ -248,7 +248,7 @@ Rectangle {
                         anchors.fill: parent
                         anchors.margins: 12
                         spacing: 4
-                        FText { Layout.alignment: Qt.AlignHCenter; text: index === 0 ? "Today" : Qt.formatDate(new Date(modelData.date), "ddd"); color: root.ink; font.weight: Font.Bold }
+                        FText { Layout.alignment: Qt.AlignHCenter; text: index === 0 ? I18n.tr("Today") : I18n.locale.toString(new Date(modelData.date), "ddd"); color: root.ink; font.weight: Font.Bold }
                         FIcon { Layout.alignment: Qt.AlignHCenter; icon: Weather.iconFor(modelData.code, true); size: 30; fill: 1; color: root.ink }
                         FText { Layout.alignment: Qt.AlignHCenter; text: Math.round(modelData.max) + "°  " + Math.round(modelData.min) + "°"; color: root.ink; font.pixelSize: Theme.fsSm; font.weight: Font.DemiBold }
                         // where today's range sits in the week's
@@ -279,14 +279,14 @@ Rectangle {
         FIcon { Layout.alignment: Qt.AlignHCenter; icon: "partly_cloudy_day"; size: 64; color: "#ffffff" }
         FText {
             Layout.alignment: Qt.AlignHCenter
-            text: Settings.data.weather.enabled ? "Getting the weather…" : "Weather is off"
+            text: Settings.data.weather.enabled ? I18n.tr("Getting the weather…") : I18n.tr("Weather is off")
             color: "#ffffff"
             font.pixelSize: Theme.fsXl
             font.weight: Font.Bold
         }
         FButton {
             Layout.alignment: Qt.AlignHCenter
-            text: "Weather settings"
+            text: I18n.tr("Weather settings")
             icon: "tune"
             onClicked: root.openSettings("clock")
         }

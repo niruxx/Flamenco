@@ -132,14 +132,14 @@ Variants {
                             Layout.topMargin: Theme.sp1
                             spacing: Theme.sp2
                             FButton {
-                                text: "Open"
+                                text: I18n.tr("Open")
                                 icon: "folder_open"
                                 implicitHeight: 32
                                 disabled: card.note.endsWith("…")
                                 onClicked: Devices.open(card.uid, card.dev)
                             }
                             FButton {
-                                text: "Eject"
+                                text: I18n.tr("Eject")
                                 icon: "eject"
                                 variant: "tonal"
                                 implicitHeight: 32

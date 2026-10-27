@@ -26,7 +26,7 @@ GridView {
     FText {
         anchors.centerIn: parent
         visible: grid.count === 0
-        text: Wallpapers.scanning ? "Scanning…" : Wallpapers.status === "missing" ? "Folder not found:\n" + Wallpapers.dir : "No images in " + Wallpapers.dir
+        text: Wallpapers.scanning ? I18n.tr("Scanning…") : Wallpapers.status === "missing" ? I18n.tr("Folder not found:\n") + Wallpapers.dir : I18n.tr("No images in ") + Wallpapers.dir
         horizontalAlignment: Text.AlignHCenter
         dim: true
     }

@@ -122,11 +122,11 @@ ColumnLayout {
 
     // ── Flamenco Greeter ──
     Group {
-        title: "Login screen · Flamenco Greeter"
+        title: I18n.tr("Login screen · Flamenco Greeter")
 
         SettingRow {
-            title: root.st.greeterInstalled ? (root.greeterInUse ? "Flamenco Greeter is your login screen" : "Flamenco Greeter is installed") : "Flamenco Greeter isn't installed"
-            subtitle: !root.loaded ? "Checking…"
+            title: root.st.greeterInstalled ? (root.greeterInUse ? I18n.tr("Flamenco Greeter is your login screen") : I18n.tr("Flamenco Greeter is installed")) : I18n.tr("Flamenco Greeter isn't installed")
+            subtitle: !root.loaded ? I18n.tr("Checking…")
                 : !root.st.greeterInstalled ? "A login screen for greetd that looks like the shell. You can set it up here now and install it later (github.com/niruxx/flamenco-greeter)."
                 : root.greeterInUse ? "Changes here show on the login screen after you click Apply."
                 : "greetd isn't using it yet: pick it as the greeter in the greetd section below."
@@ -134,18 +134,18 @@ ColumnLayout {
         }
 
         ChoiceRow {
-            title: "Wallpaper"
-            subtitle: root.g.wallpaperMode === "desktop" ? "The one on your desktop now: " + (Paths.fileName(Wallpapers.current) || "none") : ""
+            title: I18n.tr("Wallpaper")
+            subtitle: root.g.wallpaperMode === "desktop" ? I18n.tr("The one on your desktop now: ") + (Paths.fileName(Wallpapers.current) || "none") : ""
             icon: "wallpaper"
             target: root.g
             key: "wallpaperMode"
             segWidth: 96
-            options: [{ value: "desktop", label: "Desktop" }, { value: "custom", label: "Image" }, { value: "color", label: "Color" }]
+            options: [{ value: "desktop", label: I18n.tr("Desktop") }, { value: "custom", label: I18n.tr("Image") }, { value: "color", label: I18n.tr("Color") }]
         }
         SettingRow {
             visible: root.g.wallpaperMode === "custom"
-            title: "Image"
-            subtitle: "Copied for the greeter when you apply, since it can't read your home folder"
+            title: I18n.tr("Image")
+            subtitle: I18n.tr("Copied for the greeter when you apply, since it can't read your home folder")
             icon: "image"
             Row {
                 spacing: 8
@@ -158,7 +158,7 @@ ColumnLayout {
                     onEditingFinished: root.g.wallpaper = text.trim()
                 }
                 FButton {
-                    text: "Browse"
+                    text: I18n.tr("Browse")
                     icon: "folder_open"
                     variant: "tonal"
                     implicitHeight: 38
@@ -169,49 +169,49 @@ ColumnLayout {
         }
         TextRow {
             visible: root.g.wallpaperMode === "color"
-            title: "Background color"
+            title: I18n.tr("Background color")
             subtitle: "#rrggbb · empty uses the palette's background"
             icon: "format_color_fill"
             target: root.g
             key: "color"
             placeholder: String(Theme.bg)
         }
-        SliderRow { visible: root.g.wallpaperMode !== "color"; title: "Blur"; icon: "blur_on"; target: root.g; key: "blur"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
-        SliderRow { visible: root.g.wallpaperMode !== "color"; title: "Dim"; icon: "brightness_4"; target: root.g; key: "dim"; from: 0; to: 0.8; stepSize: 0.05; factor: 100; suffix: "%" }
+        SliderRow { visible: root.g.wallpaperMode !== "color"; title: I18n.tr("Blur"); icon: "blur_on"; target: root.g; key: "blur"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
+        SliderRow { visible: root.g.wallpaperMode !== "color"; title: I18n.tr("Dim"); icon: "brightness_4"; target: root.g; key: "dim"; from: 0; to: 0.8; stepSize: 0.05; factor: 100; suffix: "%" }
 
         SettingRow {
-            title: "Font"
-            subtitle: "Colors always follow the shell's palette"
+            title: I18n.tr("Font")
+            subtitle: I18n.tr("Colors always follow the shell's palette")
             icon: "font_download"
             FDropdown {
                 implicitWidth: 280
                 fontPreview: true
-                options: [{ value: "", label: "Same as the shell (" + Settings.data.appearance.fontFamily + ")" }].concat(Sounds.fonts)
+                options: [{ value: "", label: I18n.tr("Same as the shell (") + Settings.data.appearance.fontFamily + ")" }].concat(Sounds.fonts)
                 current: root.g.fontFamily
                 onSelected: v => root.g.fontFamily = v
             }
         }
         SettingRow {
-            title: "Monospace font"
+            title: I18n.tr("Monospace font")
             icon: "code"
             FDropdown {
                 implicitWidth: 280
                 fontPreview: true
-                options: [{ value: "", label: "Same as the shell (" + Settings.data.appearance.monoFamily + ")" }].concat(Sounds.monoFonts.length ? Sounds.monoFonts : Sounds.fonts)
+                options: [{ value: "", label: I18n.tr("Same as the shell (") + Settings.data.appearance.monoFamily + ")" }].concat(Sounds.monoFonts.length ? Sounds.monoFonts : Sounds.fonts)
                 current: root.g.monoFamily
                 onSelected: v => root.g.monoFamily = v
             }
         }
-        SliderRow { title: "Text size"; icon: "format_size"; target: root.g; key: "fontScale"; from: 0.8; to: 1.5; stepSize: 0.05; factor: 100; suffix: "%" }
+        SliderRow { title: I18n.tr("Text size"); icon: "format_size"; target: root.g; key: "fontScale"; from: 0.8; to: 1.5; stepSize: 0.05; factor: 100; suffix: "%" }
 
-        SwitchRow { title: "Session picker"; subtitle: "Choose niri, Hyprland or another desktop when logging in"; icon: "desktop_windows"; target: root.g; key: "sessionPicker" }
+        SwitchRow { title: I18n.tr("Session picker"); subtitle: I18n.tr("Choose niri, Hyprland or another desktop when logging in"); icon: "desktop_windows"; target: root.g; key: "sessionPicker" }
         SettingRow {
-            title: "Default session"
-            subtitle: root.st.sessions.length ? "" : "No sessions found in /usr/share/wayland-sessions or /usr/share/xsessions"
+            title: I18n.tr("Default session")
+            subtitle: root.st.sessions.length ? "" : I18n.tr("No sessions found in /usr/share/wayland-sessions or /usr/share/xsessions")
             icon: "start"
             FDropdown {
                 implicitWidth: 280
-                options: [{ value: "", label: "The last one used" }].concat(root.st.sessions.map(s => ({ value: s.id, label: s.name + (s.type === "x11" ? " (X11)" : "") })))
+                options: [{ value: "", label: I18n.tr("The last one used") }].concat(root.st.sessions.map(s => ({ value: s.id, label: s.name + (s.type === "x11" ? " (X11)" : "") })))
                 current: root.g.defaultSession
                 onSelected: v => root.g.defaultSession = v
             }
@@ -220,7 +220,7 @@ ColumnLayout {
             model: root.g.sessionPicker ? root.st.sessions : []
             SettingRow {
                 required property var modelData
-                title: "Show " + modelData.name
+                title: I18n.tr("Show ") + modelData.name
                 subtitle: modelData.comment || modelData.id
                 icon: "check_box_outline_blank"
                 FSwitch {
@@ -230,12 +230,12 @@ ColumnLayout {
             }
         }
 
-        SwitchRow { title: "List users"; subtitle: "Off: type a user name instead"; icon: "group"; target: root.g; key: "userList" }
-        SwitchRow { title: "Remember the last user and session"; icon: "history"; target: root.g; key: "rememberUser" }
-        SwitchRow { title: "Power buttons"; subtitle: "Suspend, restart and shut down on the login screen"; icon: "power_settings_new"; target: root.g; key: "powerButtons" }
+        SwitchRow { title: I18n.tr("List users"); subtitle: I18n.tr("Off: type a user name instead"); icon: "group"; target: root.g; key: "userList" }
+        SwitchRow { title: I18n.tr("Remember the last user and session"); icon: "history"; target: root.g; key: "rememberUser" }
+        SwitchRow { title: I18n.tr("Power buttons"); subtitle: I18n.tr("Suspend, restart and shut down on the login screen"); icon: "power_settings_new"; target: root.g; key: "powerButtons" }
         SwitchRow {
-            title: "Fingerprint login"
-            subtitle: !Fingerprint.enrolled ? "Enroll a finger in the Fingerprint section above first"
+            title: I18n.tr("Fingerprint login")
+            subtitle: !Fingerprint.enrolled ? I18n.tr("Enroll a finger in the Fingerprint section above first")
                 : root.st.fingerprintPam ? "greetd's PAM setup asks fprintd, so the greeter can show a fingerprint prompt. Your keyring still needs your password the first time."
                 : "greetd doesn't ask for fingerprints yet. Add this as the first auth line of /etc/pam.d/greetd: auth sufficient pam_fprintd.so"
             icon: "fingerprint"
@@ -244,23 +244,23 @@ ColumnLayout {
         }
         SettingRow {
             visible: root.g.fingerprint && root.loaded && !root.st.fingerprintPam
-            title: "Copy the PAM line"
-            subtitle: "Flamenco doesn't edit PAM files itself: a mistake there can lock you out. Keep a root shell open while you try it."
+            title: I18n.tr("Copy the PAM line")
+            subtitle: I18n.tr("Flamenco doesn't edit PAM files itself: a mistake there can lock you out. Keep a root shell open while you try it.")
             icon: "content_copy"
             FButton {
-                text: "Copy"
+                text: I18n.tr("Copy")
                 variant: "tonal"
                 onClicked: Quickshell.execDetached(["wl-copy", "auth       sufficient   pam_fprintd.so"])
             }
         }
 
         SettingRow {
-            title: "Apply to the login screen"
-            subtitle: (root.st.applied?.generator ? "Last applied by " + root.st.applied.generator + ". " : "")
+            title: I18n.tr("Apply to the login screen")
+            subtitle: (root.st.applied?.generator ? I18n.tr("Last applied by ") + root.st.applied.generator + ". " : "")
                 + "Writes " + (root.st.appliedDir || "/var/cache/flamenco-greeter") + " in a terminal (asks for your password). Your avatar, wallpaper, palette and clock format go along."
             icon: "publish"
             FButton {
-                text: "Apply"
+                text: I18n.tr("Apply")
                 icon: "done"
                 disabled: runner.running || (root.g.wallpaperMode !== "color" && !root.wallpaperPath)
                 onClicked: root.applyGreeter()
@@ -273,7 +273,7 @@ ColumnLayout {
         title: "greetd"
 
         SettingRow {
-            title: !root.loaded ? "Checking greetd…"
+            title: !root.loaded ? I18n.tr("Checking greetd…")
                 : !root.st.greetdInstalled ? "greetd isn't installed"
                 : root.st.greetdEnabled ? "greetd starts at boot"
                 : "greetd is installed but doesn't start at boot"
@@ -285,7 +285,7 @@ ColumnLayout {
                 spacing: 8
                 FButton {
                     visible: root.loaded && !root.st.greetdInstalled
-                    text: "Install greetd"
+                    text: I18n.tr("Install greetd")
                     variant: "tonal"
                     onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed greetd"))
                 }
@@ -299,23 +299,23 @@ ColumnLayout {
 
         SettingRow {
             visible: root.st.greetdInstalled ?? false
-            title: "Greeter"
-            subtitle: "The login screen greetd shows. Only installed greeters can be applied."
+            title: I18n.tr("Greeter")
+            subtitle: I18n.tr("The login screen greetd shows. Only installed greeters can be applied.")
             icon: "login"
             FDropdown {
                 implicitWidth: 280
                 options: {
-                    const o = [{ value: "flamenco-greeter --command niri", label: "Flamenco Greeter (in niri)" }, { value: "flamenco-greeter --command Hyprland", label: "Flamenco Greeter (in Hyprland)" }];
+                    const o = [{ value: "flamenco-greeter --command niri", label: I18n.tr("Flamenco Greeter (in niri)") }, { value: "flamenco-greeter --command Hyprland", label: I18n.tr("Flamenco Greeter (in Hyprland)") }];
                     if ((root.st.greeters ?? []).includes("tuigreet"))
-                        o.push({ value: "tuigreet --time --remember --remember-session", label: "tuigreet (text)" });
+                        o.push({ value: "tuigreet --time --remember --remember-session", label: I18n.tr("tuigreet (text)") });
                     if ((root.st.greeters ?? []).includes("agreety"))
-                        o.push({ value: "agreety --cmd $SHELL", label: "agreety (plain text)" });
+                        o.push({ value: "agreety --cmd $SHELL", label: I18n.tr("agreety (plain text)") });
                     if (draft.command && !o.some(x => x.value === draft.command))
                         o.push({ value: draft.command, label: draft.command });
                     return o;
                 }
                 current: draft.command
-                placeholder: "Choose a greeter…"
+                placeholder: I18n.tr("Choose a greeter…")
                 onSelected: v => {
                     draft.command = v;
                     draft.dirty = true;
@@ -324,8 +324,8 @@ ColumnLayout {
         }
         TextRow {
             visible: root.st.greetdInstalled ?? false
-            title: "Greeter command"
-            subtitle: "Or any command; greetd runs it as the greeter user"
+            title: I18n.tr("Greeter command")
+            subtitle: I18n.tr("Or any command; greetd runs it as the greeter user")
             icon: "terminal"
             target: draft
             key: "command"
@@ -334,7 +334,7 @@ ColumnLayout {
         }
         TextRow {
             visible: root.st.greetdInstalled ?? false
-            title: "Greeter user"
+            title: I18n.tr("Greeter user")
             subtitle: "greetd's package creates \"greeter\""
             icon: "person"
             target: draft
@@ -344,8 +344,8 @@ ColumnLayout {
         }
         TextRow {
             visible: root.st.greetdInstalled ?? false
-            title: "Virtual terminal"
-            subtitle: "Usually 1. A number, or next / current"
+            title: I18n.tr("Virtual terminal")
+            subtitle: I18n.tr("Usually 1. A number, or next / current")
             icon: "tv"
             target: draft
             key: "vt"
@@ -354,8 +354,8 @@ ColumnLayout {
         }
         SwitchRow {
             visible: root.st.greetdInstalled ?? false
-            title: "Log in automatically"
-            subtitle: "Starts a session at boot without the login screen (once; logging out shows the greeter)"
+            title: I18n.tr("Log in automatically")
+            subtitle: I18n.tr("Starts a session at boot without the login screen (once; logging out shows the greeter)")
             icon: "bolt"
             target: draft
             key: "autologin"
@@ -363,7 +363,7 @@ ColumnLayout {
         }
         DropdownRow {
             visible: (root.st.greetdInstalled ?? false) && draft.autologin
-            title: "As user"
+            title: I18n.tr("As user")
             icon: "account_circle"
             target: draft
             key: "autologinUser"
@@ -372,30 +372,30 @@ ColumnLayout {
         }
         DropdownRow {
             visible: (root.st.greetdInstalled ?? false) && draft.autologin
-            title: "Into session"
+            title: I18n.tr("Into session")
             icon: "start"
             target: draft
             key: "autologinSession"
             options: (root.st.sessions ?? []).map(s => ({ value: s.id, label: s.name }))
-            placeholder: "Choose a session…"
+            placeholder: I18n.tr("Choose a session…")
             onEdited: draft.dirty = true
         }
 
         SettingRow {
             visible: root.st.greetdInstalled ?? false
-            title: "Apply greetd settings"
-            subtitle: "Writes " + (root.cfg.path || "/etc/greetd/config.toml") + " in a terminal and keeps a backup. Refused if the greeter isn't installed, so you can't end up without a login screen."
+            title: I18n.tr("Apply greetd settings")
+            subtitle: I18n.tr("Writes ") + (root.cfg.path || "/etc/greetd/config.toml") + " in a terminal and keeps a backup. Refused if the greeter isn't installed, so you can't end up without a login screen."
             icon: "publish"
             Row {
                 spacing: 8
                 FButton {
-                    text: "Revert"
+                    text: I18n.tr("Revert")
                     variant: "text"
                     visible: draft.dirty
                     onClicked: root.loadDraft()
                 }
                 FButton {
-                    text: "Apply"
+                    text: I18n.tr("Apply")
                     icon: "done"
                     disabled: runner.running || !draft.command || (draft.autologin && !draft.autologinSession)
                     onClicked: root.applyGreetd()
@@ -404,11 +404,11 @@ ColumnLayout {
         }
         SettingRow {
             visible: (root.st.greetdInstalled ?? false) && !root.st.greetdEnabled
-            title: "Use greetd at boot"
-            subtitle: "Replaces " + (root.st.displayManager || "your current login manager") + " from the next boot. Apply a greeter above first. To go back: sudo systemctl enable --force " + (root.st.displayManager || "sddm")
+            title: I18n.tr("Use greetd at boot")
+            subtitle: I18n.tr("Replaces ") + (root.st.displayManager || "your current login manager") + " from the next boot. Apply a greeter above first. To go back: sudo systemctl enable --force " + (root.st.displayManager || "sddm")
             icon: "power_settings_new"
             FButton {
-                text: "Enable greetd"
+                text: I18n.tr("Enable greetd")
                 variant: "tonal"
                 disabled: runner.running || !root.cfg.command
                 onClicked: root.inTerminal("enable")

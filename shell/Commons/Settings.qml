@@ -41,6 +41,7 @@ Singleton {
 
             property JsonObject general: JsonObject {
                 property bool use24h: true
+                property string language: ""        // Flamenco's own text: "" follows the system | en | es…
                 property string dateStyle: "dmy"   // dmy (Wednesday, 28 October) | mdy (Wednesday, October 28) | iso (2026-10-28)
                 property int firstDay: -1          // first day of the week: -1 as the language has it | 0 Sunday | 1 Monday | 6 Saturday
                 property bool showSeconds: false

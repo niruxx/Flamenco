@@ -41,7 +41,7 @@ LazyLoader {
     FloatingWindow {
         id: win
 
-        title: "Flamenco Settings"
+        title: I18n.tr("Flamenco Settings")
         implicitWidth: 1080
         implicitHeight: 780
         color: Theme.alpha(Theme.bg, Theme.settingsOp)
@@ -49,48 +49,48 @@ LazyLoader {
         onVisibleChanged: if (!visible) Panels.settingsOpen = false
 
         readonly property var pages: [
-            { id: "network", icon: "wifi", label: "Wi-Fi & Network", comp: networkC },
-            { id: "bluetooth", icon: "bluetooth", label: "Bluetooth", comp: bluetoothC },
-            { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
-            { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
-            { id: "power", icon: "battery_charging_full", label: "Power", comp: powerC },
-            { id: "appearance", icon: "palette", label: "Appearance", comp: appearanceC },
-            { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
-            { id: "notifications", icon: "notifications", label: "Notifications", comp: notifC },
-            { id: "apps", icon: "format_paint", label: "App Theming", comp: appsC },
-            { id: "get", icon: "download", label: "Get themes", comp: getC },
-            { id: "bar", icon: "toolbar", label: "Bar", comp: barC },
-            { id: "dock", icon: "dock_to_bottom", label: "Dock", comp: dockC },
-            { id: "quicksettings", icon: "tune", label: "Quick settings", comp: quickC },
-            { id: "launcher", icon: "apps", label: "Launcher", comp: launcherC },
-            { id: "desktop", icon: "widgets", label: "Desktop widgets", comp: desktopC },
-            { id: "overview", icon: "overview_key", label: "Overview", comp: overviewC },
-            { id: "edges", icon: "select_all", label: "Screen edges", comp: edgesC },
-            { id: "clock", icon: "schedule", label: "Clock & Weather", comp: clockC },
-            { id: "keyboard", icon: "keyboard", label: "Keyboard", comp: keyboardC },
-            { id: "pointer", icon: "mouse", label: "Mouse & Touchpad", comp: pointerC },
-            { id: "night", icon: "nightlight", label: "Night light", comp: nightC },
-            { id: "printers", icon: "print", label: "Printers", comp: printersC },
-            { id: "screenshots", icon: "screenshot_monitor", label: "Screenshots", comp: screenshotC },
-            { id: "windows", icon: "select_window", label: "Windows & Layout", comp: windowsC },
-            { id: "workspaces", icon: "view_carousel", label: "Workspaces", comp: workspacesC },
-            { id: "users", icon: "manage_accounts", label: "Users", comp: usersC },
-            { id: "accounts", icon: "cloud_sync", label: "Online Accounts", comp: accountsC },
-            { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
-            { id: "datetime", icon: "more_time", label: "Date & Time", comp: datetimeC },
-            { id: "region", icon: "language", label: "Region & Language", comp: regionC },
-            { id: "wellbeing", icon: "self_improvement", label: "Digital wellbeing", comp: wellbeingC },
-            { id: "lock", icon: "lock", label: "Lock & Login", comp: lockC },
-            { id: "defaults", icon: "open_in_new", label: "Default apps", comp: defaultsC },
-            { id: "autostart", icon: "rocket_launch", label: "Auto-start", comp: autostartC },
-            { id: "flatpak", icon: "inventory_2", label: "Flatpak permissions", comp: flatpakC },
-            { id: "ai", icon: "auto_awesome", label: "AI", comp: aiC },
-            { id: "plugins", icon: "extension", label: "Plugins", comp: pluginsC },
-            { id: "thirdparty", icon: "deployed_code", label: "Plugins (3rd party)", comp: thirdPartyC },
-            { id: "firewall", icon: "shield", label: "Firewall", comp: firewallC },
-            { id: "keyring", icon: "key", label: "Keyring", comp: keyringC },
-            { id: "system", icon: "health_and_safety", label: "System check", comp: systemC },
-            { id: "about", icon: "info", label: "About", comp: aboutC }
+            { id: "network", icon: "wifi", label: I18n.tr("Wi-Fi & Network"), comp: networkC },
+            { id: "bluetooth", icon: "bluetooth", label: I18n.tr("Bluetooth"), comp: bluetoothC },
+            { id: "displays", icon: "monitor", label: I18n.tr("Displays"), comp: displaysC },
+            { id: "sound", icon: "volume_up", label: I18n.tr("Sound"), comp: soundC },
+            { id: "power", icon: "battery_charging_full", label: I18n.tr("Power"), comp: powerC },
+            { id: "appearance", icon: "palette", label: I18n.tr("Appearance"), comp: appearanceC },
+            { id: "wallpaper", icon: "wallpaper", label: I18n.tr("Wallpaper"), comp: wallpaperC },
+            { id: "notifications", icon: "notifications", label: I18n.tr("Notifications"), comp: notifC },
+            { id: "apps", icon: "format_paint", label: I18n.tr("App Theming"), comp: appsC },
+            { id: "get", icon: "download", label: I18n.tr("Get themes"), comp: getC },
+            { id: "bar", icon: "toolbar", label: I18n.tr("Bar"), comp: barC },
+            { id: "dock", icon: "dock_to_bottom", label: I18n.tr("Dock"), comp: dockC },
+            { id: "quicksettings", icon: "tune", label: I18n.tr("Quick settings"), comp: quickC },
+            { id: "launcher", icon: "apps", label: I18n.tr("Launcher"), comp: launcherC },
+            { id: "desktop", icon: "widgets", label: I18n.tr("Desktop widgets"), comp: desktopC },
+            { id: "overview", icon: "overview_key", label: I18n.tr("Overview"), comp: overviewC },
+            { id: "edges", icon: "select_all", label: I18n.tr("Screen edges"), comp: edgesC },
+            { id: "clock", icon: "schedule", label: I18n.tr("Clock & Weather"), comp: clockC },
+            { id: "keyboard", icon: "keyboard", label: I18n.tr("Keyboard"), comp: keyboardC },
+            { id: "pointer", icon: "mouse", label: I18n.tr("Mouse & Touchpad"), comp: pointerC },
+            { id: "night", icon: "nightlight", label: I18n.tr("Night light"), comp: nightC },
+            { id: "printers", icon: "print", label: I18n.tr("Printers"), comp: printersC },
+            { id: "screenshots", icon: "screenshot_monitor", label: I18n.tr("Screenshots"), comp: screenshotC },
+            { id: "windows", icon: "select_window", label: I18n.tr("Windows & Layout"), comp: windowsC },
+            { id: "workspaces", icon: "view_carousel", label: I18n.tr("Workspaces"), comp: workspacesC },
+            { id: "users", icon: "manage_accounts", label: I18n.tr("Users"), comp: usersC },
+            { id: "accounts", icon: "cloud_sync", label: I18n.tr("Online Accounts"), comp: accountsC },
+            { id: "sharing", icon: "screen_share", label: I18n.tr("Screen sharing & files"), comp: sharingC },
+            { id: "datetime", icon: "more_time", label: I18n.tr("Date & Time"), comp: datetimeC },
+            { id: "region", icon: "language", label: I18n.tr("Region & Language"), comp: regionC },
+            { id: "wellbeing", icon: "self_improvement", label: I18n.tr("Digital wellbeing"), comp: wellbeingC },
+            { id: "lock", icon: "lock", label: I18n.tr("Lock & Login"), comp: lockC },
+            { id: "defaults", icon: "open_in_new", label: I18n.tr("Default apps"), comp: defaultsC },
+            { id: "autostart", icon: "rocket_launch", label: I18n.tr("Auto-start"), comp: autostartC },
+            { id: "flatpak", icon: "inventory_2", label: I18n.tr("Flatpak permissions"), comp: flatpakC },
+            { id: "ai", icon: "auto_awesome", label: I18n.tr("AI"), comp: aiC },
+            { id: "plugins", icon: "extension", label: I18n.tr("Plugins"), comp: pluginsC },
+            { id: "thirdparty", icon: "deployed_code", label: I18n.tr("Plugins (3rd party)"), comp: thirdPartyC },
+            { id: "firewall", icon: "shield", label: I18n.tr("Firewall"), comp: firewallC },
+            { id: "keyring", icon: "key", label: I18n.tr("Keyring"), comp: keyringC },
+            { id: "system", icon: "health_and_safety", label: I18n.tr("System check"), comp: systemC },
+            { id: "about", icon: "info", label: I18n.tr("About"), comp: aboutC }
         ]
         readonly property int index: Math.max(0, pages.findIndex(p => p.id === Panels.settingsPage))
         readonly property var page: pages[index]
@@ -181,8 +181,9 @@ LazyLoader {
             const order = pages.map(p => p.id);
             const hits = [];
             for (const e of searchIndex) {
-                const t = e.title.toLowerCase();
-                const hay = t + " " + e.subtitle.toLowerCase() + " " + e.group.toLowerCase() + " " + e.label.toLowerCase();
+                // the English and the translated words both find it
+                const t = (e.title + " " + I18n.tr(e.title)).toLowerCase();
+                const hay = t + " " + (e.subtitle + " " + I18n.tr(e.subtitle) + " " + e.group + " " + I18n.tr(e.group) + " " + e.label + " " + I18n.tr(e.label)).toLowerCase();
                 if (!words.every(w => hay.includes(w)))
                     continue;
                 // titles that start with it first, then titles containing it, then the rest
@@ -300,7 +301,7 @@ LazyLoader {
                 }
                 FText {
                     anchors.centerIn: parent
-                    text: "Settings"
+                    text: I18n.tr("Settings")
                     font.pixelSize: Theme.fsLg
                     font.weight: Font.Medium
                 }
@@ -366,7 +367,7 @@ LazyLoader {
                                 implicitHeight: 44
                                 radius: height / 2
                                 icon: "search"
-                                placeholder: "Search settings"
+                                placeholder: I18n.tr("Search settings")
                                 onEdited: t => win.query = t
                                 onTextChanged: win.query = text
                                 onAccepted: win.go(win.results[0])
@@ -400,7 +401,7 @@ LazyLoader {
                                 width: parent.width
                                 leftPadding: 12
                                 topPadding: 8
-                                text: win.searchIndex.length ? "Nothing matches “" + win.query.trim() + "”" : "Loading…"
+                                text: win.searchIndex.length ? I18n.tr("Nothing matches “") + win.query.trim() + "”" : I18n.tr("Loading…")
                                 dim: true
                                 wrapMode: Text.Wrap
                             }
@@ -429,10 +430,10 @@ LazyLoader {
                                         ColumnLayout {
                                             Layout.fillWidth: true
                                             spacing: 0
-                                            FText { Layout.fillWidth: true; text: hit.modelData.title; font.weight: hit.modelData.kind === "row" ? Font.Normal : Font.DemiBold; elide: Text.ElideRight }
+                                            FText { Layout.fillWidth: true; text: I18n.tr(hit.modelData.title); font.weight: hit.modelData.kind === "row" ? Font.Normal : Font.DemiBold; elide: Text.ElideRight }
                                             FText {
                                                 Layout.fillWidth: true
-                                                text: hit.modelData.kind === "page" ? (win.descs[hit.modelData.page] ?? "") : hit.modelData.label + (hit.modelData.group && hit.modelData.kind === "row" ? " › " + hit.modelData.group : "")
+                                                text: hit.modelData.kind === "page" ? I18n.tr(win.descs[hit.modelData.page] ?? "") : I18n.tr(hit.modelData.label) + (hit.modelData.group && hit.modelData.kind === "row" ? " › " + I18n.tr(hit.modelData.group) : "")
                                                 dim: true
                                                 font.pixelSize: Theme.fsXs
                                                 elide: Text.ElideRight
@@ -512,7 +513,7 @@ LazyLoader {
                                                         }
                                                         FText {
                                                             Layout.fillWidth: true
-                                                            text: win.descs[item.modelData.id] ?? ""
+                                                            text: I18n.tr(win.descs[item.modelData.id] ?? "")
                                                             font.pixelSize: Theme.fsXs
                                                             elide: Text.ElideRight
                                                             color: item.sel ? Theme.alpha(Theme.text, 0.8) : Theme.textDim

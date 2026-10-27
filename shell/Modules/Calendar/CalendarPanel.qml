@@ -24,20 +24,20 @@ Variants {
 
         // tabs with `action` open something else instead of a page
         readonly property var tabs: hub ? [
-            { value: "home", label: "Home", icon: "space_dashboard" },
-            { value: "media", label: "Media", icon: "music_note" },
-            { value: "calendar", label: "Calendar", icon: "calendar_month" },
-            { value: "weather", label: "Weather", icon: "partly_cloudy_day" },
-            { value: "wallpapers", label: "Wallpaper", icon: "wallpaper" },
-            { value: "system", label: "System", icon: "monitoring" }
-        ].concat(Wellbeing.enabled ? [{ value: "wellbeing", label: "Wellbeing", icon: "self_improvement" }] : [],
-            [{ value: "settings", label: "Settings", icon: "settings", action: true }]) : [
-            { value: "overview", label: "Overview", icon: "dashboard" },
-            { value: "media", label: "Media", icon: "music_note" },
-            { value: "wallpapers", label: "Wallpapers", icon: "wallpaper" },
-            { value: "weather", label: "Weather", icon: "partly_cloudy_day" }
-        ].concat(Wellbeing.enabled ? [{ value: "wellbeing", label: "Wellbeing", icon: "self_improvement" }] : [],
-            [{ value: "settings", label: "Settings", icon: "settings", action: true }])
+            { value: "home", label: I18n.tr("Home"), icon: "space_dashboard" },
+            { value: "media", label: I18n.tr("Media"), icon: "music_note" },
+            { value: "calendar", label: I18n.tr("Calendar"), icon: "calendar_month" },
+            { value: "weather", label: I18n.tr("Weather"), icon: "partly_cloudy_day" },
+            { value: "wallpapers", label: I18n.tr("Wallpaper"), icon: "wallpaper" },
+            { value: "system", label: I18n.tr("System"), icon: "monitoring" }
+        ].concat(Wellbeing.enabled ? [{ value: "wellbeing", label: I18n.tr("Wellbeing"), icon: "self_improvement" }] : [],
+            [{ value: "settings", label: I18n.tr("Settings"), icon: "settings", action: true }]) : [
+            { value: "overview", label: I18n.tr("Overview"), icon: "dashboard" },
+            { value: "media", label: I18n.tr("Media"), icon: "music_note" },
+            { value: "wallpapers", label: I18n.tr("Wallpapers"), icon: "wallpaper" },
+            { value: "weather", label: I18n.tr("Weather"), icon: "partly_cloudy_day" }
+        ].concat(Wellbeing.enabled ? [{ value: "wellbeing", label: I18n.tr("Wellbeing"), icon: "self_improvement" }] : [],
+            [{ value: "settings", label: I18n.tr("Settings"), icon: "settings", action: true }])
         readonly property var pageTabs: tabs.filter(t => !t.action)
         property string tab: "overview"
         readonly property int tabIndex: Math.max(0, pageTabs.findIndex(t => t.value === tab))
@@ -179,7 +179,7 @@ Variants {
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 10
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "Ctrl+Tab"
+                    text: I18n.tr("Ctrl+Tab")
                     dim: true
                     font.pixelSize: Theme.fsXs
                 }

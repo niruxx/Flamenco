@@ -22,7 +22,7 @@ Singleton {
     readonly property var mine: devices.filter(d => d.paired || d.bonded)
     readonly property var nearby: devices.filter(d => !d.paired && !d.bonded && (hasName(d) || (Settings.data.bluetooth.showUnnamed ?? false)))
     readonly property string icon: !enabled ? "bluetooth_disabled" : connected.length > 0 ? "bluetooth_connected" : "bluetooth"
-    readonly property string label: !enabled ? "Off" : connected.length > 0 ? connected[0].name : "On"
+    readonly property string label: !enabled ? I18n.tr("Off") : connected.length > 0 ? connected[0].name : I18n.tr("On")
 
     function hasName(d) {
         const n = String(d.name || "");

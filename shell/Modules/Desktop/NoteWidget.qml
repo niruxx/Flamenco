@@ -14,7 +14,7 @@ ColumnLayout {
     width: Math.round(250 * k)
 
     FText {
-        text: "Note"
+        text: I18n.tr("Note")
         color: Theme.accent
         font.weight: Font.DemiBold
         font.pixelSize: Math.round(Theme.fsSm * root.k)
@@ -40,7 +40,7 @@ ColumnLayout {
         }
         FText {
             visible: edit.text === "" && !edit.activeFocus
-            text: root.editing ? "Type here once you're done arranging" : "Click to type…"
+            text: root.editing ? I18n.tr("Type here once you're done arranging") : I18n.tr("Click to type…")
             dim: true
             font.pixelSize: Math.round(Theme.fsMd * root.k)
         }

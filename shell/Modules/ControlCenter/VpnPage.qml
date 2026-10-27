@@ -6,7 +6,7 @@ import qs.Services
 import qs.Widgets
 
 DetailPage {
-    title: "VPN"
+    title: I18n.tr("VPN")
 
     headerExtra: [
         FIconButton {
@@ -30,11 +30,11 @@ DetailPage {
         Layout.topMargin: Theme.sp4
         spacing: Theme.sp2
         FIcon { Layout.alignment: Qt.AlignHCenter; icon: "vpn_lock"; size: 44; color: Theme.textDim }
-        FText { Layout.alignment: Qt.AlignHCenter; text: "No VPN connections"; font.weight: Font.Bold }
+        FText { Layout.alignment: Qt.AlignHCenter; text: I18n.tr("No VPN connections"); font.weight: Font.Bold }
         FText {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
-            text: "Import a WireGuard (.conf) or OpenVPN (.ovpn) file in Settings → Network."
+            text: I18n.tr("Import a WireGuard (.conf) or OpenVPN (.ovpn) file in Settings → Network.")
             dim: true
             wrapMode: Text.Wrap
         }
@@ -46,7 +46,7 @@ DetailPage {
             required property var modelData
             icon: modelData.active ? "vpn_lock" : "vpn_key"
             title: modelData.name
-            subtitle: (modelData.type === "wireguard" ? "WireGuard" : "VPN") + " · " + (Network.vpnBusy === modelData.name ? "working…" : modelData.active ? "Connected" : "Disconnected")
+            subtitle: (modelData.type === "wireguard" ? I18n.tr("WireGuard") : I18n.tr("VPN")) + " · " + (Network.vpnBusy === modelData.name ? "working…" : modelData.active ? I18n.tr("Connected") : I18n.tr("Disconnected"))
             selected: modelData.active
             busy: Network.vpnBusy === modelData.name
             onClicked: Network.setVpn(modelData.name, !modelData.active)

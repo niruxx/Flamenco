@@ -146,19 +146,19 @@ Variants {
                         color: Theme.alpha(Theme.accent, 0.18)
                         FIcon { anchors.centerIn: parent; icon: Notifs.dnd ? "notifications_off" : "notifications"; size: 17; fill: 1; color: Theme.accent }
                     }
-                    FText { text: "Notifications"; font.weight: Font.Bold; font.pixelSize: Theme.fsLg }
+                    FText { text: I18n.tr("Notifications"); font.weight: Font.Bold; font.pixelSize: Theme.fsLg }
                     FText { visible: Notifs.history.count > 0; text: Notifs.history.count; color: Theme.accent; font.weight: Font.Bold; font.pixelSize: Theme.fsLg }
                     Item { Layout.fillWidth: true }
                     FButton {
                         implicitHeight: 32
-                        text: "DND"
+                        text: I18n.tr("DND")
                         icon: Notifs.dnd ? "notifications_off" : "do_not_disturb_on"
                         variant: Notifs.dnd ? "filled" : "tonal"
                         onClicked: Notifs.setDnd(!Notifs.dnd)
                     }
                     FButton {
                         implicitHeight: 32
-                        text: "Clear"
+                        text: I18n.tr("Clear")
                         icon: "clear_all"
                         variant: "tonal"
                         disabled: Notifs.history.count === 0
@@ -234,8 +234,8 @@ Variants {
                         visible: Notifs.history.count === 0
                         spacing: 6
                         FIcon { Layout.alignment: Qt.AlignHCenter; icon: Notifs.dnd ? "notifications_paused" : "done_all"; size: 40; color: Theme.accent }
-                        FText { Layout.alignment: Qt.AlignHCenter; text: "You're all caught up"; font.weight: Font.DemiBold }
-                        FText { Layout.alignment: Qt.AlignHCenter; text: Notifs.dnd ? "Do not disturb is on" : "New notifications show up here"; dim: true; font.pixelSize: Theme.fsSm }
+                        FText { Layout.alignment: Qt.AlignHCenter; text: I18n.tr("You're all caught up"); font.weight: Font.DemiBold }
+                        FText { Layout.alignment: Qt.AlignHCenter; text: Notifs.dnd ? I18n.tr("Do not disturb is on") : I18n.tr("New notifications show up here"); dim: true; font.pixelSize: Theme.fsSm }
                     }
                 }
             }

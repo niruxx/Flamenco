@@ -8,7 +8,7 @@ import qs.Modules.Volume
 // Control center → Mixer: each app's volume, mute and output, and apps recording.
 DetailPage {
     id: page
-    title: "Mixer"
+    title: I18n.tr("Mixer")
     headerExtra: FIconButton {
         icon: "tune"
         size: 30

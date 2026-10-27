@@ -71,7 +71,7 @@ RowLayout {
     }
 
     FButton {
-        text: root.noPicker ? "No file chooser" : "Browse"
+        text: root.noPicker ? I18n.tr("No file chooser") : I18n.tr("Browse")
         icon: root.noPicker ? "error" : "folder_open"
         variant: "tonal"
         implicitHeight: 38

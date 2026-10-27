@@ -53,21 +53,21 @@ Variants {
                 startpage: "https://www.startpage.com/do/search?q=%s", ecosia: "https://www.ecosia.org/search?q=%s" })[lc.webEngine || "duckduckgo"]
             ?? (/^https:\/\/.*%s/.test(lc.webEngine || "") ? lc.webEngine : "https://duckduckgo.com/?q=%s")
         readonly property var sessionActions: [
-            { id: "lock", title: "Lock the screen", keys: ["lock"], icon: "lock" },
-            { id: "tasks", title: "Task manager", keys: ["task manager", "processes", "kill"], icon: "monitoring" },
-            { id: "suspend", title: "Suspend", keys: ["suspend", "sleep"], icon: "bedtime" },
-            { id: "hibernate", title: "Hibernate", keys: ["hibernate"], icon: "downloading" },
-            { id: "logout", title: "Log out", keys: ["log out", "logout", "sign out"], icon: "logout" },
-            { id: "reboot", title: "Restart", keys: ["restart", "reboot"], icon: "restart_alt" },
-            { id: "shutdown", title: "Shut down", keys: ["shut down", "shutdown", "power off", "poweroff"], icon: "power_settings_new" }
+            { id: "lock", title: I18n.tr("Lock the screen"), keys: ["lock"], icon: "lock" },
+            { id: "tasks", title: I18n.tr("Task manager"), keys: ["task manager", "processes", "kill"], icon: "monitoring" },
+            { id: "suspend", title: I18n.tr("Suspend"), keys: ["suspend", "sleep"], icon: "bedtime" },
+            { id: "hibernate", title: I18n.tr("Hibernate"), keys: ["hibernate"], icon: "downloading" },
+            { id: "logout", title: I18n.tr("Log out"), keys: ["log out", "logout", "sign out"], icon: "logout" },
+            { id: "reboot", title: I18n.tr("Restart"), keys: ["restart", "reboot"], icon: "restart_alt" },
+            { id: "shutdown", title: I18n.tr("Shut down"), keys: ["shut down", "shutdown", "power off", "poweroff"], icon: "power_settings_new" }
         ]
         // the app grid's categories (freedesktop's main ones, folded together)
         readonly property var categories: [
-            { id: "all", label: "All", cats: [] }, { id: "internet", label: "Internet", cats: ["Network", "WebBrowser", "Email", "Chat"] },
-            { id: "office", label: "Office", cats: ["Office"] }, { id: "media", label: "Media", cats: ["AudioVideo", "Audio", "Video"] },
-            { id: "graphics", label: "Graphics", cats: ["Graphics"] }, { id: "dev", label: "Development", cats: ["Development"] },
-            { id: "games", label: "Games", cats: ["Game"] }, { id: "system", label: "System", cats: ["System", "Settings"] },
-            { id: "utility", label: "Utilities", cats: ["Utility", "Accessories"] }, { id: "learn", label: "Learning", cats: ["Education", "Science"] }
+            { id: "all", label: I18n.tr("All"), cats: [] }, { id: "internet", label: I18n.tr("Internet"), cats: ["Network", "WebBrowser", "Email", "Chat"] },
+            { id: "office", label: I18n.tr("Office"), cats: ["Office"] }, { id: "media", label: I18n.tr("Media"), cats: ["AudioVideo", "Audio", "Video"] },
+            { id: "graphics", label: I18n.tr("Graphics"), cats: ["Graphics"] }, { id: "dev", label: I18n.tr("Development"), cats: ["Development"] },
+            { id: "games", label: I18n.tr("Games"), cats: ["Game"] }, { id: "system", label: I18n.tr("System"), cats: ["System", "Settings"] },
+            { id: "utility", label: I18n.tr("Utilities"), cats: ["Utility", "Accessories"] }, { id: "learn", label: I18n.tr("Learning"), cats: ["Education", "Science"] }
         ]
         function inCategory(e, id) {
             const c = categories.find(x => x.id === id);
@@ -94,10 +94,10 @@ Variants {
         readonly property var results: {
             if (mode === "calc") {
                 const r = calc(term);
-                return r === null ? [] : [{ kind: "calc", title: String(r), subtitle: "Enter to copy · " + term, icon: "calculate" }];
+                return r === null ? [] : [{ kind: "calc", title: String(r), subtitle: I18n.tr("Enter to copy · ") + term, icon: "calculate" }];
             }
             if (mode === "run")
-                return term ? [{ kind: "run", title: term, subtitle: "Run in shell", icon: "terminal" }, { kind: "runterm", title: term, subtitle: "Run in " + Settings.data.general.terminal, icon: "terminal" }] : [];
+                return term ? [{ kind: "run", title: term, subtitle: I18n.tr("Run in shell"), icon: "terminal" }, { kind: "runterm", title: term, subtitle: I18n.tr("Run in ") + Settings.data.general.terminal, icon: "terminal" }] : [];
             if (mode === "plugin") {
                 if (pluginResults.length === 0)
                     return [{ kind: "hint", title: plugin.name, subtitle: plugin.hint || "Type to search", icon: "extension" }];
@@ -107,26 +107,26 @@ Variants {
                 const words = term.toLowerCase().split(/\s+/).filter(Boolean);
                 const hits = words.length ? emojis.filter(e => words.every(w => e[1].includes(w)))
                     : (lc.recentEmoji || []).map(g => emojis.find(e => e[0] === g)).filter(Boolean).concat(emojis.filter(e => !(lc.recentEmoji || []).includes(e[0])));
-                return hits.slice(0, 80).map(e => ({ kind: "emoji", glyph: e[0], title: e[1].charAt(0).toUpperCase() + e[1].slice(1), subtitle: "Enter to copy", icon: "" }));
+                return hits.slice(0, 80).map(e => ({ kind: "emoji", glyph: e[0], title: e[1].charAt(0).toUpperCase() + e[1].slice(1), subtitle: I18n.tr("Enter to copy"), icon: "" }));
             }
             if (mode === "color") {
-                const out = [{ kind: "pickcolor", title: "Pick a color on screen", subtitle: "Copies its hex code", icon: "colorize" }];
+                const out = [{ kind: "pickcolor", title: I18n.tr("Pick a color on screen"), subtitle: I18n.tr("Copies its hex code"), icon: "colorize" }];
                 const c = parseColor(term);
                 if (c) {
                     const hex = "#" + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2, "0")).join("");
                     const hsl = toHsl(c);
                     for (const t of [hex, "rgb(" + c.r + ", " + c.g + ", " + c.b + ")", "hsl(" + hsl.h + ", " + hsl.s + "%, " + hsl.l + "%)"])
-                        out.push({ kind: "copy", title: t, subtitle: "Enter to copy", icon: "palette", swatch: hex });
+                        out.push({ kind: "copy", title: t, subtitle: I18n.tr("Enter to copy"), icon: "palette", swatch: hex });
                 }
                 return out;
             }
             if (mode === "clip") {
                 const q = term.toLowerCase();
-                return clips.filter(c => c.toLowerCase().includes(q)).slice(0, 50).map(c => ({ kind: "clip", line: c, title: c.split("\t").slice(1).join(" ").trim(), subtitle: "Clipboard", icon: "content_paste" }));
+                return clips.filter(c => c.toLowerCase().includes(q)).slice(0, 50).map(c => ({ kind: "clip", line: c, title: c.split("\t").slice(1).join(" ").trim(), subtitle: I18n.tr("Clipboard"), icon: "content_paste" }));
             }
             if (mode === "files") {
                 if (!term)
-                    return [{ kind: "hint", title: "Search your files", subtitle: "Type a name after /", icon: "folder_open" }];
+                    return [{ kind: "hint", title: I18n.tr("Search your files"), subtitle: I18n.tr("Type a name after /"), icon: "folder_open" }];
                 return files.map(f => ({ kind: "file", path: f.path, title: f.name, subtitle: f.dir, icon: f.folder ? "folder" : "description" }));
             }
             if (mode === "mux") {
@@ -134,33 +134,33 @@ Variants {
                 const out = mux.sessions.filter(m => m.name.toLowerCase().includes(q))
                     .map(m => ({ kind: "mux", tool: m.tool, name: m.name, title: m.name, subtitle: m.tool + (m.detail ? " · " + m.detail : ""), icon: "terminal" }));
                 for (const t of mux.tools)
-                    out.push({ kind: "mux", tool: t, name: term, fresh: true, title: "New " + t + " session" + (term ? " “" + term + "”" : ""), subtitle: "In " + (Settings.data.general.terminal || "kitty"), icon: "add" });
-                return out.length ? out : [{ kind: "hint", title: "No tmux or zellij", subtitle: "Install one to keep terminal sessions running", icon: "terminal" }];
+                    out.push({ kind: "mux", tool: t, name: term, fresh: true, title: I18n.tr("New ") + t + " session" + (term ? " “" + term + "”" : ""), subtitle: I18n.tr("In ") + (Settings.data.general.terminal || "kitty"), icon: "add" });
+                return out.length ? out : [{ kind: "hint", title: I18n.tr("No tmux or zellij"), subtitle: I18n.tr("Install one to keep terminal sessions running"), icon: "terminal" }];
             }
             if (term === "")
                 return gridApps.slice(0, 50).map(e => appItem(e));
             if (/^qr\s+\S/i.test(term))
-                return [{ kind: "qr", title: "QR code of “" + term.slice(3).trim() + "”", subtitle: "Shows it, to scan with a phone", icon: "qr_code_2" }];
+                return [{ kind: "qr", title: I18n.tr("QR code of “") + term.slice(3).trim() + "”", subtitle: I18n.tr("Shows it, to scan with a phone"), icon: "qr_code_2" }];
             const q = term.toLowerCase();
             const out = Apps.search(term).slice(0, 40).map(e => appItem(e));
             // open windows
             if (lc.searchWindows ?? true)
                 for (const w of Niri.windows.filter(w => String(w.title).toLowerCase().includes(q) || String(w.app_id).toLowerCase().includes(q)).slice(0, 6))
-                    out.push({ kind: "window", win: w, title: w.title || w.app_id, subtitle: "Open window · " + (Apps.lookup(w.app_id)?.name ?? w.app_id), icon: Apps.lookup(w.app_id)?.icon ?? w.app_id });
+                    out.push({ kind: "window", win: w, title: w.title || w.app_id, subtitle: I18n.tr("Open window · ") + (Apps.lookup(w.app_id)?.name ?? w.app_id), icon: Apps.lookup(w.app_id)?.icon ?? w.app_id });
             // lock, log out, restart…
             if ((lc.searchSession ?? true) && q.length >= 2)
                 for (const a of sessionActions.filter(a => a.keys.some(k => k.startsWith(q))))
-                    out.push({ kind: "session", action: a.id, title: a.title, subtitle: ["logout", "reboot", "shutdown"].includes(a.id) ? "Opens the power menu to confirm" : "Session", icon: a.icon });
+                    out.push({ kind: "session", action: a.id, title: a.title, subtitle: ["logout", "reboot", "shutdown"].includes(a.id) ? I18n.tr("Opens the power menu to confirm") : I18n.tr("Session"), icon: a.icon });
             // Flamenco's settings
             if ((lc.searchSettings ?? true) && q.length >= 2) {
                 const words = q.split(/\s+/);
                 const hits = settingsIndex.filter(e => words.every(w => (e.title + " " + e.label + " " + e.group).toLowerCase().includes(w)))
                     .sort((a, b) => (a.title.toLowerCase().startsWith(q) ? 0 : 1) - (b.title.toLowerCase().startsWith(q) ? 0 : 1) || (a.kind === "page" ? -1 : 0) - (b.kind === "page" ? -1 : 0));
                 for (const e of hits.slice(0, 4))
-                    out.push({ kind: "setting", entry: e, title: e.title, subtitle: "Settings · " + e.label + (e.group && e.group !== e.title ? " › " + e.group : ""), icon: e.icon || "settings" });
+                    out.push({ kind: "setting", entry: e, title: e.title, subtitle: I18n.tr("Settings · ") + e.label + (e.group && e.group !== e.title ? " › " + e.group : ""), icon: e.icon || "settings" });
             }
             if (lc.webSearch ?? true)
-                out.push({ kind: "web", title: "Search the web for “" + term + "”", subtitle: (lc.webEngine || "duckduckgo").replace(/^https?:\/\/([^/]+).*/, "$1"), icon: "travel_explore" });
+                out.push({ kind: "web", title: I18n.tr("Search the web for “") + term + "”", subtitle: (lc.webEngine || "duckduckgo").replace(/^https?:\/\/([^/]+).*/, "$1"), icon: "travel_explore" });
             return out;
         }
 
@@ -393,7 +393,7 @@ Variants {
                 implicitHeight: 52
                 radius: Theme.rLg
                 icon: panel.mode === "calc" ? "calculate" : panel.mode === "run" ? "terminal" : panel.mode === "clip" ? "content_paste" : panel.mode === "emoji" ? "mood" : panel.mode === "color" ? "palette" : panel.mode === "files" ? "folder_open" : "search"
-                placeholder: "Search apps, windows, settings   ·   = calc   > run   ; clips   : emoji   # color   / files   @ terminals"
+                placeholder: I18n.tr("Search apps, windows, settings   ·   = calc   > run   ; clips   : emoji   # color   / files   @ terminals")
                 fontSize: Theme.fsLg
                 onEdited: t => {
                     panel.query = t;
@@ -680,7 +680,7 @@ Variants {
                 visible: list.count === 0 && panel.query !== ""
                 Layout.alignment: Qt.AlignHCenter
                 Layout.margins: Theme.sp4
-                text: "No results"
+                text: I18n.tr("No results")
                 dim: true
             }
         }

@@ -8,8 +8,8 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Default apps"
-    subtitle: "Which app opens links, files and the terminal. Saved to mimeapps.list, which every desktop app reads."
+    title: I18n.tr("Default apps")
+    subtitle: I18n.tr("Which app opens links, files and the terminal. Saved to mimeapps.list, which every desktop app reads.")
 
     property var categories: []
     property string status: ""
@@ -48,10 +48,10 @@ Page {
     }
 
     Group {
-        title: "Links"
+        title: I18n.tr("Links")
         SwitchRow {
-            title: "Ask which browser"
-            subtitle: Settings.data.general.browserPicker ? "Links you click elsewhere ask which browser opens them (with \"always\" to stop asking)" : "Off: links open in the default browser"
+            title: I18n.tr("Ask which browser")
+            subtitle: Settings.data.general.browserPicker ? I18n.tr("Links you click elsewhere ask which browser opens them (with \"always\" to stop asking)") : I18n.tr("Off: links open in the default browser")
             icon: "travel_explore"
             target: Settings.data.general
             key: "browserPicker"
@@ -66,7 +66,7 @@ Page {
                 id: row
                 required property var modelData
                 title: modelData.label
-                subtitle: modelData.candidates.length ? "" : "No installed app handles this"
+                subtitle: modelData.candidates.length ? "" : I18n.tr("No installed app handles this")
                 icon: modelData.icon
                 RowLayout {
                     spacing: 8
@@ -79,7 +79,7 @@ Page {
                         implicitWidth: 260
                         options: row.modelData.candidates.map(c => ({ value: c.id, label: c.name }))
                         current: row.modelData.current
-                        placeholder: "Not set"
+                        placeholder: I18n.tr("Not set")
                         onSelected: v => page.choose(row.modelData, v)
                     }
                 }

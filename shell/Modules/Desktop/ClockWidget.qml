@@ -17,7 +17,7 @@ ColumnLayout {
         spacing: Math.round(6 * root.k)
         FText {
             id: hm
-            text: Qt.formatDateTime(Time.now, Time.use24h ? "HH:mm" : "h:mm")
+            text: I18n.locale.toString(Time.now, Time.use24h ? I18n.tr("HH:mm") : "h:mm")
             font.pixelSize: Math.round(76 * root.k)
             font.weight: Font.Light
             font.letterSpacing: -2
@@ -41,7 +41,7 @@ ColumnLayout {
         FText {
             visible: !Time.use24h
             anchors.baseline: hm.baseline
-            text: Qt.formatDateTime(Time.now, "AP")
+            text: I18n.locale.toString(Time.now, "AP")
             font.pixelSize: Math.round(20 * root.k)
             dim: true
         }

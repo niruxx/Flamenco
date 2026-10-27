@@ -48,12 +48,12 @@ Variants {
                     Layout.fillWidth: true
                     spacing: 0
                     FText {
-                        text: "Notifications"
+                        text: I18n.tr("Notifications")
                         font.pixelSize: Theme.fsXl
                         font.weight: Font.Bold
                     }
                     FText {
-                        text: (Notifs.history.count === 0 ? "Nothing new" : Notifs.history.count + (Notifs.history.count === 1 ? " notification" : " notifications"))
+                        text: (Notifs.history.count === 0 ? I18n.tr("Nothing new") : Notifs.history.count + (Notifs.history.count === 1 ? " notification" : " notifications"))
                             + (Notifs.dnd ? " · Do not disturb is on" : "")
                         dim: true
                         font.pixelSize: Theme.fsSm
@@ -66,14 +66,14 @@ Variants {
                 spacing: 8
                 FButton {
                     Layout.fillWidth: true
-                    text: Notifs.dnd ? "Do not disturb: on" : "Do not disturb"
+                    text: Notifs.dnd ? I18n.tr("Do not disturb: on") : I18n.tr("Do not disturb")
                     icon: Notifs.dnd ? "notifications_off" : "do_not_disturb_on"
                     variant: Notifs.dnd ? "filled" : "tonal"
                     onClicked: Notifs.setDnd(!Notifs.dnd)
                 }
                 FButton {
                     Layout.fillWidth: true
-                    text: "Clear all"
+                    text: I18n.tr("Clear all")
                     icon: "delete_sweep"
                     variant: "tonal"
                     disabled: Notifs.history.count === 0
@@ -98,14 +98,14 @@ Variants {
                 FText {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: "You're all caught up"
+                    text: I18n.tr("You're all caught up")
                     font.pixelSize: Theme.fsLg
                     font.weight: Font.DemiBold
                 }
                 FText {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: Notifs.dnd ? "Do Not Disturb is on" : "New notifications will show up here"
+                    text: Notifs.dnd ? I18n.tr("Do Not Disturb is on") : I18n.tr("New notifications will show up here")
                     dim: true
                 }
             }

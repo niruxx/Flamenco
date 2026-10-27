@@ -28,7 +28,7 @@ ColumnLayout {
     spacing: Math.round(Theme.sp2 * k)
 
     FText {
-        text: Qt.formatDate(root.today, "MMMM yyyy")
+        text: I18n.locale.toString(root.today, "MMMM yyyy")
         font.weight: Font.DemiBold
         font.pixelSize: Math.round(Theme.fsLg * root.k)
     }
@@ -41,7 +41,7 @@ ColumnLayout {
                 required property int index
                 width: Math.round(32 * root.k)
                 horizontalAlignment: Text.AlignHCenter
-                text: Qt.locale().dayName((root.first + index) % 7, Locale.NarrowFormat)
+                text: I18n.locale.dayName((root.first + index) % 7, Locale.NarrowFormat)
                 dim: true
                 font.pixelSize: Math.round(Theme.fsXs * root.k)
             }
@@ -97,7 +97,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
                 FText { Layout.fillWidth: true; text: up.modelData.title; font.pixelSize: Math.round(Theme.fsSm * root.k); font.weight: Font.Medium; elide: Text.ElideRight }
-                FText { Layout.fillWidth: true; text: Qt.formatDate(new Date(up.modelData.start), "ddd d") + " · " + Events.timeOf(up.modelData); dim: true; font.pixelSize: Math.round(Theme.fsXs * root.k); elide: Text.ElideRight }
+                FText { Layout.fillWidth: true; text: I18n.locale.toString(new Date(up.modelData.start), "ddd d") + " · " + Events.timeOf(up.modelData); dim: true; font.pixelSize: Math.round(Theme.fsXs * root.k); elide: Text.ElideRight }
             }
         }
     }

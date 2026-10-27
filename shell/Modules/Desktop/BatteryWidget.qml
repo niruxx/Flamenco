@@ -30,7 +30,7 @@ RowLayout {
     ColumnLayout {
         spacing: Math.round(2 * root.k)
         FText {
-            text: !Power.hasBattery ? "On mains power" : Power.charging ? (Power.percent >= 99 ? "Fully charged" : "Charging") : "On battery"
+            text: !Power.hasBattery ? I18n.tr("On mains power") : Power.charging ? (Power.percent >= 99 ? I18n.tr("Fully charged") : I18n.tr("Charging")) : I18n.tr("On battery")
             font.weight: Font.DemiBold
             font.pixelSize: Math.round(Theme.fsLg * root.k)
         }

@@ -181,12 +181,12 @@ Variants {
                 }
                 ColumnLayout {
                     spacing: 0
-                    FText { text: "Switch window"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+                    FText { text: I18n.tr("Switch window"); font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
                     FText { text: win.n + (win.n === 1 ? " window open" : " windows open"); dim: true; font.pixelSize: Theme.fsXs }
                 }
                 Item { Layout.fillWidth: true }
                 Repeater {
-                    model: [{ k: "Tab", t: "next" }, { k: "⇧ Tab", t: "back" }, { k: "Alt", t: "release to switch" }]
+                    model: [{ k: I18n.tr("Tab"), t: I18n.tr("next") }, { k: "⇧ Tab", t: I18n.tr("back") }, { k: I18n.tr("Alt"), t: I18n.tr("release to switch") }]
                     Rectangle {
                         required property var modelData
                         implicitWidth: chip.implicitWidth + 20
@@ -720,7 +720,7 @@ Variants {
                 }
                 FText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "Swipe a window up (or press Delete) to close it  ·  ← → to move  ·  release Alt to switch"
+                    text: I18n.tr("Swipe a window up (or press Delete) to close it  ·  ← → to move  ·  release Alt to switch")
                     color: Qt.rgba(1, 1, 1, 0.7)
                     font.pixelSize: Theme.fsSm
                 }

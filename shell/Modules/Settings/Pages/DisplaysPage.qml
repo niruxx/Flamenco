@@ -6,8 +6,8 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Displays"
-    subtitle: "Drag screens to arrange them, then pick resolution, refresh rate, scale and orientation. Changes apply live and revert after 15 seconds unless you keep them."
+    title: I18n.tr("Displays")
+    subtitle: I18n.tr("Drag screens to arrange them, then pick resolution, refresh rate, scale and orientation. Changes apply live and revert after 15 seconds unless you keep them.")
 
     property var draft: []
     property string selected: ""
@@ -92,7 +92,7 @@ Page {
 
     // ── arrangement ──
     Group {
-        title: "Arrangement"
+        title: I18n.tr("Arrangement")
 
         Item {
             id: canvas
@@ -125,7 +125,7 @@ Page {
             FText {
                 anchors.centerIn: parent
                 visible: canvas.shown.length === 0
-                text: Displays.loading ? "Reading displays from niri…" : "No displays reported by niri"
+                text: Displays.loading ? I18n.tr("Reading displays from niri…") : I18n.tr("No displays reported by niri")
                 dim: true
             }
 
@@ -226,8 +226,8 @@ Page {
         title: page.sel ? page.sel.name + (page.selInfo && (page.selInfo.make + page.selInfo.model) ? " · " + (page.selInfo.make + " " + page.selInfo.model).trim() : "") : ""
 
         SettingRow {
-            title: "Enabled"
-            subtitle: page.draft.filter(o => o.enabled).length <= 1 && page.sel?.enabled ? "The last enabled display can't be turned off" : ""
+            title: I18n.tr("Enabled")
+            subtitle: page.draft.filter(o => o.enabled).length <= 1 && page.sel?.enabled ? I18n.tr("The last enabled display can't be turned off") : ""
             icon: "power_settings_new"
             FSwitch {
                 checked: page.sel?.enabled ?? false
@@ -241,7 +241,7 @@ Page {
 
         SettingRow {
             visible: page.sel?.enabled ?? false
-            title: "Resolution"
+            title: I18n.tr("Resolution")
             icon: "aspect_ratio"
             FDropdown {
                 implicitWidth: 260
@@ -271,7 +271,7 @@ Page {
 
         SettingRow {
             visible: page.sel?.enabled ?? false
-            title: "Refresh rate"
+            title: I18n.tr("Refresh rate")
             icon: "speed"
             FDropdown {
                 implicitWidth: 260
@@ -287,8 +287,8 @@ Page {
 
         SettingRow {
             visible: page.sel?.enabled ?? false
-            title: "Scale"
-            subtitle: page.sel ? "Looks like " + page.logicalSize(page.sel).w + " × " + page.logicalSize(page.sel).h : ""
+            title: I18n.tr("Scale")
+            subtitle: page.sel ? I18n.tr("Looks like ") + page.logicalSize(page.sel).w + " × " + page.logicalSize(page.sel).h : ""
             icon: "zoom_in"
             FDropdown {
                 implicitWidth: 260
@@ -307,7 +307,7 @@ Page {
         SettingRow {
             id: orient
             visible: page.sel?.enabled ?? false
-            title: "Orientation"
+            title: I18n.tr("Orientation")
             icon: "screen_rotation"
             readonly property string tf: page.sel?.transform ?? "normal"
             readonly property bool flipped: tf.startsWith("flipped")
@@ -322,7 +322,7 @@ Page {
                 spacing: 10
                 FSegmented {
                     implicitWidth: 300
-                    options: [{ value: "0", label: "Normal" }, { value: "90", label: "90°" }, { value: "180", label: "180°" }, { value: "270", label: "270°" }]
+                    options: [{ value: "0", label: I18n.tr("Normal") }, { value: "90", label: "90°" }, { value: "180", label: "180°" }, { value: "270", label: "270°" }]
                     current: orient.rot
                     onSelected: v => orient.setTf(v, orient.flipped)
                 }
@@ -338,8 +338,8 @@ Page {
 
         SettingRow {
             visible: (page.sel?.enabled ?? false) && (page.selInfo?.vrrSupported ?? false)
-            title: "Variable refresh rate"
-            subtitle: "Adaptive sync (FreeSync / G-Sync compatible)"
+            title: I18n.tr("Variable refresh rate")
+            subtitle: I18n.tr("Adaptive sync (FreeSync / G-Sync compatible)")
             icon: "motion_blur"
             FSwitch {
                 checked: page.sel?.vrr ?? false
@@ -349,8 +349,8 @@ Page {
 
         SettingRow {
             visible: page.sel?.enabled ?? false
-            title: "Position"
-            subtitle: "Drag the display above, or it snaps to its neighbours"
+            title: I18n.tr("Position")
+            subtitle: I18n.tr("Drag the display above, or it snaps to its neighbours")
             icon: "open_with"
             FText {
                 text: page.sel ? page.sel.x + ", " + page.sel.y : ""
@@ -366,20 +366,20 @@ Page {
         spacing: Theme.sp3
 
         FButton {
-            text: "Apply"
+            text: I18n.tr("Apply")
             icon: "check"
             disabled: !page.dirty || Displays.busy || Displays.confirming
             onClicked: Displays.tryApply(page.draft)
         }
         FButton {
-            text: "Reset"
+            text: I18n.tr("Reset")
             icon: "undo"
             variant: "outlined"
             disabled: !page.dirty
             onClicked: page.reset()
         }
         FButton {
-            text: "Identify"
+            text: I18n.tr("Identify")
             icon: "badge"
             variant: "tonal"
             onClicked: Displays.identify()
@@ -397,10 +397,10 @@ Page {
     }
 
     Group {
-        title: "Safety"
+        title: I18n.tr("Safety")
         SwitchRow {
-            title: "Never leave every screen off"
-            subtitle: "If the laptop screen is switched off and no other display is connected (e.g. at login), turn it back on. It goes off again when the external display returns."
+            title: I18n.tr("Never leave every screen off")
+            subtitle: I18n.tr("If the laptop screen is switched off and no other display is connected (e.g. at login), turn it back on. It goes off again when the external display returns.")
             icon: "screenshot_monitor"
             target: Settings.data.displays
             key: "fallback"
@@ -409,10 +409,10 @@ Page {
     }
 
     Group {
-        title: "Brightness"
+        title: I18n.tr("Brightness")
         SliderRow {
-            title: "Lowest brightness"
-            subtitle: "The brightness keys and sliders stop here, so the screen never goes black"
+            title: I18n.tr("Lowest brightness")
+            subtitle: I18n.tr("The brightness keys and sliders stop here, so the screen never goes black")
             icon: "brightness_low"
             target: Settings.data.brightness
             key: "minimum"
@@ -425,13 +425,13 @@ Page {
     }
 
     Group {
-        title: "Brightness (external monitors)"
+        title: I18n.tr("Brightness (external monitors)")
         SettingRow {
             title: !Brightness.ddcInstalled ? "ddcutil isn't installed"
                 : Brightness.ddcLoading ? "Looking for monitors…"
                 : Brightness.ddc.length ? Brightness.ddc.length + (Brightness.ddc.length === 1 ? " monitor" : " monitors") + " with brightness control"
                 : "No monitor answered"
-            subtitle: !Brightness.ddcInstalled ? "External monitors' brightness is set over the cable (DDC/CI) with ddcutil."
+            subtitle: !Brightness.ddcInstalled ? I18n.tr("External monitors' brightness is set over the cable (DDC/CI) with ddcutil.")
                 : Brightness.ddcError ? Brightness.ddcError
                 : Brightness.ddc.length ? "Also in quick settings. On a desktop, the brightness keys change the focused monitor."
                 : "Turn on DDC/CI in the monitor's own menu, and check you can use /dev/i2c-* (the i2c group, module i2c-dev)."
@@ -440,7 +440,7 @@ Page {
                 spacing: 8
                 FButton {
                     visible: !Brightness.ddcInstalled
-                    text: "Install"
+                    text: I18n.tr("Install")
                     variant: "tonal"
                     onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed ddcutil && sudo usermod -aG i2c \"$USER\" && echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf && sudo modprobe i2c-dev && echo 'Log out and back in for the i2c group.'"))
                 }

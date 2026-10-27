@@ -7,30 +7,30 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Dock"
-    subtitle: "Left-click focuses an app (again to cycle its windows), middle-click opens a new window, right-click opens a menu (move to a workspace, pin, close, force quit…). Changes show right away."
+    title: I18n.tr("Dock")
+    subtitle: I18n.tr("Left-click focuses an app (again to cycle its windows), middle-click opens a new window, right-click opens a menu (move to a workspace, pin, close, force quit…). Changes show right away.")
     readonly property var d: Settings.data.dock
     // installed apps that aren't pinned yet, for the picker
     readonly property var pinnable: Apps.all.filter(e => !d.pinned.includes(e.id)).map(e => ({ value: e.id, label: e.name }))
 
     Group {
-        SwitchRow { title: "Show dock"; icon: "dock_to_bottom"; target: page.d; key: "enabled" }
+        SwitchRow { title: I18n.tr("Show dock"); icon: "dock_to_bottom"; target: page.d; key: "enabled" }
         ChoiceRow {
-            title: "Style"
-            subtitle: (page.d.style || "classic") === "panel" ? "Your apps with pills for the start button, overview, clock and weather"
+            title: I18n.tr("Style")
+            subtitle: (page.d.style || "classic") === "panel" ? I18n.tr("Your apps with pills for the start button, overview, clock and weather")
                 : page.d.style === "unity" ? "Ubuntu Unity's launcher: along the whole edge, the Dash button first, apps on tiles lit in their colors, pips for open windows"
                 : "Just your apps"
             icon: "view_day"
             target: page.d
             key: "style"
             segWidth: 120
-            options: [{ value: "classic", label: "Classic" }, { value: "panel", label: "Panel" }, { value: "unity", label: "Unity" }]
+            options: [{ value: "classic", label: I18n.tr("Classic") }, { value: "panel", label: I18n.tr("Panel") }, { value: "unity", label: I18n.tr("Unity") }]
         }
         Repeater {
             model: (page.d.style || "classic") === "panel" ? [
-                { k: "launcher", t: "Start button", i: "apps" }, { k: "overview", t: "Overview button", i: "overview_key" },
-                { k: "clock", t: "Clock", i: "schedule" }, { k: "weather", t: "Weather", i: "partly_cloudy_day" }]
-                : page.d.style === "unity" ? [{ k: "launcher", t: "Dash button", i: "apps" }] : []
+                { k: "launcher", t: I18n.tr("Start button"), i: "apps" }, { k: "overview", t: I18n.tr("Overview button"), i: "overview_key" },
+                { k: "clock", t: I18n.tr("Clock"), i: "schedule" }, { k: "weather", t: I18n.tr("Weather"), i: "partly_cloudy_day" }]
+                : page.d.style === "unity" ? [{ k: "launcher", t: I18n.tr("Dash button"), i: "apps" }] : []
             SettingRow {
                 id: prow
                 required property var modelData
@@ -47,60 +47,60 @@ Page {
             }
         }
         ChoiceRow {
-            title: "Position"
+            title: I18n.tr("Position")
             icon: "picture_in_picture"
             target: page.d
             key: "position"
-            options: [{ value: "bottom", label: "Bottom" }, { value: "left", label: "Left" }, { value: "right", label: "Right" }]
+            options: [{ value: "bottom", label: I18n.tr("Bottom") }, { value: "left", label: I18n.tr("Left") }, { value: "right", label: I18n.tr("Right") }]
         }
         DropdownRow {
             visible: Quickshell.screens.length > 1
-            title: "Show on"
+            title: I18n.tr("Show on")
             icon: "monitor"
             target: page.d
             key: "screen"
-            options: [{ value: "", label: "Every screen" }].concat(Quickshell.screens.map(s => ({ value: s.name, label: s.name + (s.model ? " · " + s.model : "") })))
+            options: [{ value: "", label: I18n.tr("Every screen") }].concat(Quickshell.screens.map(s => ({ value: s.name, label: s.name + (s.model ? " · " + s.model : "") })))
         }
-        SwitchRow { title: "Show running apps"; subtitle: "Apps with open windows appear even when not pinned"; icon: "apps"; target: page.d; key: "showRunning" }
-        SwitchRow { visible: page.d.showRunning && page.d.style !== "unity"; title: "Separate pinned apps"; subtitle: "A line between pinned apps and the other running ones"; icon: "more_vert"; target: page.d; key: "separator" }
-        SwitchRow { title: "App names on hover"; icon: "label"; target: page.d; key: "labels" }
+        SwitchRow { title: I18n.tr("Show running apps"); subtitle: I18n.tr("Apps with open windows appear even when not pinned"); icon: "apps"; target: page.d; key: "showRunning" }
+        SwitchRow { visible: page.d.showRunning && page.d.style !== "unity"; title: I18n.tr("Separate pinned apps"); subtitle: I18n.tr("A line between pinned apps and the other running ones"); icon: "more_vert"; target: page.d; key: "separator" }
+        SwitchRow { title: I18n.tr("App names on hover"); icon: "label"; target: page.d; key: "labels" }
         ChoiceRow {
             visible: page.d.style !== "unity"
-            title: "Running indicator"
+            title: I18n.tr("Running indicator")
             icon: "more_horiz"
             target: page.d
             key: "indicator"
-            options: [{ value: "line", label: "Line" }, { value: "dot", label: "Dot" }, { value: "count", label: "Count" }, { value: "none", label: "None" }]
+            options: [{ value: "line", label: I18n.tr("Line") }, { value: "dot", label: I18n.tr("Dot") }, { value: "count", label: I18n.tr("Count") }, { value: "none", label: I18n.tr("None") }]
         }
-        SwitchRow { title: "Only this screen's apps"; subtitle: "Running apps (and window counts) from the dock's own screen; pinned apps always show"; icon: "monitor"; target: page.d; key: "thisScreen" }
+        SwitchRow { title: I18n.tr("Only this screen's apps"); subtitle: I18n.tr("Running apps (and window counts) from the dock's own screen; pinned apps always show"); icon: "monitor"; target: page.d; key: "thisScreen" }
     }
 
     Group {
-        title: "Hiding"
-        SwitchRow { title: "Auto-hide"; subtitle: "Hidden until the pointer touches the screen edge"; icon: "visibility_off"; target: page.d; key: "autoHide" }
-        SliderRow { visible: page.d.autoHide; title: "Reveal edge"; subtitle: "How close to the edge the pointer has to be"; icon: "vertical_align_bottom"; target: page.d; key: "revealSize"; from: 2; to: 24; stepSize: 1; suffix: " px" }
-        SliderRow { visible: page.d.autoHide; title: "Hide after"; subtitle: "How long it stays once the pointer leaves"; icon: "timer"; target: page.d; key: "hideDelay"; from: 0; to: 2000; stepSize: 50; suffix: " ms" }
+        title: I18n.tr("Hiding")
+        SwitchRow { title: I18n.tr("Auto-hide"); subtitle: I18n.tr("Hidden until the pointer touches the screen edge"); icon: "visibility_off"; target: page.d; key: "autoHide" }
+        SliderRow { visible: page.d.autoHide; title: I18n.tr("Reveal edge"); subtitle: I18n.tr("How close to the edge the pointer has to be"); icon: "vertical_align_bottom"; target: page.d; key: "revealSize"; from: 2; to: 24; stepSize: 1; suffix: " px" }
+        SliderRow { visible: page.d.autoHide; title: I18n.tr("Hide after"); subtitle: I18n.tr("How long it stays once the pointer leaves"); icon: "timer"; target: page.d; key: "hideDelay"; from: 0; to: 2000; stepSize: 50; suffix: " ms" }
     }
 
     Group {
-        title: "Size"
-        SliderRow { title: "Icon size"; icon: "photo_size_select_large"; target: page.d; key: "iconSize"; from: 24; to: 96; stepSize: 2; suffix: " px" }
-        SliderRow { title: "Icon spacing"; icon: "space_bar"; target: page.d; key: "spacing"; from: 0; to: 24; stepSize: 1; suffix: " px" }
-        SwitchRow { visible: page.d.style !== "unity"; title: "Magnification"; subtitle: "Icons grow under the pointer"; icon: "zoom_in"; target: page.d; key: "magnify" }
-        SliderRow { visible: page.d.magnify && page.d.style !== "unity"; title: "Magnification amount"; icon: "zoom_out_map"; target: page.d; key: "zoom"; from: 0.1; to: 1.5; stepSize: 0.05; factor: 100; suffix: "%" }
+        title: I18n.tr("Size")
+        SliderRow { title: I18n.tr("Icon size"); icon: "photo_size_select_large"; target: page.d; key: "iconSize"; from: 24; to: 96; stepSize: 2; suffix: " px" }
+        SliderRow { title: I18n.tr("Icon spacing"); icon: "space_bar"; target: page.d; key: "spacing"; from: 0; to: 24; stepSize: 1; suffix: " px" }
+        SwitchRow { visible: page.d.style !== "unity"; title: I18n.tr("Magnification"); subtitle: I18n.tr("Icons grow under the pointer"); icon: "zoom_in"; target: page.d; key: "magnify" }
+        SliderRow { visible: page.d.magnify && page.d.style !== "unity"; title: I18n.tr("Magnification amount"); icon: "zoom_out_map"; target: page.d; key: "zoom"; from: 0.1; to: 1.5; stepSize: 0.05; factor: 100; suffix: "%" }
     }
 
     Group {
-        title: "Look"
-        SliderRow { visible: page.d.style !== "unity"; title: "Distance from the edge"; subtitle: "0 sits flush against the screen edge"; icon: "border_bottom"; target: page.d; key: "margin"; from: 0; to: 48; stepSize: 1; suffix: " px" }
-        SliderRow { title: "Tint icons"; subtitle: page.d.tint > 0 ? "Toward the accent color, so they match the theme" : "As the icon theme draws them"; icon: "colors"; target: page.d; key: "tint"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
-        SliderRow { title: "Background opacity"; subtitle: "0% leaves only the icons"; icon: "opacity"; target: page.d; key: "opacity"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
-        SliderRow { visible: page.d.style !== "unity"; title: "Corner roundness"; icon: "rounded_corner"; target: page.d; key: "roundness"; from: 0; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
-        SwitchRow { visible: page.d.style !== "unity"; title: "Border"; icon: "border_style"; target: page.d; key: "border" }
+        title: I18n.tr("Look")
+        SliderRow { visible: page.d.style !== "unity"; title: I18n.tr("Distance from the edge"); subtitle: I18n.tr("0 sits flush against the screen edge"); icon: "border_bottom"; target: page.d; key: "margin"; from: 0; to: 48; stepSize: 1; suffix: " px" }
+        SliderRow { title: I18n.tr("Tint icons"); subtitle: page.d.tint > 0 ? I18n.tr("Toward the accent color, so they match the theme") : I18n.tr("As the icon theme draws them"); icon: "colors"; target: page.d; key: "tint"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
+        SliderRow { title: I18n.tr("Background opacity"); subtitle: I18n.tr("0% leaves only the icons"); icon: "opacity"; target: page.d; key: "opacity"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
+        SliderRow { visible: page.d.style !== "unity"; title: I18n.tr("Corner roundness"); icon: "rounded_corner"; target: page.d; key: "roundness"; from: 0; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
+        SwitchRow { visible: page.d.style !== "unity"; title: I18n.tr("Border"); icon: "border_style"; target: page.d; key: "border" }
     }
 
     Group {
-        title: "Pinned apps"
+        title: I18n.tr("Pinned apps")
 
         Repeater {
             model: page.d.pinned
@@ -124,11 +124,11 @@ Page {
         }
 
         SettingRow {
-            title: "Pin an app"
+            title: I18n.tr("Pin an app")
             icon: "push_pin"
             FDropdown {
                 implicitWidth: 280
-                placeholder: "Choose an app…"
+                placeholder: I18n.tr("Choose an app…")
                 options: page.pinnable
                 current: ""
                 onSelected: v => Settings.listAdd(page.d, "pinned", v)

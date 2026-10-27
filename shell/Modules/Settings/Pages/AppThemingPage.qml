@@ -7,11 +7,11 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "App Theming"
-    subtitle: "Style Qt and GTK applications, terminals and more with the shell palette. Flamenco writes qt5ct/qt6ct color schemes and stylesheets, a KDE color scheme, GTK 3/4 CSS, and color files for the other apps you pick. Your own files are backed up before the first change."
+    title: I18n.tr("App Theming")
+    subtitle: I18n.tr("Style Qt and GTK applications, terminals and more with the shell palette. Flamenco writes qt5ct/qt6ct color schemes and stylesheets, a KDE color scheme, GTK 3/4 CSS, and color files for the other apps you pick. Your own files are backed up before the first change.")
     readonly property var o: Settings.data.apps
     readonly property var inst: AppTheming.installed
-    readonly property var keep: [{ value: "", label: "Leave unchanged" }]
+    readonly property var keep: [{ value: "", label: I18n.tr("Leave unchanged") }]
 
     Component.onCompleted: AppTheming.refreshInstalled()
 
@@ -19,12 +19,12 @@ Page {
         Layout.fillWidth: true
         spacing: Theme.sp3
         FButton {
-            text: AppTheming.busy ? "Applying…" : AppTheming.following ? "Apply now" : "Use Flamenco's colors"
+            text: AppTheming.busy ? I18n.tr("Applying…") : AppTheming.following ? I18n.tr("Apply now") : I18n.tr("Use Flamenco's colors")
             icon: "format_paint"
             onClicked: AppTheming.following ? AppTheming.apply() : AppTheming.useScheme("flamenco")
         }
         FButton {
-            text: "Restore originals"
+            text: I18n.tr("Restore originals")
             icon: "undo"
             variant: "outlined"
             onClicked: Quickshell.execDetached([Paths.bin, "apps-theme", "--restore"])
@@ -39,7 +39,7 @@ Page {
 
     // ── which look apps get: the shell's, or a desktop's own defaults ──
     Group {
-        title: "Color scheme"
+        title: I18n.tr("Color scheme")
         Item {
             Layout.fillWidth: true
             Layout.margins: Theme.sp3
@@ -51,9 +51,9 @@ Page {
                 readonly property real tileW: (width - spacing * 2) / 3
                 Repeater {
                     model: [
-                        { value: "flamenco", label: "Flamenco", hint: "Your shell palette in every app", swatch: [Theme.bg, Theme.surfaceHigh, Theme.accent, Theme.accent2] },
-                        { value: "gnome", label: "GNOME defaults", hint: "Adwaita, GNOME's fonts, no color scheme", swatch: ["#fafafb", "#ebebed", "#3584e4", "#241f31"] },
-                        { value: "kde", label: "KDE defaults", hint: "Breeze colors, style and icons", swatch: ["#eff0f1", "#fcfcfc", "#3daee9", "#232629"] }
+                        { value: "flamenco", label: I18n.tr("Flamenco"), hint: I18n.tr("Your shell palette in every app"), swatch: [Theme.bg, Theme.surfaceHigh, Theme.accent, Theme.accent2] },
+                        { value: "gnome", label: I18n.tr("GNOME defaults"), hint: I18n.tr("Adwaita, GNOME's fonts, no color scheme"), swatch: ["#fafafb", "#ebebed", "#3584e4", "#241f31"] },
+                        { value: "kde", label: I18n.tr("KDE defaults"), hint: I18n.tr("Breeze colors, style and icons"), swatch: ["#eff0f1", "#fcfcfc", "#3daee9", "#232629"] }
                     ]
                     Rectangle {
                         id: stile
@@ -99,7 +99,7 @@ Page {
             }
         }
         SettingRow {
-            title: AppTheming.following ? "Using another desktop too?" : "Apps use " + (page.o.scheme === "kde" ? "KDE's" : "GNOME's") + " defaults"
+            title: AppTheming.following ? I18n.tr("Using another desktop too?") : I18n.tr("Apps use ") + (page.o.scheme === "kde" ? I18n.tr("KDE's") : I18n.tr("GNOME's")) + " defaults"
             subtitle: AppTheming.following
                 ? "Before switching to GNOME or Plasma, pick its defaults here: Flamenco's colors come out of GTK, GNOME and KDE settings (your own files from before Flamenco come back), so the other desktop and its tools (GNOME Tweaks, System Settings) work as usual. Pick Flamenco again when you're back."
                 : "Flamenco won't re-theme apps until you pick Flamenco again. Restart open apps to see the change."
@@ -109,7 +109,7 @@ Page {
 
     // live preview of the generated widget style
     Group {
-        title: "Preview"
+        title: I18n.tr("Preview")
         Rectangle {
             Layout.fillWidth: true
             Layout.margins: 12
@@ -148,13 +148,13 @@ Page {
                         color: Theme.surface
                         border.width: 2
                         border.color: page.o.accentSelection ? Theme.accent : Theme.border
-                        FText { anchors.verticalCenter: parent.verticalCenter; x: 10; text: "Text field"; dim: true }
+                        FText { anchors.verticalCenter: parent.verticalCenter; x: 10; text: I18n.tr("Text field"); dim: true }
                     }
                 }
                 RowLayout {
                     spacing: 10
                     FSwitch { checked: true }
-                    FText { text: "Selection"; color: Theme.onAccent; Layout.preferredWidth: 90; horizontalAlignment: Text.AlignHCenter
+                    FText { text: I18n.tr("Selection"); color: Theme.onAccent; Layout.preferredWidth: 90; horizontalAlignment: Text.AlignHCenter
                         Rectangle { z: -1; anchors.fill: parent; anchors.margins: -4; radius: 4; color: page.o.accentSelection ? Theme.accent : Theme.textDim }
                     }
                     Item { Layout.fillWidth: true }
@@ -170,34 +170,34 @@ Page {
     }
 
     Group {
-        title: "General"
-        SwitchRow { title: "Apply automatically"; subtitle: "Re-theme apps whenever the palette or these options change"; icon: "autorenew"; target: page.o; key: "autoApply" }
-        SwitchRow { title: "Sync fonts"; subtitle: "Use the shell's interface and monospace fonts in apps"; icon: "font_download"; target: page.o; key: "syncFonts" }
-        DropdownRow { title: "Icon theme"; subtitle: "Used by Qt and GTK apps"; icon: "category"; target: page.o; key: "iconTheme"; options: page.keep.concat(page.inst.icons) }
-        DropdownRow { title: "Cursor theme"; icon: "arrow_selector_tool"; target: page.o; key: "cursorTheme"; options: page.keep.concat(page.inst.cursors) }
-        SliderRow { visible: page.o.cursorTheme !== ""; title: "Cursor size"; icon: "straighten"; target: page.o; key: "cursorSize"; from: 16; to: 64; stepSize: 4; suffix: "px" }
+        title: I18n.tr("General")
+        SwitchRow { title: I18n.tr("Apply automatically"); subtitle: I18n.tr("Re-theme apps whenever the palette or these options change"); icon: "autorenew"; target: page.o; key: "autoApply" }
+        SwitchRow { title: I18n.tr("Sync fonts"); subtitle: I18n.tr("Use the shell's interface and monospace fonts in apps"); icon: "font_download"; target: page.o; key: "syncFonts" }
+        DropdownRow { title: I18n.tr("Icon theme"); subtitle: I18n.tr("Used by Qt and GTK apps"); icon: "category"; target: page.o; key: "iconTheme"; options: page.keep.concat(page.inst.icons) }
+        DropdownRow { title: I18n.tr("Cursor theme"); icon: "arrow_selector_tool"; target: page.o; key: "cursorTheme"; options: page.keep.concat(page.inst.cursors) }
+        SliderRow { visible: page.o.cursorTheme !== ""; title: I18n.tr("Cursor size"); icon: "straighten"; target: page.o; key: "cursorSize"; from: 16; to: 64; stepSize: 4; suffix: "px" }
         ColorChoiceRow {
-            title: "Cursor color"
-            subtitle: page.o.cursorTint === "" ? "As the cursor theme draws it"
+            title: I18n.tr("Cursor color")
+            subtitle: page.o.cursorTint === "" ? I18n.tr("As the cursor theme draws it")
                 : "A recolored copy of " + (page.o.cursorTheme || "the current cursor theme") + " (works best with two-tone themes: Adwaita, Breeze, Bibata). Apps opened before pick it up when restarted"
             icon: "arrow_selector_tool"
             target: page.o
             key: "cursorTint"
-            choices: [{ value: "", label: "Theme's" }, { value: "accent", label: "Accent" }]
+            choices: [{ value: "", label: I18n.tr("Theme's") }, { value: "accent", label: I18n.tr("Accent") }]
             swatches: ["#ff5d73", "#ff8a4c", "#f5c542", "#7bd88f", "#3ec7c2", "#5b9cff", "#9b7bff"]
         }
         SettingRow {
-            title: "Get more themes"
-            subtitle: "Icon, cursor and GTK themes from the KDE Store, installed in one click"
+            title: I18n.tr("Get more themes")
+            subtitle: I18n.tr("Icon, cursor and GTK themes from the KDE Store, installed in one click")
             icon: "download"
             FButton {
-                text: "Get themes"
+                text: I18n.tr("Get themes")
                 variant: "tonal"
                 onClicked: Panels.settingsPage = "get"
             }
         }
         SettingRow {
-            title: AppTheming.scanning ? "Scanning installed themes…" : "Installed themes"
+            title: AppTheming.scanning ? I18n.tr("Scanning installed themes…") : I18n.tr("Installed themes")
             subtitle: page.inst.icons.length + " icon · " + page.inst.cursors.length + " cursor · " + page.inst.gtk.length + " GTK · " + page.inst.qtStyles.length + " Qt styles"
             icon: "inventory_2"
             FIconButton { icon: "refresh"; onClicked: AppTheming.refreshInstalled() }
@@ -205,10 +205,10 @@ Page {
     }
 
     Group {
-        title: "Other apps"
+        title: I18n.tr("Other apps")
         SettingRow {
-            title: "Terminals, launchers, browsers and more"
-            subtitle: "Each one gets a color file from your palette, plus one marked line in its own config to load it. Restore originals undoes both."
+            title: I18n.tr("Terminals, launchers, browsers and more")
+            subtitle: I18n.tr("Each one gets a color file from your palette, plus one marked line in its own config to load it. Restore originals undoes both.")
             icon: "palette"
         }
         Repeater {
@@ -228,7 +228,7 @@ Page {
                 required property var modelData
                 readonly property bool here: !!(page.inst.apps ?? {})[modelData.id]
                 title: modelData.name
-                subtitle: (here ? "" : "Not installed. ") + modelData.note
+                subtitle: (here ? "" : I18n.tr("Not installed. ")) + modelData.note
                 icon: modelData.icon
                 opacity: here ? 1 : 0.6
                 FSwitch {
@@ -244,34 +244,34 @@ Page {
     }
 
     Group {
-        title: "Stylesheet options (Qt + GTK)"
-        SwitchRow { title: "Match shell roundness"; icon: "rounded_corner"; target: page.o; key: "matchRoundness" }
-        SliderRow { visible: !page.o.matchRoundness; title: "Widget corner radius"; icon: "crop_square"; target: page.o; key: "radius"; from: 0; to: 20; stepSize: 1; suffix: "px" }
+        title: I18n.tr("Stylesheet options (Qt + GTK)")
+        SwitchRow { title: I18n.tr("Match shell roundness"); icon: "rounded_corner"; target: page.o; key: "matchRoundness" }
+        SliderRow { visible: !page.o.matchRoundness; title: I18n.tr("Widget corner radius"); icon: "crop_square"; target: page.o; key: "radius"; from: 0; to: 20; stepSize: 1; suffix: "px" }
         ChoiceRow {
-            title: "Buttons"
+            title: I18n.tr("Buttons")
             icon: "smart_button"
             target: page.o
             key: "buttons"
-            options: [{ value: "soft", label: "Soft" }, { value: "flat", label: "Flat" }, { value: "outlined", label: "Outlined" }]
+            options: [{ value: "soft", label: I18n.tr("Soft") }, { value: "flat", label: I18n.tr("Flat") }, { value: "outlined", label: I18n.tr("Outlined") }]
         }
         ChoiceRow {
-            title: "Scrollbars"
+            title: I18n.tr("Scrollbars")
             icon: "swap_vert"
             target: page.o
             key: "scrollbars"
-            options: [{ value: "thin", label: "Thin" }, { value: "overlay", label: "Overlay" }, { value: "classic", label: "Classic" }]
+            options: [{ value: "thin", label: I18n.tr("Thin") }, { value: "overlay", label: I18n.tr("Overlay") }, { value: "classic", label: I18n.tr("Classic") }]
         }
-        SwitchRow { title: "Accent selections & focus rings"; icon: "highlight"; target: page.o; key: "accentSelection" }
-        SliderRow { title: "Surface contrast"; subtitle: "Separation between window, view and card backgrounds"; icon: "contrast"; target: page.o; key: "contrast"; from: -1; to: 1; stepSize: 0.1; decimals: 1 }
+        SwitchRow { title: I18n.tr("Accent selections & focus rings"); icon: "highlight"; target: page.o; key: "accentSelection" }
+        SliderRow { title: I18n.tr("Surface contrast"); subtitle: I18n.tr("Separation between window, view and card backgrounds"); icon: "contrast"; target: page.o; key: "contrast"; from: -1; to: 1; stepSize: 0.1; decimals: 1 }
     }
 
     Group {
-        title: "Qt applications"
-        SwitchRow { title: "Theme Qt apps"; subtitle: "Writes qt5ct + qt6ct configs. Requires QT_QPA_PLATFORMTHEME=qt6ct (see `flamenco doctor`)."; icon: "widgets"; target: page.o; key: "qt" }
+        title: I18n.tr("Qt applications")
+        SwitchRow { title: I18n.tr("Theme Qt apps"); subtitle: I18n.tr("Writes qt5ct + qt6ct configs. Requires QT_QPA_PLATFORMTHEME=qt6ct (see `flamenco doctor`)."); icon: "widgets"; target: page.o; key: "qt" }
         DropdownRow {
             visible: page.o.qt
-            title: "Widget style"
-            subtitle: "Installed Qt 6 styles. Fusion takes the generated stylesheet best."
+            title: I18n.tr("Widget style")
+            subtitle: I18n.tr("Installed Qt 6 styles. Fusion takes the generated stylesheet best.")
             icon: "style"
             target: page.o
             key: "qtStyle"
@@ -279,20 +279,20 @@ Page {
         }
         DropdownRow {
             visible: page.o.qt && page.o.qtStyle === "kvantum"
-            title: "Kvantum theme"
+            title: I18n.tr("Kvantum theme")
             icon: "palette"
             target: page.o
             key: "kvantumTheme"
-            placeholder: page.inst.kvantum.length ? "Select…" : "No Kvantum themes found"
+            placeholder: page.inst.kvantum.length ? I18n.tr("Select…") : I18n.tr("No Kvantum themes found")
             options: page.keep.concat(page.inst.kvantum)
         }
-        SwitchRow { visible: page.o.qt; title: "Generated stylesheet (QSS)"; subtitle: "Rounded controls, accent focus, custom scrollbars"; icon: "css"; target: page.o; key: "qss" }
-        SwitchRow { visible: page.o.qt; title: "KDE color scheme"; subtitle: "For KDE apps (Dolphin, Kate…) that read kdeglobals"; icon: "palette"; target: page.o; key: "kdeColors" }
+        SwitchRow { visible: page.o.qt; title: I18n.tr("Generated stylesheet (QSS)"); subtitle: I18n.tr("Rounded controls, accent focus, custom scrollbars"); icon: "css"; target: page.o; key: "qss" }
+        SwitchRow { visible: page.o.qt; title: I18n.tr("KDE color scheme"); subtitle: I18n.tr("For KDE apps (Dolphin, Kate…) that read kdeglobals"); icon: "palette"; target: page.o; key: "kdeColors" }
     }
 
     Group {
         visible: page.o.qt
-        title: "Custom QSS"
+        title: I18n.tr("Custom QSS")
         CodeEditor {
             target: page.o
             key: "customQss"
@@ -301,25 +301,25 @@ Page {
     }
 
     Group {
-        title: "GTK applications"
-        SwitchRow { title: "Theme GTK apps"; subtitle: "Writes ~/.config/gtk-3.0 and gtk-4.0 gtk.css and sets the dark/light preference"; icon: "widgets"; target: page.o; key: "gtk" }
+        title: I18n.tr("GTK applications")
+        SwitchRow { title: I18n.tr("Theme GTK apps"); subtitle: I18n.tr("Writes ~/.config/gtk-3.0 and gtk-4.0 gtk.css and sets the dark/light preference"); icon: "widgets"; target: page.o; key: "gtk" }
         DropdownRow {
             visible: page.o.gtk
-            title: "Base GTK theme"
-            subtitle: "Automatic uses adw-gtk3 when installed so GTK 3 apps match libadwaita"
+            title: I18n.tr("Base GTK theme")
+            subtitle: I18n.tr("Automatic uses adw-gtk3 when installed so GTK 3 apps match libadwaita")
             icon: "web"
             target: page.o
             key: "gtkTheme"
-            options: [{ value: "", label: "Automatic" }].concat(page.inst.gtk)
+            options: [{ value: "", label: I18n.tr("Automatic") }].concat(page.inst.gtk)
         }
-        SwitchRow { visible: page.o.gtk; title: "GTK 3"; icon: "looks_3"; target: page.o; key: "gtk3" }
-        SwitchRow { visible: page.o.gtk; title: "GTK 4 / libadwaita"; icon: "looks_4"; target: page.o; key: "gtk4" }
-        SwitchRow { visible: page.o.gtk; title: "Extra styling"; subtitle: "Apply radius, button and scrollbar options, not just colors"; icon: "auto_awesome"; target: page.o; key: "gtkExtras" }
+        SwitchRow { visible: page.o.gtk; title: I18n.tr("GTK 3"); icon: "looks_3"; target: page.o; key: "gtk3" }
+        SwitchRow { visible: page.o.gtk; title: I18n.tr("GTK 4 / libadwaita"); icon: "looks_4"; target: page.o; key: "gtk4" }
+        SwitchRow { visible: page.o.gtk; title: I18n.tr("Extra styling"); subtitle: I18n.tr("Apply radius, button and scrollbar options, not just colors"); icon: "auto_awesome"; target: page.o; key: "gtkExtras" }
     }
 
     Group {
         visible: page.o.gtk
-        title: "Custom GTK CSS"
+        title: I18n.tr("Custom GTK CSS")
         CodeEditor {
             target: page.o
             key: "customGtkCss"

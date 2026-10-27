@@ -94,7 +94,7 @@ Singleton {
             return;
         const list = (cfg.shortcuts || []).slice();
         if (!list.some(s => norm(s.key) === norm("Mod+L")))
-            list.push({ key: "Mod+L", type: "flamenco", value: "lock", title: "Lock the screen" });
+            list.push({ key: I18n.tr("Mod+L"), type: "flamenco", value: "lock", title: I18n.tr("Lock the screen") });
         // written either way, so it reaches the compositor config on fresh setups too
         setShortcuts(list);
         cfg.lockKeyAdded = true;
@@ -107,9 +107,9 @@ Singleton {
             return;
         const list = (cfg.shortcuts || []).slice();
         if (!list.some(s => norm(s.key) === norm("Alt+Tab")))
-            list.push({ key: "Alt+Tab", type: "flamenco", value: "switcher-next", title: "App switcher" });
+            list.push({ key: I18n.tr("Alt+Tab"), type: "flamenco", value: "switcher-next", title: I18n.tr("App switcher") });
         if (!list.some(s => norm(s.key) === norm("Alt+Shift+Tab")))
-            list.push({ key: "Alt+Shift+Tab", type: "flamenco", value: "switcher-prev", title: "App switcher (back)" });
+            list.push({ key: I18n.tr("Alt+Shift+Tab"), type: "flamenco", value: "switcher-prev", title: I18n.tr("App switcher (back)") });
         setShortcuts(list);
         cfg.switcherKeysAdded = true;
     }

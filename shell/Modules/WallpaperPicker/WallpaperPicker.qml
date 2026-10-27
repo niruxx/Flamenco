@@ -26,13 +26,13 @@ Variants {
                 FSegmented {
                     implicitWidth: 400
                     implicitHeight: 34
-                    options: [{ value: "folder", label: "Your folder" }, { value: "wallhaven", label: "Wallhaven" }, { value: "kde", label: "KDE Store" }, { value: "live", label: "Live" }]
+                    options: [{ value: "folder", label: I18n.tr("Your folder") }, { value: "wallhaven", label: I18n.tr("Wallhaven") }, { value: "kde", label: I18n.tr("KDE Store") }, { value: "live", label: I18n.tr("Live") }]
                     current: panel.source
                     onSelected: v => panel.source = v
                 }
                 FText {
                     Layout.fillWidth: true
-                    text: "Wallpapers"
+                    text: I18n.tr("Wallpapers")
                     font.pixelSize: Theme.fsXl
                     font.weight: Font.Bold
                 }
@@ -42,7 +42,7 @@ Variants {
                     visible: Quickshell.screens.length > 1
                     implicitWidth: 260
                     implicitHeight: 34
-                    options: [{ value: false, label: "All screens" }, { value: true, label: "This screen (" + panel.modelData.name + ")" }]
+                    options: [{ value: false, label: I18n.tr("All screens") }, { value: true, label: I18n.tr("This screen (") + panel.modelData.name + ")" }]
                     current: Settings.data.wallpaper.perScreen
                     onSelected: v => Settings.data.wallpaper.perScreen = v
                 }

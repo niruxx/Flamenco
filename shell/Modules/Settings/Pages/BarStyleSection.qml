@@ -9,16 +9,16 @@ import qs.Widgets
 // outline, shadow).
 Group {
     id: root
-    title: "Style"
+    title: I18n.tr("Style")
     readonly property var b: Settings.data.bar
     readonly property var styles: [
-        { value: "islands", label: "Islands", hint: "Separate floating groups" },
-        { value: "floating", label: "Floating", hint: "One rounded bar" },
-        { value: "attached", label: "Attached", hint: "Flush with the edge" },
-        { value: "framed", label: "Framed", hint: "Solid bar, pill groups" },
-        { value: "capsule", label: "Capsule", hint: "One pill, centered" },
-        { value: "minimal", label: "Minimal", hint: "No bar, just widgets" },
-        { value: "outline", label: "Outline", hint: "See-through, outlined" }
+        { value: "islands", label: I18n.tr("Islands"), hint: I18n.tr("Separate floating groups") },
+        { value: "floating", label: I18n.tr("Floating"), hint: I18n.tr("One rounded bar") },
+        { value: "attached", label: I18n.tr("Attached"), hint: I18n.tr("Flush with the edge") },
+        { value: "framed", label: I18n.tr("Framed"), hint: I18n.tr("Solid bar, pill groups") },
+        { value: "capsule", label: I18n.tr("Capsule"), hint: I18n.tr("One pill, centered") },
+        { value: "minimal", label: I18n.tr("Minimal"), hint: I18n.tr("No bar, just widgets") },
+        { value: "outline", label: I18n.tr("Outline"), hint: I18n.tr("See-through, outlined") }
     ]
 
     Item {
@@ -160,11 +160,11 @@ Group {
         }
     }
 
-    SliderRow { title: "Thickness"; icon: "height"; target: root.b; key: "height"; from: 28; to: 56; stepSize: 2; suffix: " px" }
+    SliderRow { title: I18n.tr("Thickness"); icon: "height"; target: root.b; key: "height"; from: 28; to: 56; stepSize: 2; suffix: " px" }
     SettingRow {
         visible: !Theme.barFlush
-        title: "Distance from the edge"
-        subtitle: (root.b.margin ?? -1) < 0 ? "Matching the windows' gap (" + Theme.edge + " px), so the bar, panels and windows line up" : "Its own distance"
+        title: I18n.tr("Distance from the edge")
+        subtitle: (root.b.margin ?? -1) < 0 ? I18n.tr("Matching the windows' gap (") + Theme.edge + " px), so the bar, panels and windows line up" : I18n.tr("Its own distance")
         icon: "border_outer"
         Row {
             spacing: 8
@@ -191,8 +191,8 @@ Group {
     }
     SettingRow {
         visible: !Theme.barFlush && root.b.style !== "minimal"
-        title: "Corner radius"
-        subtitle: (root.b.radius ?? -1) < 0 ? "Following Appearance → Corner roundness" : "Its own rounding (never more than fully round ends)"
+        title: I18n.tr("Corner radius")
+        subtitle: (root.b.radius ?? -1) < 0 ? I18n.tr("Following Appearance → Corner roundness") : I18n.tr("Its own rounding (never more than fully round ends)")
         icon: "rounded_corner"
         Row {
             spacing: 8
@@ -218,13 +218,13 @@ Group {
         }
     }
     ChoiceRow {
-        title: "Widget spacing"
+        title: I18n.tr("Widget spacing")
         icon: "space_bar"
         target: root.b
         key: "spacing"
         segWidth: 100
-        options: [{ value: 0.6, label: "Compact" }, { value: 1, label: "Normal" }, { value: 1.5, label: "Roomy" }]
+        options: [{ value: 0.6, label: I18n.tr("Compact") }, { value: 1, label: I18n.tr("Normal") }, { value: 1.5, label: I18n.tr("Roomy") }]
     }
-    SwitchRow { visible: ["floating", "islands", "capsule"].includes(root.b.style); title: "Outline"; subtitle: "A thin border around the bar"; icon: "border_style"; target: root.b; key: "border" }
-    SwitchRow { visible: !Theme.barFlush && !["minimal", "outline"].includes(root.b.style); title: "Shadow"; subtitle: Settings.data.appearance.shadows ? "" : "Drop shadows are off in Appearance"; icon: "shadow"; target: root.b; key: "shadow" }
+    SwitchRow { visible: ["floating", "islands", "capsule"].includes(root.b.style); title: I18n.tr("Outline"); subtitle: I18n.tr("A thin border around the bar"); icon: "border_style"; target: root.b; key: "border" }
+    SwitchRow { visible: !Theme.barFlush && !["minimal", "outline"].includes(root.b.style); title: I18n.tr("Shadow"); subtitle: Settings.data.appearance.shadows ? "" : I18n.tr("Drop shadows are off in Appearance"); icon: "shadow"; target: root.b; key: "shadow" }
 }

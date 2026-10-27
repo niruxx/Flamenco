@@ -8,8 +8,8 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Printers"
-    subtitle: "Printing goes through CUPS. Starting or enabling the service needs your password, so those open a terminal."
+    title: I18n.tr("Printers")
+    subtitle: I18n.tr("Printing goes through CUPS. Starting or enabling the service needs your password, so those open a terminal.")
 
     property var st: ({ installed: true, service: {}, socket: {}, printers: [], jobs: [], configTool: "" })
     property bool loaded: false
@@ -49,13 +49,13 @@ Page {
     // not installed
     Group {
         visible: page.loaded && !page.st.installed
-        title: "CUPS isn't installed"
+        title: I18n.tr("CUPS isn't installed")
         SettingRow {
-            title: "Install printing support"
+            title: I18n.tr("Install printing support")
             subtitle: "cups, cups-pdf (print to PDF) and system-config-printer (adding printers)"
             icon: "print_disabled"
             FButton {
-                text: "Install"
+                text: I18n.tr("Install")
                 icon: "download"
                 onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed cups cups-pdf system-config-printer && sudo systemctl enable --now cups.socket"))
             }
@@ -64,26 +64,26 @@ Page {
 
     Group {
         visible: page.st.installed
-        title: "Service"
+        title: I18n.tr("Service")
         SettingRow {
-            title: page.running ? "CUPS is running" : "CUPS is stopped"
+            title: page.running ? I18n.tr("CUPS is running") : I18n.tr("CUPS is stopped")
             subtitle: "cups.service " + (page.st.service?.raw ?? "?") + " · cups.socket " + (page.st.socket?.raw ?? "?") + ((page.st.socket?.enabled || page.st.service?.enabled) ? " · starts at boot" : " · doesn't start at boot")
             icon: page.running ? "print" : "print_disabled"
             Row {
                 spacing: 6
                 FButton {
                     visible: !page.running
-                    text: "Start"
+                    text: I18n.tr("Start")
                     onClicked: page.inTerminal(["service", "start"])
                 }
                 FButton {
                     visible: page.running
-                    text: "Stop"
+                    text: I18n.tr("Stop")
                     variant: "outlined"
                     onClicked: page.inTerminal(["service", "stop"])
                 }
                 FButton {
-                    text: (page.st.socket?.enabled || page.st.service?.enabled) ? "Disable at boot" : "Enable at boot"
+                    text: (page.st.socket?.enabled || page.st.service?.enabled) ? I18n.tr("Disable at boot") : I18n.tr("Enable at boot")
                     variant: "tonal"
                     onClicked: page.inTerminal(["service", (page.st.socket?.enabled || page.st.service?.enabled) ? "disable" : "enable"])
                 }
@@ -93,12 +93,12 @@ Page {
 
     Group {
         visible: page.st.installed && page.running
-        title: "Printers"
+        title: I18n.tr("Printers")
 
         SettingRow {
             visible: page.st.printers.length === 0
-            title: "No printers yet"
-            subtitle: "Add one with " + (page.st.configTool || "the CUPS web interface")
+            title: I18n.tr("No printers yet")
+            subtitle: I18n.tr("Add one with ") + (page.st.configTool || "the CUPS web interface")
             icon: "print_add"
         }
 
@@ -118,7 +118,7 @@ Page {
                         onClicked: page.cli(["default", prow.modelData.name])
                     }
                     FButton {
-                        text: "Test page"
+                        text: I18n.tr("Test page")
                         variant: "tonal"
                         implicitHeight: 32
                         onClicked: page.cli(["test", prow.modelData.name])
@@ -128,11 +128,11 @@ Page {
         }
 
         SettingRow {
-            title: "Add a printer"
-            subtitle: page.st.configTool ? "Opens " + page.st.configTool : "Opens the CUPS web interface (http://localhost:631)"
+            title: I18n.tr("Add a printer")
+            subtitle: page.st.configTool ? I18n.tr("Opens ") + page.st.configTool : I18n.tr("Opens the CUPS web interface (http://localhost:631)")
             icon: "add"
             FButton {
-                text: "Add printer"
+                text: I18n.tr("Add printer")
                 icon: "print_add"
                 onClicked: page.cli(["add"])
             }
@@ -141,11 +141,11 @@ Page {
 
     Group {
         visible: page.st.installed && page.running
-        title: "Queue"
+        title: I18n.tr("Queue")
 
         SettingRow {
             visible: page.st.jobs.length === 0
-            title: "Nothing waiting to print"
+            title: I18n.tr("Nothing waiting to print")
             icon: "inbox"
         }
 
@@ -167,10 +167,10 @@ Page {
 
         SettingRow {
             visible: page.st.jobs.length > 1
-            title: "Cancel everything"
+            title: I18n.tr("Cancel everything")
             icon: "clear_all"
             FButton {
-                text: "Cancel all"
+                text: I18n.tr("Cancel all")
                 variant: "outlined"
                 onClicked: page.cli(["cancel", "all"])
             }

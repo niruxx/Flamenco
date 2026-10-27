@@ -10,7 +10,7 @@ Rectangle {
 
     property var options: []
     property var current
-    property string placeholder: "Select…"
+    property string placeholder: I18n.tr("Select…")
     property bool searchable: options.length > 8
     property bool fontPreview: false      // draw each option in its own font (font pickers)
 
@@ -118,7 +118,7 @@ Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: 36
                 icon: "search"
-                placeholder: "Filter"
+                placeholder: I18n.tr("Filter")
                 onEdited: t => root.filter = t
                 onAccepted: if (root.filtered.length > 0) {
                     root.selected(root.filtered[0].value);
@@ -187,7 +187,7 @@ Rectangle {
             FText {
                 visible: root.filtered.length === 0
                 Layout.alignment: Qt.AlignHCenter
-                text: "No matches"
+                text: I18n.tr("No matches")
                 dim: true
             }
         }

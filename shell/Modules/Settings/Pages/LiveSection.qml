@@ -12,7 +12,7 @@ import qs.Widgets
 // keeps them in the keyring (or a file only you can read); the shell never holds them.
 Group {
     id: root
-    title: "Live wallpapers"
+    title: I18n.tr("Live wallpapers")
     readonly property var w: Settings.data.wallpaper
     property var keys: ({})                  // source → has a key
 
@@ -22,8 +22,8 @@ Group {
     Component.onCompleted: refreshKeys()
 
     SwitchRow {
-        title: "Play live wallpapers"
-        subtitle: !Wallpapers.canPlay ? "Qt Multimedia isn't installed, so they show a still (Settings → System check)"
+        title: I18n.tr("Play live wallpapers")
+        subtitle: !Wallpapers.canPlay ? I18n.tr("Qt Multimedia isn't installed, so they show a still (Settings → System check)")
             : Wallpapers.liveCount > 0 ? Wallpapers.liveCount + " in your folder (videos: mp4, webm, mkv, mov; and GIFs). Off: they show a still"
             : "Put videos (mp4, webm, mkv, mov) or GIFs in your folder, or find some online below"
         icon: "animated_images"
@@ -33,25 +33,25 @@ Group {
     SettingRow {
         visible: !Wallpapers.canPoster
         title: "ffmpeg isn't installed"
-        subtitle: "It makes the stills of videos: their thumbnails, the transitions, colors from wallpaper and the lock screen"
+        subtitle: I18n.tr("It makes the stills of videos: their thumbnails, the transitions, colors from wallpaper and the lock screen")
         icon: "warning"
         FButton {
-            text: "System check"
+            text: I18n.tr("System check")
             variant: "text"
             onClicked: Panels.openSettings("system")
         }
     }
-    SwitchRow { visible: root.w.live; title: "Pause in power saver"; subtitle: Power.profileId === "power-saver" ? "Paused now: the power profile is Power saver. They play on battery otherwise" : "While the power profile is Power saver; they play on battery otherwise. The picture stays, it just stops moving"; icon: "battery_saver"; target: root.w; key: "livePauseSaver" }
-    SwitchRow { visible: root.w.live; title: "Pause behind windows"; subtitle: "While a tiled window is on the screen's workspace"; icon: "select_window"; target: root.w; key: "livePauseWindows" }
-    SliderRow { visible: root.w.live; title: "Speed"; icon: "speed"; target: root.w; key: "liveSpeed"; from: 0.25; to: 2; stepSize: 0.05; decimals: 2; suffix: "×" }
-    SwitchRow { visible: root.w.live; title: "Sound"; subtitle: "Videos are silent unless this is on"; icon: "volume_up"; target: root.w; key: "liveSound" }
+    SwitchRow { visible: root.w.live; title: I18n.tr("Pause in power saver"); subtitle: Power.profileId === "power-saver" ? I18n.tr("Paused now: the power profile is Power saver. They play on battery otherwise") : I18n.tr("While the power profile is Power saver; they play on battery otherwise. The picture stays, it just stops moving"); icon: "battery_saver"; target: root.w; key: "livePauseSaver" }
+    SwitchRow { visible: root.w.live; title: I18n.tr("Pause behind windows"); subtitle: I18n.tr("While a tiled window is on the screen's workspace"); icon: "select_window"; target: root.w; key: "livePauseWindows" }
+    SliderRow { visible: root.w.live; title: I18n.tr("Speed"); icon: "speed"; target: root.w; key: "liveSpeed"; from: 0.25; to: 2; stepSize: 0.05; decimals: 2; suffix: "×" }
+    SwitchRow { visible: root.w.live; title: I18n.tr("Sound"); subtitle: I18n.tr("Videos are silent unless this is on"); icon: "volume_up"; target: root.w; key: "liveSound" }
 
     SettingRow {
-        title: "Find live wallpapers online"
-        subtitle: "In the wallpaper switcher's Live tab: Wikimedia Commons (no key), Pexels or Pixabay, or paste a link. Saved to " + Wallpapers.dir + "/live"
+        title: I18n.tr("Find live wallpapers online")
+        subtitle: I18n.tr("In the wallpaper switcher's Live tab: Wikimedia Commons (no key), Pexels or Pixabay, or paste a link. Saved to ") + Wallpapers.dir + "/live"
         icon: "travel_explore"
         FButton {
-            text: "Open the switcher"
+            text: I18n.tr("Open the switcher")
             icon: "view_carousel"
             onClicked: Panels.open("wallpaper", "")
         }
@@ -67,7 +67,7 @@ Group {
             required property var modelData
             readonly property bool has: !!root.keys[modelData.id]
             title: modelData.name + " API key"
-            subtitle: has ? "Saved (in your keyring, or a file only you can read)" : "Free: sign up, then paste your key here"
+            subtitle: has ? I18n.tr("Saved (in your keyring, or a file only you can read)") : I18n.tr("Free: sign up, then paste your key here")
             icon: "key"
             Row {
                 spacing: 8
@@ -75,10 +75,10 @@ Group {
                     id: field
                     implicitWidth: 200
                     password: true
-                    placeholder: krow.has ? "Replace the key" : "Paste the key"
+                    placeholder: krow.has ? I18n.tr("Replace the key") : I18n.tr("Paste the key")
                 }
                 FButton {
-                    text: "Save"
+                    text: I18n.tr("Save")
                     disabled: field.text.trim() === ""
                     onClicked: {
                         saver.createObject(root, { src: krow.modelData.id, key: field.text.trim(), remove: false }).running = true;
@@ -87,13 +87,13 @@ Group {
                 }
                 FButton {
                     visible: krow.has
-                    text: "Remove"
+                    text: I18n.tr("Remove")
                     variant: "text"
                     onClicked: saver.createObject(root, { src: krow.modelData.id, key: "", remove: true }).running = true
                 }
                 FButton {
                     visible: !krow.has
-                    text: "Get a key"
+                    text: I18n.tr("Get a key")
                     variant: "text"
                     onClicked: Qt.openUrlExternally(krow.modelData.url)
                 }

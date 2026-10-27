@@ -6,8 +6,8 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Keyboard"
-    subtitle: "Layouts and shortcuts. Everything here is written to your niri config (~/.config/niri/config.kdl) and applies immediately."
+    title: I18n.tr("Keyboard")
+    subtitle: I18n.tr("Layouts and shortcuts. Everything here is written to your niri config (~/.config/niri/config.kdl) and applies immediately.")
 
     readonly property var k: Settings.data.keyboard
     property int editing: -2          // -2: none · -1: new shortcut · n: editing shortcut n
@@ -44,7 +44,7 @@ Page {
         if (at >= 0)
             list[at] = Object.assign({}, list[at], { key: key });
         else
-            list.unshift({ key: key, type: "flamenco", value: "launcher", title: "Launcher" });
+            list.unshift({ key: key, type: "flamenco", value: "launcher", title: I18n.tr("Launcher") });
         Keyboard.setShortcuts(list);
     }
 
@@ -56,7 +56,7 @@ Page {
                                            && !(sc.type === "none" && Keyboard.norm(sc.key) === Keyboard.norm("Mod+Q"))
                                            && Keyboard.norm(sc.key) !== Keyboard.norm(key));
         if (Keyboard.norm(key) !== Keyboard.norm("Mod+Q"))
-            list = list.concat([{ key: key, type: "niri", value: "close-window", title: "Close window" }, { key: "Mod+Q", type: "none", value: "" }]);
+            list = list.concat([{ key: key, type: "niri", value: "close-window", title: I18n.tr("Close window") }, { key: I18n.tr("Mod+Q"), type: "none", value: "" }]);
         Keyboard.setShortcuts(list);
     }
 
@@ -66,13 +66,13 @@ Page {
 
     // ── backlight (only on keyboards that have one) ──
     Group {
-        title: "Cheat sheet"
+        title: I18n.tr("Cheat sheet")
         SettingRow {
-            title: "See every shortcut"
-            subtitle: "All the key bindings in your compositor config, grouped. Bind the Flamenco function \"Keyboard shortcuts cheat sheet\" below to open it from the keyboard, or run flamenco keys show."
+            title: I18n.tr("See every shortcut")
+            subtitle: I18n.tr("All the key bindings in your compositor config, grouped. Bind the Flamenco function \"Keyboard shortcuts cheat sheet\" below to open it from the keyboard, or run flamenco keys show.")
             icon: "keyboard_keys"
             FButton {
-                text: "Show"
+                text: I18n.tr("Show")
                 variant: "tonal"
                 onClicked: {
                     Panels.settingsOpen = false;
@@ -84,11 +84,11 @@ Page {
 
     Group {
         visible: Brightness.kbdAvailable
-        title: "Backlight"
+        title: I18n.tr("Backlight")
 
         SettingRow {
-            title: "Keyboard brightness"
-            subtitle: Brightness.kbdMax <= 10 ? Brightness.kbdMax + " levels · also on the keyboard's backlight keys" : "Also on the keyboard's backlight keys"
+            title: I18n.tr("Keyboard brightness")
+            subtitle: Brightness.kbdMax <= 10 ? Brightness.kbdMax + " levels · also on the keyboard's backlight keys" : I18n.tr("Also on the keyboard's backlight keys")
             icon: Brightness.kbdLevel > 0 ? "backlight_high" : "backlight_high_off"
             FSlider {
                 width: 260
@@ -103,7 +103,7 @@ Page {
 
     // ── layout ──
     Group {
-        title: "Layout"
+        title: I18n.tr("Layout")
 
         Repeater {
             model: page.layouts
@@ -112,14 +112,14 @@ Page {
                 required property string modelData
                 required property int index
                 title: page.layoutLabel(modelData)
-                subtitle: index === 0 ? "Default layout" : ""
+                subtitle: index === 0 ? I18n.tr("Default layout") : ""
                 icon: "language"
                 Row {
                     spacing: 4
                     FDropdown {
                         implicitWidth: 220
-                        placeholder: "Variant"
-                        options: [{ value: "", label: "Default variant" }].concat(Keyboard.catalog.variants[lrow.modelData] ?? [])
+                        placeholder: I18n.tr("Variant")
+                        options: [{ value: "", label: I18n.tr("Default variant") }].concat(Keyboard.catalog.variants[lrow.modelData] ?? [])
                         current: page.variants[lrow.index]
                         onSelected: v => {
                             const vs = page.variants.slice();
@@ -149,12 +149,12 @@ Page {
         }
 
         SettingRow {
-            title: page.layouts.length ? "Add a layout" : "Layouts"
-            subtitle: page.layouts.length ? "" : "None set: niri uses the system keymap (localectl)"
+            title: page.layouts.length ? I18n.tr("Add a layout") : I18n.tr("Layouts")
+            subtitle: page.layouts.length ? "" : I18n.tr("None set: niri uses the system keymap (localectl)")
             icon: "add"
             FDropdown {
                 implicitWidth: 300
-                placeholder: "Choose a layout…"
+                placeholder: I18n.tr("Choose a layout…")
                 options: Keyboard.catalog.layouts.filter(l => !page.layouts.includes(l.value))
                 current: ""
                 onSelected: v => page.setLayouts(page.layouts.concat([v]), page.variants.concat([""]))
@@ -163,19 +163,19 @@ Page {
 
         SettingRow {
             visible: page.layouts.length > 1
-            title: "Switch layouts with"
-            subtitle: "Or click the keyboard widget in the bar, or bind niri's switch-layout"
+            title: I18n.tr("Switch layouts with")
+            subtitle: I18n.tr("Or click the keyboard widget in the bar, or bind niri's switch-layout")
             icon: "swap_horiz"
             FDropdown {
                 implicitWidth: 300
                 options: [
-                    { value: "", label: "Nothing" },
-                    { value: "grp:alt_shift_toggle", label: "Alt + Shift" },
-                    { value: "grp:ctrl_shift_toggle", label: "Ctrl + Shift" },
-                    { value: "grp:win_space_toggle", label: "Super + Space (clashes with the launcher)" },
-                    { value: "grp:alt_space_toggle", label: "Alt + Space" },
-                    { value: "grp:caps_toggle", label: "Caps Lock" },
-                    { value: "grp:shifts_toggle", label: "Both Shift keys" }
+                    { value: "", label: I18n.tr("Nothing") },
+                    { value: "grp:alt_shift_toggle", label: I18n.tr("Alt + Shift") },
+                    { value: "grp:ctrl_shift_toggle", label: I18n.tr("Ctrl + Shift") },
+                    { value: "grp:win_space_toggle", label: I18n.tr("Super + Space (clashes with the launcher)") },
+                    { value: "grp:alt_space_toggle", label: I18n.tr("Alt + Space") },
+                    { value: "grp:caps_toggle", label: I18n.tr("Caps Lock") },
+                    { value: "grp:shifts_toggle", label: I18n.tr("Both Shift keys") }
                 ]
                 current: page.optSwitch
                 onSelected: v => page.setOptions(v, page.optCaps, page.optCompose, page.optOther)
@@ -184,46 +184,46 @@ Page {
     }
 
     Group {
-        title: "Keys"
+        title: I18n.tr("Keys")
         SettingRow {
-            title: "Caps Lock"
+            title: I18n.tr("Caps Lock")
             icon: "keyboard_capslock"
             FDropdown {
                 implicitWidth: 280
                 options: [
-                    { value: "", label: "Caps Lock (default)" },
-                    { value: "caps:escape", label: "Escape" },
-                    { value: "ctrl:nocaps", label: "Ctrl" },
-                    { value: "caps:swapescape", label: "Swap with Escape" },
-                    { value: "ctrl:swapcaps", label: "Swap with Ctrl" },
-                    { value: "caps:backspace", label: "Backspace" },
-                    { value: "caps:none", label: "Disabled" }
+                    { value: "", label: I18n.tr("Caps Lock (default)") },
+                    { value: "caps:escape", label: I18n.tr("Escape") },
+                    { value: "ctrl:nocaps", label: I18n.tr("Ctrl") },
+                    { value: "caps:swapescape", label: I18n.tr("Swap with Escape") },
+                    { value: "ctrl:swapcaps", label: I18n.tr("Swap with Ctrl") },
+                    { value: "caps:backspace", label: I18n.tr("Backspace") },
+                    { value: "caps:none", label: I18n.tr("Disabled") }
                 ]
                 current: page.optCaps
                 onSelected: v => page.setOptions(page.optSwitch, v, page.optCompose, page.optOther)
             }
         }
         SettingRow {
-            title: "Compose key"
-            subtitle: "Type accents and symbols as sequences, e.g. Compose ' e → é"
+            title: I18n.tr("Compose key")
+            subtitle: I18n.tr("Type accents and symbols as sequences, e.g. Compose ' e → é")
             icon: "keyboard_option_key"
             FDropdown {
                 implicitWidth: 280
                 options: [
-                    { value: "", label: "None" },
-                    { value: "compose:ralt", label: "Right Alt" },
-                    { value: "compose:rctrl", label: "Right Ctrl" },
-                    { value: "compose:menu", label: "Menu" },
-                    { value: "compose:caps", label: "Caps Lock" },
-                    { value: "compose:rwin", label: "Right Super" }
+                    { value: "", label: I18n.tr("None") },
+                    { value: "compose:ralt", label: I18n.tr("Right Alt") },
+                    { value: "compose:rctrl", label: I18n.tr("Right Ctrl") },
+                    { value: "compose:menu", label: I18n.tr("Menu") },
+                    { value: "compose:caps", label: I18n.tr("Caps Lock") },
+                    { value: "compose:rwin", label: I18n.tr("Right Super") }
                 ]
                 current: page.optCompose
                 onSelected: v => page.setOptions(page.optSwitch, page.optCaps, v, page.optOther)
             }
         }
         SettingRow {
-            title: "Other XKB options"
-            subtitle: "Comma-separated, see `man xkeyboard-config`"
+            title: I18n.tr("Other XKB options")
+            subtitle: I18n.tr("Comma-separated, see `man xkeyboard-config`")
             icon: "tune"
             FTextField {
                 implicitWidth: 280
@@ -234,8 +234,8 @@ Page {
             }
         }
         SettingRow {
-            title: "Repeat delay"
-            subtitle: "How long to hold a key before it repeats"
+            title: I18n.tr("Repeat delay")
+            subtitle: I18n.tr("How long to hold a key before it repeats")
             icon: "timer"
             FSlider {
                 width: 260
@@ -249,7 +249,7 @@ Page {
             }
         }
         SettingRow {
-            title: "Repeat rate"
+            title: I18n.tr("Repeat rate")
             icon: "speed"
             FSlider {
                 width: 260
@@ -263,15 +263,15 @@ Page {
             }
         }
         SettingRow {
-            title: "Try it"
+            title: I18n.tr("Try it")
             icon: "edit"
             FTextField {
                 implicitWidth: 280
-                placeholder: "Hold a key here to test repeat"
+                placeholder: I18n.tr("Hold a key here to test repeat")
             }
         }
         SettingRow {
-            title: "Num Lock on at startup"
+            title: I18n.tr("Num Lock on at startup")
             icon: "pin"
             FSwitch {
                 checked: page.k.numlock
@@ -279,12 +279,12 @@ Page {
             }
         }
         SettingRow {
-            title: "Remember layout"
-            subtitle: "Per window: each window keeps the layout you last used in it"
+            title: I18n.tr("Remember layout")
+            subtitle: I18n.tr("Per window: each window keeps the layout you last used in it")
             icon: "web_asset"
             FSegmented {
                 implicitWidth: 260
-                options: [{ value: "global", label: "Everywhere" }, { value: "window", label: "Per window" }]
+                options: [{ value: "global", label: I18n.tr("Everywhere") }, { value: "window", label: I18n.tr("Per window") }]
                 current: page.k.trackLayout
                 onSelected: v => Keyboard.setInput({ trackLayout: v })
             }
@@ -293,19 +293,19 @@ Page {
 
     // ── shortcuts ──
     Group {
-        title: "Shortcuts"
+        title: I18n.tr("Shortcuts")
 
         SettingRow {
-            title: "Open the launcher with"
-            subtitle: Keyboard.norm(page.launcherKey) === "ctrl+space" ? "niri can't tell left and right Ctrl apart, so either works. Apps no longer receive Ctrl+Space (e.g. VS Code suggestions, input-method switching)." : "Or set any key in the launcher's row below"
+            title: I18n.tr("Open the launcher with")
+            subtitle: Keyboard.norm(page.launcherKey) === "ctrl+space" ? "niri can't tell left and right Ctrl apart, so either works. Apps no longer receive Ctrl+Space (e.g. VS Code suggestions, input-method switching)." : I18n.tr("Or set any key in the launcher's row below")
             icon: "apps"
             FSegmented {
                 implicitWidth: 420
                 options: [
-                    { value: "Mod+Space", label: "Super+Space" },
-                    { value: "Ctrl+Space", label: "Ctrl+Space" },
-                    { value: "Alt+Space", label: "Alt+Space" },
-                    { value: "Mod+D", label: "Super+D" }
+                    { value: I18n.tr("Mod+Space"), label: I18n.tr("Super+Space") },
+                    { value: I18n.tr("Ctrl+Space"), label: I18n.tr("Ctrl+Space") },
+                    { value: I18n.tr("Alt+Space"), label: I18n.tr("Alt+Space") },
+                    { value: I18n.tr("Mod+D"), label: I18n.tr("Super+D") }
                 ]
                 current: ["Mod+Space", "Ctrl+Space", "Alt+Space", "Mod+D"].find(o => Keyboard.norm(o) === Keyboard.norm(page.launcherKey)) ?? ""
                 onSelected: v => page.setLauncherKey(v)
@@ -313,16 +313,16 @@ Page {
         }
 
         SettingRow {
-            title: "Close windows with"
-            subtitle: Keyboard.norm(page.closeKey) === "ctrl+q" ? "Replaces Super+Q. Many apps use Ctrl+Q to quit (Firefox, file managers, editors); with this they no longer get it." : Keyboard.norm(page.closeKey) === "mod+q" ? "niri's default" : "Replaces Super+Q"
+            title: I18n.tr("Close windows with")
+            subtitle: Keyboard.norm(page.closeKey) === "ctrl+q" ? I18n.tr("Replaces Super+Q. Many apps use Ctrl+Q to quit (Firefox, file managers, editors); with this they no longer get it.") : Keyboard.norm(page.closeKey) === "mod+q" ? "niri's default" : I18n.tr("Replaces Super+Q")
             icon: "close"
             FSegmented {
                 implicitWidth: 420
                 options: [
-                    { value: "Mod+Q", label: "Super+Q" },
-                    { value: "Ctrl+Q", label: "Ctrl+Q" },
-                    { value: "Alt+F4", label: "Alt+F4" },
-                    { value: "Mod+Shift+Q", label: "Super+Shift+Q" }
+                    { value: I18n.tr("Mod+Q"), label: I18n.tr("Super+Q") },
+                    { value: I18n.tr("Ctrl+Q"), label: I18n.tr("Ctrl+Q") },
+                    { value: I18n.tr("Alt+F4"), label: I18n.tr("Alt+F4") },
+                    { value: I18n.tr("Mod+Shift+Q"), label: I18n.tr("Super+Shift+Q") }
                 ]
                 current: ["Mod+Q", "Ctrl+Q", "Alt+F4", "Mod+Shift+Q"].find(o => Keyboard.norm(o) === Keyboard.norm(page.closeKey)) ?? ""
                 onSelected: v => page.setCloseKey(v)
@@ -334,13 +334,13 @@ Page {
             Layout.margins: 12
             spacing: 8
             FButton {
-                text: "Add shortcut"
+                text: I18n.tr("Add shortcut")
                 icon: "add"
                 disabled: page.editing !== -2
                 onClicked: page.editing = -1
             }
             FButton {
-                text: page.confirmReset ? "Click again to reset" : "Reset all to defaults"
+                text: page.confirmReset ? I18n.tr("Click again to reset") : I18n.tr("Reset all to defaults")
                 icon: "restart_alt"
                 variant: page.confirmReset ? "filled" : "outlined"
                 onClicked: {
@@ -361,7 +361,7 @@ Page {
             }
             FText {
                 Layout.fillWidth: true
-                text: Keyboard.busy ? "Saving…" : Keyboard.status
+                text: Keyboard.busy ? I18n.tr("Saving…") : Keyboard.status
                 dim: true
                 elide: Text.ElideRight
                 font.pixelSize: Theme.fsSm
@@ -448,7 +448,7 @@ Page {
 
         SettingRow {
             title: Keyboard.others.length + " other niri bindings"
-            subtitle: "Window, workspace and media keys in your config. Press Mod+Shift+/ in niri to see them all."
+            subtitle: I18n.tr("Window, workspace and media keys in your config. Press Mod+Shift+/ in niri to see them all.")
             icon: "info"
         }
     }

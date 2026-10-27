@@ -9,8 +9,8 @@ import qs.Widgets
 // it by hand, and how the shell shows the time.
 Page {
     id: page
-    title: "Date & Time"
-    subtitle: "The system's clock and time zone. Changes ask for your password in a terminal (it's a system setting)."
+    title: I18n.tr("Date & Time")
+    subtitle: I18n.tr("The system's clock and time zone. Changes ask for your password in a terminal (it's a system setting).")
     readonly property var st: DateTime.st
 
     Component.onCompleted: {
@@ -32,11 +32,11 @@ Page {
             spacing: 2
             FText {
                 Layout.alignment: Qt.AlignHCenter
-                text: Qt.formatDateTime(Time.now, Time.use24h ? "HH:mm" : "h:mm AP")
+                text: I18n.locale.toString(Time.now, Time.use24h ? I18n.tr("HH:mm") : "h:mm AP")
                 font.pixelSize: Math.round(54 * Theme.scale)
                 font.weight: Font.Light
             }
-            FText { Layout.alignment: Qt.AlignHCenter; text: Qt.formatDate(Time.now, "dddd d MMMM yyyy"); dim: true }
+            FText { Layout.alignment: Qt.AlignHCenter; text: I18n.locale.toString(Time.now, "dddd d MMMM yyyy"); dim: true }
             Row {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: 6
@@ -44,7 +44,7 @@ Page {
                 Repeater {
                     model: [
                         { icon: "public", text: page.st.timezone || "Time zone unknown", on: true },
-                        { icon: page.st.synced ? "sync" : "sync_disabled", text: page.st.ntp ? (page.st.synced ? "Synced" + (page.st.server ? " with " + page.st.server : "") : "Syncing…") : "Not syncing", on: !!page.st.synced }
+                        { icon: page.st.synced ? "sync" : "sync_disabled", text: page.st.ntp ? (page.st.synced ? I18n.tr("Synced") + (page.st.server ? " with " + page.st.server : "") : I18n.tr("Syncing…")) : I18n.tr("Not syncing"), on: !!page.st.synced }
                     ]
                     Rectangle {
                         required property var modelData
@@ -68,14 +68,14 @@ Page {
     SettingRow {
         visible: DateTime.st.available === false
         title: "timedatectl isn't available"
-        subtitle: "Date & Time works with systemd (timedatectl and systemd-timesyncd)"
+        subtitle: I18n.tr("Date & Time works with systemd (timedatectl and systemd-timesyncd)")
         icon: "warning"
     }
 
     Group {
-        title: "Time zone"
+        title: I18n.tr("Time zone")
         SettingRow {
-            title: "Automatic time zone"
+            title: I18n.tr("Automatic time zone")
             subtitle: (Settings.data.datetime.autoTimezone
                 ? "Follows where you are (by your connection), checked at start and every few hours" + (DateTime.detected ? ": " + DateTime.detected : "")
                 : "Set it below") + (Settings.data.datetime.autoTimezone && !page.st.autoRule ? ". Needs a one-time password to let it change the time zone by itself" : "")
@@ -86,8 +86,8 @@ Page {
             }
         }
         SettingRow {
-            title: "Time zone"
-            subtitle: "Search, e.g. london, tokyo, new_york"
+            title: I18n.tr("Time zone")
+            subtitle: I18n.tr("Search, e.g. london, tokyo, new_york")
             icon: "public"
             enabled: !Settings.data.datetime.autoTimezone
             opacity: enabled ? 1 : 0.5
@@ -104,7 +104,7 @@ Page {
                     readonly property string q: zoneSearch.text.trim().toLowerCase().replace(/ /g, "_")
                     options: DateTime.zones.filter(z => !q || z.toLowerCase().includes(q)).slice(0, 200).map(z => ({ value: z, label: z.replace(/_/g, " ") }))
                     current: page.st.timezone ?? ""
-                    placeholder: "Choose…"
+                    placeholder: I18n.tr("Choose…")
                     onSelected: v => {
                         if (v !== page.st.timezone)
                             DateTime.setTimezone(v);
@@ -114,11 +114,11 @@ Page {
         }
         SettingRow {
             visible: !!page.st.autoRule
-            title: "Changing the time zone without a password"
-            subtitle: "Allowed for administrators at this computer (a polkit rule set up for automatic time zone). Only the time zone, nothing else"
+            title: I18n.tr("Changing the time zone without a password")
+            subtitle: I18n.tr("Allowed for administrators at this computer (a polkit rule set up for automatic time zone). Only the time zone, nothing else")
             icon: "verified_user"
             FButton {
-                text: "Remove"
+                text: I18n.tr("Remove")
                 variant: "text"
                 onClicked: DateTime.inTerminal(["auto-rule", "off"])
             }
@@ -126,10 +126,10 @@ Page {
     }
 
     Group {
-        title: "Clock"
+        title: I18n.tr("Clock")
         SettingRow {
-            title: "Set the time automatically"
-            subtitle: page.st.chrony ? "chrony keeps the time here (its own settings in /etc/chrony.conf)" : "Keeps the clock right over the network (systemd-timesyncd)"
+            title: I18n.tr("Set the time automatically")
+            subtitle: page.st.chrony ? "chrony keeps the time here (its own settings in /etc/chrony.conf)" : I18n.tr("Keeps the clock right over the network (systemd-timesyncd)")
             icon: "sync"
             FSwitch {
                 checked: !!page.st.ntp
@@ -139,8 +139,8 @@ Page {
         }
         SettingRow {
             visible: !page.st.chrony
-            title: "Time servers"
-            subtitle: page.st.customServers ? "Using yours: " + page.st.customServers : "Your distribution's (" + (page.st.server || "default") + "). Or your own: host names or IPs, space-separated"
+            title: I18n.tr("Time servers")
+            subtitle: page.st.customServers ? I18n.tr("Using yours: ") + page.st.customServers : I18n.tr("Your distribution's (") + (page.st.server || "default") + "). Or your own: host names or IPs, space-separated"
             icon: "dns"
             Row {
                 spacing: 8
@@ -152,14 +152,14 @@ Page {
                     onAccepted: DateTime.setServers(text)
                 }
                 FButton {
-                    text: "Save"
+                    text: I18n.tr("Save")
                     variant: "tonal"
                     disabled: servers.text.trim() === (page.st.customServers ?? "")
                     onClicked: DateTime.setServers(servers.text)
                 }
                 FButton {
                     visible: !!page.st.customServers
-                    text: "Default"
+                    text: I18n.tr("Default")
                     variant: "text"
                     onClicked: DateTime.setServers("")
                 }
@@ -167,19 +167,19 @@ Page {
         }
         SettingRow {
             visible: !page.st.ntp
-            title: "Set the date and time"
-            subtitle: "While automatic time is off"
+            title: I18n.tr("Set the date and time")
+            subtitle: I18n.tr("While automatic time is off")
             icon: "edit_calendar"
             Row {
                 spacing: 8
                 FTextField {
                     id: manual
                     implicitWidth: 180
-                    text: Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm")
-                    placeholder: "YYYY-MM-DD HH:MM"
+                    text: I18n.locale.toString(new Date(), "yyyy-MM-dd HH:mm")
+                    placeholder: I18n.tr("YYYY-MM-DD HH:MM")
                 }
                 FButton {
-                    text: "Set"
+                    text: I18n.tr("Set")
                     variant: "tonal"
                     disabled: !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(manual.text.trim())
                     onClicked: DateTime.setTime(manual.text.trim())
@@ -189,14 +189,14 @@ Page {
     }
 
     Group {
-        title: "Shown as"
-        SwitchRow { title: "24-hour time"; icon: "schedule"; target: Settings.data.general; key: "use24h" }
+        title: I18n.tr("Shown as")
+        SwitchRow { title: I18n.tr("24-hour time"); icon: "schedule"; target: Settings.data.general; key: "use24h" }
         SettingRow {
-            title: "The bar's clock"
-            subtitle: "Its layout, alignment and seconds are in Clock & Weather"
+            title: I18n.tr("The bar's clock")
+            subtitle: I18n.tr("Its layout, alignment and seconds are in Clock & Weather")
             icon: "toolbar"
             FButton {
-                text: "Clock & Weather"
+                text: I18n.tr("Clock & Weather")
                 variant: "text"
                 onClicked: Panels.settingsPage = "clock"
             }

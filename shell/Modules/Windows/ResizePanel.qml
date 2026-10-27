@@ -97,14 +97,14 @@ Variants {
                         }
                         FText {
                             Layout.fillWidth: true
-                            text: (panel.size ? Math.round(panel.size[0]) + " × " + Math.round(panel.size[1]) + "  ·  " : "") + (panel.floating ? "Floating" : "Tiled")
+                            text: (panel.size ? Math.round(panel.size[0]) + " × " + Math.round(panel.size[1]) + "  ·  " : "") + (panel.floating ? I18n.tr("Floating") : I18n.tr("Tiled"))
                             dim: true
                             font.pixelSize: Theme.fsSm
                             elide: Text.ElideRight
                         }
                     }
                     FButton {
-                        text: panel.floating ? "Tile it" : "Float it"
+                        text: panel.floating ? I18n.tr("Tile it") : I18n.tr("Float it")
                         variant: "tonal"
                         implicitHeight: 32
                         onClicked: Niri.toggleFloating(panel.w)
@@ -114,8 +114,8 @@ Variants {
                 // ── width and height: presets, steps, a slider ──
                 Repeater {
                     model: [
-                        { axis: "width", label: "Width", icon: "width", max: panel.modelData.width, i: 0 },
-                        { axis: "height", label: "Height", icon: "height", max: panel.modelData.height, i: 1 }
+                        { axis: "width", label: I18n.tr("Width"), icon: "width", max: panel.modelData.width, i: 0 },
+                        { axis: "height", label: I18n.tr("Height"), icon: "height", max: panel.modelData.height, i: 1 }
                     ]
                     ColumnLayout {
                         id: axisRow
@@ -134,7 +134,7 @@ Variants {
                             FIcon { icon: axisRow.modelData.icon; color: Theme.textDim }
                             FText { text: axisRow.modelData.label; Layout.preferredWidth: 56 }
                             Repeater {
-                                model: [{ t: "⅓", v: "33.333%" }, { t: "½", v: "50%" }, { t: "⅔", v: "66.667%" }, { t: "Full", v: "100%" }]
+                                model: [{ t: "⅓", v: "33.333%" }, { t: "½", v: "50%" }, { t: "⅔", v: "66.667%" }, { t: I18n.tr("Full"), v: "100%" }]
                                 FButton {
                                     required property var modelData
                                     text: modelData.t
@@ -174,8 +174,8 @@ Variants {
                     Layout.fillWidth: true
                     spacing: Theme.sp2
                     FIcon { icon: "open_with"; color: Theme.textDim }
-                    FText { text: "Place"; Layout.preferredWidth: 56 }
-                    FButton { text: "Center"; icon: "center_focus_strong"; variant: "tonal"; implicitHeight: 32; onClicked: Resize.center() }
+                    FText { text: I18n.tr("Place"); Layout.preferredWidth: 56 }
+                    FButton { text: I18n.tr("Center"); icon: "center_focus_strong"; variant: "tonal"; implicitHeight: 32; onClicked: Resize.center() }
                     Item { Layout.fillWidth: true }
                     FIconButton { icon: "arrow_back"; size: 32; onClicked: Resize.move(-40, 0) }
                     FIconButton { icon: "arrow_upward"; size: 32; onClicked: Resize.move(0, -40) }
@@ -185,7 +185,7 @@ Variants {
 
                 FText {
                     Layout.fillWidth: true
-                    text: Niri.hyprland ? "Some of these need niri; on Hyprland, Super + right-drag resizes"
+                    text: Niri.hyprland ? I18n.tr("Some of these need niri; on Hyprland, Super + right-drag resizes")
                         : "← → width · ↑ ↓ height" + (panel.floating ? " · Shift + arrows move · C centers" : "") + " · Enter or Esc when done. Super + right-drag resizes too"
                     dim: true
                     font.pixelSize: Theme.fsXs

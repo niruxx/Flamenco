@@ -285,7 +285,7 @@ Rectangle {
             FButton {
                 Layout.topMargin: 16
                 visible: Media.player?.canRaise ?? false
-                text: Media.player?.identity ?? "Player"
+                text: Media.player?.identity ?? I18n.tr("Player")
                 icon: "play_arrow"
                 onClicked: {
                     Media.player.raise();
@@ -311,8 +311,8 @@ Rectangle {
             border.color: Theme.alpha(Theme.accent, 0.3)
             FIcon { anchors.centerIn: parent; icon: "music_off"; size: 56; fill: 1; color: Theme.accent }
         }
-        FText { Layout.alignment: Qt.AlignHCenter; text: "No media"; font.pixelSize: Theme.fsXxl; font.weight: Font.Bold }
-        FText { Layout.alignment: Qt.AlignHCenter; text: "Play something in a music or video app and it shows up here"; dim: true }
+        FText { Layout.alignment: Qt.AlignHCenter; text: I18n.tr("No media"); font.pixelSize: Theme.fsXxl; font.weight: Font.Bold }
+        FText { Layout.alignment: Qt.AlignHCenter; text: I18n.tr("Play something in a music or video app and it shows up here"); dim: true }
     }
 
     // ── the visualizer, across the bottom (the shared one: Settings → Sound → Audio visualizer) ──

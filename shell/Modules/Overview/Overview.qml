@@ -144,7 +144,7 @@ Variants {
                 implicitHeight: 48
                 radius: height / 2
                 icon: "search"
-                placeholder: "Type to search apps"
+                placeholder: I18n.tr("Type to search apps")
                 fontSize: Theme.fsLg
                 onEdited: t => {
                     win.query = t;
@@ -231,7 +231,7 @@ Variants {
                 FText {
                     anchors.centerIn: parent
                     visible: windowArea.n === 0
-                    text: win.current ? "No windows on this workspace" : ""
+                    text: win.current ? I18n.tr("No windows on this workspace") : ""
                     color: "white"
                     opacity: 0.8
                     font.pixelSize: Theme.fsXl
@@ -337,7 +337,7 @@ Variants {
                 FText {
                     anchors.centerIn: parent
                     visible: appGrid.count === 0
-                    text: "No apps match “" + win.query.trim() + "”"
+                    text: I18n.tr("No apps match “") + win.query.trim() + "”"
                     color: "white"
                     opacity: 0.8
                     font.pixelSize: Theme.fsLg

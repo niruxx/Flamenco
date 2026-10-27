@@ -10,7 +10,7 @@ import qs.Widgets
 // Add one to a section below, like any other widget.
 Group {
     id: root
-    title: "Custom widgets"
+    title: I18n.tr("Custom widgets")
     readonly property var b: Settings.data.bar
     readonly property var ids: Object.keys(b.customs || {}).sort()
     property string editing: ""
@@ -39,10 +39,10 @@ Group {
     }
 
     SettingRow {
-        title: root.ids.length ? root.ids.length + (root.ids.length === 1 ? " custom widget" : " custom widgets") : "None yet"
-        subtitle: "A widget from your own command, e.g. a script that prints the weather, a countdown or a server's status. Then add it to a section below"
+        title: root.ids.length ? root.ids.length + (root.ids.length === 1 ? " custom widget" : " custom widgets") : I18n.tr("None yet")
+        subtitle: I18n.tr("A widget from your own command, e.g. a script that prints the weather, a countdown or a server's status. Then add it to a section below")
         icon: "terminal"
-        FButton { text: "New"; icon: "add"; variant: "tonal"; onClicked: root.add() }
+        FButton { text: I18n.tr("New"); icon: "add"; variant: "tonal"; onClicked: root.add() }
     }
     Repeater {
         model: root.ids
@@ -56,7 +56,7 @@ Group {
             spacing: 0
             SettingRow {
                 title: card.c.name || card.modelData
-                subtitle: (card.c.exec ? card.c.exec : "No command yet") + (card.placed ? "" : " · not in the bar yet")
+                subtitle: (card.c.exec ? card.c.exec : I18n.tr("No command yet")) + (card.placed ? "" : " · not in the bar yet")
                 icon: card.c.icon || "terminal"
                 Row {
                     spacing: 2
@@ -71,17 +71,17 @@ Group {
                 columns: 2
                 columnSpacing: Theme.sp3
                 rowSpacing: Theme.sp2
-                FText { text: "Name"; dim: true }
+                FText { text: I18n.tr("Name"); dim: true }
                 FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.name || ""; onEditingFinished: root.set(card.modelData, "name", text.trim()) }
-                FText { text: "Command"; dim: true }
-                FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.exec || ""; placeholder: "e.g. ~/bin/status.sh, or: date +%A"; onEditingFinished: root.set(card.modelData, "exec", text.trim()) }
-                FText { text: "Runs"; dim: true }
+                FText { text: I18n.tr("Command"); dim: true }
+                FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.exec || ""; placeholder: I18n.tr("e.g. ~/bin/status.sh, or: date +%A"); onEditingFinished: root.set(card.modelData, "exec", text.trim()) }
+                FText { text: I18n.tr("Runs"); dim: true }
                 RowLayout {
                     spacing: Theme.sp2
                     FSegmented {
                         implicitWidth: 300
                         implicitHeight: 34
-                        options: [{ value: false, label: "Every few seconds" }, { value: true, label: "Keeps running" }]
+                        options: [{ value: false, label: I18n.tr("Every few seconds") }, { value: true, label: I18n.tr("Keeps running") }]
                         current: card.c.watch ?? false
                         onSelected: v => root.set(card.modelData, "watch", v)
                     }
@@ -96,29 +96,29 @@ Group {
                                 root.set(card.modelData, "interval", v);
                         }
                     }
-                    FText { visible: !(card.c.watch ?? false); text: "seconds"; dim: true }
+                    FText { visible: !(card.c.watch ?? false); text: I18n.tr("seconds"); dim: true }
                 }
-                FText { text: "Icon"; dim: true }
-                FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.icon || ""; placeholder: "A Material Symbols name, or empty"; onEditingFinished: root.set(card.modelData, "icon", text.trim()) }
-                FText { text: "Click"; dim: true }
-                FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.onClick || ""; placeholder: "A command, or empty"; onEditingFinished: root.set(card.modelData, "onClick", text.trim()) }
-                FText { text: "Right-click"; dim: true }
+                FText { text: I18n.tr("Icon"); dim: true }
+                FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.icon || ""; placeholder: I18n.tr("A Material Symbols name, or empty"); onEditingFinished: root.set(card.modelData, "icon", text.trim()) }
+                FText { text: I18n.tr("Click"); dim: true }
+                FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.onClick || ""; placeholder: I18n.tr("A command, or empty"); onEditingFinished: root.set(card.modelData, "onClick", text.trim()) }
+                FText { text: I18n.tr("Right-click"); dim: true }
                 FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.onRightClick || ""; onEditingFinished: root.set(card.modelData, "onRightClick", text.trim()) }
-                FText { text: "Middle-click"; dim: true }
+                FText { text: I18n.tr("Middle-click"); dim: true }
                 FTextField { Layout.fillWidth: true; implicitHeight: 36; text: card.c.onMiddleClick || ""; onEditingFinished: root.set(card.modelData, "onMiddleClick", text.trim()) }
                 Item { width: 1; height: 1 }
                 RowLayout {
                     spacing: Theme.sp2
                     FButton {
                         visible: !card.placed
-                        text: "Add to the right section"
+                        text: I18n.tr("Add to the right section")
                         icon: "add"
                         variant: "tonal"
                         onClicked: root.b.right = (root.b.right || []).concat([card.modelData])
                     }
                     FText {
                         Layout.fillWidth: true
-                        text: "It shows the first line it prints, or JSON like {\"text\": \"…\", \"tooltip\": \"…\", \"class\": \"warning\"}"
+                        text: I18n.tr("It shows the first line it prints, or JSON like {\"text\": \"…\", \"tooltip\": \"…\", \"class\": \"warning\"}")
                         dim: true
                         font.pixelSize: Theme.fsXs
                         wrapMode: Text.Wrap

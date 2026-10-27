@@ -30,7 +30,7 @@ ColumnLayout {
         Layout.fillWidth: true
         FText {
             Layout.fillWidth: true
-            text: Qt.formatDate(root.shown, "MMMM yyyy")
+            text: I18n.locale.toString(root.shown, "MMMM yyyy")
             font.pixelSize: Theme.fsLg
             font.weight: Font.Bold
         }

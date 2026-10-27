@@ -53,7 +53,7 @@ Grid {
     }
     FText {
         visible: root.apps.length === 0
-        text: "Pin apps in the dock or launcher to see them here"
+        text: I18n.tr("Pin apps in the dock or launcher to see them here")
         dim: true
         font.pixelSize: Math.round(Theme.fsSm * root.k)
     }

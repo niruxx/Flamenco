@@ -35,7 +35,7 @@ Variants {
             RowLayout {
                 Layout.fillWidth: true
                 FIcon { icon: "sticky_note_2"; size: 24; fill: 1; color: Theme.accent }
-                FText { Layout.fillWidth: true; text: "Notepad"; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
+                FText { Layout.fillWidth: true; text: I18n.tr("Notepad"); font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
                 FIconButton {
                     icon: panel.preview ? "edit" : "visibility"
                     size: 34
@@ -76,7 +76,7 @@ Variants {
                         spacing: 2
                         FButton {
                             width: parent.width
-                            text: "New note"
+                            text: I18n.tr("New note")
                             icon: "add"
                             variant: "tonal"
                             onClicked: {
@@ -147,7 +147,7 @@ Variants {
                         }
                         FText {
                             visible: !panel.preview && editor.text === ""
-                            text: "Write something… Markdown works: # headings, **bold**, - lists"
+                            text: I18n.tr("Write something… Markdown works: # headings, **bold**, - lists")
                             dim: true
                         }
                         TextEdit {

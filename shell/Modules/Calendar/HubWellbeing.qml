@@ -45,11 +45,11 @@ Item {
                     Layout.fillWidth: true
                     ColumnLayout {
                         spacing: 0
-                        FText { text: root.weekOffset === 0 ? "This week's screen time" : "Weekly screen time"; font.pixelSize: Theme.fsLg; font.weight: Font.Medium }
+                        FText { text: root.weekOffset === 0 ? I18n.tr("This week's screen time") : I18n.tr("Weekly screen time"); font.pixelSize: Theme.fsLg; font.weight: Font.Medium }
                         Row {
                             spacing: 6
                             FText { text: Wellbeing.fmt(root.weekTotal); font.pixelSize: Theme.fsXxl; font.weight: Font.Bold; color: Theme.accent }
-                            FText { anchors.baseline: parent.children[0].baseline; text: "TOTAL"; dim: true; font.pixelSize: Theme.fsXs; font.weight: Font.Bold }
+                            FText { anchors.baseline: parent.children[0].baseline; text: I18n.tr("TOTAL"); dim: true; font.pixelSize: Theme.fsXs; font.weight: Font.Bold }
                         }
                     }
                     Item { Layout.fillWidth: true }
@@ -105,7 +105,7 @@ Item {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     anchors.top: parent.bottom
                                     anchors.topMargin: 4
-                                    text: Qt.locale().dayName((Time.firstDay + parent.index) % 7, Locale.ShortFormat)
+                                    text: I18n.locale.dayName((Time.firstDay + parent.index) % 7, Locale.ShortFormat)
                                     font.pixelSize: Theme.fsXs
                                     font.weight: parent.today ? Font.Bold : Font.Normal
                                     color: parent.today ? Theme.accent : Theme.textDim
@@ -129,10 +129,10 @@ Item {
                 spacing: Theme.sp2
                 RowLayout {
                     Layout.fillWidth: true
-                    FText { Layout.fillWidth: true; text: "Most used apps"; font.pixelSize: Theme.fsLg; font.weight: Font.Medium }
+                    FText { Layout.fillWidth: true; text: I18n.tr("Most used apps"); font.pixelSize: Theme.fsLg; font.weight: Font.Medium }
                     FSegmented {
                         implicitWidth: 240
-                        options: [{ value: "day", label: "Day" }, { value: "week", label: "Week" }, { value: "month", label: "Month" }]
+                        options: [{ value: "day", label: I18n.tr("Day") }, { value: "week", label: I18n.tr("Week") }, { value: "month", label: I18n.tr("Month") }]
                         current: root.range
                         onSelected: v => root.range = v
                     }
@@ -148,7 +148,7 @@ Item {
                         FText {
                             visible: root.apps.length === 0
                             Layout.topMargin: Theme.sp3
-                            text: Wellbeing.enabled ? "Nothing yet: time counts while you use apps" : "Screen time is off (Settings → Digital wellbeing)"
+                            text: Wellbeing.enabled ? I18n.tr("Nothing yet: time counts while you use apps") : I18n.tr("Screen time is off (Settings → Digital wellbeing)")
                             dim: true
                         }
                         Repeater {
@@ -196,7 +196,7 @@ Item {
                                     x: Theme.sp3
                                     y: 56
                                     spacing: 6
-                                    FText { anchors.verticalCenter: parent.verticalCenter; text: "Daily limit:"; dim: true; font.pixelSize: Theme.fsSm }
+                                    FText { anchors.verticalCenter: parent.verticalCenter; text: I18n.tr("Daily limit:"); dim: true; font.pixelSize: Theme.fsSm }
                                     Repeater {
                                         model: [{ m: 0, l: "None" }, { m: 30, l: "30m" }, { m: 60, l: "1h" }, { m: 120, l: "2h" }, { m: 240, l: "4h" }]
                                         FButton {

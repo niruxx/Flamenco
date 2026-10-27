@@ -61,7 +61,7 @@ Variants {
                 FIcon { icon: "keyboard"; size: 26; fill: 1; color: Theme.accent }
                 FText {
                     Layout.fillWidth: true
-                    text: "Keyboard shortcuts"
+                    text: I18n.tr("Keyboard shortcuts")
                     font.pixelSize: Theme.fsXl
                     font.weight: Font.Bold
                 }
@@ -70,7 +70,7 @@ Variants {
                     implicitWidth: 260
                     implicitHeight: 38
                     icon: "search"
-                    placeholder: "Filter"
+                    placeholder: I18n.tr("Filter")
                     onEdited: t => panel.filter = t
                 }
                 FIconButton {
@@ -82,7 +82,7 @@ Variants {
 
             FText {
                 visible: panel.groups.length === 0
-                text: loader.running ? "Reading your bindings…" : "Nothing matches"
+                text: loader.running ? I18n.tr("Reading your bindings…") : I18n.tr("Nothing matches")
                 dim: true
             }
 

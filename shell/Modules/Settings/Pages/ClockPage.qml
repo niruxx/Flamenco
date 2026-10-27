@@ -6,20 +6,20 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Clock & Weather"
-    subtitle: "Also controls the dashboard that opens from the bar clock."
+    title: I18n.tr("Clock & Weather")
+    subtitle: I18n.tr("Also controls the dashboard that opens from the bar clock.")
     readonly property var w: Settings.data.weather
     readonly property var d: Settings.data.dashboard
 
     Group {
-        title: "Clock"
-        SwitchRow { title: "24-hour time"; icon: "schedule"; target: Settings.data.general; key: "use24h" }
-        SwitchRow { title: "Show seconds"; icon: "timer"; target: Settings.data.general; key: "showSeconds" }
+        title: I18n.tr("Clock")
+        SwitchRow { title: I18n.tr("24-hour time"); icon: "schedule"; target: Settings.data.general; key: "use24h" }
+        SwitchRow { title: I18n.tr("Show seconds"); icon: "timer"; target: Settings.data.general; key: "showSeconds" }
     }
 
     Group {
         id: barClock
-        title: "Bar clock"
+        title: I18n.tr("Bar clock")
         readonly property var b: Settings.data.bar
         // which bar section has the clock (the shared layout), and where in it
         readonly property string side: ["left", "center", "right"].find(k => (b[k] || []).includes("clock")) ?? ""
@@ -42,39 +42,39 @@ Page {
         }
 
         ChoiceRow {
-            title: "Layout"
-            subtitle: "On a vertical bar it's always hours over minutes"
+            title: I18n.tr("Layout")
+            subtitle: I18n.tr("On a vertical bar it's always hours over minutes")
             icon: "schedule"
             target: barClock.b
             key: "clockLayout"
             segWidth: 120
-            options: [{ value: "inline", label: "Time • date" }, { value: "stacked", label: "Time over date" }, { value: "time", label: "Time only" }]
+            options: [{ value: "inline", label: I18n.tr("Time • date") }, { value: "stacked", label: I18n.tr("Time over date") }, { value: "time", label: I18n.tr("Time only") }]
         }
         ChoiceRow {
             visible: barClock.b.clockLayout === "stacked"
-            title: "Line alignment"
-            subtitle: "How the time and the date line up"
+            title: I18n.tr("Line alignment")
+            subtitle: I18n.tr("How the time and the date line up")
             icon: "format_align_center"
             target: barClock.b
             key: "clockAlign"
-            options: [{ value: "left", label: "Left", icon: "format_align_left" }, { value: "center", label: "Center", icon: "format_align_center" }, { value: "right", label: "Right", icon: "format_align_right" }]
+            options: [{ value: "left", label: I18n.tr("Left"), icon: "format_align_left" }, { value: "center", label: I18n.tr("Center"), icon: "format_align_center" }, { value: "right", label: I18n.tr("Right"), icon: "format_align_right" }]
         }
         SettingRow {
-            title: "Position"
-            subtitle: barClock.side === "" ? "The clock isn't in the bar: pick a side to add it" : "Where in the bar it sits (the shared layout; Bar settings has the rest)"
+            title: I18n.tr("Position")
+            subtitle: barClock.side === "" ? I18n.tr("The clock isn't in the bar: pick a side to add it") : I18n.tr("Where in the bar it sits (the shared layout; Bar settings has the rest)")
             icon: "align_horizontal_center"
             Row {
                 spacing: 8
                 FSegmented {
                     implicitWidth: 270
-                    options: [{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }]
+                    options: [{ value: "left", label: I18n.tr("Left") }, { value: "center", label: I18n.tr("Center") }, { value: "right", label: I18n.tr("Right") }]
                     current: barClock.side
                     onSelected: v => barClock.moveTo(v, barClock.place || (v === "left" ? "start" : "end"))
                 }
                 FSegmented {
                     visible: barClock.side !== ""
                     implicitWidth: 180
-                    options: [{ value: "start", label: "First" }, { value: "end", label: "Last" }]
+                    options: [{ value: "start", label: I18n.tr("First") }, { value: "end", label: I18n.tr("Last") }]
                     current: barClock.place
                     onSelected: v => barClock.moveTo(barClock.side, v)
                 }
@@ -84,14 +84,14 @@ Page {
 
     Group {
         id: cals
-        title: "Calendars"
+        title: I18n.tr("Calendars")
         readonly property var list: Settings.data.calendar.sources || []
         SettingRow {
-            title: "Online accounts"
-            subtitle: "Sign in to iCloud, Nextcloud, Fastmail or any CalDAV server, or add Google and Outlook calendars"
+            title: I18n.tr("Online accounts")
+            subtitle: I18n.tr("Sign in to iCloud, Nextcloud, Fastmail or any CalDAV server, or add Google and Outlook calendars")
             icon: "cloud_sync"
             FButton {
-                text: "Online Accounts"
+                text: I18n.tr("Online Accounts")
                 variant: "tonal"
                 onClicked: Panels.settingsPage = "accounts"
             }
@@ -101,8 +101,8 @@ Page {
         }
 
         SettingRow {
-            title: cals.list.length ? cals.list.length + (cals.list.length === 1 ? " calendar" : " calendars") + " in the calendar panel" : "Events in the calendar panel"
-            subtitle: "An ICS link (Google: Settings → your calendar → Secret address in iCal format; Outlook: Publish calendar → ICS), an .ics file, or a folder of .ics files (vdirsyncer / khal, for CalDAV)."
+            title: cals.list.length ? cals.list.length + (cals.list.length === 1 ? " calendar" : " calendars") + " in the calendar panel" : I18n.tr("Events in the calendar panel")
+            subtitle: I18n.tr("An ICS link (Google: Settings → your calendar → Secret address in iCal format; Outlook: Publish calendar → ICS), an .ics file, or a folder of .ics files (vdirsyncer / khal, for CalDAV).")
             icon: "event"
             FIconButton {
                 icon: Events.loading ? "progress_activity" : "refresh"
@@ -140,14 +140,14 @@ Page {
             }
         }
         SettingRow {
-            title: "Add a calendar"
+            title: I18n.tr("Add a calendar")
             icon: "add"
             Row {
                 spacing: 8
-                FTextField { id: calName; implicitWidth: 130; placeholder: "Name" }
-                FTextField { id: calUrl; implicitWidth: 260; placeholder: "https://…/basic.ics  or  ~/.calendars/work" }
+                FTextField { id: calName; implicitWidth: 130; placeholder: I18n.tr("Name") }
+                FTextField { id: calUrl; implicitWidth: 260; placeholder: I18n.tr("https://…/basic.ics  or  ~/.calendars/work") }
                 FButton {
-                    text: "Add"
+                    text: I18n.tr("Add")
                     disabled: calUrl.text.trim() === ""
                     onClicked: {
                         const colors = [Theme.palette.accent, Theme.palette.accent2, Theme.palette.accent3, Theme.palette.success, Theme.palette.warning];
@@ -162,50 +162,50 @@ Page {
     }
 
     Group {
-        title: "Dashboard"
+        title: I18n.tr("Dashboard")
         ChoiceRow {
-            title: "Dashboard layout"
-            subtitle: page.d.style === "tabs" ? "Compact, with tabs along the top" : "Wide, with a rail on the left: Home (toggles, sliders, media, weather, system), Media, Calendar, Weather, Wallpaper"
+            title: I18n.tr("Dashboard layout")
+            subtitle: page.d.style === "tabs" ? I18n.tr("Compact, with tabs along the top") : I18n.tr("Wide, with a rail on the left: Home (toggles, sliders, media, weather, system), Media, Calendar, Weather, Wallpaper")
             icon: "space_dashboard"
             target: page.d
             key: "style"
             segWidth: 110
-            options: [{ value: "hub", label: "Hub", icon: "view_quilt" }, { value: "tabs", label: "Tabs", icon: "tab" }]
+            options: [{ value: "hub", label: I18n.tr("Hub"), icon: "view_quilt" }, { value: "tabs", label: I18n.tr("Tabs"), icon: "tab" }]
         }
         DropdownRow {
             visible: page.d.style === "tabs"
-            title: "Opens on"
-            subtitle: "Tab shown when you click the bar clock"
+            title: I18n.tr("Opens on")
+            subtitle: I18n.tr("Tab shown when you click the bar clock")
             icon: "dashboard"
             target: page.d
             key: "defaultTab"
-            options: [{ value: "overview", label: "Overview" }, { value: "media", label: "Media" }, { value: "wallpapers", label: "Wallpapers" }, { value: "weather", label: "Weather" }]
+            options: [{ value: "overview", label: I18n.tr("Overview") }, { value: "media", label: I18n.tr("Media") }, { value: "wallpapers", label: I18n.tr("Wallpapers") }, { value: "weather", label: I18n.tr("Weather") }]
         }
-        SwitchRow { visible: page.d.style === "tabs"; title: "User card"; subtitle: "Avatar, name and uptime on the Overview tab"; icon: "account_circle"; target: page.d; key: "showUser" }
-        SwitchRow { visible: page.d.style === "tabs"; title: "Media card"; subtitle: "Now playing on the Overview tab"; icon: "music_note"; target: page.d; key: "showMedia" }
-        SwitchRow { visible: page.d.style === "tabs"; title: "Weather card"; subtitle: "Current weather on the Overview tab"; icon: "partly_cloudy_day"; target: page.w; key: "showInOverview" }
+        SwitchRow { visible: page.d.style === "tabs"; title: I18n.tr("User card"); subtitle: I18n.tr("Avatar, name and uptime on the Overview tab"); icon: "account_circle"; target: page.d; key: "showUser" }
+        SwitchRow { visible: page.d.style === "tabs"; title: I18n.tr("Media card"); subtitle: I18n.tr("Now playing on the Overview tab"); icon: "music_note"; target: page.d; key: "showMedia" }
+        SwitchRow { visible: page.d.style === "tabs"; title: I18n.tr("Weather card"); subtitle: I18n.tr("Current weather on the Overview tab"); icon: "partly_cloudy_day"; target: page.w; key: "showInOverview" }
     }
 
     Group {
-        title: "Weather"
-        SwitchRow { title: "Enable weather"; subtitle: "Data from open-meteo.com, no account needed"; icon: "partly_cloudy_day"; target: page.w; key: "enabled" }
-        TextRow { title: "Location"; subtitle: "City name, press Enter to look it up"; icon: "location_on"; target: page.w; key: "city"; placeholder: "Seville" }
+        title: I18n.tr("Weather")
+        SwitchRow { title: I18n.tr("Enable weather"); subtitle: I18n.tr("Data from open-meteo.com, no account needed"); icon: "partly_cloudy_day"; target: page.w; key: "enabled" }
+        TextRow { title: I18n.tr("Location"); subtitle: I18n.tr("City name, press Enter to look it up"); icon: "location_on"; target: page.w; key: "city"; placeholder: I18n.tr("Seville") }
         SettingRow {
             visible: Weather.ready
             title: Weather.place + ": " + Math.round(Weather.temp) + Weather.unit + ", " + Weather.description
             icon: Weather.icon
             FIconButton { icon: "refresh"; onClicked: Weather.refresh() }
         }
-        ChoiceRow { title: "Units"; icon: "thermostat"; target: page.w; key: "fahrenheit"; options: [{ value: false, label: "°C, km/h" }, { value: true, label: "°F, mph" }]; segWidth: 110 }
-        SliderRow { title: "Forecast days"; icon: "date_range"; target: page.w; key: "forecastDays"; from: 1; to: 7; stepSize: 1; suffix: " days" }
+        ChoiceRow { title: I18n.tr("Units"); icon: "thermostat"; target: page.w; key: "fahrenheit"; options: [{ value: false, label: I18n.tr("°C, km/h") }, { value: true, label: I18n.tr("°F, mph") }]; segWidth: 110 }
+        SliderRow { title: I18n.tr("Forecast days"); icon: "date_range"; target: page.w; key: "forecastDays"; from: 1; to: 7; stepSize: 1; suffix: " days" }
     }
 
     Group {
-        title: "Weather details"
-        SwitchRow { title: "Feels like"; icon: "accessibility_new"; target: page.w; key: "showFeelsLike" }
-        SwitchRow { title: "Wind"; icon: "air"; target: page.w; key: "showWind" }
-        SwitchRow { title: "Humidity"; icon: "humidity_percentage"; target: page.w; key: "showHumidity" }
-        SwitchRow { title: "Sunrise & sunset"; icon: "wb_twilight"; target: page.w; key: "showSunTimes" }
-        SwitchRow { title: "Next 12 hours"; icon: "schedule"; target: page.w; key: "showHourly" }
+        title: I18n.tr("Weather details")
+        SwitchRow { title: I18n.tr("Feels like"); icon: "accessibility_new"; target: page.w; key: "showFeelsLike" }
+        SwitchRow { title: I18n.tr("Wind"); icon: "air"; target: page.w; key: "showWind" }
+        SwitchRow { title: I18n.tr("Humidity"); icon: "humidity_percentage"; target: page.w; key: "showHumidity" }
+        SwitchRow { title: I18n.tr("Sunrise & sunset"); icon: "wb_twilight"; target: page.w; key: "showSunTimes" }
+        SwitchRow { title: I18n.tr("Next 12 hours"); icon: "schedule"; target: page.w; key: "showHourly" }
     }
 }

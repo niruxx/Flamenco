@@ -14,8 +14,8 @@ import qs.Widgets
 // Remove takes away only that.
 Page {
     id: page
-    title: "Get themes"
-    subtitle: "Find icon and cursor themes, GTK themes, color schemes and wallpapers on the KDE Store, and fonts on Fontsource. They install into your home folder only."
+    title: I18n.tr("Get themes")
+    subtitle: I18n.tr("Find icon and cursor themes, GTK themes, color schemes and wallpapers on the KDE Store, and fonts on Fontsource. They install into your home folder only.")
 
     property string kind: "icons"
     property string query: ""
@@ -35,13 +35,13 @@ Page {
 
     readonly property bool fonts: kind === "fonts"
     readonly property var kinds: [
-        { value: "icons", label: "Icons", icon: "category" },
-        { value: "cursors", label: "Cursors", icon: "arrow_selector_tool" },
-        { value: "gtk", label: "GTK", icon: "web_asset" },
-        { value: "colors", label: "Colors", icon: "palette" },
-        { value: "wallpapers", label: "Wallpapers", icon: "wallpaper" },
-        { value: "fonts", label: "Fonts", icon: "font_download" },
-        { value: "palettes", label: "Palettes", icon: "palette" }
+        { value: "icons", label: I18n.tr("Icons"), icon: "category" },
+        { value: "cursors", label: I18n.tr("Cursors"), icon: "arrow_selector_tool" },
+        { value: "gtk", label: I18n.tr("GTK"), icon: "web_asset" },
+        { value: "colors", label: I18n.tr("Colors"), icon: "palette" },
+        { value: "wallpapers", label: I18n.tr("Wallpapers"), icon: "wallpaper" },
+        { value: "fonts", label: I18n.tr("Fonts"), icon: "font_download" },
+        { value: "palettes", label: I18n.tr("Palettes"), icon: "palette" }
     ]
     readonly property string source: fonts ? "Fontsource (fontsource.org)" : kind === "palettes" ? "the DMS theme registry" : "the KDE Store (store.kde.org)"
 
@@ -142,7 +142,7 @@ Page {
             id: field
             Layout.fillWidth: true
             icon: "search"
-            placeholder: "Search " + (page.kinds.find(k => k.value === page.kind)?.label ?? "").toLowerCase() + " on " + page.source
+            placeholder: I18n.tr("Search ") + (page.kinds.find(k => k.value === page.kind)?.label ?? "").toLowerCase() + " on " + page.source
             onAccepted: {
                 page.query = text.trim();
                 page.search(false);
@@ -151,14 +151,14 @@ Page {
         FDropdown {
             implicitWidth: 170
             visible: !page.fonts && page.kind !== "palettes"
-            options: [{ value: "rating", label: "Best rated" }, { value: "downloads", label: "Most downloaded" }, { value: "new", label: "Newest" }]
+            options: [{ value: "rating", label: I18n.tr("Best rated") }, { value: "downloads", label: I18n.tr("Most downloaded") }, { value: "new", label: I18n.tr("Newest") }]
             current: page.sort
             onSelected: v => page.sort = v
         }
         FDropdown {
             implicitWidth: 170
             visible: page.fonts
-            options: [{ value: "all", label: "All fonts" }, { value: "sans-serif", label: "Sans serif" }, { value: "serif", label: "Serif" }, { value: "monospace", label: "Monospace" }, { value: "display", label: "Display" }, { value: "handwriting", label: "Handwriting" }]
+            options: [{ value: "all", label: I18n.tr("All fonts") }, { value: "sans-serif", label: I18n.tr("Sans serif") }, { value: "serif", label: I18n.tr("Serif") }, { value: "monospace", label: I18n.tr("Monospace") }, { value: "display", label: I18n.tr("Display") }, { value: "handwriting", label: I18n.tr("Handwriting") }]
             current: page.category
             onSelected: v => page.category = v
         }
@@ -255,7 +255,7 @@ Page {
                                 visible: page.fonts
                                 anchors.fill: parent
                                 anchors.margins: Theme.sp3
-                                text: "Aa Bb Cc 123\nThe quick brown fox"
+                                text: I18n.tr("Aa Bb Cc 123\nThe quick brown fox")
                                 font.family: card.r.installed ? card.r.name : Theme.fontFamily
                                 font.pixelSize: Theme.fsLg
                                 wrapMode: Text.Wrap
@@ -276,7 +276,7 @@ Page {
                                 FText {
                                     id: tag
                                     anchors.centerIn: parent
-                                    text: card.current ? "In use" : "Installed"
+                                    text: card.current ? I18n.tr("In use") : I18n.tr("Installed")
                                     font.pixelSize: Theme.fsXs
                                     font.weight: Font.DemiBold
                                     color: card.current ? Theme.onAccent : Theme.text
@@ -314,7 +314,7 @@ Page {
                             Layout.fillWidth: true
                             implicitHeight: 34
                             visible: !card.r.installed && (card.r.files || []).length > 1
-                            options: [{ value: 0, label: "Best match" }].concat((card.r.files || []).map(f => ({ value: f.n, label: f.name + (f.size ? "  (" + Math.max(1, Math.round(f.size / 1048576)) + " MB)" : "") })))
+                            options: [{ value: 0, label: I18n.tr("Best match") }].concat((card.r.files || []).map(f => ({ value: f.n, label: f.name + (f.size ? "  (" + Math.max(1, Math.round(f.size / 1048576)) + " MB)" : "") })))
                             current: page.chosen[card.r.id] ?? 0
                             onSelected: v => {
                                 const c = Object.assign({}, page.chosen);
@@ -327,20 +327,20 @@ Page {
                             spacing: Theme.sp1
                             FButton {
                                 visible: !card.r.installed || card.doing !== ""
-                                text: card.doing === "install" ? "Installing…" : card.doing === "remove" ? "Removing…" : "Install"
+                                text: card.doing === "install" ? I18n.tr("Installing…") : card.doing === "remove" ? I18n.tr("Removing…") : I18n.tr("Install")
                                 icon: card.doing === "" ? "download" : ""
                                 disabled: card.doing !== ""
                                 onClicked: page.install(card.r)
                             }
                             FButton {
                                 visible: card.doing === "" && page.usable(card.r) && !card.current
-                                text: "Use"
+                                text: I18n.tr("Use")
                                 icon: "check"
                                 onClicked: page.use(card.r)
                             }
                             FButton {
                                 visible: card.doing === "" && card.r.ours
-                                text: "Remove"
+                                text: I18n.tr("Remove")
                                 variant: "text"
                                 onClicked: page.uninstall(card.r)
                             }
@@ -354,7 +354,7 @@ Page {
                         FText {
                             Layout.fillWidth: true
                             visible: page.kind === "colors" && card.r.installed
-                            text: "For KDE apps: choose it in System Settings → Colors, or in an app's color settings"
+                            text: I18n.tr("For KDE apps: choose it in System Settings → Colors, or in an app's color settings")
                             dim: true
                             font.pixelSize: Theme.fsXs
                             wrapMode: Text.Wrap
@@ -378,21 +378,21 @@ Page {
         }
         FText {
             Layout.alignment: Qt.AlignHCenter
-            text: page.loading ? "Searching " + page.source + "…" : page.error !== "" ? "Couldn't reach " + page.source : "Nothing found"
+            text: page.loading ? I18n.tr("Searching ") + page.source + "…" : page.error !== "" ? I18n.tr("Couldn't reach ") + page.source : I18n.tr("Nothing found")
             dim: true
         }
     }
     FButton {
         Layout.alignment: Qt.AlignHCenter
         visible: page.more && !page.loading
-        text: "Show more"
+        text: I18n.tr("Show more")
         icon: "expand_more"
         variant: "tonal"
         onClicked: page.search(true)
     }
     FText {
         Layout.fillWidth: true
-        text: "Themes made by the community: look at what you install. Icon and cursor themes go to ~/.local/share/icons, GTK themes to ~/.local/share/themes, color schemes to ~/.local/share/color-schemes, fonts to ~/.local/share/fonts/flamenco and wallpapers to kde-store in your wallpaper folder."
+        text: I18n.tr("Themes made by the community: look at what you install. Icon and cursor themes go to ~/.local/share/icons, GTK themes to ~/.local/share/themes, color schemes to ~/.local/share/color-schemes, fonts to ~/.local/share/fonts/flamenco and wallpapers to kde-store in your wallpaper folder.")
         dim: true
         font.pixelSize: Theme.fsXs
         wrapMode: Text.Wrap

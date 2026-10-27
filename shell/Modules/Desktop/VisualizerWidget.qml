@@ -28,7 +28,7 @@ ColumnLayout {
     }
     FText {
         Layout.alignment: Qt.AlignHCenter
-        text: Media.active ? (Media.title || "Playing") + (Media.artist ? " · " + Media.artist : "") : "Nothing playing"
+        text: Media.active ? (Media.title || "Playing") + (Media.artist ? " · " + Media.artist : "") : I18n.tr("Nothing playing")
         dim: !Media.active
         font.pixelSize: Math.round(Theme.fsSm * root.k)
         elide: Text.ElideRight

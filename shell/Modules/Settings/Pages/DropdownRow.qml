@@ -1,4 +1,5 @@
 import QtQuick
+import qs.Commons
 import qs.Widgets
 
 SettingRow {
@@ -6,7 +7,7 @@ SettingRow {
     property var target
     property string key
     property var options: []
-    property string placeholder: "Select…"
+    property string placeholder: I18n.tr("Select…")
     signal edited
     FDropdown {
         implicitWidth: 280

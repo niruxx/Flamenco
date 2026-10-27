@@ -83,10 +83,10 @@ Item {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: -2
-                        FText { text: Qt.formatDate(root.shown, "MMMM"); font.pixelSize: 30; font.weight: Font.Bold }
-                        FText { text: Qt.formatDate(root.shown, "yyyy"); color: Theme.accent; font.weight: Font.Bold }
+                        FText { text: I18n.locale.toString(root.shown, "MMMM"); font.pixelSize: 30; font.weight: Font.Bold }
+                        FText { text: I18n.locale.toString(root.shown, "yyyy"); color: Theme.accent; font.weight: Font.Bold }
                     }
-                    FButton { visible: root.monthOffset !== 0 || !root.isToday; text: "Today"; icon: "today"; variant: "tonal"; onClicked: root.goToday() }
+                    FButton { visible: root.monthOffset !== 0 || !root.isToday; text: I18n.tr("Today"); icon: "today"; variant: "tonal"; onClicked: root.goToday() }
                     FIconButton { icon: "chevron_left"; size: 38; flat: false; onClicked: root.monthOffset-- }
                     FIconButton { icon: "chevron_right"; size: 38; flat: false; onClicked: root.monthOffset++ }
                 }
@@ -238,15 +238,15 @@ Item {
                             Column {
                                 anchors.centerIn: parent
                                 spacing: -4
-                                FText { anchors.horizontalCenter: parent.horizontalCenter; text: Qt.formatDate(root.selected, "d"); font.pixelSize: 26; font.weight: Font.Bold; color: Theme.onAccent }
-                                FText { anchors.horizontalCenter: parent.horizontalCenter; text: Qt.formatDate(root.selected, "MMM").toUpperCase(); font.pixelSize: Theme.fsXs; font.weight: Font.Bold; color: Theme.onAccent }
+                                FText { anchors.horizontalCenter: parent.horizontalCenter; text: I18n.locale.toString(root.selected, "d"); font.pixelSize: 26; font.weight: Font.Bold; color: Theme.onAccent }
+                                FText { anchors.horizontalCenter: parent.horizontalCenter; text: I18n.locale.toString(root.selected, "MMM").toUpperCase(); font.pixelSize: Theme.fsXs; font.weight: Font.Bold; color: Theme.onAccent }
                             }
                         }
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 0
-                            FText { text: root.isToday ? "Today" : Qt.formatDate(root.selected, "dddd"); font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
-                            FText { text: root.day.length ? root.day.length + (root.day.length === 1 ? " event" : " events") : "Nothing planned"; dim: true; font.pixelSize: Theme.fsSm }
+                            FText { text: root.isToday ? I18n.tr("Today") : I18n.locale.toString(root.selected, "dddd"); font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
+                            FText { text: root.day.length ? root.day.length + (root.day.length === 1 ? " event" : " events") : I18n.tr("Nothing planned"); dim: true; font.pixelSize: Theme.fsSm }
                         }
                     }
 
@@ -289,7 +289,7 @@ Item {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.Wrap
                                 dim: true
-                                text: Settings.data.calendar.sources.length ? "A free day" : "No calendars yet. Add one in Settings → Clock & Weather → Calendars."
+                                text: Settings.data.calendar.sources.length ? I18n.tr("A free day") : I18n.tr("No calendars yet. Add one in Settings → Clock & Weather → Calendars.")
                             }
                         }
                     }
@@ -308,14 +308,14 @@ Item {
                     anchors.top: parent.top
                     anchors.margins: 14
                     spacing: 6
-                    FText { text: "Coming up"; font.weight: Font.Bold }
+                    FText { text: I18n.tr("Coming up"); font.weight: Font.Bold }
                     Repeater {
                         model: root.upcoming
                         RowLayout {
                             required property var modelData
                             Layout.fillWidth: true
                             spacing: 10
-                            FText { Layout.preferredWidth: 64; text: Qt.formatDate(modelData.day, "ddd d"); color: Theme.accent; font.weight: Font.Bold; font.pixelSize: Theme.fsSm }
+                            FText { Layout.preferredWidth: 64; text: I18n.locale.toString(modelData.day, "ddd d"); color: Theme.accent; font.weight: Font.Bold; font.pixelSize: Theme.fsSm }
                             Rectangle { width: 8; height: 8; radius: 4; color: modelData.color || Theme.accent }
                             FText { Layout.fillWidth: true; text: modelData.title; elide: Text.ElideRight; font.pixelSize: Theme.fsSm }
                             FText { text: Events.timeOf(modelData); dim: true; font.pixelSize: Theme.fsXs }

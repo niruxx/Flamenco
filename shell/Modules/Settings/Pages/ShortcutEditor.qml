@@ -51,7 +51,7 @@ Rectangle {
         spacing: Theme.sp3
 
         FText {
-            text: root.initial.key ? "Edit shortcut" : "New shortcut"
+            text: root.initial.key ? I18n.tr("Edit shortcut") : I18n.tr("New shortcut")
             font.pixelSize: Theme.fsLg
             font.weight: Font.Bold
         }
@@ -60,7 +60,7 @@ Rectangle {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
-            FText { text: "Keys"; dim: true; font.pixelSize: Theme.fsSm }
+            FText { text: I18n.tr("Keys"); dim: true; font.pixelSize: Theme.fsSm }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
@@ -86,13 +86,13 @@ Rectangle {
                 wrapMode: Text.Wrap
                 font.pixelSize: Theme.fsSm
                 color: root.duplicate || (root.key && !root.validKey) ? Theme.error : Theme.warning
-                text: root.key && !root.validKey ? "Use niri key names joined by +, e.g. Mod+Shift+S, Ctrl+Alt+T, XF86AudioPlay"
+                text: root.key && !root.validKey ? I18n.tr("Use niri key names joined by +, e.g. Mod+Shift+S, Ctrl+Alt+T, XF86AudioPlay")
                     : root.duplicate ? "Another Flamenco shortcut already uses " + root.key
                     : root.conflict ? "Replaces your niri binding: " + root.conflict + " (it's commented out, not deleted)" : ""
             }
             FText {
                 Layout.fillWidth: true
-                text: "Mod is Super (the Windows key). Combinations niri already uses won't reach this window, so type those instead."
+                text: I18n.tr("Mod is Super (the Windows key). Combinations niri already uses won't reach this window, so type those instead.")
                 dim: true
                 wrapMode: Text.Wrap
                 font.pixelSize: Theme.fsXs
@@ -103,15 +103,15 @@ Rectangle {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 6
-            FText { text: "Does"; dim: true; font.pixelSize: Theme.fsSm }
+            FText { text: I18n.tr("Does"); dim: true; font.pixelSize: Theme.fsSm }
             FSegmented {
                 Layout.fillWidth: true
                 options: [
-                    { value: "flamenco", label: "Shell function", icon: "local_fire_department" },
-                    { value: "app", label: "Open app", icon: "apps" },
-                    { value: "command", label: "Run command", icon: "terminal" },
-                    { value: "niri", label: "niri action", icon: "view_column" },
-                    { value: "none", label: "Disable key", icon: "block" }
+                    { value: "flamenco", label: I18n.tr("Shell function"), icon: "local_fire_department" },
+                    { value: "app", label: I18n.tr("Open app"), icon: "apps" },
+                    { value: "command", label: I18n.tr("Run command"), icon: "terminal" },
+                    { value: "niri", label: I18n.tr("niri action"), icon: "view_column" },
+                    { value: "none", label: I18n.tr("Disable key"), icon: "block" }
                 ]
                 current: root.type
                 onSelected: v => {
@@ -135,7 +135,7 @@ Rectangle {
             FDropdown {
                 visible: root.type === "app"
                 Layout.fillWidth: true
-                placeholder: "Choose an app…"
+                placeholder: I18n.tr("Choose an app…")
                 options: Apps.all.map(e => ({ value: e.id, label: e.name }))
                 current: root.value
                 onSelected: v => root.value = v
@@ -153,7 +153,7 @@ Rectangle {
             FText {
                 visible: root.type === "none"
                 Layout.fillWidth: true
-                text: "The key will do nothing. Use this to switch off a niri binding you don't want; your original line is commented out and comes back if you delete this."
+                text: I18n.tr("The key will do nothing. Use this to switch off a niri binding you don't want; your original line is commented out and comes back if you delete this.")
                 dim: true
                 wrapMode: Text.Wrap
             }
@@ -164,7 +164,7 @@ Rectangle {
                 spacing: 8
                 FDropdown {
                     Layout.preferredWidth: 260
-                    placeholder: "Common actions"
+                    placeholder: I18n.tr("Common actions")
                     options: Keyboard.niriActions
                     current: root.value
                     onSelected: v => {
@@ -190,11 +190,11 @@ Rectangle {
             FTextField {
                 Layout.fillWidth: true
                 icon: "label"
-                placeholder: "Name in niri's hotkey overlay (optional)"
+                placeholder: I18n.tr("Name in niri's hotkey overlay (optional)")
                 text: root.title
                 onEdited: t => root.title = t
             }
-            FText { visible: root.type !== "niri"; text: "Works when locked"; dim: true; font.pixelSize: Theme.fsSm }
+            FText { visible: root.type !== "niri"; text: I18n.tr("Works when locked"); dim: true; font.pixelSize: Theme.fsSm }
             FSwitch {
                 visible: root.type !== "niri"
                 checked: root.locked
@@ -206,12 +206,12 @@ Rectangle {
             Layout.alignment: Qt.AlignRight
             spacing: 8
             FButton {
-                text: "Cancel"
+                text: I18n.tr("Cancel")
                 variant: "outlined"
                 onClicked: root.cancel()
             }
             FButton {
-                text: "Save shortcut"
+                text: I18n.tr("Save shortcut")
                 icon: "check"
                 disabled: !root.valid
                 onClicked: root.save({ key: root.key, type: root.type, value: root.value.trim(), title: root.title.trim(), locked: root.type !== "niri" && root.locked })

@@ -10,8 +10,8 @@ import qs.Widgets
 // applied together in a terminal with one sudo prompt.
 Page {
     id: page
-    title: "Firewall"
-    subtitle: "Detects ufw or firewalld. Changes are collected below and applied together; that step asks for your password in a terminal."
+    title: I18n.tr("Firewall")
+    subtitle: I18n.tr("Detects ufw or firewalld. Changes are collected below and applied together; that step asks for your password in a terminal.")
 
     property var st: ({ backend: "", conflict: false, ufw: { installed: false }, firewalld: { installed: false } })
     property bool loaded: false
@@ -104,36 +104,36 @@ Page {
             }
             RowLayout {
                 spacing: 8
-                FButton { text: "Apply"; icon: "admin_panel_settings"; disabled: runner.running; onClicked: page.apply() }
-                FButton { text: "Discard"; variant: "outlined"; onClicked: page.ops = [] }
+                FButton { text: I18n.tr("Apply"); icon: "admin_panel_settings"; disabled: runner.running; onClicked: page.apply() }
+                FButton { text: I18n.tr("Discard"); variant: "outlined"; onClicked: page.ops = [] }
             }
         }
     }
 
     // ── status ──
     Group {
-        title: "Status"
+        title: I18n.tr("Status")
 
         SettingRow {
             visible: page.loaded && !page.backend
-            title: "No firewall installed"
+            title: I18n.tr("No firewall installed")
             subtitle: "ufw is simpler; firewalld adds zones (groups of rules per network)"
             icon: "shield"
             Row {
                 spacing: 6
-                FButton { text: "Install ufw"; variant: "tonal"; onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed ufw")) }
-                FButton { text: "Install firewalld"; variant: "tonal"; onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed firewalld")) }
+                FButton { text: I18n.tr("Install ufw"); variant: "tonal"; onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed ufw")) }
+                FButton { text: I18n.tr("Install firewalld"); variant: "tonal"; onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed firewalld")) }
             }
         }
 
         SettingRow {
             visible: page.ufw.installed && page.fwd.installed
-            title: "Manage"
-            subtitle: page.st.conflict ? "Both are running, and their rules clash. Disable one of them." : "Both are installed; only one should run"
+            title: I18n.tr("Manage")
+            subtitle: page.st.conflict ? I18n.tr("Both are running, and their rules clash. Disable one of them.") : I18n.tr("Both are installed; only one should run")
             icon: page.st.conflict ? "warning" : "compare_arrows"
             FSegmented {
                 implicitWidth: 260
-                options: [{ value: "ufw", label: "ufw" }, { value: "firewalld", label: "firewalld" }]
+                options: [{ value: "ufw", label: I18n.tr("ufw") }, { value: "firewalld", label: I18n.tr("firewalld") }]
                 current: page.backend
                 onSelected: v => page.backend = v
             }
@@ -142,7 +142,7 @@ Page {
         SettingRow {
             visible: page.backend !== ""
             title: page.backend + (page.running ? " is on" : " is off")
-            subtitle: (page.cur.service?.enabled ? "Starts at boot" : "Doesn't start at boot") + (page.backend === "ufw" && page.ufw.enabled !== undefined ? " · rules " + (page.ufw.enabled ? "enabled" : "disabled") : "")
+            subtitle: (page.cur.service?.enabled ? I18n.tr("Starts at boot") : I18n.tr("Doesn't start at boot")) + (page.backend === "ufw" && page.ufw.enabled !== undefined ? " · rules " + (page.ufw.enabled ? "enabled" : "disabled") : "")
             icon: page.running ? "verified_user" : "gpp_bad"
             FSwitch {
                 checked: page.running
@@ -154,30 +154,30 @@ Page {
     // ── ufw ──
     Group {
         visible: page.backend === "ufw"
-        title: "Defaults"
+        title: I18n.tr("Defaults")
         SettingRow {
-            title: "Incoming connections"
-            subtitle: "What happens to traffic no rule mentions"
+            title: I18n.tr("Incoming connections")
+            subtitle: I18n.tr("What happens to traffic no rule mentions")
             icon: "call_received"
             FDropdown {
                 implicitWidth: 220
-                options: [{ value: "deny", label: "Deny (recommended)" }, { value: "reject", label: "Reject" }, { value: "allow", label: "Allow" }]
+                options: [{ value: "deny", label: I18n.tr("Deny (recommended)") }, { value: "reject", label: I18n.tr("Reject") }, { value: "allow", label: I18n.tr("Allow") }]
                 current: page.ufw.incoming ?? ""
                 onSelected: v => page.queue({ op: "default", policy: v, direction: "incoming" }, "Incoming default: " + v)
             }
         }
         SettingRow {
-            title: "Outgoing connections"
+            title: I18n.tr("Outgoing connections")
             icon: "call_made"
             FDropdown {
                 implicitWidth: 220
-                options: [{ value: "allow", label: "Allow (recommended)" }, { value: "deny", label: "Deny" }, { value: "reject", label: "Reject" }]
+                options: [{ value: "allow", label: I18n.tr("Allow (recommended)") }, { value: "deny", label: I18n.tr("Deny") }, { value: "reject", label: I18n.tr("Reject") }]
                 current: page.ufw.outgoing ?? ""
                 onSelected: v => page.queue({ op: "default", policy: v, direction: "outgoing" }, "Outgoing default: " + v)
             }
         }
         SettingRow {
-            title: "Logging"
+            title: I18n.tr("Logging")
             icon: "receipt_long"
             FDropdown {
                 implicitWidth: 220
@@ -190,20 +190,20 @@ Page {
 
     Group {
         visible: page.backend === "ufw"
-        title: "Rules"
+        title: I18n.tr("Rules")
 
         SettingRow {
             visible: page.ufw.rules === null || page.ufw.rules === undefined
-            title: "Reading rules needs your password"
+            title: I18n.tr("Reading rules needs your password")
             subtitle: "ufw only shows its rules to root. Flamenco keeps a copy after each change."
             icon: "lock"
-            FButton { text: "Load rules"; icon: "key"; disabled: runner.running; onClicked: page.runInTerminal("load") }
+            FButton { text: I18n.tr("Load rules"); icon: "key"; disabled: runner.running; onClicked: page.runInTerminal("load") }
         }
 
         SettingRow {
             visible: Array.isArray(page.ufw.rules) && page.ufw.rules.length === 0
-            title: "No rules"
-            subtitle: "Everything incoming follows the default above"
+            title: I18n.tr("No rules")
+            subtitle: I18n.tr("Everything incoming follows the default above")
             icon: "rule"
         }
 
@@ -227,9 +227,9 @@ Page {
 
         SettingRow {
             visible: (page.ufw.rulesTime ?? 0) > 0
-            title: "Rules as of " + Qt.formatDateTime(new Date((page.ufw.rulesTime ?? 0) * 1000), "ddd HH:mm")
+            title: I18n.tr("Rules as of ") + I18n.locale.toString(new Date((page.ufw.rulesTime ?? 0) * 1000), "ddd HH:mm")
             icon: "history"
-            FButton { text: "Reload"; variant: "tonal"; disabled: runner.running; onClicked: page.runInTerminal("load") }
+            FButton { text: I18n.tr("Reload"); variant: "tonal"; disabled: runner.running; onClicked: page.runInTerminal("load") }
         }
 
         // add a rule
@@ -237,21 +237,21 @@ Page {
             Layout.fillWidth: true
             Layout.margins: 12
             spacing: 8
-            FText { text: "Add a rule"; font.weight: Font.Bold }
+            FText { text: I18n.tr("Add a rule"); font.weight: Font.Bold }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
-                FTextField { id: uPort; Layout.preferredWidth: 150; icon: "lan"; placeholder: "port or 6000:6010" }
-                FSegmented { id: uProto; implicitWidth: 200; options: [{ value: "tcp", label: "TCP" }, { value: "udp", label: "UDP" }, { value: "", label: "Both" }]; current: "tcp"; onSelected: v => current = v }
+                FTextField { id: uPort; Layout.preferredWidth: 150; icon: "lan"; placeholder: I18n.tr("port or 6000:6010") }
+                FSegmented { id: uProto; implicitWidth: 200; options: [{ value: "tcp", label: I18n.tr("TCP") }, { value: "udp", label: I18n.tr("UDP") }, { value: "", label: I18n.tr("Both") }]; current: "tcp"; onSelected: v => current = v }
                 FDropdown { id: uAction; implicitWidth: 130; options: ["allow", "deny", "reject", "limit"]; current: "allow"; onSelected: v => current = v }
             }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 8
-                FTextField { id: uFrom; Layout.fillWidth: true; icon: "public"; placeholder: "from (optional): 192.168.1.0/24" }
-                FTextField { id: uComment; Layout.fillWidth: true; icon: "label"; placeholder: "comment (optional)" }
+                FTextField { id: uFrom; Layout.fillWidth: true; icon: "public"; placeholder: I18n.tr("from (optional): 192.168.1.0/24") }
+                FTextField { id: uComment; Layout.fillWidth: true; icon: "label"; placeholder: I18n.tr("comment (optional)") }
                 FButton {
-                    text: "Add"
+                    text: I18n.tr("Add")
                     icon: "add"
                     disabled: uPort.text.trim() === ""
                     onClicked: {
@@ -269,19 +269,19 @@ Page {
     // ── firewalld ──
     Group {
         visible: page.backend === "firewalld" && page.running
-        title: "Zones"
+        title: I18n.tr("Zones")
 
         SettingRow {
             visible: !page.fwd.readable
-            title: "Couldn't read firewalld"
+            title: I18n.tr("Couldn't read firewalld")
             subtitle: "firewall-cmd was refused; check that your user may query firewalld (polkit)"
             icon: "warning"
         }
 
         SettingRow {
             visible: page.fwd.readable ?? false
-            title: "Zone"
-            subtitle: "Each zone is a set of rules; each network interface belongs to one" + (page.zone === page.fwd.defaultZone ? " · this is the default zone" : "")
+            title: I18n.tr("Zone")
+            subtitle: I18n.tr("Each zone is a set of rules; each network interface belongs to one") + (page.zone === page.fwd.defaultZone ? " · this is the default zone" : "")
             icon: "workspaces"
             Row {
                 spacing: 6
@@ -293,7 +293,7 @@ Page {
                 }
                 FButton {
                     visible: page.zone !== page.fwd.defaultZone
-                    text: "Make default"
+                    text: I18n.tr("Make default")
                     variant: "tonal"
                     onClicked: page.queue({ op: "set-default-zone", zone: page.zone }, "Default zone: " + page.zone)
                 }
@@ -305,8 +305,8 @@ Page {
             SettingRow {
                 id: irow
                 required property var modelData
-                title: "Interface " + modelData.iface
-                subtitle: "In zone " + modelData.zone
+                title: I18n.tr("Interface ") + modelData.iface
+                subtitle: I18n.tr("In zone ") + modelData.zone
                 icon: "settings_ethernet"
                 FDropdown {
                     implicitWidth: 200
@@ -320,7 +320,7 @@ Page {
 
     Group {
         visible: page.backend === "firewalld" && page.running && (page.fwd.readable ?? false)
-        title: "Open in “" + page.zone + "”"
+        title: I18n.tr("Open in “") + page.zone + "”"
 
         Repeater {
             model: page.zoneInfo.ports ?? []
@@ -328,7 +328,7 @@ Page {
                 id: prow
                 required property string modelData
                 title: modelData
-                subtitle: "Port"
+                subtitle: I18n.tr("Port")
                 icon: "lan"
                 FIconButton { icon: "delete"; iconColor: Theme.error; onClicked: page.queue({ op: "remove-port", zone: page.zone, port: prow.modelData }, "Close " + prow.modelData + " in " + page.zone) }
             }
@@ -339,14 +339,14 @@ Page {
                 id: srow
                 required property string modelData
                 title: modelData
-                subtitle: "Service"
+                subtitle: I18n.tr("Service")
                 icon: "dns"
                 FIconButton { icon: "delete"; iconColor: Theme.error; onClicked: page.queue({ op: "remove-service", zone: page.zone, name: srow.modelData }, "Remove " + srow.modelData + " from " + page.zone) }
             }
         }
         SettingRow {
             visible: (page.zoneInfo.ports ?? []).length === 0 && (page.zoneInfo.services ?? []).length === 0
-            title: "Nothing open in this zone"
+            title: I18n.tr("Nothing open in this zone")
             icon: "shield"
         }
 
@@ -354,10 +354,10 @@ Page {
             Layout.fillWidth: true
             Layout.margins: 12
             spacing: 8
-            FTextField { id: fPort; Layout.preferredWidth: 160; icon: "lan"; placeholder: "port or 6000-6010" }
-            FSegmented { id: fProto; implicitWidth: 150; options: [{ value: "tcp", label: "TCP" }, { value: "udp", label: "UDP" }]; current: "tcp"; onSelected: v => current = v }
+            FTextField { id: fPort; Layout.preferredWidth: 160; icon: "lan"; placeholder: I18n.tr("port or 6000-6010") }
+            FSegmented { id: fProto; implicitWidth: 150; options: [{ value: "tcp", label: I18n.tr("TCP") }, { value: "udp", label: I18n.tr("UDP") }]; current: "tcp"; onSelected: v => current = v }
             FButton {
-                text: "Open port"
+                text: I18n.tr("Open port")
                 icon: "add"
                 disabled: fPort.text.trim() === ""
                 onClicked: {
@@ -375,7 +375,7 @@ Page {
             FDropdown {
                 id: fService
                 Layout.fillWidth: true
-                placeholder: "Add a service (ssh, http, samba…)"
+                placeholder: I18n.tr("Add a service (ssh, http, samba…)")
                 options: (page.fwd.services ?? []).filter(x => !(page.zoneInfo.services ?? []).includes(x))
                 current: ""
                 onSelected: v => page.queue({ op: "add-service", zone: page.zone, name: v }, "Allow " + v + " in " + page.zone)
@@ -386,6 +386,6 @@ Page {
     RowLayout {
         Layout.fillWidth: true
         FIconButton { icon: "refresh"; onClicked: page.refresh() }
-        FText { text: getter.running ? "Reading firewall…" : ""; dim: true }
+        FText { text: getter.running ? I18n.tr("Reading firewall…") : ""; dim: true }
     }
 }

@@ -7,7 +7,7 @@ import qs.Widgets
 // Control center → Night light: on / off, warmth, dimming and the schedule, at a glance.
 DetailPage {
     id: page
-    title: "Night light"
+    title: I18n.tr("Night light")
     readonly property var n: Settings.data.night
     headerExtra: FIconButton {
         icon: "tune"
@@ -31,7 +31,7 @@ DetailPage {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
-                FText { text: Toggles.nightLight ? "On" : "Off"; font.weight: Font.Bold }
+                FText { text: Toggles.nightLight ? I18n.tr("On") : I18n.tr("Off"); font.weight: Font.Bold }
                 FText { Layout.fillWidth: true; text: Toggles.status; dim: true; font.pixelSize: Theme.fsSm; elide: Text.ElideRight }
             }
             FSwitch {
@@ -41,7 +41,7 @@ DetailPage {
         }
     }
 
-    FText { Layout.topMargin: Theme.sp2; text: "Warmth · " + page.n.temperature + " K"; dim: true; font.pixelSize: Theme.fsSm; font.weight: Font.Bold }
+    FText { Layout.topMargin: Theme.sp2; text: I18n.tr("Warmth · ") + page.n.temperature + " K"; dim: true; font.pixelSize: Theme.fsSm; font.weight: Font.Bold }
     FPillSlider {
         Layout.fillWidth: true
         icon: "thermostat"
@@ -51,7 +51,7 @@ DetailPage {
         to: "#ffe0b8"
         onMoved: v => page.n.temperature = Math.round((2000 + v * 4000) / 100) * 100
     }
-    FText { Layout.topMargin: Theme.sp2; text: "Dim · " + Math.round((page.n.brightness ?? 1) * 100) + "%"; dim: true; font.pixelSize: Theme.fsSm; font.weight: Font.Bold }
+    FText { Layout.topMargin: Theme.sp2; text: I18n.tr("Dim · ") + Math.round((page.n.brightness ?? 1) * 100) + "%"; dim: true; font.pixelSize: Theme.fsSm; font.weight: Font.Bold }
     FPillSlider {
         Layout.fillWidth: true
         icon: "brightness_low"
@@ -61,10 +61,10 @@ DetailPage {
         onMoved: v => page.n.brightness = Math.round((0.5 + v * 0.5) * 20) / 20
     }
 
-    FText { Layout.topMargin: Theme.sp2; text: "Schedule"; dim: true; font.pixelSize: Theme.fsSm; font.weight: Font.Bold }
+    FText { Layout.topMargin: Theme.sp2; text: I18n.tr("Schedule"); dim: true; font.pixelSize: Theme.fsSm; font.weight: Font.Bold }
     FSegmented {
         Layout.fillWidth: true
-        options: [{ value: "off", label: "Manual" }, { value: "sun", label: "Sunset → sunrise" }, { value: "custom", label: page.n.from + " → " + page.n.to }]
+        options: [{ value: "off", label: I18n.tr("Manual") }, { value: "sun", label: I18n.tr("Sunset → sunrise") }, { value: "custom", label: page.n.from + " → " + page.n.to }]
         current: page.n.schedule || "off"
         onSelected: v => page.n.schedule = v
     }

@@ -27,7 +27,7 @@ ColumnLayout {
     }
 
     FText {
-        text: Wallpapers.status === "missing" ? "Folder not found: " + Wallpapers.dir
+        text: Wallpapers.status === "missing" ? I18n.tr("Folder not found: ") + Wallpapers.dir
             : Wallpapers.scanning ? "Scanning " + Wallpapers.dir + "…"
             : Wallpapers.files.length + " images in " + Wallpapers.dir + " · current: " + (Paths.fileName(Wallpapers.forScreen(root.screenName)) || "none")
         dim: true

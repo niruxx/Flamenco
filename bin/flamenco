@@ -95,7 +95,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.61.0"
+VERSION = "0.62.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -3464,11 +3464,12 @@ def qml_literal(text: str, obj: tuple, prop: str) -> str:
     """A property's plain string value, directly in this object; "" when it's computed."""
     _, a, b = obj
     body, masked = text[a + 1:b - 1], qml_mask(text[a + 1:b - 1])
-    for m in re.finditer(r"(?<![\w.])" + prop + r"\s*:\s*\"", masked):
+    # a plain string, or one wrapped for translation: I18n.tr("…")
+    for m in re.finditer(r"(?<![\w.])" + prop + r"\s*:\s*(I18n\.tr\()?\"", masked):
         # only at this object's own level
         if masked[:m.start()].count("{") != masked[:m.start()].count("}"):
             continue
-        sm = re.match(r'"((?:[^"\\]|\\.)*)"\s*(?=[;\n}]|$)', body[m.end() - 1:])
+        sm = re.match(r'"((?:[^"\\]|\\.)*)"\)?\s*(?=[;\n}]|$)', body[m.end() - 1:])
         if sm:
             return json.loads('"' + sm.group(1) + '"')
     return ""
@@ -3479,7 +3480,7 @@ def settings_index() -> list[dict]:
     win = (shell_dir() / "Modules/Settings/SettingsWindow.qml").read_text()
     comps = dict(re.findall(r"Component\s*\{\s*id:\s*(\w+);\s*(\w+)\s*\{", win))
     out = []
-    for pid, icon, label, comp in re.findall(r'\{\s*id:\s*"([\w-]+)",\s*icon:\s*"([^"]+)",\s*label:\s*"([^"]+)",\s*comp:\s*(\w+)\s*\}', win):
+    for pid, icon, label, comp in re.findall(r'\{\s*id:\s*"([\w-]+)",\s*icon:\s*"([^"]+)",\s*label:\s*(?:I18n\.tr\()?"([^"]+)"\)?,\s*comp:\s*(\w+)\s*\}', win):
         out.append({"page": pid, "icon": icon, "label": label, "kind": "page", "title": label, "subtitle": "", "group": ""})
         files, seen = [comps.get(comp, "")], set()
         while files:

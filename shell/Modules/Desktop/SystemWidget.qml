@@ -15,9 +15,9 @@ ColumnLayout {
 
     Repeater {
         model: [
-            { icon: "memory", label: "Processor", value: SystemStats.cpu, text: Math.round(SystemStats.cpu * 100) + "%" },
-            { icon: "memory_alt", label: "Memory", value: SystemStats.mem, text: SystemStats.memUsed.toFixed(1) + " / " + SystemStats.memTotal.toFixed(0) + " GiB" },
-            { icon: "thermostat", label: "Temperature", value: Math.min(1, SystemStats.temp / 100), text: SystemStats.temp > 0 ? Math.round(SystemStats.temp) + "°C" : "–" }
+            { icon: "memory", label: I18n.tr("Processor"), value: SystemStats.cpu, text: Math.round(SystemStats.cpu * 100) + "%" },
+            { icon: "memory_alt", label: I18n.tr("Memory"), value: SystemStats.mem, text: SystemStats.memUsed.toFixed(1) + " / " + SystemStats.memTotal.toFixed(0) + " GiB" },
+            { icon: "thermostat", label: I18n.tr("Temperature"), value: Math.min(1, SystemStats.temp / 100), text: SystemStats.temp > 0 ? Math.round(SystemStats.temp) + "°C" : "–" }
         ]
         ColumnLayout {
             required property var modelData
@@ -45,7 +45,7 @@ ColumnLayout {
         }
     }
     FText {
-        text: "Up " + SystemStats.uptimeText
+        text: I18n.tr("Up ") + SystemStats.uptimeText
         dim: true
         font.pixelSize: Math.round(Theme.fsXs * root.k)
     }

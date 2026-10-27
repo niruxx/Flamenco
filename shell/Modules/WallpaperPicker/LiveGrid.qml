@@ -24,7 +24,7 @@ ColumnLayout {
     property string busy: ""                // the video being downloaded
     property string dlError: ""
     readonly property string source: Settings.data.wallpaper.liveSource || "wikimedia"
-    readonly property var sources: [{ value: "wikimedia", label: "Wikimedia", icon: "public" }, { value: "pexels", label: "Pexels", icon: "movie" }, { value: "pixabay", label: "Pixabay", icon: "video_library" }]
+    readonly property var sources: [{ value: "wikimedia", label: I18n.tr("Wikimedia"), icon: "public" }, { value: "pexels", label: I18n.tr("Pexels"), icon: "movie" }, { value: "pixabay", label: I18n.tr("Pixabay"), icon: "video_library" }]
 
     function search(next) {
         if (finder.running)
@@ -68,7 +68,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: 38
             icon: "search"
-            placeholder: "Search live wallpapers (ocean, rain, city at night…)"
+            placeholder: I18n.tr("Search live wallpapers (ocean, rain, city at night…)")
             onAccepted: {
                 root.query = text;
                 root.search(false);
@@ -107,13 +107,13 @@ ColumnLayout {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
-                text: root.loading ? "Searching…" : root.error || "Nothing found"
+                text: root.loading ? I18n.tr("Searching…") : root.error || "Nothing found"
                 color: root.error && !root.needKey ? Theme.error : Theme.textDim
             }
             FButton {
                 Layout.alignment: Qt.AlignHCenter
                 visible: root.needKey
-                text: "Add a key"
+                text: I18n.tr("Add a key")
                 icon: "key"
                 onClicked: Panels.findSetting("wallpaper", "Live wallpapers")
             }
@@ -178,7 +178,7 @@ ColumnLayout {
                         anchors.centerIn: parent
                         spacing: 4
                         FIcon { anchors.horizontalCenter: parent.horizontalCenter; icon: "downloading"; size: 26; color: Theme.accent }
-                        FText { anchors.horizontalCenter: parent.horizontalCenter; text: "Downloading…"; color: Theme.text }
+                        FText { anchors.horizontalCenter: parent.horizontalCenter; text: I18n.tr("Downloading…"); color: Theme.text }
                     }
                 }
                 HoverHandler { id: hov }
@@ -193,7 +193,7 @@ ColumnLayout {
     FText {
         Layout.fillWidth: true
         visible: root.dlError !== ""
-        text: "Couldn't download it: " + root.dlError
+        text: I18n.tr("Couldn't download it: ") + root.dlError
         color: Theme.error
         wrapMode: Text.Wrap
         font.pixelSize: Theme.fsSm
@@ -208,11 +208,11 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: 38
             icon: "link"
-            placeholder: "Or paste a link to a video or GIF (https://…/clip.mp4)"
+            placeholder: I18n.tr("Or paste a link to a video or GIF (https://…/clip.mp4)")
             onAccepted: root.download(text.trim())
         }
         FButton {
-            text: root.busy !== "" && root.busy === link.text.trim() ? "Downloading…" : "Download"
+            text: root.busy !== "" && root.busy === link.text.trim() ? I18n.tr("Downloading…") : I18n.tr("Download")
             icon: "download"
             disabled: link.text.trim() === "" || root.busy !== ""
             onClicked: root.download(link.text.trim())
@@ -221,7 +221,7 @@ ColumnLayout {
 
     FText {
         Layout.fillWidth: true
-        text: (root.source === "wikimedia" ? "Free videos from Wikimedia Commons (check each one's license on its page)" : root.source === "pexels" ? "Videos from Pexels (free to use)" : "Videos from Pixabay (free to use)")
+        text: (root.source === "wikimedia" ? I18n.tr("Free videos from Wikimedia Commons (check each one's license on its page)") : root.source === "pexels" ? I18n.tr("Videos from Pexels (free to use)") : I18n.tr("Videos from Pixabay (free to use)"))
             + " · saved to " + Wallpapers.dir + "/live" + (Wallpapers.canPoster ? "" : " · install ffmpeg for thumbnails")
         dim: true
         wrapMode: Text.Wrap

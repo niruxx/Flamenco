@@ -17,7 +17,7 @@ ColumnLayout {
         const d = new Date(e.start), t = new Date(Time.now);
         const k = Events.key(d), today = Events.key(t);
         t.setDate(t.getDate() + 1);
-        return k === today ? "Today" : k === Events.key(t) ? "Tomorrow" : Qt.formatDate(d, "ddd d MMM");
+        return k === today ? "Today" : k === Events.key(t) ? "Tomorrow" : I18n.locale.toString(d, "ddd d MMM");
     }
     implicitWidth: Math.round(270 * k)
     spacing: Math.round(Theme.sp2 * k)
@@ -25,7 +25,7 @@ ColumnLayout {
     RowLayout {
         spacing: Math.round(6 * root.k)
         FIcon { icon: "event_upcoming"; size: Math.round(18 * root.k); fill: 1; color: Theme.accent }
-        FText { text: "Up next"; font.weight: Font.DemiBold; font.pixelSize: Math.round(Theme.fsLg * root.k) }
+        FText { text: I18n.tr("Up next"); font.weight: Font.DemiBold; font.pixelSize: Math.round(Theme.fsLg * root.k) }
     }
     Repeater {
         model: root.next
@@ -63,7 +63,7 @@ ColumnLayout {
     FText {
         visible: root.next.length === 0
         Layout.fillWidth: true
-        text: (Settings.data.calendar.sources || []).length ? "Nothing coming up" : "No calendars yet: add them in Settings → Online Accounts"
+        text: (Settings.data.calendar.sources || []).length ? I18n.tr("Nothing coming up") : I18n.tr("No calendars yet: add them in Settings → Online Accounts")
         dim: true
         wrapMode: Text.Wrap
         font.pixelSize: Math.round(Theme.fsSm * root.k)

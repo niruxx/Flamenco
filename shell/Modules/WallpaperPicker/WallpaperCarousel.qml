@@ -165,7 +165,7 @@ Variants {
 
                 FSegmented {
                     implicitWidth: 560
-                    options: [{ value: "folder", label: "Wallpapers · " + Wallpapers.files.length, icon: "image" }, { value: "wallhaven", label: "Wallhaven", icon: "travel_explore" }, { value: "kde", label: "KDE Store", icon: "storefront" }, { value: "live", label: "Live", icon: "animated_images" }]
+                    options: [{ value: "folder", label: I18n.tr("Wallpapers · ") + Wallpapers.files.length, icon: "image" }, { value: "wallhaven", label: I18n.tr("Wallhaven"), icon: "travel_explore" }, { value: "kde", label: I18n.tr("KDE Store"), icon: "storefront" }, { value: "live", label: I18n.tr("Live"), icon: "animated_images" }]
                     current: win.source
                     onSelected: v => win.source = v
                 }
@@ -176,7 +176,7 @@ Variants {
                     implicitHeight: 44
                     radius: height / 2
                     icon: "search"
-                    placeholder: "Search " + Wallpapers.files.length + " wallpapers…"
+                    placeholder: I18n.tr("Search ") + Wallpapers.files.length + " wallpapers…"
                     onEdited: t => {
                         win.query = t;
                         view.currentIndex = 0;
@@ -220,7 +220,7 @@ Variants {
                 FSegmented {
                     visible: Quickshell.screens.length > 1
                     implicitWidth: 240
-                    options: [{ value: false, label: "All screens" }, { value: true, label: "This screen" }]
+                    options: [{ value: false, label: I18n.tr("All screens") }, { value: true, label: I18n.tr("This screen") }]
                     current: Settings.data.wallpaper.perScreen
                     onSelected: v => Settings.data.wallpaper.perScreen = v
                 }
@@ -492,7 +492,7 @@ Variants {
                 visible: win.source === "folder" && view.count === 0
                 anchors.centerIn: parent
                 horizontalAlignment: Text.AlignHCenter
-                text: Wallpapers.scanning ? "Scanning…" : win.query ? "No wallpapers match “" + win.query + "”"
+                text: Wallpapers.scanning ? I18n.tr("Scanning…") : win.query ? I18n.tr("No wallpapers match “") + win.query + "”"
                     : Wallpapers.status === "missing" ? "Folder not found:\n" + Wallpapers.dir : "No images in " + Wallpapers.dir
                 color: "#ffffff"
                 font.pixelSize: Theme.fsLg
@@ -553,7 +553,7 @@ Variants {
                         onClicked: Wallpapers.toggleFavorite(win.selected)
                     }
                     FButton {
-                        text: win.selected === win.applied ? "Applied" : "Apply"
+                        text: win.selected === win.applied ? I18n.tr("Applied") : I18n.tr("Apply")
                         icon: "check"
                         disabled: win.selected === win.applied
                         onClicked: win.apply()

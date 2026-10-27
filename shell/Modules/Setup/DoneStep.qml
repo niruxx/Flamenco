@@ -13,12 +13,12 @@ Item {
         return Settings.data.keyboard.shortcuts.find(sc => sc.type === "flamenco" && sc.value === fn)?.key ?? fallback;
     }
     readonly property var tips: [
-        { icon: "apps", label: "Open apps", key: keyFor("launcher", "Mod+Space") },
-        { icon: "tune", label: "Quick settings", key: keyFor("control", "Mod+A") },
-        { icon: "notifications", label: "Notifications", key: keyFor("notifications", "Mod+N") },
-        { icon: "wallpaper", label: "Wallpapers", key: keyFor("wallpapers", "Mod+W") },
-        { icon: "settings", label: "Settings", key: keyFor("settings", "Mod+Comma") },
-        { icon: "power_settings_new", label: "Power menu", key: keyFor("power", "Mod+Escape") }
+        { icon: "apps", label: I18n.tr("Open apps"), key: keyFor("launcher", "Mod+Space") },
+        { icon: "tune", label: I18n.tr("Quick settings"), key: keyFor("control", "Mod+A") },
+        { icon: "notifications", label: I18n.tr("Notifications"), key: keyFor("notifications", "Mod+N") },
+        { icon: "wallpaper", label: I18n.tr("Wallpapers"), key: keyFor("wallpapers", "Mod+W") },
+        { icon: "settings", label: I18n.tr("Settings"), key: keyFor("settings", "Mod+Comma") },
+        { icon: "power_settings_new", label: I18n.tr("Power menu"), key: keyFor("power", "Mod+Escape") }
     ]
 
     // a few drifting sparks
@@ -70,7 +70,7 @@ Item {
         FText {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
-            text: "Welcome to Flamenco, " + Paths.user
+            text: I18n.tr("Welcome to Flamenco, ") + Paths.user
             font.pixelSize: Theme.fsXxl
             font.weight: Font.Bold
             wrapMode: Text.Wrap
@@ -78,7 +78,7 @@ Item {
         FText {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
-            text: "You're all set. A few keys to remember:"
+            text: I18n.tr("You're all set. A few keys to remember:")
             dim: true
         }
 
@@ -104,7 +104,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Theme.sp5
             implicitHeight: 46
-            text: "Start using Flamenco"
+            text: I18n.tr("Start using Flamenco")
             icon: "rocket_launch"
             onClicked: root.finish()
         }

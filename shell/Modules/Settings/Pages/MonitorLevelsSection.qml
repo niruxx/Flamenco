@@ -8,22 +8,22 @@ import qs.Widgets
 // Performance panel and the system hub turn the warning color, then the critical one.
 Group {
     id: root
-    title: "Monitoring levels"
+    title: I18n.tr("Monitoring levels")
     readonly property var m: Settings.data.monitor
 
     Repeater {
         model: [
-            { k: "cpu", t: "Processor", i: "memory", unit: "%", now: Math.round(SystemStats.cpu * 100) },
-            { k: "mem", t: "Memory", i: "developer_board", unit: "%", now: Math.round(SystemStats.mem * 100) },
-            { k: "temp", t: "Temperature", i: "thermostat", unit: "°C", now: Math.round(SystemStats.temp) },
-            { k: "gpu", t: "Graphics card", i: "videogame_asset", unit: "%", now: SystemStats.gpuBusy >= 0 ? Math.round(SystemStats.gpuBusy * 100) : -1 },
-            { k: "disk", t: "Disk space used", i: "hard_drive", unit: "%", now: -1 }
+            { k: "cpu", t: I18n.tr("Processor"), i: "memory", unit: "%", now: Math.round(SystemStats.cpu * 100) },
+            { k: "mem", t: I18n.tr("Memory"), i: "developer_board", unit: "%", now: Math.round(SystemStats.mem * 100) },
+            { k: "temp", t: I18n.tr("Temperature"), i: "thermostat", unit: "°C", now: Math.round(SystemStats.temp) },
+            { k: "gpu", t: I18n.tr("Graphics card"), i: "videogame_asset", unit: "%", now: SystemStats.gpuBusy >= 0 ? Math.round(SystemStats.gpuBusy * 100) : -1 },
+            { k: "disk", t: I18n.tr("Disk space used"), i: "hard_drive", unit: "%", now: -1 }
         ]
         SettingRow {
             id: lrow
             required property var modelData
             title: modelData.t
-            subtitle: "Warning, then critical" + (modelData.now >= 0 ? " · now " + modelData.now + modelData.unit : "")
+            subtitle: I18n.tr("Warning, then critical") + (modelData.now >= 0 ? " · now " + modelData.now + modelData.unit : "")
             icon: modelData.i
             Row {
                 spacing: 6
@@ -54,19 +54,19 @@ Group {
         }
     }
     ColorChoiceRow {
-        title: "Warning color"
+        title: I18n.tr("Warning color")
         icon: "warning"
         target: root.m
         key: "warnColor"
-        choices: [{ value: "", label: "Theme's" }]
+        choices: [{ value: "", label: I18n.tr("Theme's") }]
         swatches: ["#f5c542", "#ff8a4c", "#efb73e", "#e6b450"]
     }
     ColorChoiceRow {
-        title: "Critical color"
+        title: I18n.tr("Critical color")
         icon: "error"
         target: root.m
         key: "critColor"
-        choices: [{ value: "", label: "Theme's" }]
+        choices: [{ value: "", label: I18n.tr("Theme's") }]
         swatches: ["#ff5d73", "#e5534b", "#df382c", "#ff4f8b"]
     }
 }

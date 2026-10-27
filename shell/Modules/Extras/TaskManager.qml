@@ -99,7 +99,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 spacing: Theme.sp3
                 FIcon { icon: "monitoring"; size: 26; color: Theme.accent; fill: 1 }
-                FText { text: "Task manager"; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
+                FText { text: I18n.tr("Task manager"); font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
                 FText { text: win.rows.length + " processes · CPU " + Math.round(SystemStats.cpu * 100) + "% · memory " + Math.round(SystemStats.mem * 100) + "%"; dim: true; font.pixelSize: Theme.fsSm }
                 Item { Layout.fillWidth: true }
                 FIconButton { icon: "close"; onClicked: Panels.tasks = false }
@@ -111,7 +111,7 @@ PanelWindow {
                     id: field
                     Layout.fillWidth: true
                     icon: "search"
-                    placeholder: "Search by name, command or PID"
+                    placeholder: I18n.tr("Search by name, command or PID")
                     onEdited: t => win.query = t
                     onKeyPressed: event => {
                         if (event.key === Qt.Key_Escape) {
@@ -122,14 +122,14 @@ PanelWindow {
                 }
                 FSegmented {
                     implicitWidth: 270
-                    options: [{ value: "cpu", label: "CPU" }, { value: "mem", label: "Memory" }, { value: "name", label: "Name" }]
+                    options: [{ value: "cpu", label: I18n.tr("CPU") }, { value: "mem", label: I18n.tr("Memory") }, { value: "name", label: I18n.tr("Name") }]
                     current: win.sort
                     onSelected: v => win.sort = v
                 }
                 Row {
                     spacing: 6
                     FSwitch { anchors.verticalCenter: parent.verticalCenter; checked: win.mineOnly; onToggled: c => win.mineOnly = c }
-                    FText { anchors.verticalCenter: parent.verticalCenter; text: "Mine only"; dim: true }
+                    FText { anchors.verticalCenter: parent.verticalCenter; text: I18n.tr("Mine only"); dim: true }
                 }
             }
             FText { Layout.fillWidth: true; visible: win.status !== ""; text: win.status; color: Theme.error; font.pixelSize: Theme.fsSm }
@@ -165,14 +165,14 @@ PanelWindow {
                         FText { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: win.mb(row.modelData.rss); mono: true; dim: true }
                         FButton {
                             visible: rowHov.hovered || win.asking === row.modelData.pid
-                            text: win.asking === row.modelData.pid ? "Sure?" : "End"
+                            text: win.asking === row.modelData.pid ? I18n.tr("Sure?") : I18n.tr("End")
                             variant: win.asking === row.modelData.pid ? "filled" : "tonal"
                             implicitHeight: 30
                             onClicked: win.asking === row.modelData.pid ? win.end(row.modelData, "term") : win.asking = row.modelData.pid
                         }
                         FButton {
                             visible: rowHov.hovered
-                            text: "Kill"
+                            text: I18n.tr("Kill")
                             variant: "text"
                             implicitHeight: 30
                             onClicked: win.end(row.modelData, "kill")

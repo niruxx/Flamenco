@@ -9,7 +9,7 @@ import qs.Widgets
 // The preview follows the music, or a made-up beat while nothing plays.
 Group {
     id: root
-    title: "Audio visualizer"
+    title: I18n.tr("Audio visualizer")
     readonly property var v: Settings.data.visualizer
     readonly property bool real: Media.playing && Cava.available
     property var demo: []
@@ -49,62 +49,62 @@ Group {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.margins: 10
-            text: !Cava.available ? "Preview (cava isn't installed)" : root.real ? "Live" : "Preview"
+            text: !Cava.available ? I18n.tr("Preview (cava isn't installed)") : root.real ? I18n.tr("Live") : I18n.tr("Preview")
             dim: true
             font.pixelSize: Theme.fsXs
         }
     }
 
     ChoiceRow {
-        title: "Style"
+        title: I18n.tr("Style")
         icon: "graphic_eq"
         target: root.v
         key: "style"
         segWidth: 78
-        options: [{ value: "bars", label: "Bars" }, { value: "mirror", label: "Mirror" }, { value: "wave", label: "Wave" }, { value: "dots", label: "Dots" }, { value: "radial", label: "Radial" }, { value: "peaks", label: "Peaks" }]
+        options: [{ value: "bars", label: I18n.tr("Bars") }, { value: "mirror", label: I18n.tr("Mirror") }, { value: "wave", label: I18n.tr("Wave") }, { value: "dots", label: I18n.tr("Dots") }, { value: "radial", label: I18n.tr("Radial") }, { value: "peaks", label: I18n.tr("Peaks") }]
     }
     ChoiceRow {
-        title: "Colors"
+        title: I18n.tr("Colors")
         icon: "palette"
         target: root.v
         key: "colors"
         segWidth: 86
-        options: [{ value: "accent", label: "Accent" }, { value: "palette", label: "Palette" }, { value: "rainbow", label: "Rainbow" }, { value: "fire", label: "Fire" }, { value: "mono", label: "Plain" }]
+        options: [{ value: "accent", label: I18n.tr("Accent") }, { value: "palette", label: I18n.tr("Palette") }, { value: "rainbow", label: I18n.tr("Rainbow") }, { value: "fire", label: I18n.tr("Fire") }, { value: "mono", label: I18n.tr("Plain") }]
     }
     ChoiceRow {
-        title: "Animation"
-        subtitle: ({ smooth: "Glides to each beat", snappy: "Follows the sound closely", bouncy: "Springs past each beat and settles", gravity: "Jumps up at once, falls slowly" })[root.v.motion || "smooth"] ?? ""
+        title: I18n.tr("Animation")
+        subtitle: ({ smooth: I18n.tr("Glides to each beat"), snappy: I18n.tr("Follows the sound closely"), bouncy: I18n.tr("Springs past each beat and settles"), gravity: I18n.tr("Jumps up at once, falls slowly") })[root.v.motion || "smooth"] ?? ""
         icon: "animation"
         target: root.v
         key: "motion"
         segWidth: 90
-        options: [{ value: "smooth", label: "Smooth" }, { value: "snappy", label: "Snappy" }, { value: "bouncy", label: "Bouncy" }, { value: "gravity", label: "Gravity" }]
+        options: [{ value: "smooth", label: I18n.tr("Smooth") }, { value: "snappy", label: I18n.tr("Snappy") }, { value: "bouncy", label: I18n.tr("Bouncy") }, { value: "gravity", label: I18n.tr("Gravity") }]
     }
-    SliderRow { title: "Detail"; subtitle: "How finely the sound is split into bands"; icon: "equalizer"; target: root.v; key: "bars"; from: 8; to: 64; stepSize: 4 }
-    ChoiceRow { title: "Frame rate"; icon: "speed"; target: root.v; key: "fps"; segWidth: 90; options: [{ value: 30, label: "30 fps" }, { value: 60, label: "60 fps" }] }
+    SliderRow { title: I18n.tr("Detail"); subtitle: I18n.tr("How finely the sound is split into bands"); icon: "equalizer"; target: root.v; key: "bars"; from: 8; to: 64; stepSize: 4 }
+    ChoiceRow { title: I18n.tr("Frame rate"); icon: "speed"; target: root.v; key: "fps"; segWidth: 90; options: [{ value: 30, label: I18n.tr("30 fps") }, { value: 60, label: I18n.tr("60 fps") }] }
 
     SwitchRow {
-        title: "Big on the desktop"
-        subtitle: "A visualizer across the screen, above the wallpaper and under your windows, while something plays"
+        title: I18n.tr("Big on the desktop")
+        subtitle: I18n.tr("A visualizer across the screen, above the wallpaper and under your windows, while something plays")
         icon: "fit_screen"
         target: root.v
         key: "band"
     }
     ChoiceRow {
         visible: root.v.band
-        title: "Where"
+        title: I18n.tr("Where")
         icon: "vertical_align_center"
         target: root.v
         key: "bandPosition"
         segWidth: 90
-        options: [{ value: "bottom", label: "Bottom" }, { value: "center", label: "Middle" }, { value: "top", label: "Top" }]
+        options: [{ value: "bottom", label: I18n.tr("Bottom") }, { value: "center", label: I18n.tr("Middle") }, { value: "top", label: I18n.tr("Top") }]
     }
-    SliderRow { visible: root.v.band; title: "Height"; icon: "height"; target: root.v; key: "bandHeight"; from: 80; to: 600; stepSize: 10; suffix: " px" }
-    SliderRow { visible: root.v.band; title: "Opacity"; icon: "opacity"; target: root.v; key: "bandOpacity"; from: 0.2; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
+    SliderRow { visible: root.v.band; title: I18n.tr("Height"); icon: "height"; target: root.v; key: "bandHeight"; from: 80; to: 600; stepSize: 10; suffix: " px" }
+    SliderRow { visible: root.v.band; title: I18n.tr("Opacity"); icon: "opacity"; target: root.v; key: "bandOpacity"; from: 0.2; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
     SettingRow {
         visible: !Cava.available
         title: "cava isn't installed"
-        subtitle: "The visualizers need it (System check, or: sudo pacman -S cava)"
+        subtitle: I18n.tr("The visualizers need it (System check, or: sudo pacman -S cava)")
         icon: "warning"
     }
 }

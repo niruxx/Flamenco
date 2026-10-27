@@ -62,7 +62,7 @@ ColumnLayout {
                 spacing: Math.round(2 * root.k)
                 FText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: Qt.formatDate(new Date(modelData.date + "T12:00:00"), "ddd")
+                    text: I18n.locale.toString(new Date(modelData.date + "T12:00:00"), "ddd")
                     dim: true
                     font.pixelSize: Math.round(Theme.fsSm * root.k)
                 }
@@ -82,7 +82,7 @@ ColumnLayout {
     FText {
         visible: !root.on
         Layout.preferredWidth: Math.round(240 * root.k)
-        text: Settings.data.weather.enabled ? "Getting the weather…" : "Weather is off. Turn it on in Settings → Clock & Weather."
+        text: Settings.data.weather.enabled ? I18n.tr("Getting the weather…") : I18n.tr("Weather is off. Turn it on in Settings → Clock & Weather.")
         wrapMode: Text.Wrap
         dim: true
         font.pixelSize: Math.round(Theme.fsMd * root.k)

@@ -95,7 +95,7 @@ BarChip {
                 }
                 FButton {
                     Layout.fillWidth: true
-                    text: "Update now"
+                    text: I18n.tr("Update now")
                     icon: "download"
                     onClicked: {
                         pop.visible = false;
@@ -104,7 +104,7 @@ BarChip {
                 }
                 FText {
                     Layout.fillWidth: true
-                    text: "Runs " + (Updates.upgrade || "sudo pacman -Syu") + " in a terminal"
+                    text: I18n.tr("Runs ") + (Updates.upgrade || "sudo pacman -Syu") + " in a terminal"
                     dim: true
                     font.pixelSize: Theme.fsXs
                     wrapMode: Text.Wrap

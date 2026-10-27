@@ -7,23 +7,23 @@ import qs.Modules.Volume
 
 Page {
     id: page
-    title: "Sound"
-    subtitle: "Sound theme for the shell and your apps, event sounds, audio devices and each app's volume."
+    title: I18n.tr("Sound")
+    subtitle: I18n.tr("Sound theme for the shell and your apps, event sounds, audio devices and each app's volume.")
     readonly property var sd: Settings.data.sound
 
     Component.onCompleted: Sounds.load()
 
     Group {
-        title: "Sound theme"
+        title: I18n.tr("Sound theme")
         SettingRow {
-            title: "Theme"
-            subtitle: Sounds.themes.length ? "Installed themes from /usr/share/sounds and ~/.local/share/sounds. Apps get it through GTK, GNOME and KDE settings." : "Only the bundled Flamenco theme was found. More: sound-theme-freedesktop, ocean-sound-theme."
+            title: I18n.tr("Theme")
+            subtitle: Sounds.themes.length ? I18n.tr("Installed themes from /usr/share/sounds and ~/.local/share/sounds. Apps get it through GTK, GNOME and KDE settings.") : I18n.tr("Only the bundled Flamenco theme was found. More: sound-theme-freedesktop, ocean-sound-theme.")
             icon: "library_music"
             FDropdown {
                 implicitWidth: 280
                 options: Sounds.themes
                 current: page.sd.theme
-                placeholder: "Choose a theme…"
+                placeholder: I18n.tr("Choose a theme…")
                 onSelected: v => {
                     page.sd.theme = v;
                     Sounds.play("message-new-instant");
@@ -32,7 +32,7 @@ Page {
         }
 
         SettingRow {
-            title: "Preview"
+            title: I18n.tr("Preview")
             icon: "play_circle"
             Flow {
                 width: 360
@@ -61,17 +61,17 @@ Page {
     }
 
     Group {
-        title: "Event sounds"
-        SwitchRow { title: "Notification sound"; subtitle: "When a notification pops up (silent in Do Not Disturb)"; icon: "notifications_active"; target: page.sd; key: "notifications" }
-        SwitchRow { title: "Volume feedback"; subtitle: "A click after you change the volume"; icon: "volume_up"; target: page.sd; key: "volumeFeedback" }
-        SwitchRow { title: "Brightness feedback"; subtitle: "A tick after you change the screen brightness"; icon: "brightness_6"; target: page.sd; key: "brightnessFeedback" }
-        SwitchRow { title: "App event sounds"; subtitle: "Let GTK, GNOME and KDE apps play their event sounds"; icon: "apps"; target: page.sd; key: "eventSounds" }
+        title: I18n.tr("Event sounds")
+        SwitchRow { title: I18n.tr("Notification sound"); subtitle: I18n.tr("When a notification pops up (silent in Do Not Disturb)"); icon: "notifications_active"; target: page.sd; key: "notifications" }
+        SwitchRow { title: I18n.tr("Volume feedback"); subtitle: I18n.tr("A click after you change the volume"); icon: "volume_up"; target: page.sd; key: "volumeFeedback" }
+        SwitchRow { title: I18n.tr("Brightness feedback"); subtitle: I18n.tr("A tick after you change the screen brightness"); icon: "brightness_6"; target: page.sd; key: "brightnessFeedback" }
+        SwitchRow { title: I18n.tr("App event sounds"); subtitle: I18n.tr("Let GTK, GNOME and KDE apps play their event sounds"); icon: "apps"; target: page.sd; key: "eventSounds" }
     }
 
     Group {
-        title: "Devices"
+        title: I18n.tr("Devices")
         SettingRow {
-            title: "Output"
+            title: I18n.tr("Output")
             icon: "speaker"
             FDropdown {
                 implicitWidth: 300
@@ -85,7 +85,7 @@ Page {
             }
         }
         SettingRow {
-            title: "Output volume"
+            title: I18n.tr("Output volume")
             icon: Audio.icon
             FSlider {
                 width: 300
@@ -95,7 +95,7 @@ Page {
             }
         }
         SettingRow {
-            title: "Input"
+            title: I18n.tr("Input")
             icon: "mic"
             FDropdown {
                 implicitWidth: 300
@@ -109,7 +109,7 @@ Page {
             }
         }
         SettingRow {
-            title: "Input volume"
+            title: I18n.tr("Input volume")
             icon: Audio.micMuted ? "mic_off" : "mic"
             FSlider {
                 width: 300
@@ -124,9 +124,9 @@ Page {
     VisualizerSection {}
 
     Group {
-        title: "App volumes"
-        SwitchRow { title: "Allow up to 150%"; subtitle: "For quiet apps; above 100% can distort"; icon: "volume_up"; target: page.sd; key: "mixerBoost" }
-        SwitchRow { title: "Set each stream"; subtitle: "An app playing several things (browser tabs) opens up to set each one"; icon: "format_list_bulleted"; target: page.sd; key: "mixerStreams" }
+        title: I18n.tr("App volumes")
+        SwitchRow { title: I18n.tr("Allow up to 150%"); subtitle: I18n.tr("For quiet apps; above 100% can distort"); icon: "volume_up"; target: page.sd; key: "mixerBoost" }
+        SwitchRow { title: I18n.tr("Set each stream"); subtitle: I18n.tr("An app playing several things (browser tabs) opens up to set each one"); icon: "format_list_bulleted"; target: page.sd; key: "mixerStreams" }
         AppMixer {
             Layout.fillWidth: true
             Layout.margins: Theme.sp3
@@ -135,19 +135,19 @@ Page {
     }
 
     Group {
-        title: "Media players"
+        title: I18n.tr("Media players")
         DropdownRow {
-            title: "Preferred player"
-            subtitle: Settings.data.media.preferred ? "The media controls follow it whenever it has something, unless another player is playing" : "None: the one playing, else the last with a track"
+            title: I18n.tr("Preferred player")
+            subtitle: Settings.data.media.preferred ? I18n.tr("The media controls follow it whenever it has something, unless another player is playing") : I18n.tr("None: the one playing, else the last with a track")
             icon: "star"
             target: Settings.data.media
             key: "preferred"
-            options: [{ value: "", label: "None" }].concat((Settings.data.media.seen || []).map(n => ({ value: n, label: n + (Media.names.includes(n) ? "" : " (closed)") })))
+            options: [{ value: "", label: I18n.tr("None") }].concat((Settings.data.media.seen || []).map(n => ({ value: n, label: n + (Media.names.includes(n) ? "" : " (closed)") })))
         }
         SettingRow {
             visible: (Settings.data.media.seen || []).length === 0
-            title: "No players yet"
-            subtitle: "Players show up here once they've been open (Spotify, mpv, a browser playing a video…)"
+            title: I18n.tr("No players yet")
+            subtitle: I18n.tr("Players show up here once they've been open (Spotify, mpv, a browser playing a video…)")
             icon: "info"
         }
         Repeater {
@@ -157,12 +157,12 @@ Page {
                 required property string modelData
                 readonly property bool ignored: (Settings.data.media.ignored || []).some(n => n.toLowerCase() === modelData.toLowerCase())
                 title: modelData
-                subtitle: ignored ? "Ignored: never shown in the bar, panels or lock screen" : Media.names.includes(modelData) ? "Open now" : "Closed"
+                subtitle: ignored ? I18n.tr("Ignored: never shown in the bar, panels or lock screen") : Media.names.includes(modelData) ? I18n.tr("Open now") : I18n.tr("Closed")
                 icon: "music_note"
                 Row {
                     spacing: 6
                     FButton {
-                        text: prow.ignored ? "Show it" : "Ignore"
+                        text: prow.ignored ? I18n.tr("Show it") : I18n.tr("Ignore")
                         variant: prow.ignored ? "filled" : "tonal"
                         onClicked: {
                             const all = Settings.data.media.ignored || [];

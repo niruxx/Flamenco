@@ -86,7 +86,7 @@ Scope {
                     RowLayout {
                         spacing: Theme.sp3
                         FIcon { icon: "auto_awesome"; size: 30; fill: 1; color: Theme.accent }
-                        FText { text: "What's new in Flamenco " + root.latest; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
+                        FText { text: I18n.tr("What's new in Flamenco ") + root.latest; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
                     }
                     Repeater {
                         model: root.fresh.length ? root.fresh : root.log.slice(0, 1)
@@ -108,7 +108,7 @@ Scope {
                     }
                     FButton {
                         Layout.alignment: Qt.AlignRight
-                        text: "Got it"
+                        text: I18n.tr("Got it")
                         onClicked: root.close()
                     }
                 }

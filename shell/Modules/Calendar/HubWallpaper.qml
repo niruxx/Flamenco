@@ -102,7 +102,7 @@ Rectangle {
                         height: 24
                         radius: 12
                         color: Theme.accent3
-                        FText { id: cur; anchors.centerIn: parent; text: "current"; font.pixelSize: Theme.fsXs; font.weight: Font.Bold; color: Theme.onAccent }
+                        FText { id: cur; anchors.centerIn: parent; text: I18n.tr("current"); font.pixelSize: Theme.fsXs; font.weight: Font.Bold; color: Theme.onAccent }
                     }
                 }
             }
@@ -149,10 +149,10 @@ Rectangle {
                 columns: 2
                 rowSpacing: 8
                 columnSpacing: 8
-                FButton { Layout.fillWidth: true; text: "Shuffle"; icon: "shuffle"; onClicked: Wallpapers.random(root.screenName) }
-                FButton { Layout.fillWidth: true; text: "Switcher"; icon: "view_carousel"; variant: "tonal"; onClicked: Panels.open("wallpaper", root.screenName) }
-                FButton { Layout.fillWidth: true; text: "Rescan"; icon: "refresh"; variant: "tonal"; onClicked: Wallpapers.rescan() }
-                FButton { Layout.fillWidth: true; text: "Settings"; icon: "tune"; variant: "tonal"; onClicked: root.openSettings("wallpaper") }
+                FButton { Layout.fillWidth: true; text: I18n.tr("Shuffle"); icon: "shuffle"; onClicked: Wallpapers.random(root.screenName) }
+                FButton { Layout.fillWidth: true; text: I18n.tr("Switcher"); icon: "view_carousel"; variant: "tonal"; onClicked: Panels.open("wallpaper", root.screenName) }
+                FButton { Layout.fillWidth: true; text: I18n.tr("Rescan"); icon: "refresh"; variant: "tonal"; onClicked: Wallpapers.rescan() }
+                FButton { Layout.fillWidth: true; text: I18n.tr("Settings"); icon: "tune"; variant: "tonal"; onClicked: root.openSettings("wallpaper") }
             }
         }
 
@@ -227,7 +227,7 @@ Rectangle {
                     anchors.centerIn: parent
                     visible: grid.count === 0
                     horizontalAlignment: Text.AlignHCenter
-                    text: Wallpapers.scanning ? "Scanning…" : Wallpapers.status === "missing" ? "Folder not found:\n" + Wallpapers.dir : "No images in " + Wallpapers.dir
+                    text: Wallpapers.scanning ? I18n.tr("Scanning…") : Wallpapers.status === "missing" ? I18n.tr("Folder not found:\n") + Wallpapers.dir : I18n.tr("No images in ") + Wallpapers.dir
                     color: "#ffffff"
                 }
             }

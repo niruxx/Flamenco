@@ -70,7 +70,7 @@ PanelWindow {
             y: Theme.sp5
             width: parent.width - Theme.sp5 * 2
             spacing: Theme.sp3
-            FText { text: Panels.qr === "@wifi" ? "Share Wi-Fi" + (win.label ? ": " + win.label : "") : "QR code"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+            FText { text: Panels.qr === "@wifi" ? I18n.tr("Share Wi-Fi") + (win.label ? ": " + win.label : "") : I18n.tr("QR code"); font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
             Rectangle {
                 Layout.alignment: Qt.AlignHCenter
                 implicitWidth: 260
@@ -85,16 +85,16 @@ PanelWindow {
                     smooth: false
                     fillMode: Image.PreserveAspectFit
                 }
-                FText { anchors.centerIn: parent; visible: !win.path; text: win.error ? "" : "Making it…"; color: "#555" }
+                FText { anchors.centerIn: parent; visible: !win.path; text: win.error ? "" : I18n.tr("Making it…"); color: "#555" }
             }
             FText { Layout.fillWidth: true; visible: win.error !== ""; text: win.error; color: Theme.error; wrapMode: Text.Wrap }
-            FText { Layout.fillWidth: true; visible: Panels.qr === "@wifi" && win.path; text: "Point a phone's camera at it to join"; dim: true; horizontalAlignment: Text.AlignHCenter }
+            FText { Layout.fillWidth: true; visible: Panels.qr === "@wifi" && win.path; text: I18n.tr("Point a phone's camera at it to join"); dim: true; horizontalAlignment: Text.AlignHCenter }
             FTextField {
                 Layout.fillWidth: true
-                placeholder: "Or type text or a link for a QR code"
+                placeholder: I18n.tr("Or type text or a link for a QR code")
                 onAccepted: if (text.trim()) win.make([text.trim()])
             }
-            FButton { Layout.alignment: Qt.AlignRight; text: "Done"; onClicked: Panels.qr = "" }
+            FButton { Layout.alignment: Qt.AlignRight; text: I18n.tr("Done"); onClicked: Panels.qr = "" }
         }
     }
 }

@@ -63,7 +63,7 @@ Variants {
                 }
                 FText {
                     Layout.fillWidth: true
-                    text: "Clipboard"
+                    text: I18n.tr("Clipboard")
                     font.pixelSize: Theme.fsLg
                     font.weight: Font.Bold
                 }
@@ -76,7 +76,7 @@ Variants {
                 // clearing asks for a second click
                 FButton {
                     visible: Clipboard.entries.length > 0
-                    text: panel.confirmClear ? "Clear all?" : "Clear"
+                    text: panel.confirmClear ? I18n.tr("Clear all?") : I18n.tr("Clear")
                     icon: "delete_sweep"
                     variant: panel.confirmClear ? "filled" : "tonal"
                     onClicked: {
@@ -96,7 +96,7 @@ Variants {
                 Layout.fillWidth: true
                 visible: Clipboard.entries.length > 0
                 icon: "search"
-                placeholder: "Search the clipboard"
+                placeholder: I18n.tr("Search the clipboard")
                 onEdited: t => {
                     panel.query = t;
                     list.currentIndex = 0;
@@ -183,7 +183,7 @@ Variants {
                         FText {
                             id: rowText
                             Layout.fillWidth: true
-                            text: row.modelData.image ? "Image · " + row.modelData.kind.toUpperCase() + "\n" + row.modelData.size : row.modelData.text
+                            text: row.modelData.image ? I18n.tr("Image · ") + row.modelData.kind.toUpperCase() + "\n" + row.modelData.size : row.modelData.text
                             dim: row.modelData.image
                             wrapMode: Text.Wrap
                             maximumLineCount: 3
@@ -229,7 +229,7 @@ Variants {
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
                     dim: true
-                    text: !Clipboard.available ? "Clipboard history needs cliphist and wl-clipboard:\nsudo pacman -S cliphist wl-clipboard"
+                    text: !Clipboard.available ? I18n.tr("Clipboard history needs cliphist and wl-clipboard:\nsudo pacman -S cliphist wl-clipboard")
                         : panel.query !== "" ? "Nothing matches “" + panel.query.trim() + "”"
                         : !Clipboard.watching ? "History is off (Settings → Launcher → Clipboard history)"
                         : "Nothing copied yet. What you copy shows up here."
@@ -240,7 +240,7 @@ Variants {
                 Layout.fillWidth: true
                 visible: list.count > 0
                 horizontalAlignment: Text.AlignHCenter
-                text: "Click or Enter copies · Delete removes"
+                text: I18n.tr("Click or Enter copies · Delete removes")
                 dim: true
                 font.pixelSize: Theme.fsXs
             }

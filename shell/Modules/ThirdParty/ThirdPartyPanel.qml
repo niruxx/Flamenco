@@ -123,7 +123,7 @@ Variants {
                 width: parent.width - 20
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.Wrap
-                text: (panel.plugin?.name ?? "This plugin") + "'s panel didn't load. Settings → Plugins (3rd party) says why."
+                text: (panel.plugin?.name ?? I18n.tr("This plugin")) + "'s panel didn't load. Settings → Plugins (3rd party) says why."
                 dim: true
             }
         }

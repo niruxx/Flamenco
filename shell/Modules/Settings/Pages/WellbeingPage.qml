@@ -8,8 +8,8 @@ import qs.Widgets
 // kept only on this computer), daily app limits, break reminders.
 Page {
     id: page
-    title: "Digital wellbeing"
-    subtitle: "Screen time and app limits. Everything stays on this computer (~/.local/state/flamenco/wellbeing.json)."
+    title: I18n.tr("Digital wellbeing")
+    subtitle: I18n.tr("Screen time and app limits. Everything stays on this computer (~/.local/state/flamenco/wellbeing.json).")
     readonly property var w: Settings.data.wellbeing
     readonly property var limited: Object.keys(w.limits || {})
     property bool confirmClear: false
@@ -26,7 +26,7 @@ Page {
             spacing: Theme.sp4
             ColumnLayout {
                 spacing: 0
-                FText { text: "Today"; dim: true; font.pixelSize: Theme.fsSm }
+                FText { text: I18n.tr("Today"); dim: true; font.pixelSize: Theme.fsSm }
                 FText { text: Wellbeing.fmt(Wellbeing.todayTotal); font.pixelSize: Theme.fsXxl; font.weight: Font.Bold; color: Theme.accent }
             }
             Item { Layout.fillWidth: true }
@@ -41,7 +41,7 @@ Page {
                 }
             }
             FButton {
-                text: "Details"
+                text: I18n.tr("Details")
                 variant: "tonal"
                 onClicked: {
                     Panels.settingsOpen = false;
@@ -52,24 +52,24 @@ Page {
     }
 
     Group {
-        title: "Screen time"
-        SwitchRow { title: "Count screen time"; subtitle: "How long each app is in front of you, while you're active"; icon: "hourglass_bottom"; target: page.w; key: "enabled" }
-        SliderRow { visible: page.w.enabled; title: "Stop counting after"; subtitle: "This long without touching the keyboard or mouse (and while locked)"; icon: "timer"; target: page.w; key: "idleAfter"; from: 30; to: 600; stepSize: 30; factor: 1 / 60; decimals: 1; suffix: " min" }
+        title: I18n.tr("Screen time")
+        SwitchRow { title: I18n.tr("Count screen time"); subtitle: I18n.tr("How long each app is in front of you, while you're active"); icon: "hourglass_bottom"; target: page.w; key: "enabled" }
+        SliderRow { visible: page.w.enabled; title: I18n.tr("Stop counting after"); subtitle: I18n.tr("This long without touching the keyboard or mouse (and while locked)"); icon: "timer"; target: page.w; key: "idleAfter"; from: 30; to: 600; stepSize: 30; factor: 1 / 60; decimals: 1; suffix: " min" }
         SettingRow {
-            title: "Clear screen time"
-            subtitle: page.confirmClear ? "All of it, for every day: sure?" : "Forget everything counted so far"
+            title: I18n.tr("Clear screen time")
+            subtitle: page.confirmClear ? I18n.tr("All of it, for every day: sure?") : I18n.tr("Forget everything counted so far")
             icon: "delete_sweep"
             Row {
                 spacing: 6
                 FButton {
                     visible: !page.confirmClear
-                    text: "Clear…"
+                    text: I18n.tr("Clear…")
                     variant: "text"
                     onClicked: page.confirmClear = true
                 }
                 FButton {
                     visible: page.confirmClear
-                    text: "Clear it all"
+                    text: I18n.tr("Clear it all")
                     onClicked: {
                         Wellbeing.clear();
                         page.confirmClear = false;
@@ -77,7 +77,7 @@ Page {
                 }
                 FButton {
                     visible: page.confirmClear
-                    text: "Keep"
+                    text: I18n.tr("Keep")
                     variant: "text"
                     onClicked: page.confirmClear = false
                 }
@@ -86,14 +86,14 @@ Page {
     }
 
     Group {
-        title: "Breaks"
+        title: I18n.tr("Breaks")
         SettingRow {
-            title: "Remind me to take a break"
-            subtitle: page.w.breakEvery > 0 ? "After " + page.w.breakEvery + " minutes of use without one" : "Off"
+            title: I18n.tr("Remind me to take a break")
+            subtitle: page.w.breakEvery > 0 ? I18n.tr("After ") + page.w.breakEvery + " minutes of use without one" : I18n.tr("Off")
             icon: "self_improvement"
             FSegmented {
                 implicitWidth: 300
-                options: [{ value: 0, label: "Off" }, { value: 30, label: "30m" }, { value: 60, label: "1h" }, { value: 90, label: "90m" }, { value: 120, label: "2h" }]
+                options: [{ value: 0, label: I18n.tr("Off") }, { value: 30, label: I18n.tr("30m") }, { value: 60, label: I18n.tr("1h") }, { value: 90, label: I18n.tr("90m") }, { value: 120, label: I18n.tr("2h") }]
                 current: page.w.breakEvery ?? 0
                 onSelected: v => page.w.breakEvery = v
             }
@@ -101,11 +101,11 @@ Page {
     }
 
     Group {
-        title: "App limits"
+        title: I18n.tr("App limits")
         SettingRow {
             visible: page.limited.length === 0
-            title: "No limits yet"
-            subtitle: "In the dashboard's Wellbeing page, press an app's timer to give it a daily limit"
+            title: I18n.tr("No limits yet")
+            subtitle: I18n.tr("In the dashboard's Wellbeing page, press an app's timer to give it a daily limit")
             icon: "timer_off"
         }
         Repeater {

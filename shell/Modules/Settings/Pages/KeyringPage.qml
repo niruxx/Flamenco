@@ -9,8 +9,8 @@ import qs.Widgets
 // Which Secret Service (org.freedesktop.secrets) provider apps use for passwords.
 Page {
     id: page
-    title: "Keyring"
-    subtitle: "Where apps (browsers, mail, Git, VS Code…) keep your passwords. Pick which keyring answers them."
+    title: I18n.tr("Keyring")
+    subtitle: I18n.tr("Where apps (browsers, mail, Git, VS Code…) keep your passwords. Pick which keyring answers them.")
 
     property var st: ({ chosen: "", owner: {}, pam: {}, keyrings: [] })
     property bool loaded: false
@@ -69,7 +69,7 @@ Page {
                 Layout.fillWidth: true
                 spacing: 0
                 FText {
-                    text: !page.loaded ? "Checking…" : page.st.owner.process ? (page.current ? page.current.label : page.st.owner.process) + " is answering apps" : "No keyring is running right now"
+                    text: !page.loaded ? I18n.tr("Checking…") : page.st.owner.process ? (page.current ? page.current.label : page.st.owner.process) + " is answering apps" : I18n.tr("No keyring is running right now")
                     font.pixelSize: Theme.fsLg
                     font.weight: Font.Bold
                 }
@@ -77,7 +77,7 @@ Page {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     dim: true
-                    text: page.st.chosen === "none" ? "Set to none: apps can't store passwords" : page.st.chosen ? "Chosen in Flamenco; starts automatically when an app needs it" : "Using the system default (whichever keyring starts first)"
+                    text: page.st.chosen === "none" ? I18n.tr("Set to none: apps can't store passwords") : page.st.chosen ? I18n.tr("Chosen in Flamenco; starts automatically when an app needs it") : I18n.tr("Using the system default (whichever keyring starts first)")
                 }
             }
             FIconButton { icon: "refresh"; onClicked: page.load() }
@@ -86,7 +86,7 @@ Page {
 
     // ── choices ──
     Group {
-        title: "Keyring"
+        title: I18n.tr("Keyring")
 
         Repeater {
             model: page.st.keyrings
@@ -101,19 +101,19 @@ Page {
                     spacing: 6
                     FButton {
                         visible: !kr.modelData.installed
-                        text: "Install"
+                        text: I18n.tr("Install")
                         variant: "tonal"
                         onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed " + kr.modelData.package + (kr.modelData.managerPackage && kr.modelData.managerPackage !== kr.modelData.package ? " " + kr.modelData.managerPackage : "")))
                     }
                     FButton {
                         visible: kr.modelData.installed && kr.modelData.managerInstalled
-                        text: "Open"
+                        text: I18n.tr("Open")
                         variant: "outlined"
                         onClicked: Quickshell.execDetached(kr.modelData.manager)
                     }
                     FButton {
                         visible: kr.modelData.installed
-                        text: kr.chosen ? "In use" : "Use"
+                        text: kr.chosen ? I18n.tr("In use") : I18n.tr("Use")
                         disabled: kr.chosen || user.running
                         onClicked: page.use(kr.modelData.value)
                     }
@@ -122,11 +122,11 @@ Page {
         }
 
         SettingRow {
-            title: "None"
-            subtitle: "Don't start any keyring; apps that need one will ask or fail to save passwords"
+            title: I18n.tr("None")
+            subtitle: I18n.tr("Don't start any keyring; apps that need one will ask or fail to save passwords")
             icon: page.st.chosen === "none" ? "radio_button_checked" : "radio_button_unchecked"
             FButton {
-                text: page.st.chosen === "none" ? "In use" : "Use"
+                text: page.st.chosen === "none" ? I18n.tr("In use") : I18n.tr("Use")
                 variant: "outlined"
                 disabled: page.st.chosen === "none" || user.running
                 onClicked: page.use("none")
@@ -135,11 +135,11 @@ Page {
 
         SettingRow {
             visible: page.st.chosen !== ""
-            title: "Back to the system default"
-            subtitle: "Remove Flamenco's choice and let whichever keyring starts first answer"
+            title: I18n.tr("Back to the system default")
+            subtitle: I18n.tr("Remove Flamenco's choice and let whichever keyring starts first answer")
             icon: "undo"
             FButton {
-                text: "Reset"
+                text: I18n.tr("Reset")
                 variant: "outlined"
                 disabled: user.running
                 onClicked: page.use("default")
@@ -155,19 +155,19 @@ Page {
 
     // ── unlock at login ──
     Group {
-        title: "Unlock at login"
+        title: I18n.tr("Unlock at login")
 
         SettingRow {
             visible: page.unlocking.length > 0
-            title: "Unlocks automatically"
+            title: I18n.tr("Unlocks automatically")
             subtitle: page.unlocking.map(s => s + ": " + page.st.pam[s].join(", ")).join(" · ")
             icon: "lock_open"
         }
 
         SettingRow {
             visible: page.loaded && page.unlocking.length === 0
-            title: "Your keyring will ask for its password once per session"
-            subtitle: "To unlock it with your login password, the login manager's PAM file needs the module below. Flamenco doesn't edit PAM files automatically, because a mistake there can stop you logging in."
+            title: I18n.tr("Your keyring will ask for its password once per session")
+            subtitle: I18n.tr("To unlock it with your login password, the login manager's PAM file needs the module below. Flamenco doesn't edit PAM files automatically, because a mistake there can stop you logging in.")
             icon: "password"
         }
 

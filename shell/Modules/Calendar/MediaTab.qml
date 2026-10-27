@@ -20,8 +20,8 @@ ColumnLayout {
         Layout.bottomMargin: Theme.sp6
         spacing: Theme.sp2
         FIcon { Layout.alignment: Qt.AlignHCenter; icon: "music_off"; size: 56; color: Theme.textDim }
-        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: "No media playing"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
-        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: "Start something in any MPRIS-capable player"; dim: true }
+        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: I18n.tr("No media playing"); font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+        FText { Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter; text: I18n.tr("Start something in any MPRIS-capable player"); dim: true }
     }
 
     // player: centered art + track info over a blurred backdrop

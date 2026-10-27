@@ -7,7 +7,7 @@ import qs.Widgets
 DetailPage {
     id: page
     property bool input: false
-    title: input ? "Input device" : "Output device"
+    title: input ? I18n.tr("Input device") : I18n.tr("Output device")
 
     Repeater {
         model: page.input ? Audio.sources : Audio.sinks

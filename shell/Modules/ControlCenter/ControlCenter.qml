@@ -103,7 +103,7 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent
                         icon: Network.icon
-                        title: "Wi-Fi"
+                        title: I18n.tr("Wi-Fi")
                         subtitle: Network.label
                         active: Network.wifiEnabled
                         hasDetails: true
@@ -121,7 +121,7 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent2
                         icon: BluetoothState.icon
-                        title: "Bluetooth"
+                        title: I18n.tr("Bluetooth")
                         subtitle: BluetoothState.label
                         active: BluetoothState.enabled
                         hasDetails: BluetoothState.available
@@ -136,8 +136,8 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent3
                         icon: "do_not_disturb_on"
-                        title: "Do not disturb"
-                        subtitle: Notifs.dnd ? "On" : "Off"
+                        title: I18n.tr("Do not disturb")
+                        subtitle: Notifs.dnd ? I18n.tr("On") : I18n.tr("Off")
                         active: Notifs.dnd
                         onClicked: Notifs.setDnd(!Notifs.dnd)
                     }
@@ -149,7 +149,7 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.warning
                         icon: "nightlight"
-                        title: "Night light"
+                        title: I18n.tr("Night light")
                         subtitle: Toggles.status
                         active: Toggles.nightLight
                         hasDetails: true
@@ -164,8 +164,8 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent2
                         icon: "coffee"
-                        title: "Caffeine"
-                        subtitle: Toggles.caffeine ? "Staying awake" : "Off"
+                        title: I18n.tr("Caffeine")
+                        subtitle: Toggles.caffeine ? I18n.tr("Staying awake") : I18n.tr("Off")
                         active: Toggles.caffeine
                         onClicked: Toggles.caffeine = !Toggles.caffeine
                     }
@@ -177,7 +177,7 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent
                         icon: Power.profileIcon
-                        title: "Power"
+                        title: I18n.tr("Power")
                         subtitle: Power.profileName
                         active: Power.profileName !== "Balanced"
                         hasDetails: true
@@ -192,8 +192,8 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent3
                         icon: Network.vpnActive ? "vpn_lock" : "vpn_key"
-                        title: "VPN"
-                        subtitle: Network.vpnActive ? Network.activeVpns.map(v => v.name).join(", ") : Network.vpns.length ? "Off" : "Not set up"
+                        title: I18n.tr("VPN")
+                        subtitle: Network.vpnActive ? Network.activeVpns.map(v => v.name).join(", ") : Network.vpns.length ? I18n.tr("Off") : I18n.tr("Not set up")
                         active: Network.vpnActive
                         hasDetails: true
                         onClicked: {
@@ -214,8 +214,8 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent2
                         icon: Theme.dark ? "dark_mode" : "light_mode"
-                        title: "Dark mode"
-                        subtitle: Theme.dark ? "On" : "Off"
+                        title: I18n.tr("Dark mode")
+                        subtitle: Theme.dark ? I18n.tr("On") : I18n.tr("Off")
                         active: Theme.dark
                         onClicked: Settings.data.appearance.mode = Theme.dark ? "light" : "dark"
                     }
@@ -227,8 +227,8 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.error
                         icon: Recorder.recording ? "stop_circle" : "screen_record"
-                        title: Recorder.recording ? "Stop recording" : "Record screen"
-                        subtitle: Recorder.recording ? Recorder.clock : "This screen · ⋯ for an area"
+                        title: Recorder.recording ? I18n.tr("Stop recording") : I18n.tr("Record screen")
+                        subtitle: Recorder.recording ? Recorder.clock : I18n.tr("This screen · ⋯ for an area")
                         active: Recorder.recording
                         hasDetails: !Recorder.recording
                         onClicked: {
@@ -248,8 +248,8 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent3
                         icon: "widgets"
-                        title: "Desktop widgets"
-                        subtitle: Settings.data.desktop.enabled ? (Settings.data.desktop.widgets.length ? Settings.data.desktop.widgets.length + " on the desktop" : "Add some") : "Off"
+                        title: I18n.tr("Desktop widgets")
+                        subtitle: Settings.data.desktop.enabled ? (Settings.data.desktop.widgets.length ? Settings.data.desktop.widgets.length + " on the desktop" : I18n.tr("Add some")) : I18n.tr("Off")
                         active: Settings.data.desktop.enabled && Settings.data.desktop.widgets.length > 0
                         onClicked: {
                             Settings.data.desktop.enabled = true;
@@ -264,7 +264,7 @@ Variants {
                         Layout.fillWidth: true
                         tint: Theme.accent
                         icon: "wallpaper"
-                        title: "Wallpaper"
+                        title: I18n.tr("Wallpaper")
                         subtitle: Paths.fileName(Wallpapers.current) || "None"
                         onClicked: Panels.toggle("wallpaper", panel.modelData.name)
                     }

@@ -54,7 +54,7 @@ Variants {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.horizontalCenterOffset: -side.width / 2
             visible: Desk.on(ed.screenName).length === 0
-            text: "Drag a widget from the right onto the desktop"
+            text: I18n.tr("Drag a widget from the right onto the desktop")
             font.pixelSize: Theme.fsXl
             color: "white"
             opacity: 0.85
@@ -190,7 +190,7 @@ Variants {
                     FIcon { icon: "widgets"; size: 24; color: Theme.accent; fill: 1 }
                     FText {
                         Layout.fillWidth: true
-                        text: "Desktop widgets"
+                        text: I18n.tr("Desktop widgets")
                         font.pixelSize: Theme.fsXl
                         font.weight: Font.Bold
                     }
@@ -198,7 +198,7 @@ Variants {
                 }
                 FText {
                     Layout.fillWidth: true
-                    text: "Drag one onto the desktop, or click to add it. Drag placed widgets to move them; hover one to resize or remove it."
+                    text: I18n.tr("Drag one onto the desktop, or click to add it. Drag placed widgets to move them; hover one to resize or remove it.")
                     dim: true
                     wrapMode: Text.Wrap
                     font.pixelSize: Theme.fsSm
@@ -272,25 +272,25 @@ Variants {
                     }
                 }
 
-                FText { text: "Style"; font.weight: Font.DemiBold }
+                FText { text: I18n.tr("Style"); font.weight: Font.DemiBold }
                 FSegmented {
                     Layout.fillWidth: true
                     implicitHeight: 38
-                    options: [{ value: "card", label: "Card" }, { value: "glass", label: "Glass" }, { value: "bare", label: "Bare" }]
+                    options: [{ value: "card", label: I18n.tr("Card") }, { value: "glass", label: I18n.tr("Glass") }, { value: "bare", label: I18n.tr("Bare") }]
                     current: Settings.data.desktop.style
                     onSelected: v => Settings.data.desktop.style = v
                 }
                 RowLayout {
                     Layout.fillWidth: true
                     FButton {
-                        text: "Remove all"
+                        text: I18n.tr("Remove all")
                         variant: "text"
                         disabled: Desk.on(ed.screenName).length === 0
                         onClicked: Desk.clear(ed.screenName)
                     }
                     Item { Layout.fillWidth: true }
                     FButton {
-                        text: "Done"
+                        text: I18n.tr("Done")
                         icon: "done"
                         onClicked: ed.done()
                     }

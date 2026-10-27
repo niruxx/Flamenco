@@ -116,7 +116,7 @@ Variants {
                 }
                 FText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "Authentication required"
+                    text: I18n.tr("Authentication required")
                     font.pixelSize: Theme.fsLg
                     font.weight: Font.Bold
                 }
@@ -132,7 +132,7 @@ Variants {
                     Layout.fillWidth: true
                     visible: text !== ""
                     readonly property var who: win.flow?.selectedIdentity ?? null
-                    text: who && who.string && who.string !== Quickshell.env("USER") ? "As " + who.string : ""
+                    text: who && who.string && who.string !== Quickshell.env("USER") ? I18n.tr("As ") + who.string : ""
                     horizontalAlignment: Text.AlignHCenter
                     font.pixelSize: Theme.fsSm
                 }
@@ -156,7 +156,7 @@ Variants {
                 FText {
                     Layout.fillWidth: true
                     visible: text !== ""
-                    text: win.waiting ? "Touch the fingerprint reader, or type your password"
+                    text: win.waiting ? I18n.tr("Touch the fingerprint reader, or type your password")
                         : (win.flow?.supplementaryMessage ?? "") !== "" ? win.flow.supplementaryMessage
                         : PolkitAuth.failed ? "That didn't work. Try again" : ""
                     color: PolkitAuth.failed || (win.flow?.supplementaryIsError ?? false) ? Theme.error : Theme.textDim
@@ -171,12 +171,12 @@ Variants {
                     spacing: Theme.sp2
                     Item { Layout.fillWidth: true }
                     FButton {
-                        text: "Cancel"
+                        text: I18n.tr("Cancel")
                         variant: "tonal"
                         onClicked: PolkitAuth.cancel()
                     }
                     FButton {
-                        text: win.busy ? "Checking…" : "Authenticate"
+                        text: win.busy ? I18n.tr("Checking…") : I18n.tr("Authenticate")
                         icon: "lock_open"
                         disabled: win.busy || field.text === ""
                         onClicked: win.submit()

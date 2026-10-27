@@ -86,8 +86,8 @@ Variants {
                     }
                     ColumnLayout {
                         spacing: 0
-                        FText { text: "Share your screen"; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
-                        FText { text: "An app wants to see a screen. Pick the one to share."; dim: true }
+                        FText { text: I18n.tr("Share your screen"); font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
+                        FText { text: I18n.tr("An app wants to see a screen. Pick the one to share."); dim: true }
                     }
                 }
 
@@ -161,9 +161,9 @@ Variants {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    FText { Layout.fillWidth: true; text: "← → pick · Enter share · Esc don't"; dim: true; font.pixelSize: Theme.fsXs }
-                    FButton { text: "Don't share"; variant: "text"; onClicked: Share.answer("") }
-                    FButton { text: "Share"; icon: "screen_share"; onClicked: Share.answer(Share.outputs[win.sel] ?? "") }
+                    FText { Layout.fillWidth: true; text: I18n.tr("← → pick · Enter share · Esc don't"); dim: true; font.pixelSize: Theme.fsXs }
+                    FButton { text: I18n.tr("Don't share"); variant: "text"; onClicked: Share.answer("") }
+                    FButton { text: I18n.tr("Share"); icon: "screen_share"; onClicked: Share.answer(Share.outputs[win.sel] ?? "") }
                 }
             }
         }

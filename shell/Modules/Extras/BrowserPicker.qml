@@ -74,7 +74,7 @@ PanelWindow {
             y: Theme.sp5
             width: parent.width - Theme.sp5 * 2
             spacing: Theme.sp2
-            FText { text: "Open with"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+            FText { text: I18n.tr("Open with"); font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
             FText { Layout.fillWidth: true; text: win.url; dim: true; elide: Text.ElideMiddle; font.pixelSize: Theme.fsSm }
             Repeater {
                 model: win.browsers
@@ -107,7 +107,7 @@ PanelWindow {
             RowLayout {
                 spacing: 8
                 FSwitch { checked: win.always; onToggled: c => win.always = c }
-                FText { text: "Always use this one (stop asking)"; dim: true }
+                FText { text: I18n.tr("Always use this one (stop asking)"); dim: true }
             }
         }
     }

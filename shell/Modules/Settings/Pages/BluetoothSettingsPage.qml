@@ -10,8 +10,8 @@ import qs.Widgets
 // or PIN they ask for). It looks for devices while it's open.
 Page {
     id: page
-    title: "Bluetooth"
-    subtitle: "Pair headphones, keyboards, mice, phones and other devices. Put a device in pairing mode and it shows up under Nearby."
+    title: I18n.tr("Bluetooth")
+    subtitle: I18n.tr("Pair headphones, keyboards, mice, phones and other devices. Put a device in pairing mode and it shows up under Nearby.")
     readonly property var ad: BluetoothState.adapter
     property string forgetting: ""            // asks once more before forgetting
 
@@ -30,8 +30,8 @@ Page {
 
     Group {
         SettingRow {
-            title: "Bluetooth"
-            subtitle: !BluetoothState.available ? "No Bluetooth adapter found (is bluetooth.service running? Settings → System check)"
+            title: I18n.tr("Bluetooth")
+            subtitle: !BluetoothState.available ? I18n.tr("No Bluetooth adapter found (is bluetooth.service running? Settings → System check)")
                 : BluetoothState.enabled ? (BluetoothState.connected.length ? "Connected to " + BluetoothState.connected.map(d => d.name).join(", ") : "On") : "Off"
             icon: BluetoothState.icon
             FSwitch {
@@ -42,8 +42,8 @@ Page {
         }
         SettingRow {
             visible: BluetoothState.enabled
-            title: "Visible as “" + (page.ad?.name ?? "") + "”"
-            subtitle: (page.ad?.discoverable ?? false) ? "Other devices can find this computer now" : "Other devices can't find this computer (devices you pair from here don't need this)"
+            title: I18n.tr("Visible as “") + (page.ad?.name ?? "") + "”"
+            subtitle: (page.ad?.discoverable ?? false) ? I18n.tr("Other devices can find this computer now") : I18n.tr("Other devices can't find this computer (devices you pair from here don't need this)")
             icon: "visibility"
             FSwitch {
                 checked: page.ad?.discoverable ?? false
@@ -59,11 +59,11 @@ Page {
 
     Group {
         visible: BluetoothState.enabled
-        title: "My devices"
+        title: I18n.tr("My devices")
         SettingRow {
             visible: BluetoothState.mine.length === 0
-            title: "None yet"
-            subtitle: "Devices you pair show up here"
+            title: I18n.tr("None yet")
+            subtitle: I18n.tr("Devices you pair show up here")
             icon: "info"
         }
         Repeater {
@@ -73,19 +73,19 @@ Page {
                 required property var modelData
                 readonly property bool moving: modelData.state === BluetoothDeviceState.Connecting || modelData.state === BluetoothDeviceState.Disconnecting
                 title: modelData.name || modelData.address
-                subtitle: (moving ? (modelData.state === BluetoothDeviceState.Connecting ? "Connecting…" : "Disconnecting…") : modelData.connected ? "Connected" : "Not connected")
+                subtitle: (moving ? (modelData.state === BluetoothDeviceState.Connecting ? I18n.tr("Connecting…") : I18n.tr("Disconnecting…")) : modelData.connected ? I18n.tr("Connected") : I18n.tr("Not connected"))
                     + (modelData.batteryAvailable ? " · battery " + Math.round(modelData.battery * 100) + "%" : "")
                 icon: BluetoothState.kindIcon(modelData)
                 Row {
                     spacing: 6
                     FButton {
-                        text: drow.modelData.connected ? "Disconnect" : "Connect"
+                        text: drow.modelData.connected ? I18n.tr("Disconnect") : I18n.tr("Connect")
                         variant: drow.modelData.connected ? "tonal" : "filled"
                         disabled: drow.moving
                         onClicked: BluetoothState.toggleDevice(drow.modelData)
                     }
                     FButton {
-                        text: page.forgetting === drow.modelData.address ? "Sure?" : "Forget"
+                        text: page.forgetting === drow.modelData.address ? I18n.tr("Sure?") : I18n.tr("Forget")
                         variant: "text"
                         onClicked: {
                             if (page.forgetting === drow.modelData.address) {
@@ -103,21 +103,21 @@ Page {
 
     Group {
         visible: BluetoothState.enabled
-        title: "Options"
-        SwitchRow { title: "Reconnect my devices"; subtitle: "When Bluetooth comes on (and at login), devices you've paired and trust connect again"; icon: "bluetooth_connected"; target: Settings.data.bluetooth; key: "autoConnect" }
-        SwitchRow { title: "Signal strength"; subtitle: "How close nearby devices are, while searching"; icon: "signal_cellular_alt"; target: Settings.data.bluetooth; key: "signal" }
-        SwitchRow { title: "Devices without a name"; subtitle: "Some devices only give an address until they're paired"; icon: "help"; target: Settings.data.bluetooth; key: "showUnnamed" }
+        title: I18n.tr("Options")
+        SwitchRow { title: I18n.tr("Reconnect my devices"); subtitle: I18n.tr("When Bluetooth comes on (and at login), devices you've paired and trust connect again"); icon: "bluetooth_connected"; target: Settings.data.bluetooth; key: "autoConnect" }
+        SwitchRow { title: I18n.tr("Signal strength"); subtitle: I18n.tr("How close nearby devices are, while searching"); icon: "signal_cellular_alt"; target: Settings.data.bluetooth; key: "signal" }
+        SwitchRow { title: I18n.tr("Devices without a name"); subtitle: I18n.tr("Some devices only give an address until they're paired"); icon: "help"; target: Settings.data.bluetooth; key: "showUnnamed" }
     }
 
     Group {
         visible: BluetoothState.enabled
-        title: "Nearby"
+        title: I18n.tr("Nearby")
         SettingRow {
-            title: BluetoothState.scanning ? "Searching…" : "Not searching"
-            subtitle: BluetoothState.nearby.length ? BluetoothState.nearby.length + " found" : "Put the device in pairing mode (often: hold its power or Bluetooth button until a light blinks)"
+            title: BluetoothState.scanning ? I18n.tr("Searching…") : I18n.tr("Not searching")
+            subtitle: BluetoothState.nearby.length ? BluetoothState.nearby.length + " found" : I18n.tr("Put the device in pairing mode (often: hold its power or Bluetooth button until a light blinks)")
             icon: "bluetooth_searching"
             FButton {
-                text: BluetoothState.scanning ? "Stop" : "Search again"
+                text: BluetoothState.scanning ? I18n.tr("Stop") : I18n.tr("Search again")
                 variant: "tonal"
                 onClicked: BluetoothState.scanning ? BluetoothState.stopScan() : BluetoothState.startScan()
             }
@@ -132,7 +132,7 @@ Page {
                 subtitle: (bars > 0 ? ["", "Weak signal", "Fair signal", "Good signal", "Strong signal"][bars] + " · " : "") + modelData.address
                 icon: BluetoothState.kindIcon(modelData)
                 FButton {
-                    text: BluetoothState.pairing === nrow.modelData.address ? "Pairing…" : "Pair"
+                    text: BluetoothState.pairing === nrow.modelData.address ? I18n.tr("Pairing…") : I18n.tr("Pair")
                     disabled: BluetoothState.pairing !== ""
                     onClicked: BluetoothState.pair(nrow.modelData)
                 }

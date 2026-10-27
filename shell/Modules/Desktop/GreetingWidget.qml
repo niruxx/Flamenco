@@ -30,7 +30,7 @@ ColumnLayout {
     }
     FText {
         Layout.topMargin: Math.round(4 * root.k)
-        text: Qt.formatDate(Time.now, "dddd d MMMM") + (root.nextEvent ? " · next: " + root.nextEvent.title + " at " + Qt.formatTime(new Date(root.nextEvent.start), Time.use24h ? "HH:mm" : "h:mm AP")
+        text: I18n.locale.toString(Time.now, "dddd d MMMM") + (root.nextEvent ? " · next: " + root.nextEvent.title + " at " + Qt.formatTime(new Date(root.nextEvent.start), Time.use24h ? I18n.tr("HH:mm") : "h:mm AP")
             : Weather.ready ? " · " + Math.round(Weather.temp) + Weather.unit + " " + Weather.description.toLowerCase() : "")
         font.pixelSize: Math.round(Theme.fsMd * root.k)
         dim: true

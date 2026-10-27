@@ -40,7 +40,7 @@ Item {
     implicitHeight: Math.max(60, lay.implicitHeight + 24)
 
     // Settings search: scroll here and flash when this is what was searched for
-    readonly property bool found: Panels.settingsFind !== "" && Panels.settingsFind === root.title
+    readonly property bool found: Panels.settingsFind !== "" && (Panels.settingsFind === root.title || I18n.tr(Panels.settingsFind) === root.title)
     function reveal() {
         let f = root.parent;
         while (f && !(f.contentY !== undefined && f.contentItem !== undefined))

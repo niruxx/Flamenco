@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.62.0",
+    "items": [
+      "Flamenco in Spanish: Settings \u2192 Region & Language \u2192 Flamenco's language (the system's language by default)",
+      "Dates, day and month names in the language you pick",
+      "More languages can be added from one file each (docs/translating.md)"
+    ]
+  },
+  {
     "version": "0.61.0",
     "items": [
       "The Dynamic island: six places on the screen or in the bar, and on hover a bigger pill with the cover, a seek bar and the controls",

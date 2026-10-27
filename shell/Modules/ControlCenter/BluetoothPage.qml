@@ -10,7 +10,7 @@ import qs.Widgets
 // button shows that and starts a new search.
 DetailPage {
     id: page
-    title: "Bluetooth"
+    title: I18n.tr("Bluetooth")
 
     // scanning while it's on screen (quick settings keeps the page when it closes)
     readonly property bool shown: Panels.current === "control" && Panels.controlDetail === "bluetooth"
@@ -42,7 +42,7 @@ DetailPage {
     FText {
         Layout.fillWidth: true
         visible: !BluetoothState.available || !BluetoothState.enabled
-        text: !BluetoothState.available ? "No Bluetooth adapter (is bluetooth.service running?)" : "Bluetooth is off"
+        text: !BluetoothState.available ? I18n.tr("No Bluetooth adapter (is bluetooth.service running?)") : I18n.tr("Bluetooth is off")
         dim: true
         wrapMode: Text.Wrap
     }
@@ -51,7 +51,7 @@ DetailPage {
 
     FText {
         visible: BluetoothState.enabled && BluetoothState.mine.length > 0
-        text: "My devices"
+        text: I18n.tr("My devices")
         font.pixelSize: Theme.fsSm
         font.weight: Font.DemiBold
         color: Theme.accent
@@ -62,7 +62,7 @@ DetailPage {
             required property var modelData
             icon: BluetoothState.kindIcon(modelData)
             title: modelData.name || modelData.address
-            subtitle: (modelData.connected ? "Connected" : "Not connected") + (modelData.batteryAvailable ? " · " + Math.round(modelData.battery * 100) + "%" : "")
+            subtitle: (modelData.connected ? I18n.tr("Connected") : I18n.tr("Not connected")) + (modelData.batteryAvailable ? " · " + Math.round(modelData.battery * 100) + "%" : "")
             selected: modelData.connected
             busy: modelData.state === BluetoothDeviceState.Connecting || modelData.state === BluetoothDeviceState.Disconnecting
             onClicked: BluetoothState.toggleDevice(modelData)
@@ -74,14 +74,14 @@ DetailPage {
         Layout.fillWidth: true
         Layout.topMargin: Theme.sp2
         FText {
-            text: "Nearby"
+            text: I18n.tr("Nearby")
             font.pixelSize: Theme.fsSm
             font.weight: Font.DemiBold
             color: Theme.accent
         }
         FText {
             Layout.fillWidth: true
-            text: BluetoothState.scanning ? "Searching…" : ""
+            text: BluetoothState.scanning ? I18n.tr("Searching…") : ""
             dim: true
             font.pixelSize: Theme.fsXs
         }
@@ -92,7 +92,7 @@ DetailPage {
             required property var modelData
             icon: BluetoothState.kindIcon(modelData)
             title: modelData.name || modelData.address
-            subtitle: BluetoothState.pairing === modelData.address ? "Pairing…" : "Click to pair" + (BluetoothState.bars(modelData) > 0 ? " · " + ["", "weak", "fair", "good", "strong"][BluetoothState.bars(modelData)] + " signal" : "")
+            subtitle: BluetoothState.pairing === modelData.address ? I18n.tr("Pairing…") : I18n.tr("Click to pair") + (BluetoothState.bars(modelData) > 0 ? " · " + ["", "weak", "fair", "good", "strong"][BluetoothState.bars(modelData)] + " signal" : "")
             busy: BluetoothState.pairing === modelData.address
             onClicked: BluetoothState.pair(modelData)
         }
@@ -100,7 +100,7 @@ DetailPage {
     FText {
         Layout.fillWidth: true
         visible: BluetoothState.enabled && BluetoothState.nearby.length === 0
-        text: BluetoothState.scanning ? "Put the device in pairing mode; it shows up here" : "Nothing nearby. Press the radar to look again"
+        text: BluetoothState.scanning ? I18n.tr("Put the device in pairing mode; it shows up here") : I18n.tr("Nothing nearby. Press the radar to look again")
         dim: true
         font.pixelSize: Theme.fsSm
         wrapMode: Text.Wrap

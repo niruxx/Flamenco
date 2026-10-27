@@ -50,7 +50,7 @@ The Desktop Widgets quick settings toggle shows widgets but its not scroll-able 
 - [x] Terminal sessions (tmux / zellij) to pick from and attach to (D)
 
 ### Settings additions
-- [ ] Region and language: translations of the shell, and number and date formats (N, D) (0.59.0: Settings → Region & Language sets the system language and formats, adds languages, and the shell's date style and first day of the week; translating the shell's own text is still to do)
+- [x] Region and language: translations of the shell, and number and date formats (N, D) (done in 0.62.0: Spanish, and docs/translating.md for more) (0.59.0: Settings → Region & Language sets the system language and formats, adds languages, and the shell's date style and first day of the week; translating the shell's own text is still to do)
 - [x] Wallpaper (N) (done in 0.59.0):
   - a solid color instead of a picture;
   - fill modes (fill, fit, center, tile);

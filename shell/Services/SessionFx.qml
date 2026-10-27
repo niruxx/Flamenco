@@ -92,7 +92,7 @@ Singleton {
         preview = !!isPreview;
         preset = p === "none" || !presets.includes(p) ? "fade" : p;
         message = cfg.greeting ? greeting() : "";
-        detail = cfg.greeting ? Qt.formatDate(new Date(), "dddd, d MMMM") : "";
+        detail = cfg.greeting ? I18n.locale.toString(new Date(), "dddd, d MMMM") : "";
         cover = 1;
         mode = "intro";
         hold.interval = 700;

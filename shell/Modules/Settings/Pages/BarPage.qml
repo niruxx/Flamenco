@@ -7,7 +7,7 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Bar"
+    title: I18n.tr("Bar")
     readonly property var b: Settings.data.bar
     // built-in widgets, plus the bar widgets of plugins that are turned on
     // (no Object.fromEntries: Quickshell's JavaScript doesn't have it)
@@ -86,19 +86,19 @@ Page {
         b.position = (v === "top" || v === "bottom") && Theme.barCorner ? v + "-" + Theme.barCorner : v;
     }
     readonly property bool vert: Theme.barVertical
-    readonly property var places: [{ value: "left", label: "Left", icon: "align_horizontal_left" }, { value: "center", label: "Center", icon: "align_horizontal_center" }, { value: "right", label: "Right", icon: "align_horizontal_right" }, { value: "off", label: "Off", icon: "block" }]
+    readonly property var places: [{ value: "left", label: I18n.tr("Left"), icon: "align_horizontal_left" }, { value: "center", label: I18n.tr("Center"), icon: "align_horizontal_center" }, { value: "right", label: I18n.tr("Right"), icon: "align_horizontal_right" }, { value: "off", label: I18n.tr("Off"), icon: "block" }]
 
     BarStyleSection {}
 
     property bool placeAll: false
     readonly property var mainPlaces: [
-        { id: "tray", title: "App indicators (system tray)", icon: "apps" },
-        { id: "launcher", title: "Start button", icon: "rocket_launch" },
-        { id: "window", title: "Active window", icon: "select_window" },
-        { id: "clock", title: "Clock", icon: "schedule" }
+        { id: "tray", title: I18n.tr("App indicators (system tray)"), icon: "apps" },
+        { id: "launcher", title: I18n.tr("Start button"), icon: "rocket_launch" },
+        { id: "window", title: I18n.tr("Active window"), icon: "select_window" },
+        { id: "clock", title: I18n.tr("Clock"), icon: "schedule" }
     ]
     Group {
-        title: "Placement"
+        title: I18n.tr("Placement")
         Repeater {
             // the main ones, or every widget (the order inside a section is in the lists further down)
             model: page.placeAll ? page.mainPlaces.concat(Object.keys(page.builtinWidgets).filter(k => k !== "separator" && !page.mainPlaces.some(m => m.id === k))
@@ -108,7 +108,7 @@ Page {
                 required property var modelData
                 readonly property string at: page.where(modelData.id)
                 title: modelData.title
-                subtitle: Theme.barVertical ? "Left, center and right are top, middle and bottom on a side bar" : ""
+                subtitle: Theme.barVertical ? I18n.tr("Left, center and right are top, middle and bottom on a side bar") : ""
                 icon: modelData.icon
                 FSegmented {
                     implicitWidth: 340
@@ -119,11 +119,11 @@ Page {
             }
         }
         SettingRow {
-            title: page.placeAll ? "Fewer" : "Every widget"
-            subtitle: page.placeAll ? "Back to the main four" : "Place any of the bar's widgets on the left, center or right, or leave it out"
+            title: page.placeAll ? I18n.tr("Fewer") : I18n.tr("Every widget")
+            subtitle: page.placeAll ? I18n.tr("Back to the main four") : I18n.tr("Place any of the bar's widgets on the left, center or right, or leave it out")
             icon: page.placeAll ? "expand_less" : "expand_more"
             FButton {
-                text: page.placeAll ? "Show fewer" : "Show all"
+                text: page.placeAll ? I18n.tr("Show fewer") : I18n.tr("Show all")
                 variant: "tonal"
                 onClicked: page.placeAll = !page.placeAll
             }
@@ -131,70 +131,70 @@ Page {
     }
 
     Group {
-        title: "Layout"
+        title: I18n.tr("Layout")
         SettingRow {
-            title: "Position"
-            subtitle: page.edge === "free" ? "Freeroam: a floating bar you move anywhere by dragging its grip (⋮⋮ at its left end). It doesn't keep space free, so windows can go under it" : "Left and right give a vertical bar; Freeroam floats wherever you drag it"
+            title: I18n.tr("Position")
+            subtitle: page.edge === "free" ? I18n.tr("Freeroam: a floating bar you move anywhere by dragging its grip (⋮⋮ at its left end). It doesn't keep space free, so windows can go under it") : I18n.tr("Left and right give a vertical bar; Freeroam floats wherever you drag it")
             icon: "screenshot_frame"
             FSegmented {
                 implicitWidth: 5 * 84
-                options: [{ value: "top", label: "Top", icon: "border_top" }, { value: "bottom", label: "Bottom", icon: "border_bottom" }, { value: "left", label: "Left", icon: "border_left" }, { value: "right", label: "Right", icon: "border_right" }, { value: "free", label: "Freeroam", icon: "open_with" }]
+                options: [{ value: "top", label: I18n.tr("Top"), icon: "border_top" }, { value: "bottom", label: I18n.tr("Bottom"), icon: "border_bottom" }, { value: "left", label: I18n.tr("Left"), icon: "border_left" }, { value: "right", label: I18n.tr("Right"), icon: "border_right" }, { value: "free", label: I18n.tr("Freeroam"), icon: "open_with" }]
                 current: page.edge
                 onSelected: v => page.setEdge(v)
             }
         }
         SettingRow {
             visible: page.edge === "top" || page.edge === "bottom"
-            title: "Corner"
-            subtitle: Theme.barCorner ? "Just around its widgets, in the " + page.edge + "-" + Theme.barCorner + " corner. Windows still keep clear of the edge" : "Along the whole edge, or tucked into one of its corners"
+            title: I18n.tr("Corner")
+            subtitle: Theme.barCorner ? I18n.tr("Just around its widgets, in the ") + page.edge + "-" + Theme.barCorner + " corner. Windows still keep clear of the edge" : I18n.tr("Along the whole edge, or tucked into one of its corners")
             icon: "picture_in_picture"
             FSegmented {
                 implicitWidth: 3 * 110
-                options: [{ value: "", label: "Whole edge" }, { value: "left", label: "Left corner" }, { value: "right", label: "Right corner" }]
+                options: [{ value: "", label: I18n.tr("Whole edge") }, { value: "left", label: I18n.tr("Left corner") }, { value: "right", label: I18n.tr("Right corner") }]
                 current: Theme.barCorner
                 onSelected: v => page.b.position = v ? page.edge + "-" + v : page.edge
             }
         }
         ChoiceRow {
             visible: !Theme.barCorner && page.edge !== "free" && page.b.style !== "capsule"
-            title: "Length"
-            subtitle: (page.b.length || "full") === "fit" ? "Just as long as its widgets" : "Edge to edge"
+            title: I18n.tr("Length")
+            subtitle: (page.b.length || "full") === "fit" ? I18n.tr("Just as long as its widgets") : I18n.tr("Edge to edge")
             icon: page.vert ? "height" : "width"
             target: page.b
             key: "length"
             segWidth: 120
-            options: [{ value: "full", label: "Full" }, { value: "fit", label: "Fit widgets" }]
+            options: [{ value: "full", label: I18n.tr("Full") }, { value: "fit", label: I18n.tr("Fit widgets") }]
         }
         ChoiceRow {
             visible: Theme.barFit && !Theme.barCorner && page.edge !== "free"
-            title: "Where on the edge"
+            title: I18n.tr("Where on the edge")
             icon: page.vert ? "vertical_align_center" : "align_horizontal_center"
             target: page.b
             key: "align"
             segWidth: 96
-            options: [{ value: "start", label: page.vert ? "Top" : "Left" }, { value: "center", label: page.vert ? "Middle" : "Center" }, { value: "end", label: page.vert ? "Bottom" : "Right" }]
+            options: [{ value: "start", label: page.vert ? I18n.tr("Top") : I18n.tr("Left") }, { value: "center", label: page.vert ? I18n.tr("Middle") : I18n.tr("Center") }, { value: "end", label: page.vert ? I18n.tr("Bottom") : I18n.tr("Right") }]
         }
         ChoiceRow {
             visible: !Theme.barFit
-            title: "Widgets"
-            subtitle: (page.b.arrange || "spread") === "spread" ? "Each section at its own spot: " + (page.vert ? "top, middle and bottom" : "left, center and right")
+            title: I18n.tr("Widgets")
+            subtitle: (page.b.arrange || "spread") === "spread" ? I18n.tr("Each section at its own spot: ") + (page.vert ? "top, middle and bottom" : "left, center and right")
                 : "All sections side by side, " + ({ start: page.vert ? "at the top" : "on the left", center: "in the middle", end: page.vert ? "at the bottom" : "on the right" })[page.b.arrange]
             icon: "view_column"
             target: page.b
             key: "arrange"
             segWidth: 86
-            options: [{ value: "spread", label: "Spread" }, { value: "start", label: page.vert ? "Top" : "Left" }, { value: "center", label: page.vert ? "Middle" : "Center" }, { value: "end", label: page.vert ? "Bottom" : "Right" }]
+            options: [{ value: "spread", label: I18n.tr("Spread") }, { value: "start", label: page.vert ? I18n.tr("Top") : I18n.tr("Left") }, { value: "center", label: page.vert ? I18n.tr("Middle") : I18n.tr("Center") }, { value: "end", label: page.vert ? I18n.tr("Bottom") : I18n.tr("Right") }]
         }
-        SliderRow { title: "Icon size"; subtitle: "The bar's icons (they never outgrow its thickness)"; icon: "format_size"; target: page.b; key: "iconScale"; from: 0.8; to: 1.4; stepSize: 0.05; factor: 100; suffix: "%" }
-        ChoiceRow { title: "Workspace indicator"; subtitle: page.b.workspaceStyle === "apps" ? "Each workspace shows its apps' icons; the active one is filled" : ""; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: "Pills" }, { value: "numbers", label: "Numbers" }, { value: "dots", label: "Dots" }, { value: "apps", label: "App icons" }] }
-        ChoiceRow { title: "CPU / RAM"; icon: "memory"; target: page.b; key: "statsStyle"; segWidth: 120; options: [{ value: "text", label: "Icons" }, { value: "rings", label: "Ring gauges" }] }
-        SwitchRow { title: "Temperature with CPU / RAM"; icon: "thermostat"; target: page.b; key: "statsTemp" }
+        SliderRow { title: I18n.tr("Icon size"); subtitle: I18n.tr("The bar's icons (they never outgrow its thickness)"); icon: "format_size"; target: page.b; key: "iconScale"; from: 0.8; to: 1.4; stepSize: 0.05; factor: 100; suffix: "%" }
+        ChoiceRow { title: I18n.tr("Workspace indicator"); subtitle: page.b.workspaceStyle === "apps" ? I18n.tr("Each workspace shows its apps' icons; the active one is filled") : ""; icon: "view_week"; target: page.b; key: "workspaceStyle"; options: [{ value: "pills", label: I18n.tr("Pills") }, { value: "numbers", label: I18n.tr("Numbers") }, { value: "dots", label: I18n.tr("Dots") }, { value: "apps", label: I18n.tr("App icons") }] }
+        ChoiceRow { title: I18n.tr("CPU / RAM"); icon: "memory"; target: page.b; key: "statsStyle"; segWidth: 120; options: [{ value: "text", label: I18n.tr("Icons") }, { value: "rings", label: I18n.tr("Ring gauges") }] }
+        SwitchRow { title: I18n.tr("Temperature with CPU / RAM"); icon: "thermostat"; target: page.b; key: "statsTemp" }
         SettingRow {
-            title: "Clock"
-            subtitle: "Its layout, alignment and position are in Clock & Weather"
+            title: I18n.tr("Clock")
+            subtitle: I18n.tr("Its layout, alignment and position are in Clock & Weather")
             icon: "schedule"
             FButton {
-                text: "Clock settings"
+                text: I18n.tr("Clock settings")
                 variant: "text"
                 onClicked: Panels.findSetting("clock", "Bar clock")
             }
@@ -202,29 +202,29 @@ Page {
     }
 
     Group {
-        title: "Hide"
+        title: I18n.tr("Hide")
         ChoiceRow {
-            title: "Hide the bar"
-            subtitle: page.b.hide === "auto" ? "Out of the way until you move the pointer to the screen's edge"
+            title: I18n.tr("Hide the bar")
+            subtitle: page.b.hide === "auto" ? I18n.tr("Out of the way until you move the pointer to the screen's edge")
                 : page.b.hide === "windows" ? "Hidden while windows are open on the workspace; shown on an empty one, or at the edge"
                 : "Always shown. A shortcut can still hide it (Show / hide the bar, in Keyboard → Flamenco functions)"
             icon: "visibility_off"
             target: page.b
             key: "hide"
             segWidth: 120
-            options: [{ value: "never", label: "Never" }, { value: "auto", label: "Auto-hide" }, { value: "windows", label: "With windows" }]
+            options: [{ value: "never", label: I18n.tr("Never") }, { value: "auto", label: I18n.tr("Auto-hide") }, { value: "windows", label: I18n.tr("With windows") }]
         }
-        SliderRow { visible: page.b.hide !== "never"; title: "Hide after"; subtitle: "Once the pointer leaves the bar"; icon: "timer"; target: page.b; key: "hideDelay"; from: 0; to: 3000; stepSize: 100; suffix: " ms" }
-        SliderRow { visible: page.b.hide !== "never"; title: "Edge to reveal it"; subtitle: "How close to the edge the pointer has to be"; icon: "border_outer"; target: page.b; key: "revealSize"; from: 1; to: 12; stepSize: 1; suffix: " px" }
-        SwitchRow { title: "Hide during the overview"; subtitle: "Out of the way while niri's overview is open"; icon: "overview_key"; target: page.b; key: "hideOnOverview" }
-        SwitchRow { visible: page.b.hide !== "never"; title: "Show when switching workspaces"; subtitle: "For a moment, so you see where you are"; icon: "view_carousel"; target: page.b; key: "showOnSwitch" }
-        SwitchRow { visible: page.b.hide !== "never"; title: "Keep its space"; subtitle: "Windows stay clear of the bar's spot while it's hidden, so it never covers them"; icon: "space_bar"; target: page.b; key: "hideKeepSpace" }
+        SliderRow { visible: page.b.hide !== "never"; title: I18n.tr("Hide after"); subtitle: I18n.tr("Once the pointer leaves the bar"); icon: "timer"; target: page.b; key: "hideDelay"; from: 0; to: 3000; stepSize: 100; suffix: " ms" }
+        SliderRow { visible: page.b.hide !== "never"; title: I18n.tr("Edge to reveal it"); subtitle: I18n.tr("How close to the edge the pointer has to be"); icon: "border_outer"; target: page.b; key: "revealSize"; from: 1; to: 12; stepSize: 1; suffix: " px" }
+        SwitchRow { title: I18n.tr("Hide during the overview"); subtitle: I18n.tr("Out of the way while niri's overview is open"); icon: "overview_key"; target: page.b; key: "hideOnOverview" }
+        SwitchRow { visible: page.b.hide !== "never"; title: I18n.tr("Show when switching workspaces"); subtitle: I18n.tr("For a moment, so you see where you are"); icon: "view_carousel"; target: page.b; key: "showOnSwitch" }
+        SwitchRow { visible: page.b.hide !== "never"; title: I18n.tr("Keep its space"); subtitle: I18n.tr("Windows stay clear of the bar's spot while it's hidden, so it never covers them"); icon: "space_bar"; target: page.b; key: "hideKeepSpace" }
         SettingRow {
-            title: Panels.barHidden ? "Hidden by hand" : "Hide it now"
-            subtitle: Panels.barHidden ? "Until you show it again or the shell restarts. Also: flamenco bar toggle" : "Until you show it again (the pointer at the edge still brings it out). Also: flamenco bar toggle"
+            title: Panels.barHidden ? I18n.tr("Hidden by hand") : I18n.tr("Hide it now")
+            subtitle: Panels.barHidden ? I18n.tr("Until you show it again or the shell restarts. Also: flamenco bar toggle") : I18n.tr("Until you show it again (the pointer at the edge still brings it out). Also: flamenco bar toggle")
             icon: "toggle_on"
             FButton {
-                text: Panels.barHidden ? "Show the bar" : "Hide the bar"
+                text: Panels.barHidden ? I18n.tr("Show the bar") : I18n.tr("Hide the bar")
                 variant: "tonal"
                 onClicked: Panels.barHidden = !Panels.barHidden
             }
@@ -232,17 +232,17 @@ Page {
     }
 
     Group {
-        title: "Clicks on the empty bar"
+        title: I18n.tr("Clicks on the empty bar")
         ChoiceRow {
-            title: "Scrolling"
+            title: I18n.tr("Scrolling")
             icon: "swap_vert"
             target: page.b
             key: "wheelAction"
             segWidth: 104
-            options: [{ value: "none", label: "Nothing" }, { value: "workspaces", label: "Workspaces" }, { value: "volume", label: "Volume" }, { value: "brightness", label: "Brightness" }]
+            options: [{ value: "none", label: I18n.tr("Nothing") }, { value: "workspaces", label: I18n.tr("Workspaces") }, { value: "volume", label: I18n.tr("Volume") }, { value: "brightness", label: I18n.tr("Brightness") }]
         }
         Repeater {
-            model: [{ k: "middle", t: "Middle-click", i: "mouse" }, { k: "right", t: "Right-click", i: "ads_click" }]
+            model: [{ k: "middle", t: I18n.tr("Middle-click"), i: "mouse" }, { k: "right", t: I18n.tr("Right-click"), i: "ads_click" }]
             ColumnLayout {
                 id: crow
                 required property var modelData
@@ -253,12 +253,12 @@ Page {
                     icon: crow.modelData.i
                     target: page.b
                     key: crow.modelData.k + "Action"
-                    options: [{ value: "none", label: "Nothing" }, { value: "overview", label: "Overview" }, { value: "launcher", label: "Launcher" },
-                        { value: "control", label: "Quick settings" }, { value: "settings", label: "Bar settings" }, { value: "command", label: "A command" }]
+                    options: [{ value: "none", label: I18n.tr("Nothing") }, { value: "overview", label: I18n.tr("Overview") }, { value: "launcher", label: I18n.tr("Launcher") },
+                        { value: "control", label: I18n.tr("Quick settings") }, { value: "settings", label: I18n.tr("Bar settings") }, { value: "command", label: I18n.tr("A command") }]
                 }
                 TextRow {
                     visible: page.b[crow.modelData.k + "Action"] === "command"
-                    title: "Command"
+                    title: I18n.tr("Command")
                     icon: "terminal"
                     target: page.b
                     key: crow.modelData.k + "Command"
@@ -269,10 +269,10 @@ Page {
     }
 
     Group {
-        title: "Widget options"
-        SwitchRow { title: "Caps Lock / Num Lock always shown"; subtitle: "Off: only while one is on"; icon: "keyboard_capslock"; target: page.b; key: "lockKeysAlways" }
-        TextRow { title: "Disk"; subtitle: "Where the disk widget's disk is mounted"; icon: "hard_drive"; target: page.b; key: "diskMount"; placeholder: "/" }
-        SliderRow { title: "Lyrics width"; subtitle: "The widest the lyric line gets"; icon: "lyrics"; target: page.b; key: "lyricsWidth"; from: 160; to: 600; stepSize: 20; suffix: " px" }
+        title: I18n.tr("Widget options")
+        SwitchRow { title: I18n.tr("Caps Lock / Num Lock always shown"); subtitle: I18n.tr("Off: only while one is on"); icon: "keyboard_capslock"; target: page.b; key: "lockKeysAlways" }
+        TextRow { title: I18n.tr("Disk"); subtitle: I18n.tr("Where the disk widget's disk is mounted"); icon: "hard_drive"; target: page.b; key: "diskMount"; placeholder: "/" }
+        SliderRow { title: I18n.tr("Lyrics width"); subtitle: I18n.tr("The widest the lyric line gets"); icon: "lyrics"; target: page.b; key: "lyricsWidth"; from: 160; to: 600; stepSize: 20; suffix: " px" }
     }
 
     CustomWidgetsSection {}
@@ -280,122 +280,122 @@ Page {
     BatterySection {}
 
     Group {
-        title: "Start button"
+        title: I18n.tr("Start button")
         SettingRow {
             visible: !page.used.includes("launcher")
-            title: "Not in the bar yet"
-            subtitle: "Add \"Start button (launcher)\" to a section below"
+            title: I18n.tr("Not in the bar yet")
+            subtitle: I18n.tr("Add \"Start button (launcher)\" to a section below")
             icon: "info"
         }
         ChoiceRow {
-            title: "Icon"
+            title: I18n.tr("Icon")
             icon: "apps"
             target: page.b
             key: "startIcon"
             segWidth: 100
-            options: [{ value: "apps", label: "Apps", icon: "apps" }, { value: "distro", label: "Distro", icon: "deployed_code" }, { value: "flamenco", label: "Flamenco", icon: "local_fire_department" }, { value: "custom", label: "Custom", icon: "edit" }]
+            options: [{ value: "apps", label: I18n.tr("Apps"), icon: "apps" }, { value: "distro", label: I18n.tr("Distro"), icon: "deployed_code" }, { value: "flamenco", label: I18n.tr("Flamenco"), icon: "local_fire_department" }, { value: "custom", label: I18n.tr("Custom"), icon: "edit" }]
         }
         TextRow {
             visible: page.b.startIcon === "custom"
-            title: "Custom icon"
-            subtitle: "A Material Symbols name (e.g. rocket_launch), or the path of a picture"
+            title: I18n.tr("Custom icon")
+            subtitle: I18n.tr("A Material Symbols name (e.g. rocket_launch), or the path of a picture")
             icon: "image"
             target: page.b
             key: "startCustom"
             placeholder: "rocket_launch"
         }
-        TextRow { title: "Label"; subtitle: "Text beside the icon, e.g. Start. Empty for just the icon."; icon: "label"; target: page.b; key: "startLabel"; placeholder: "Start" }
+        TextRow { title: I18n.tr("Label"); subtitle: I18n.tr("Text beside the icon, e.g. Start. Empty for just the icon."); icon: "label"; target: page.b; key: "startLabel"; placeholder: I18n.tr("Start") }
         ChoiceRow {
-            title: "Opens"
-            subtitle: Settings.data.overview.enabled ? "Right-click it for the other one" : "The overview is off (Settings → Overview)"
+            title: I18n.tr("Opens")
+            subtitle: Settings.data.overview.enabled ? I18n.tr("Right-click it for the other one") : I18n.tr("The overview is off (Settings → Overview)")
             icon: "ads_click"
             target: page.b
             key: "startAction"
             segWidth: 120
-            options: [{ value: "auto", label: "Automatic" }, { value: "overview", label: "Overview" }, { value: "launcher", label: "Launcher" }]
+            options: [{ value: "auto", label: I18n.tr("Automatic") }, { value: "overview", label: I18n.tr("Overview") }, { value: "launcher", label: I18n.tr("Launcher") }]
         }
     }
 
     Group {
-        title: "System tray (app indicators)"
-        SwitchRow { title: "Hide passive icons"; subtitle: "Apps that mark themselves idle stay out of the bar"; icon: "visibility_off"; target: page.b; key: "trayHidePassive" }
-        SliderRow { title: "Icons before overflow"; icon: "more_horiz"; target: page.b; key: "trayMaxVisible"; from: 2; to: 16; stepSize: 1 }
-        SwitchRow { title: "Native Qt menus"; subtitle: "Use the app's own Qt menu instead of the themed one"; icon: "menu"; target: page.b; key: "trayNativeMenus" }
+        title: I18n.tr("System tray (app indicators)")
+        SwitchRow { title: I18n.tr("Hide passive icons"); subtitle: I18n.tr("Apps that mark themselves idle stay out of the bar"); icon: "visibility_off"; target: page.b; key: "trayHidePassive" }
+        SliderRow { title: I18n.tr("Icons before overflow"); icon: "more_horiz"; target: page.b; key: "trayMaxVisible"; from: 2; to: 16; stepSize: 1 }
+        SwitchRow { title: I18n.tr("Native Qt menus"); subtitle: I18n.tr("Use the app's own Qt menu instead of the themed one"); icon: "menu"; target: page.b; key: "trayNativeMenus" }
     }
 
     Group {
-        title: "Microphone"
+        title: I18n.tr("Microphone")
         SettingRow {
             visible: !page.used.includes("mic")
-            title: "Not in the bar yet"
-            subtitle: "Add \"Microphone (while in use)\" to a section below. Click it to mute or unmute."
+            title: I18n.tr("Not in the bar yet")
+            subtitle: I18n.tr("Add \"Microphone (while in use)\" to a section below. Click it to mute or unmute.")
             icon: "info"
         }
         ChoiceRow {
-            title: "Show it"
-            subtitle: Audio.micInUse ? "In use now by " + Audio.micUsers : "Nothing is recording right now" + (Audio.micMuted ? " (the mic is muted)" : "")
+            title: I18n.tr("Show it")
+            subtitle: Audio.micInUse ? I18n.tr("In use now by ") + Audio.micUsers : I18n.tr("Nothing is recording right now") + (Audio.micMuted ? " (the mic is muted)" : "")
             icon: "mic"
             target: page.b
             key: "micIndicator"
             segWidth: 130
-            options: [{ value: "inuse", label: "While in use" }, { value: "inuse-muted", label: "In use or muted" }, { value: "always", label: "Always" }]
+            options: [{ value: "inuse", label: I18n.tr("While in use") }, { value: "inuse-muted", label: I18n.tr("In use or muted") }, { value: "always", label: I18n.tr("Always") }]
         }
         ChoiceRow {
-            title: "Look"
-            subtitle: ({ icon: "The mic, highlighted while recording", dot: "A small dot: amber while recording, a red ring while muted", pill: "The mic and the app listening", ring: "The mic with a ring that breathes while recording", text: "MIC or MUTED" })[page.b.micStyle || "icon"]
+            title: I18n.tr("Look")
+            subtitle: ({ icon: I18n.tr("The mic, highlighted while recording"), dot: I18n.tr("A small dot: amber while recording, a red ring while muted"), pill: I18n.tr("The mic and the app listening"), ring: I18n.tr("The mic with a ring that breathes while recording"), text: I18n.tr("MIC or MUTED") })[page.b.micStyle || "icon"]
             icon: "interests"
             target: page.b
             key: "micStyle"
             segWidth: 72
-            options: [{ value: "icon", label: "Icon" }, { value: "dot", label: "Dot" }, { value: "pill", label: "Pill" }, { value: "ring", label: "Ring" }, { value: "text", label: "Text" }]
+            options: [{ value: "icon", label: I18n.tr("Icon") }, { value: "dot", label: I18n.tr("Dot") }, { value: "pill", label: I18n.tr("Pill") }, { value: "ring", label: I18n.tr("Ring") }, { value: "text", label: I18n.tr("Text") }]
         }
     }
 
     Group {
-        title: "Package updates"
-        SwitchRow { title: "Check for updates"; subtitle: "Looks for system, AUR and Flatpak updates now and then. Off: no checks at all"; icon: "system_update"; target: Settings.data.updates; key: "enabled" }
-        SwitchRow { visible: Settings.data.updates.enabled; title: "Show in the bar"; subtitle: "An icon with the count, only while there are updates"; icon: "toolbar"; target: Settings.data.updates; key: "showInBar" }
-        SliderRow { visible: Settings.data.updates.enabled; title: "Check every"; icon: "schedule"; target: Settings.data.updates; key: "interval"; from: 15; to: 720; stepSize: 15; suffix: " min" }
+        title: I18n.tr("Package updates")
+        SwitchRow { title: I18n.tr("Check for updates"); subtitle: I18n.tr("Looks for system, AUR and Flatpak updates now and then. Off: no checks at all"); icon: "system_update"; target: Settings.data.updates; key: "enabled" }
+        SwitchRow { visible: Settings.data.updates.enabled; title: I18n.tr("Show in the bar"); subtitle: I18n.tr("An icon with the count, only while there are updates"); icon: "toolbar"; target: Settings.data.updates; key: "showInBar" }
+        SliderRow { visible: Settings.data.updates.enabled; title: I18n.tr("Check every"); icon: "schedule"; target: Settings.data.updates; key: "interval"; from: 15; to: 720; stepSize: 15; suffix: " min" }
     }
 
     Group {
-        title: "Taskbar"
+        title: I18n.tr("Taskbar")
         SettingRow {
             visible: !page.used.includes("taskbar")
-            title: "Not in the bar yet"
-            subtitle: "Add \"Taskbar (running apps)\" to a section below. Right-click an app there for its window menu."
+            title: I18n.tr("Not in the bar yet")
+            subtitle: I18n.tr("Add \"Taskbar (running apps)\" to a section below. Right-click an app there for its window menu.")
             icon: "info"
         }
         ChoiceRow {
-            title: "Show apps from"
+            title: I18n.tr("Show apps from")
             icon: "select_window"
             target: page.b
             key: "taskbarScope"
             segWidth: 112
-            options: [{ value: "all", label: "Every screen" }, { value: "screen", label: "This screen" }, { value: "workspace", label: "Workspace" }]
+            options: [{ value: "all", label: I18n.tr("Every screen") }, { value: "screen", label: I18n.tr("This screen") }, { value: "workspace", label: I18n.tr("Workspace") }]
         }
-        SwitchRow { title: "Window titles"; subtitle: "Next to the icons, when there's room"; icon: "title"; target: page.b; key: "taskbarTitles" }
+        SwitchRow { title: I18n.tr("Window titles"); subtitle: I18n.tr("Next to the icons, when there's room"); icon: "title"; target: page.b; key: "taskbarTitles" }
     }
 
     Group {
         visible: Quickshell.screens.length > 1
-        title: "Layout for"
+        title: I18n.tr("Layout for")
         SettingRow {
-            title: page.screenSel === "" ? "Every screen" : page.screenSel
-            subtitle: page.screenSel === "" ? "The shared layout, on every screen without its own" + (Object.keys(page.b.perScreen || {}).length ? " (" + Object.keys(page.b.perScreen).join(", ") + " have their own)" : "")
+            title: page.screenSel === "" ? I18n.tr("Every screen") : page.screenSel
+            subtitle: page.screenSel === "" ? I18n.tr("The shared layout, on every screen without its own") + (Object.keys(page.b.perScreen || {}).length ? " (" + Object.keys(page.b.perScreen).join(", ") + " have their own)" : "")
                 : page.own ? "This screen has its own widgets" : "This screen uses the shared layout"
             icon: "monitor"
             Row {
                 spacing: 8
                 FDropdown {
                     implicitWidth: 200
-                    options: [{ value: "", label: "Every screen" }].concat(Quickshell.screens.map(x => ({ value: x.name, label: x.name + ((page.b.perScreen || {})[x.name] ? " (own)" : "") })))
+                    options: [{ value: "", label: I18n.tr("Every screen") }].concat(Quickshell.screens.map(x => ({ value: x.name, label: x.name + ((page.b.perScreen || {})[x.name] ? " (own)" : "") })))
                     current: page.screenSel
                     onSelected: v => page.screenSel = v
                 }
                 FButton {
                     visible: page.screenSel !== "" && !page.own
-                    text: "Give it its own"
+                    text: I18n.tr("Give it its own")
                     variant: "tonal"
                     onClicked: {
                         const all = Object.assign({}, page.b.perScreen || {});
@@ -405,7 +405,7 @@ Page {
                 }
                 FButton {
                     visible: !!page.own
-                    text: "Use the shared one"
+                    text: I18n.tr("Use the shared one")
                     variant: "text"
                     onClicked: {
                         const all = Object.assign({}, page.b.perScreen || {});
@@ -418,7 +418,7 @@ Page {
     }
 
     Repeater {
-        model: [{ key: "left", label: Theme.barVertical ? "Top" : "Left" }, { key: "center", label: "Center" }, { key: "right", label: Theme.barVertical ? "Bottom" : "Right" }]
+        model: [{ key: "left", label: Theme.barVertical ? I18n.tr("Top") : I18n.tr("Left") }, { key: "center", label: I18n.tr("Center") }, { key: "right", label: Theme.barVertical ? I18n.tr("Bottom") : I18n.tr("Right") }]
 
         Group {
             id: grp

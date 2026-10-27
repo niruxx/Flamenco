@@ -11,8 +11,8 @@ import qs.Widgets
 // shell writes dates and which day starts its weeks.
 Page {
     id: page
-    title: "Region & Language"
-    subtitle: "The language and formats your apps use, and how Flamenco writes dates. Flamenco's own text is in English for now."
+    title: I18n.tr("Region & Language")
+    subtitle: I18n.tr("The language and formats your apps use, and how Flamenco writes dates. Flamenco's own text follows the language you pick below.")
     readonly property var g: Settings.data.general
     property var state: ({ lang: "", formats: "", available: [], installable: [] })
     property string status: ""
@@ -60,10 +60,10 @@ Page {
     }
 
     Group {
-        title: "Language"
+        title: I18n.tr("Language")
         DropdownRow {
-            title: "Language"
-            subtitle: page.state.lang ? "Now: " + page.label(page.state.lang) + ". Apps change after you log in again" : "Reading the system's language…"
+            title: I18n.tr("Language")
+            subtitle: page.state.lang ? I18n.tr("Now: ") + page.label(page.state.lang) + ". Apps change after you log in again" : I18n.tr("Reading the system's language…")
             icon: "language"
             options: page.state.available.map(l => ({ value: l, label: page.label(l) }))
             target: page.state
@@ -71,22 +71,22 @@ Page {
             onEdited: page.run(["set", page.state.lang, page.state.formats || ""], "Language set: log out and in again for apps to follow")
         }
         DropdownRow {
-            title: "Formats"
-            subtitle: "Dates, numbers, measurements, paper and money, from another region if you like (e.g. English text with German formats)"
+            title: I18n.tr("Formats")
+            subtitle: I18n.tr("Dates, numbers, measurements, paper and money, from another region if you like (e.g. English text with German formats)")
             icon: "public"
-            options: [{ value: "", label: "Same as the language" }].concat(page.state.available.map(l => ({ value: l, label: page.label(l) })))
+            options: [{ value: "", label: I18n.tr("Same as the language") }].concat(page.state.available.map(l => ({ value: l, label: page.label(l) })))
             target: page.state
             key: "formats"
             onEdited: page.run(["set", page.state.lang || "en_US.UTF-8", page.state.formats || ""], "Formats set: log out and in again for apps to follow")
         }
         SettingRow {
-            title: "Add a language"
-            subtitle: page.state.installable.length ? "Languages not set up yet: pick one to generate it (it asks for your password)" : "Every language this system knows is set up"
+            title: I18n.tr("Add a language")
+            subtitle: page.state.installable.length ? I18n.tr("Languages not set up yet: pick one to generate it (it asks for your password)") : I18n.tr("Every language this system knows is set up")
             icon: "add"
             FDropdown {
                 visible: page.state.installable.length > 0
                 implicitWidth: 260
-                placeholder: "Choose…"
+                placeholder: I18n.tr("Choose…")
                 options: page.state.installable.map(l => ({ value: l, label: page.label(l) }))
                 onSelected: v => page.run(["enable", v], page.label(v) + " is set up: choose it above")
             }
@@ -103,26 +103,34 @@ Page {
     }
 
     Group {
-        title: "In Flamenco"
+        title: I18n.tr("In Flamenco")
+        DropdownRow {
+            title: I18n.tr("Flamenco's language")
+            subtitle: I18n.tr("The shell's own text: the bar, panels, launcher and Settings. Anything not translated yet stays in English")
+            icon: "translate"
+            target: page.g
+            key: "language"
+            options: [{ value: "", label: I18n.tr("Same as the system") }].concat(I18n.languages)
+        }
         ChoiceRow {
-            title: "Dates"
-            subtitle: "In the bar, the lock screen and panels"
+            title: I18n.tr("Dates")
+            subtitle: I18n.tr("In the bar, the lock screen and panels")
             icon: "calendar_month"
             target: page.g
             key: "dateStyle"
             segWidth: 150
-            options: [{ value: "dmy", label: "28 October" }, { value: "mdy", label: "October 28" }, { value: "iso", label: "2026-10-28" }]
+            options: [{ value: "dmy", label: I18n.tr("28 October") }, { value: "mdy", label: I18n.tr("October 28") }, { value: "iso", label: "2026-10-28" }]
         }
         ChoiceRow {
-            title: "Weeks start on"
-            subtitle: "In the calendars"
+            title: I18n.tr("Weeks start on")
+            subtitle: I18n.tr("In the calendars")
             icon: "date_range"
             target: page.g
             key: "firstDay"
             segWidth: 110
-            options: [{ value: -1, label: "Language's" }, { value: 1, label: "Monday" }, { value: 0, label: "Sunday" }, { value: 6, label: "Saturday" }]
+            options: [{ value: -1, label: I18n.tr("Language's") }, { value: 1, label: I18n.tr("Monday") }, { value: 0, label: I18n.tr("Sunday") }, { value: 6, label: I18n.tr("Saturday") }]
         }
-        SwitchRow { title: "24-hour time"; icon: "schedule"; target: page.g; key: "use24h" }
-        SwitchRow { title: "Fahrenheit"; subtitle: "For the weather"; icon: "thermostat"; target: Settings.data.weather; key: "fahrenheit" }
+        SwitchRow { title: I18n.tr("24-hour time"); icon: "schedule"; target: page.g; key: "use24h" }
+        SwitchRow { title: I18n.tr("Fahrenheit"); subtitle: I18n.tr("For the weather"); icon: "thermostat"; target: Settings.data.weather; key: "fahrenheit" }
     }
 }

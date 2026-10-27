@@ -8,8 +8,8 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Plugins"
-    subtitle: "Bar widgets and launcher extensions made by others, or by you. Plugins live in ~/.config/flamenco/plugins and run with your permissions, so only turn on ones you trust."
+    title: I18n.tr("Plugins")
+    subtitle: I18n.tr("Bar widgets and launcher extensions made by others, or by you. Plugins live in ~/.config/flamenco/plugins and run with your permissions, so only turn on ones you trust.")
 
     property string status: ""
     Component.onCompleted: Plugins.refresh()
@@ -31,11 +31,11 @@ Page {
     }
 
     Group {
-        title: "Installed"
+        title: I18n.tr("Installed")
         SettingRow {
             visible: Plugins.all.length === 0
-            title: "No plugins yet"
-            subtitle: "Install one below, or create an example to start from"
+            title: I18n.tr("No plugins yet")
+            subtitle: I18n.tr("Install one below, or create an example to start from")
             icon: "extension"
         }
         Repeater {
@@ -75,11 +75,11 @@ Page {
             }
         }
         SettingRow {
-            title: "Reload"
-            subtitle: "After editing a plugin's files"
+            title: I18n.tr("Reload")
+            subtitle: I18n.tr("After editing a plugin's files")
             icon: "refresh"
             FButton {
-                text: "Reload"
+                text: I18n.tr("Reload")
                 variant: "tonal"
                 onClicked: Plugins.refresh()
             }
@@ -87,16 +87,16 @@ Page {
     }
 
     Group {
-        title: "Add"
+        title: I18n.tr("Add")
         SettingRow {
-            title: "Install"
-            subtitle: "A git address (https://…) or a folder with a manifest.json. It starts turned off."
+            title: I18n.tr("Install")
+            subtitle: I18n.tr("A git address (https://…) or a folder with a manifest.json. It starts turned off.")
             icon: "download"
             Row {
                 spacing: 8
-                FTextField { id: src; implicitWidth: 300; placeholder: "https://github.com/someone/flamenco-plugin" }
+                FTextField { id: src; implicitWidth: 300; placeholder: I18n.tr("https://github.com/someone/flamenco-plugin") }
                 FButton {
-                    text: "Install"
+                    text: I18n.tr("Install")
                     disabled: src.text.trim() === "" || runner.running
                     onClicked: {
                         page.cli(["install", src.text.trim()]);
@@ -106,14 +106,14 @@ Page {
             }
         }
         SettingRow {
-            title: "Create a plugin"
-            subtitle: "Makes a working example (a bar widget and a launcher extension) to edit"
+            title: I18n.tr("Create a plugin")
+            subtitle: I18n.tr("Makes a working example (a bar widget and a launcher extension) to edit")
             icon: "add_circle"
             Row {
                 spacing: 8
-                FTextField { id: newId; implicitWidth: 160; placeholder: "my-plugin" }
+                FTextField { id: newId; implicitWidth: 160; placeholder: I18n.tr("my-plugin") }
                 FButton {
-                    text: "Create"
+                    text: I18n.tr("Create")
                     variant: "tonal"
                     disabled: newId.text.trim() === "" || runner.running
                     onClicked: {
@@ -129,7 +129,7 @@ Page {
             icon: "info"
         }
         SettingRow {
-            title: "Writing plugins"
+            title: I18n.tr("Writing plugins")
             subtitle: "docs/plugins.md in Flamenco's source describes the manifest, the api object bar widgets get, and the launcher's JSON results."
             icon: "menu_book"
         }

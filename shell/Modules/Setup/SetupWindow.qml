@@ -14,7 +14,7 @@ LazyLoader {
     FloatingWindow {
         id: win
 
-        title: "Flamenco Setup"
+        title: I18n.tr("Flamenco Setup")
         implicitWidth: 1040
         implicitHeight: 760
         color: Theme.bg
@@ -22,16 +22,16 @@ LazyLoader {
         onVisibleChanged: if (!visible) Panels.setupOpen = false
 
         readonly property var steps: [
-            { id: "welcome", icon: "waving_hand", label: "Welcome", comp: welcomeC },
-            { id: "displays", icon: "monitor", label: "Displays", comp: displaysC },
-            { id: "look", icon: "palette", label: "Look & colors", comp: lookC },
-            { id: "apps", icon: "format_paint", label: "Icons & cursors", comp: appsC },
-            { id: "wallpaper", icon: "wallpaper", label: "Wallpaper", comp: wallpaperC },
-            { id: "sound", icon: "volume_up", label: "Sound", comp: soundC },
-            { id: "bluetooth", icon: "bluetooth", label: "Bluetooth", comp: btC },
-            { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
-            { id: "keyring", icon: "key", label: "Keyring", comp: keyringC },
-            { id: "done", icon: "celebration", label: "All set", comp: doneC }
+            { id: "welcome", icon: "waving_hand", label: I18n.tr("Welcome"), comp: welcomeC },
+            { id: "displays", icon: "monitor", label: I18n.tr("Displays"), comp: displaysC },
+            { id: "look", icon: "palette", label: I18n.tr("Look & colors"), comp: lookC },
+            { id: "apps", icon: "format_paint", label: I18n.tr("Icons & cursors"), comp: appsC },
+            { id: "wallpaper", icon: "wallpaper", label: I18n.tr("Wallpaper"), comp: wallpaperC },
+            { id: "sound", icon: "volume_up", label: I18n.tr("Sound"), comp: soundC },
+            { id: "bluetooth", icon: "bluetooth", label: I18n.tr("Bluetooth"), comp: btC },
+            { id: "sharing", icon: "screen_share", label: I18n.tr("Screen sharing & files"), comp: sharingC },
+            { id: "keyring", icon: "key", label: I18n.tr("Keyring"), comp: keyringC },
+            { id: "done", icon: "celebration", label: I18n.tr("All set"), comp: doneC }
         ]
         property int index: 0
         property int furthest: 0
@@ -102,8 +102,8 @@ LazyLoader {
                         }
                         ColumnLayout {
                             spacing: -2
-                            FText { text: "Flamenco"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
-                            FText { text: "Setup"; dim: true; font.pixelSize: Theme.fsSm }
+                            FText { text: I18n.tr("Flamenco"); font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+                            FText { text: I18n.tr("Setup"); dim: true; font.pixelSize: Theme.fsSm }
                         }
                     }
 
@@ -168,13 +168,13 @@ LazyLoader {
                     FButton {
                         Layout.fillWidth: true
                         visible: !win.last
-                        text: "Skip for now"
+                        text: I18n.tr("Skip for now")
                         variant: "text"
                         onClicked: win.finish(false)
                     }
                     FText {
                         Layout.fillWidth: true
-                        text: "Everything here is also in Settings"
+                        text: I18n.tr("Everything here is also in Settings")
                         dim: true
                         wrapMode: Text.Wrap
                         horizontalAlignment: Text.AlignHCenter
@@ -244,17 +244,17 @@ LazyLoader {
                         spacing: Theme.sp3
                         FText {
                             Layout.fillWidth: true
-                            text: "Step " + win.index + " of " + (win.steps.length - 2)
+                            text: I18n.tr("Step ") + win.index + " of " + (win.steps.length - 2)
                             dim: true
                         }
                         FButton {
-                            text: "Back"
+                            text: I18n.tr("Back")
                             icon: "arrow_back"
                             variant: "outlined"
                             onClicked: win.go(win.index - 1)
                         }
                         FButton {
-                            text: win.index === win.steps.length - 2 ? "Finish" : "Next"
+                            text: win.index === win.steps.length - 2 ? I18n.tr("Finish") : I18n.tr("Next")
                             icon: "arrow_forward"
                             onClicked: win.go(win.index + 1)
                         }

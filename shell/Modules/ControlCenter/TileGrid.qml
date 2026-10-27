@@ -20,30 +20,30 @@ Item {
     readonly property var qs: Settings.data.control
     // what each widget is, and how wide it starts (1 = half, 2 = the whole row)
     readonly property var catalog: ({
-            profile: { label: "You", icon: "account_circle", w: 1 },
-            actions: { label: "Settings, lock and power", icon: "power_settings_new", w: 1 },
-            volume: { label: "Volume", icon: "volume_up", w: 1 },
-            brightness: { label: "Brightness", icon: "brightness_6", w: 1 },
-            miclevel: { label: "Microphone level", icon: "mic", w: 1 },
-            wifi: { label: "Wi-Fi", icon: "wifi", w: 1 },
-            bluetooth: { label: "Bluetooth", icon: "bluetooth", w: 1 },
-            output: { label: "Sound output", icon: "speaker", w: 1 },
-            input: { label: "Microphone", icon: "mic", w: 1 },
-            vpn: { label: "VPN", icon: "vpn_key", w: 1 },
-            disk: { label: "Disk usage", icon: "storage", w: 1 },
-            picker: { label: "Color picker", icon: "colorize", w: 1 },
-            caffeine: { label: "Keep awake", icon: "coffee", w: 1 },
-            capture: { label: "Quick capture", icon: "screenshot_region", w: 1 },
-            dnd: { label: "Do not disturb", icon: "do_not_disturb_on", w: 1 },
-            power: { label: "Power profile", icon: "bolt", w: 1 },
-            night: { label: "Night light", icon: "nightlight", w: 1 },
-            dark: { label: "Dark mode", icon: "contrast", w: 1 },
-            record: { label: "Screen recording", icon: "screen_record", w: 1 },
-            widgets: { label: "Desktop widgets", icon: "widgets", w: 1 },
-            wallpaper: { label: "Wallpaper", icon: "wallpaper", w: 1 },
-            mixer: { label: "App mixer", icon: "tune", w: 1 },
-            wellbeing: { label: "Screen time", icon: "hourglass_bottom", w: 1 },
-            media: { label: "Now playing", icon: "music_note", w: 2 }
+            profile: { label: I18n.tr("You"), icon: "account_circle", w: 1 },
+            actions: { label: I18n.tr("Settings, lock and power"), icon: "power_settings_new", w: 1 },
+            volume: { label: I18n.tr("Volume"), icon: "volume_up", w: 1 },
+            brightness: { label: I18n.tr("Brightness"), icon: "brightness_6", w: 1 },
+            miclevel: { label: I18n.tr("Microphone level"), icon: "mic", w: 1 },
+            wifi: { label: I18n.tr("Wi-Fi"), icon: "wifi", w: 1 },
+            bluetooth: { label: I18n.tr("Bluetooth"), icon: "bluetooth", w: 1 },
+            output: { label: I18n.tr("Sound output"), icon: "speaker", w: 1 },
+            input: { label: I18n.tr("Microphone"), icon: "mic", w: 1 },
+            vpn: { label: I18n.tr("VPN"), icon: "vpn_key", w: 1 },
+            disk: { label: I18n.tr("Disk usage"), icon: "storage", w: 1 },
+            picker: { label: I18n.tr("Color picker"), icon: "colorize", w: 1 },
+            caffeine: { label: I18n.tr("Keep awake"), icon: "coffee", w: 1 },
+            capture: { label: I18n.tr("Quick capture"), icon: "screenshot_region", w: 1 },
+            dnd: { label: I18n.tr("Do not disturb"), icon: "do_not_disturb_on", w: 1 },
+            power: { label: I18n.tr("Power profile"), icon: "bolt", w: 1 },
+            night: { label: I18n.tr("Night light"), icon: "nightlight", w: 1 },
+            dark: { label: I18n.tr("Dark mode"), icon: "contrast", w: 1 },
+            record: { label: I18n.tr("Screen recording"), icon: "screen_record", w: 1 },
+            widgets: { label: I18n.tr("Desktop widgets"), icon: "widgets", w: 1 },
+            wallpaper: { label: I18n.tr("Wallpaper"), icon: "wallpaper", w: 1 },
+            mixer: { label: I18n.tr("App mixer"), icon: "tune", w: 1 },
+            wellbeing: { label: I18n.tr("Screen time"), icon: "hourglass_bottom", w: 1 },
+            media: { label: I18n.tr("Now playing"), icon: "music_note", w: 2 }
         })
     readonly property var defaults: ["profile", "actions", "volume", "brightness", "wifi", "bluetooth", "output", "input", "vpn", "disk",
         "picker", "caffeine", "capture", "dnd", "power", "night", "dark", "media"].map(id => ({ id, w: catalog[id].w }))
@@ -235,13 +235,13 @@ Item {
                     StateLayer { radius: 16; onClicked: root.add(parent.modelData) }
                 }
             }
-            FText { visible: root.missing.length === 0; text: "Everything is on the grid"; dim: true }
+            FText { visible: root.missing.length === 0; text: I18n.tr("Everything is on the grid"); dim: true }
         }
         RowLayout {
             Layout.fillWidth: true
             spacing: Theme.sp2
             FButton {
-                text: "Add widget"
+                text: I18n.tr("Add widget")
                 icon: "add"
                 variant: root.adding ? "filled" : "tonal"
                 onClicked: root.adding = !root.adding
@@ -337,7 +337,7 @@ Item {
                     Layout.fillWidth: true
                     spacing: 0
                     FText { Layout.fillWidth: true; text: Users.me + (SystemStats.hostname ? " @ " + SystemStats.hostname : ""); font.weight: Font.DemiBold; elide: Text.ElideRight }
-                    FText { Layout.fillWidth: true; text: (Niri.hyprland ? "Hyprland" : "niri") + "  ·  up " + SystemStats.uptimeText; dim: true; font.pixelSize: Theme.fsXs; elide: Text.ElideRight }
+                    FText { Layout.fillWidth: true; text: (Niri.hyprland ? I18n.tr("Hyprland") : "niri") + "  ·  up " + SystemStats.uptimeText; dim: true; font.pixelSize: Theme.fsXs; elide: Text.ElideRight }
                 }
             }
             StateLayer { radius: parent.radius; onClicked: Panels.openSettings("users"); onPressAndHold: root.startEdit() }
@@ -402,8 +402,8 @@ Item {
         Pill {
             host: root
             icon: Network.icon
-            title: Network.ssid || (Network.ethernet ? "Ethernet" : "Wi-Fi")
-            subtitle: Network.ethernet ? "Wired" : Network.ssid ? Network.signal + "%" : Network.wifiEnabled ? "Not connected" : "Off"
+            title: Network.ssid || (Network.ethernet ? I18n.tr("Ethernet") : I18n.tr("Wi-Fi"))
+            subtitle: Network.ethernet ? I18n.tr("Wired") : Network.ssid ? Network.signal + "%" : Network.wifiEnabled ? I18n.tr("Not connected") : I18n.tr("Off")
             on: Network.wifiEnabled || Network.ethernet
             hasDetail: true
             onClicked: Network.setWifi(!Network.wifiEnabled)
@@ -418,7 +418,7 @@ Item {
         Pill {
             host: root
             icon: BluetoothState.icon
-            title: BluetoothState.enabled ? "Enabled" : "Bluetooth"
+            title: BluetoothState.enabled ? I18n.tr("Enabled") : I18n.tr("Bluetooth")
             subtitle: BluetoothState.label
             on: BluetoothState.enabled
             hasDetail: BluetoothState.available
@@ -431,8 +431,8 @@ Item {
         Pill {
             host: root
             icon: Audio.icon
-            title: Audio.sink ? Audio.nodeName(Audio.sink) : "No output"
-            subtitle: Audio.muted ? "Muted" : Math.round(Audio.volume * 100) + "%"
+            title: Audio.sink ? Audio.nodeName(Audio.sink) : I18n.tr("No output")
+            subtitle: Audio.muted ? I18n.tr("Muted") : Math.round(Audio.volume * 100) + "%"
             on: !Audio.muted
             hasDetail: true
             onClicked: Audio.toggleMute()
@@ -444,8 +444,8 @@ Item {
         Pill {
             host: root
             icon: Audio.micMuted ? "mic_off" : "mic"
-            title: Audio.source ? Audio.nodeName(Audio.source) : "No microphone"
-            subtitle: Audio.micMuted ? "Muted" : Math.round(Audio.micVolume * 100) + "%"
+            title: Audio.source ? Audio.nodeName(Audio.source) : I18n.tr("No microphone")
+            subtitle: Audio.micMuted ? I18n.tr("Muted") : Math.round(Audio.micVolume * 100) + "%"
             on: !Audio.micMuted && Audio.source !== null
             hasDetail: true
             onClicked: Audio.toggleMicMute()
@@ -457,8 +457,8 @@ Item {
         Pill {
             host: root
             icon: Network.vpnActive ? "vpn_lock" : "vpn_key"
-            title: Network.vpnActive ? Network.activeVpns.map(v => v.name).join(", ") : "VPN"
-            subtitle: Network.vpnActive ? "Connected" : Network.vpns.length ? "Off" : "Not set up"
+            title: Network.vpnActive ? Network.activeVpns.map(v => v.name).join(", ") : I18n.tr("VPN")
+            subtitle: Network.vpnActive ? I18n.tr("Connected") : Network.vpns.length ? I18n.tr("Off") : I18n.tr("Not set up")
             on: Network.vpnActive
             hasDetail: true
             onClicked: {
@@ -479,7 +479,7 @@ Item {
             id: dp
             property string usage: ""
             icon: "storage"
-            title: "Disk usage"
+            title: I18n.tr("Disk usage")
             subtitle: usage || "…"
             onClicked: Panels.toggle("performance", root.screenName)
             Process {
@@ -500,8 +500,8 @@ Item {
         Pill {
             host: root
             icon: "colorize"
-            title: "Color picker"
-            subtitle: "Choose a color"
+            title: I18n.tr("Color picker")
+            subtitle: I18n.tr("Choose a color")
             onClicked: {
                 Panels.close();
                 Quickshell.execDetached(["sh", "-c", 'sleep 0.35; exec "$1" pick-color', "sh", Paths.bin]);
@@ -513,8 +513,8 @@ Item {
         Pill {
             host: root
             icon: "coffee"
-            title: "Keep awake"
-            subtitle: Toggles.caffeine ? "On" : "Off"
+            title: I18n.tr("Keep awake")
+            subtitle: Toggles.caffeine ? I18n.tr("On") : I18n.tr("Off")
             on: Toggles.caffeine
             onClicked: Toggles.caffeine = !Toggles.caffeine
         }
@@ -524,8 +524,8 @@ Item {
         Pill {
             host: root
             icon: "screenshot_region"
-            title: "Quick capture"
-            subtitle: "An area of the screen"
+            title: I18n.tr("Quick capture")
+            subtitle: I18n.tr("An area of the screen")
             onClicked: {
                 Panels.close();
                 Screenshot.fromSettings("region");
@@ -537,8 +537,8 @@ Item {
         Pill {
             host: root
             icon: "do_not_disturb_on"
-            title: "Do not disturb"
-            subtitle: Notifs.dnd ? "On" : "Off"
+            title: I18n.tr("Do not disturb")
+            subtitle: Notifs.dnd ? I18n.tr("On") : I18n.tr("Off")
             on: Notifs.dnd
             onClicked: Notifs.setDnd(!Notifs.dnd)
         }
@@ -548,7 +548,7 @@ Item {
         Pill {
             host: root
             icon: Power.profileIcon
-            title: "Power profile"
+            title: I18n.tr("Power profile")
             subtitle: Power.profileName
             on: Power.profileId !== "balanced"
             hasDetail: true
@@ -561,7 +561,7 @@ Item {
         Pill {
             host: root
             icon: "nightlight"
-            title: "Night light"
+            title: I18n.tr("Night light")
             subtitle: Toggles.status
             on: Toggles.nightLight
             hasDetail: true
@@ -574,8 +574,8 @@ Item {
         Pill {
             host: root
             icon: "contrast"
-            title: "Dark mode"
-            subtitle: Theme.dark ? "On" : "Off"
+            title: I18n.tr("Dark mode")
+            subtitle: Theme.dark ? I18n.tr("On") : I18n.tr("Off")
             on: Theme.dark
             onClicked: Settings.data.appearance.mode = Theme.dark ? "light" : "dark"
         }
@@ -585,8 +585,8 @@ Item {
         Pill {
             host: root
             icon: Recorder.recording ? "stop_circle" : "screen_record"
-            title: Recorder.recording ? "Stop recording" : "Record screen"
-            subtitle: Recorder.recording ? Recorder.clock : "This screen"
+            title: Recorder.recording ? I18n.tr("Stop recording") : I18n.tr("Record screen")
+            subtitle: Recorder.recording ? Recorder.clock : I18n.tr("This screen")
             on: Recorder.recording
             onClicked: {
                 Panels.close();
@@ -599,8 +599,8 @@ Item {
         Pill {
             host: root
             icon: "widgets"
-            title: "Desktop widgets"
-            subtitle: Settings.data.desktop.enabled ? (Settings.data.desktop.widgets.length ? Settings.data.desktop.widgets.length + " on the desktop" : "Add some") : "Off"
+            title: I18n.tr("Desktop widgets")
+            subtitle: Settings.data.desktop.enabled ? (Settings.data.desktop.widgets.length ? Settings.data.desktop.widgets.length + " on the desktop" : I18n.tr("Add some")) : I18n.tr("Off")
             on: Settings.data.desktop.enabled && Settings.data.desktop.widgets.length > 0
             onClicked: {
                 Settings.data.desktop.enabled = true;
@@ -613,7 +613,7 @@ Item {
         Pill {
             host: root
             icon: "wallpaper"
-            title: "Wallpaper"
+            title: I18n.tr("Wallpaper")
             subtitle: Paths.fileName(Wallpapers.current) || "None"
             onClicked: Panels.toggle("wallpaper", root.screenName)
         }
@@ -623,8 +623,8 @@ Item {
         Pill {
             host: root
             icon: "tune"
-            title: "App mixer"
-            subtitle: Audio.streamGroups.length ? Audio.streamGroups.length + " playing" : "Nothing playing"
+            title: I18n.tr("App mixer")
+            subtitle: Audio.streamGroups.length ? Audio.streamGroups.length + " playing" : I18n.tr("Nothing playing")
             on: Audio.streamGroups.length > 0
             onClicked: root.openDetail("mixer")
         }
@@ -634,8 +634,8 @@ Item {
         Pill {
             host: root
             icon: "hourglass_bottom"
-            title: "Screen time"
-            subtitle: Wellbeing.enabled ? Wellbeing.fmt(Wellbeing.todayTotal) + " today" : "Off"
+            title: I18n.tr("Screen time")
+            subtitle: Wellbeing.enabled ? Wellbeing.fmt(Wellbeing.todayTotal) + " today" : I18n.tr("Off")
             on: Wellbeing.enabled
             onClicked: Panels.openDashboard("wellbeing", root.screenName)
         }

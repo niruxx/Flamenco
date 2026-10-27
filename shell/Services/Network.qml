@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import qs.Commons
 import Quickshell
 import Quickshell.Io
 
@@ -23,7 +24,7 @@ Singleton {
 
     readonly property bool connected: ethernet || ssid !== ""
     readonly property string icon: ethernet ? "lan" : !wifiEnabled ? "wifi_off" : ssid === "" ? "signal_wifi_statusbar_not_connected" : signal > 75 ? "signal_wifi_4_bar" : signal > 50 ? "network_wifi_3_bar" : signal > 25 ? "network_wifi_2_bar" : "network_wifi_1_bar"
-    readonly property string label: ethernet ? "Ethernet" : ssid !== "" ? ssid : wifiEnabled ? "Not connected" : "Off"
+    readonly property string label: ethernet ? I18n.tr("Ethernet") : ssid !== "" ? ssid : wifiEnabled ? I18n.tr("Not connected") : I18n.tr("Off")
 
     // nmcli -t escapes ':' as '\:'
     function splitTerse(line) {

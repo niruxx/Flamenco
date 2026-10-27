@@ -9,7 +9,7 @@ import qs.Widgets
 // urgent they are, how long they stay, and whether they're kept in history.
 Group {
     id: root
-    title: "App rules"
+    title: I18n.tr("App rules")
     readonly property var rules: Settings.data.notifications.rules || []
 
     function add(app) {
@@ -17,20 +17,20 @@ Group {
     }
 
     SettingRow {
-        title: rules.length ? rules.length + (rules.length === 1 ? " rule" : " rules") : "No rules yet"
-        subtitle: Mako.found && Settings.data.notifications.backend === "mako" ? "Mako shows notifications now, so these don't apply (they're for Flamenco's own)"
+        title: rules.length ? rules.length + (rules.length === 1 ? " rule" : " rules") : I18n.tr("No rules yet")
+        subtitle: Mako.found && Settings.data.notifications.backend === "mako" ? I18n.tr("Mako shows notifications now, so these don't apply (they're for Flamenco's own)")
             : "Quiet a chatty app, let an important one through Do Not Disturb, keep some out of history. The first rule that matches counts"
         icon: "rule"
         Row {
             spacing: 6
             FDropdown {
                 implicitWidth: 200
-                placeholder: "Add for an app…"
+                placeholder: I18n.tr("Add for an app…")
                 options: Notifs.apps
                 onSelected: v => root.add(v)
             }
             FButton {
-                text: "New rule"
+                text: I18n.tr("New rule")
                 icon: "add"
                 variant: "tonal"
                 onClicked: root.add("")

@@ -6,16 +6,16 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Quick settings"
-    subtitle: "Where the quick settings panel opens, how wide it is, and what's in it."
+    title: I18n.tr("Quick settings")
+    subtitle: I18n.tr("Where the quick settings panel opens, how wide it is, and what's in it.")
     readonly property var q: Settings.data.control
     readonly property var all: [
-        { id: "wifi", label: "Wi-Fi", icon: "wifi" }, { id: "bluetooth", label: "Bluetooth", icon: "bluetooth" },
-        { id: "dnd", label: "Do not disturb", icon: "do_not_disturb_on" }, { id: "night", label: "Night light", icon: "nightlight" },
-        { id: "caffeine", label: "Caffeine", icon: "coffee" }, { id: "power", label: "Power profile", icon: "bolt" },
-        { id: "vpn", label: "VPN", icon: "vpn_key" }, { id: "dark", label: "Dark mode", icon: "dark_mode" },
-        { id: "record", label: "Record screen", icon: "screen_record" }, { id: "widgets", label: "Desktop widgets", icon: "widgets" },
-        { id: "wallpaper", label: "Wallpaper", icon: "wallpaper" }
+        { id: "wifi", label: I18n.tr("Wi-Fi"), icon: "wifi" }, { id: "bluetooth", label: I18n.tr("Bluetooth"), icon: "bluetooth" },
+        { id: "dnd", label: I18n.tr("Do not disturb"), icon: "do_not_disturb_on" }, { id: "night", label: I18n.tr("Night light"), icon: "nightlight" },
+        { id: "caffeine", label: I18n.tr("Caffeine"), icon: "coffee" }, { id: "power", label: I18n.tr("Power profile"), icon: "bolt" },
+        { id: "vpn", label: I18n.tr("VPN"), icon: "vpn_key" }, { id: "dark", label: I18n.tr("Dark mode"), icon: "dark_mode" },
+        { id: "record", label: I18n.tr("Record screen"), icon: "screen_record" }, { id: "widgets", label: I18n.tr("Desktop widgets"), icon: "widgets" },
+        { id: "wallpaper", label: I18n.tr("Wallpaper"), icon: "wallpaper" }
     ]
     // shown tiles in order ([] means all, default order)
     readonly property var shown: q.tiles && q.tiles.length ? q.tiles.filter(t => all.some(a => a.id === t)) : all.map(a => a.id)
@@ -27,23 +27,23 @@ Page {
     }
 
     Group {
-        title: "Look"
+        title: I18n.tr("Look")
         ChoiceRow {
-            title: "Style"
-            subtitle: page.q.style === "classic" ? "Icon beside the text, slim sliders" : page.q.style === "cards" ? "Icon on top, tinted when on, big sliders (like the dashboard)" : "Pill tiles in two columns, half or full width, that you arrange yourself"
+            title: I18n.tr("Style")
+            subtitle: page.q.style === "classic" ? I18n.tr("Icon beside the text, slim sliders") : page.q.style === "cards" ? I18n.tr("Icon on top, tinted when on, big sliders (like the dashboard)") : I18n.tr("Pill tiles in two columns, half or full width, that you arrange yourself")
             icon: "view_module"
             target: page.q
             key: "style"
             segWidth: 120
-            options: [{ value: "grid", label: "Grid", icon: "dashboard_customize" }, { value: "cards", label: "Cards", icon: "grid_view" }, { value: "classic", label: "Classic", icon: "view_list" }]
+            options: [{ value: "grid", label: I18n.tr("Grid"), icon: "dashboard_customize" }, { value: "cards", label: I18n.tr("Cards"), icon: "grid_view" }, { value: "classic", label: I18n.tr("Classic"), icon: "view_list" }]
         }
         SettingRow {
             visible: (page.q.style || "grid") === "grid"
-            title: "Arranging the grid"
-            subtitle: "Press and hold any tile in quick settings: remove (−), make it half or full width, drag it, add widgets, then ✓. The tile choices below are for the Cards and Classic styles"
+            title: I18n.tr("Arranging the grid")
+            subtitle: I18n.tr("Press and hold any tile in quick settings: remove (−), make it half or full width, drag it, add widgets, then ✓. The tile choices below are for the Cards and Classic styles")
             icon: "touch_app"
             FButton {
-                text: "Reset the grid"
+                text: I18n.tr("Reset the grid")
                 variant: "text"
                 disabled: !(page.q.grid || []).length
                 onClicked: page.q.grid = []
@@ -52,19 +52,19 @@ Page {
     }
 
     Group {
-        title: "Placement"
+        title: I18n.tr("Placement")
         ChoiceRow {
-            title: "Opens"
-            subtitle: page.q.align === "auto" ? "On the side of the bar where its button is" : ""
+            title: I18n.tr("Opens")
+            subtitle: page.q.align === "auto" ? I18n.tr("On the side of the bar where its button is") : ""
             icon: "align_horizontal_right"
             target: page.q
             key: "align"
             segWidth: 120
-            options: [{ value: "auto", label: "By its button" }, { value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }]
+            options: [{ value: "auto", label: I18n.tr("By its button") }, { value: "left", label: I18n.tr("Left") }, { value: "center", label: I18n.tr("Center") }, { value: "right", label: I18n.tr("Right") }]
         }
-        SliderRow { title: "Width"; icon: "width"; target: page.q; key: "width"; from: 340; to: 640; stepSize: 10; suffix: " px" }
+        SliderRow { title: I18n.tr("Width"); icon: "width"; target: page.q; key: "width"; from: 340; to: 640; stepSize: 10; suffix: " px" }
         ChoiceRow {
-            title: "Tile columns"
+            title: I18n.tr("Tile columns")
             icon: "grid_view"
             target: page.q
             key: "columns"
@@ -73,12 +73,12 @@ Page {
     }
 
     Group {
-        title: "Sections"
+        title: I18n.tr("Sections")
         Repeater {
-            model: [{ k: "header", label: "Your name, uptime, and settings / lock / power buttons", icon: "account_circle" },
-                { k: "sliders", label: "Volume, microphone and brightness sliders", icon: "tune" },
-                { k: "tiles", label: "Tiles", icon: "grid_view" },
-                { k: "media", label: "What's playing (while something is)", icon: "music_note" }]
+            model: [{ k: "header", label: I18n.tr("Your name, uptime, and settings / lock / power buttons"), icon: "account_circle" },
+                { k: "sliders", label: I18n.tr("Volume, microphone and brightness sliders"), icon: "tune" },
+                { k: "tiles", label: I18n.tr("Tiles"), icon: "grid_view" },
+                { k: "media", label: I18n.tr("What's playing (while something is)"), icon: "music_note" }]
             SettingRow {
                 required property var modelData
                 title: modelData.label
@@ -92,7 +92,7 @@ Page {
     }
 
     Group {
-        title: "Tiles"
+        title: I18n.tr("Tiles")
         visible: (page.q.sections || {}).tiles !== false
         Repeater {
             model: page.rows
@@ -126,10 +126,10 @@ Page {
             }
         }
         SettingRow {
-            title: "Back to the default tiles"
+            title: I18n.tr("Back to the default tiles")
             icon: "restart_alt"
             FButton {
-                text: "Reset"
+                text: I18n.tr("Reset")
                 variant: "text"
                 onClicked: page.q.tiles = []
             }

@@ -12,8 +12,8 @@ import qs.Widgets
 // a terminal for it; passwords are only typed into `passwd` there.
 Page {
     id: page
-    title: "Users"
-    subtitle: "Your account, and the other people who use this computer."
+    title: I18n.tr("Users")
+    subtitle: I18n.tr("Your account, and the other people who use this computer.")
 
     Component.onCompleted: Users.refresh()
     readonly property var me: Users.self
@@ -84,7 +84,7 @@ Page {
                         height: 24
                         radius: 12
                         color: Users.isAdmin ? Theme.alpha(Theme.accent, 0.18) : Theme.alpha(Theme.text, 0.07)
-                        FText { id: kind; anchors.centerIn: parent; text: Users.isAdmin ? "Administrator" : "Standard user"; font.pixelSize: Theme.fsXs; font.weight: Font.Bold; color: Users.isAdmin ? Theme.accent : Theme.textDim }
+                        FText { id: kind; anchors.centerIn: parent; text: Users.isAdmin ? I18n.tr("Administrator") : I18n.tr("Standard user"); font.pixelSize: Theme.fsXs; font.weight: Font.Bold; color: Users.isAdmin ? Theme.accent : Theme.textDim }
                     }
                     Rectangle {
                         visible: Users.accounts
@@ -92,7 +92,7 @@ Page {
                         height: 24
                         radius: 12
                         color: Theme.alpha(Theme.text, 0.07)
-                        FText { id: acct; anchors.centerIn: parent; text: "Shown on the login screen"; font.pixelSize: Theme.fsXs; color: Theme.textDim }
+                        FText { id: acct; anchors.centerIn: parent; text: I18n.tr("Shown on the login screen"); font.pixelSize: Theme.fsXs; color: Theme.textDim }
                     }
                 }
             }
@@ -108,10 +108,10 @@ Page {
     }
 
     Group {
-        title: "Your account"
+        title: I18n.tr("Your account")
         SettingRow {
-            title: "Full name"
-            subtitle: Users.accounts ? "Shown on the lock and login screens and in apps" : "Changing it asks for your password in a terminal (AccountsService isn't running)"
+            title: I18n.tr("Full name")
+            subtitle: Users.accounts ? I18n.tr("Shown on the lock and login screens and in apps") : I18n.tr("Changing it asks for your password in a terminal (AccountsService isn't running)")
             icon: "badge"
             Row {
                 spacing: 8
@@ -119,52 +119,52 @@ Page {
                     id: nameField
                     implicitWidth: 220
                     text: Users.fullName
-                    placeholder: "Your name"
+                    placeholder: I18n.tr("Your name")
                     onAccepted: if (text.trim() && text.trim() !== Users.fullName) Users.setName(text.trim())
                 }
                 FButton {
-                    text: "Save"
+                    text: I18n.tr("Save")
                     disabled: nameField.text.trim() === "" || nameField.text.trim() === Users.fullName
                     onClicked: Users.setName(nameField.text.trim())
                 }
             }
         }
         SettingRow {
-            title: "Picture"
-            subtitle: "Cropped to a square; also used by the login screen and other apps"
+            title: I18n.tr("Picture")
+            subtitle: I18n.tr("Cropped to a square; also used by the login screen and other apps")
             icon: "account_circle"
             Row {
                 spacing: 8
                 FButton {
-                    text: "Choose…"
+                    text: I18n.tr("Choose…")
                     icon: "image"
                     variant: "tonal"
                     onClicked: picker.running = true
                 }
                 FButton {
                     visible: (page.me?.avatar ?? "") !== ""
-                    text: "Remove"
+                    text: I18n.tr("Remove")
                     variant: "text"
                     onClicked: Users.removeAvatar()
                 }
             }
         }
         SettingRow {
-            title: "Password"
-            subtitle: "Opens a terminal, where you type your current password and then the new one"
+            title: I18n.tr("Password")
+            subtitle: I18n.tr("Opens a terminal, where you type your current password and then the new one")
             icon: "password"
             FButton {
-                text: "Change password…"
+                text: I18n.tr("Change password…")
                 variant: "tonal"
                 onClicked: Users.changePassword("")
             }
         }
         SettingRow {
-            title: "Signing in"
-            subtitle: "Automatic login, fingerprint unlock, the lock screen"
+            title: I18n.tr("Signing in")
+            subtitle: I18n.tr("Automatic login, fingerprint unlock, the lock screen")
             icon: "login"
             FButton {
-                text: "Lock & Login"
+                text: I18n.tr("Lock & Login")
                 variant: "text"
                 onClicked: Panels.settingsPage = "lock"
             }
@@ -172,16 +172,16 @@ Page {
     }
 
     Group {
-        title: "Other users"
+        title: I18n.tr("Other users")
         SettingRow {
             visible: !Users.isAdmin
-            title: "Only administrators can change other accounts"
-            subtitle: "Ask someone in the " + Users.adminGroup + " group, or change them with sudo"
+            title: I18n.tr("Only administrators can change other accounts")
+            subtitle: I18n.tr("Ask someone in the ") + Users.adminGroup + " group, or change them with sudo"
             icon: "lock"
         }
         SettingRow {
             visible: Users.loaded && Users.others.length === 0
-            title: "Nobody else has an account here"
+            title: I18n.tr("Nobody else has an account here")
             icon: "group"
         }
         Repeater {
@@ -191,7 +191,7 @@ Page {
                 required property var modelData
                 readonly property bool asking: page.removing === modelData.name
                 title: modelData.fullName || modelData.name
-                subtitle: "@" + modelData.name + " · " + (modelData.admin ? "Administrator" : "Standard user")
+                subtitle: "@" + modelData.name + " · " + (modelData.admin ? I18n.tr("Administrator") : I18n.tr("Standard user"))
                 icon: ""
                 Row {
                     spacing: 6
@@ -204,7 +204,7 @@ Page {
                     // what an administrator can do, or (removing) the question first
                     FButton {
                         visible: Users.isAdmin && !urow.asking
-                        text: urow.modelData.admin ? "Make standard" : "Make admin"
+                        text: urow.modelData.admin ? I18n.tr("Make standard") : I18n.tr("Make admin")
                         variant: "text"
                         onClicked: Users.setAdmin(urow.modelData.name, !urow.modelData.admin)
                     }
@@ -228,13 +228,13 @@ Page {
                     FText {
                         visible: urow.asking
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Remove " + urow.modelData.name + "?"
+                        text: I18n.tr("Remove ") + urow.modelData.name + "?"
                         color: Theme.error
                         font.weight: Font.DemiBold
                     }
                     FButton {
                         visible: urow.asking
-                        text: "Keep files"
+                        text: I18n.tr("Keep files")
                         variant: "tonal"
                         onClicked: {
                             Users.remove(urow.modelData.name, true);
@@ -243,7 +243,7 @@ Page {
                     }
                     FButton {
                         visible: urow.asking
-                        text: "Delete all"
+                        text: I18n.tr("Delete all")
                         onClicked: {
                             Users.remove(urow.modelData.name, false);
                             page.removing = "";
@@ -263,20 +263,20 @@ Page {
     }
 
     Group {
-        title: "Add a user"
+        title: I18n.tr("Add a user")
         SettingRow {
             visible: !Users.isAdmin
-            title: "Needs an administrator"
-            subtitle: "You aren't in the " + Users.adminGroup + " group, so the terminal will ask for an administrator's password (sudo may refuse you)"
+            title: I18n.tr("Needs an administrator")
+            subtitle: I18n.tr("You aren't in the ") + Users.adminGroup + " group, so the terminal will ask for an administrator's password (sudo may refuse you)"
             icon: "admin_panel_settings"
         }
         SettingRow {
-            title: "Full name"
+            title: I18n.tr("Full name")
             icon: "badge"
             FTextField {
                 id: newFull
                 implicitWidth: 240
-                placeholder: "Alex Doe"
+                placeholder: I18n.tr("Alex Doe")
                 onEdited: t => {
                     // suggest a user name from it until one is typed
                     if (!newUser.touched)
@@ -285,8 +285,8 @@ Page {
             }
         }
         SettingRow {
-            title: "User name"
-            subtitle: newUser.text === "" || page.validName(newUser.text) ? "Lowercase letters, digits, _ and -; can't be changed later" : "Start with a letter; only lowercase letters, digits, _ and -"
+            title: I18n.tr("User name")
+            subtitle: newUser.text === "" || page.validName(newUser.text) ? I18n.tr("Lowercase letters, digits, _ and -; can't be changed later") : I18n.tr("Start with a letter; only lowercase letters, digits, _ and -")
             icon: "alternate_email"
             FTextField {
                 id: newUser
@@ -297,14 +297,14 @@ Page {
             }
         }
         SettingRow {
-            title: "Administrator"
-            subtitle: "Can install software and change other accounts (the " + Users.adminGroup + " group)"
+            title: I18n.tr("Administrator")
+            subtitle: I18n.tr("Can install software and change other accounts (the ") + Users.adminGroup + " group)"
             icon: "admin_panel_settings"
             FSwitch { id: newAdmin }
         }
         SettingRow {
-            title: "Login shell"
-            subtitle: "What their terminal runs (from /etc/shells)"
+            title: I18n.tr("Login shell")
+            subtitle: I18n.tr("What their terminal runs (from /etc/shells)")
             icon: "terminal"
             FDropdown {
                 id: newShell
@@ -315,17 +315,17 @@ Page {
             }
         }
         SettingRow {
-            title: "Extra groups"
-            subtitle: newGroups.text === "" || /^[a-z_][a-z0-9_-]*(\s*,\s*[a-z_][a-z0-9_-]*)*$/.test(newGroups.text.trim()) ? "Optional, comma-separated: e.g. video, audio, input, docker" : "Group names are lowercase letters, digits, _ and -, comma-separated"
+            title: I18n.tr("Extra groups")
+            subtitle: newGroups.text === "" || /^[a-z_][a-z0-9_-]*(\s*,\s*[a-z_][a-z0-9_-]*)*$/.test(newGroups.text.trim()) ? I18n.tr("Optional, comma-separated: e.g. video, audio, input, docker") : I18n.tr("Group names are lowercase letters, digits, _ and -, comma-separated")
             icon: "group_add"
-            FTextField { id: newGroups; implicitWidth: 240; placeholder: "video, audio" }
+            FTextField { id: newGroups; implicitWidth: 240; placeholder: I18n.tr("video, audio") }
         }
         SettingRow {
-            title: "Create"
-            subtitle: "Opens a terminal: your password (sudo), then a password for the new account"
+            title: I18n.tr("Create")
+            subtitle: I18n.tr("Opens a terminal: your password (sudo), then a password for the new account")
             icon: "person_add"
             FButton {
-                text: "Add user"
+                text: I18n.tr("Add user")
                 disabled: !page.validName(newUser.text) || Users.users.some(u => u.name === newUser.text)
                     || (newGroups.text.trim() !== "" && !/^[a-z_][a-z0-9_-]*(\s*,\s*[a-z_][a-z0-9_-]*)*$/.test(newGroups.text.trim()))
                 onClicked: {

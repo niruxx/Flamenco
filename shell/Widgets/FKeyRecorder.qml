@@ -84,7 +84,7 @@ Rectangle {
             FText {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.recording || root.value === ""
-                text: root.recording ? "Press a key combination… (Esc to cancel)" : "Click to record"
+                text: root.recording ? I18n.tr("Press a key combination… (Esc to cancel)") : I18n.tr("Click to record")
                 dim: true
             }
             FKeycaps {

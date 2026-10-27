@@ -98,7 +98,7 @@ Item {
             property real k: 1
             property var spec
             property bool editing
-            text: "Unknown widget"
+            text: I18n.tr("Unknown widget")
             dim: true
         }
     }

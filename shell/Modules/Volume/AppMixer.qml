@@ -27,7 +27,7 @@ ColumnLayout {
         visible: Audio.streamGroups.length === 0 && (!root.showRecording || Audio.recorderGroups.length === 0)
         spacing: 4
         FIcon { Layout.alignment: Qt.AlignHCenter; icon: "music_off"; size: 32; color: Theme.textDim }
-        FText { Layout.alignment: Qt.AlignHCenter; text: "No apps are playing sound"; dim: true }
+        FText { Layout.alignment: Qt.AlignHCenter; text: I18n.tr("No apps are playing sound"); dim: true }
     }
 
     Repeater {
@@ -38,7 +38,7 @@ ColumnLayout {
     FText {
         visible: root.showRecording && Audio.recorderGroups.length > 0
         Layout.topMargin: Theme.sp2
-        text: "Recording"
+        text: I18n.tr("Recording")
         dim: true
         font.pixelSize: Theme.fsSm
         font.weight: Font.Bold
@@ -138,7 +138,7 @@ ColumnLayout {
                         }
                     }
                     FText {
-                        text: card.muted ? "Muted" : Math.round(card.vol * 100) + "%"
+                        text: card.muted ? I18n.tr("Muted") : Math.round(card.vol * 100) + "%"
                         mono: true
                         font.pixelSize: Theme.fsSm
                         color: card.muted ? Theme.textDim : card.vol > 1 ? Theme.warning : Theme.text

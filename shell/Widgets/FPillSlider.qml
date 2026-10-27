@@ -92,7 +92,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: 14
         anchors.verticalCenter: parent.verticalCenter
-        text: root.muted ? "Muted" : Math.round(root.shown * 100) + "%"
+        text: root.muted ? I18n.tr("Muted") : Math.round(root.shown * 100) + "%"
         font.pixelSize: Theme.fsSm
         font.weight: Font.DemiBold
         color: root.shown > 0.9 ? Theme.onAccent : Theme.text

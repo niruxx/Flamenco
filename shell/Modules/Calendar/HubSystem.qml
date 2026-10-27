@@ -94,7 +94,7 @@ GridLayout {
     // ── CPU ──
     Panel {
         icon: "memory"
-        title: "CPU"
+        title: I18n.tr("CPU")
         value: Math.round(SystemStats.cpu * 100) + "%"
         tint: Theme.accent
         Column {
@@ -115,7 +115,7 @@ GridLayout {
     // ── memory ──
     Panel {
         icon: "developer_board"
-        title: "Memory"
+        title: I18n.tr("Memory")
         value: Math.round(SystemStats.mem * 100) + "%"
         tint: Theme.warning
         Column {
@@ -136,7 +136,7 @@ GridLayout {
     // ── temperatures ──
     Panel {
         icon: "thermostat"
-        title: "Temperature"
+        title: I18n.tr("Temperature")
         value: Math.round(SystemStats.temp) + "°C"
         tint: Theme.accent2
         Column {
@@ -153,7 +153,7 @@ GridLayout {
     // ── cores ──
     Panel {
         icon: "grid_view"
-        title: "Cores"
+        title: I18n.tr("Cores")
         value: SystemStats.cores + ""
         tint: Theme.accent
         Grid {
@@ -186,7 +186,7 @@ GridLayout {
     // ── network ──
     Panel {
         icon: "swap_vert"
-        title: "Network"
+        title: I18n.tr("Network")
         tint: Theme.accent3
         Column {
             width: parent.width
@@ -211,7 +211,7 @@ GridLayout {
     // ── GPU ──
     Panel {
         icon: "videogame_asset"
-        title: "GPU"
+        title: I18n.tr("GPU")
         value: SystemStats.gpuBusy >= 0 ? Math.round(SystemStats.gpuBusy * 100) + "%" : ""
         tint: SystemStats.gpuBusy >= 0 ? SystemStats.colorFor("gpu", SystemStats.gpuBusy * 100, Theme.accent2) : Theme.accent2
         Column {
@@ -222,7 +222,7 @@ GridLayout {
                 visible: SystemStats.gpuName === "NVIDIA" || SystemStats.gpuNvidia
                 width: parent.width
                 height: 30
-                FText { anchors.verticalCenter: parent.verticalCenter; text: "Watch the NVIDIA GPU"; font.pixelSize: Theme.fsSm }
+                FText { anchors.verticalCenter: parent.verticalCenter; text: I18n.tr("Watch the NVIDIA GPU"); font.pixelSize: Theme.fsSm }
                 FSwitch {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
@@ -236,7 +236,7 @@ GridLayout {
                 wrapMode: Text.Wrap
                 dim: true
                 font.pixelSize: Theme.fsSm
-                text: SystemStats.gpuName === "NVIDIA" ? "Asking nvidia-smi keeps the GPU awake (and using power), so it's off until you switch it on."
+                text: SystemStats.gpuName === "NVIDIA" ? I18n.tr("Asking nvidia-smi keeps the GPU awake (and using power), so it's off until you switch it on.")
                     : "No GPU usage to show: AMD and Intel cards report it through the kernel, NVIDIA through nvidia-smi."
             }
             Facts {
@@ -254,7 +254,7 @@ GridLayout {
         Layout.columnSpan: 2
         Layout.preferredWidth: 2
         icon: "list"
-        title: "Top processes"
+        title: I18n.tr("Top processes")
         tint: Theme.accent
         Column {
             width: parent.width

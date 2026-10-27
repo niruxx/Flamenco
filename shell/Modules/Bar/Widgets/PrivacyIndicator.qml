@@ -70,7 +70,7 @@ BarChip {
                 anchors.margins: 12
                 spacing: 10
 
-                FText { text: "In use"; font.weight: Font.Bold }
+                FText { text: I18n.tr("In use"); font.weight: Font.Bold }
                 Use {
                     visible: Privacy.mic || Audio.micMuted
                     icon: Audio.micMuted ? "mic_off" : "mic"

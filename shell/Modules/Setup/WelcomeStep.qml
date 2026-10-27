@@ -41,7 +41,7 @@ Item {
         FText {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
-            text: "Let's get you set up"
+            text: I18n.tr("Let's get you set up")
             font.pixelSize: Theme.fsXxl
             font.weight: Font.Bold
         }
@@ -50,7 +50,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
             dim: true
-            text: "A few quick steps to make Flamenco yours. Every change applies right away, and you can skip anything. Running on " + (Niri.hyprland ? "Hyprland" : "niri") + "."
+            text: I18n.tr("A few quick steps to make Flamenco yours. Every change applies right away, and you can skip anything. Running on ") + (Niri.hyprland ? I18n.tr("Hyprland") : "niri") + "."
         }
 
         Flow {
@@ -80,7 +80,7 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: Theme.sp4
             implicitHeight: 44
-            text: "Get started"
+            text: I18n.tr("Get started")
             icon: "arrow_forward"
             onClicked: root.start()
         }

@@ -34,8 +34,8 @@ Variants {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
-                    FText { text: "Performance"; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
-                    FText { text: "Up " + SystemStats.uptimeText; dim: true; font.pixelSize: Theme.fsSm }
+                    FText { text: I18n.tr("Performance"); font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
+                    FText { text: I18n.tr("Up ") + SystemStats.uptimeText; dim: true; font.pixelSize: Theme.fsSm }
                 }
                 FButton {
                     text: "btop"
@@ -60,7 +60,7 @@ Variants {
                     spacing: Theme.sp3
 
                     PerfSection {
-                        title: "CPU"
+                        title: I18n.tr("CPU")
                         icon: "memory"
                         RowLayout {
                             Layout.fillWidth: true
@@ -81,11 +81,11 @@ Variants {
                     }
 
                     PerfSection {
-                        title: "Temperatures"
+                        title: I18n.tr("Temperatures")
                         icon: "thermostat"
                         FText {
                             visible: SystemStats.sensors.length === 0
-                            text: "No temperature sensors reported (common in virtual machines)"
+                            text: I18n.tr("No temperature sensors reported (common in virtual machines)")
                             dim: true
                             wrapMode: Text.Wrap
                             Layout.fillWidth: true
@@ -103,17 +103,17 @@ Variants {
                     }
 
                     PerfSection {
-                        title: "Memory"
+                        title: I18n.tr("Memory")
                         icon: "developer_board"
                         PerfMeter {
-                            label: "RAM"
+                            label: I18n.tr("RAM")
                             detail: SystemStats.memUsed.toFixed(1) + " / " + SystemStats.memTotal.toFixed(1) + " GiB"
                             value: SystemStats.mem
                             barColor: SystemStats.colorFor("mem", SystemStats.mem * 100, Theme.accent2)
                         }
                         PerfMeter {
                             visible: SystemStats.swapTotal > 0
-                            label: "Swap"
+                            label: I18n.tr("Swap")
                             detail: SystemStats.swapUsed.toFixed(1) + " / " + SystemStats.swapTotal.toFixed(1) + " GiB"
                             value: SystemStats.swapTotal > 0 ? SystemStats.swapUsed / SystemStats.swapTotal : 0
                             barColor: Theme.accent3
@@ -127,7 +127,7 @@ Variants {
                     }
 
                     PerfSection {
-                        title: "Disks"
+                        title: I18n.tr("Disks")
                         icon: "hard_drive"
                         visible: SystemStats.disks.length > 0
                         Repeater {
@@ -143,7 +143,7 @@ Variants {
                     }
 
                     PerfSection {
-                        title: "Network"
+                        title: I18n.tr("Network")
                         icon: "swap_vert"
                         RowLayout {
                             Layout.fillWidth: true
@@ -162,7 +162,7 @@ Variants {
                     }
 
                     PerfSection {
-                        title: "Top processes"
+                        title: I18n.tr("Top processes")
                         action: "All processes"
                         onActionClicked: {
                             Panels.close();
@@ -182,7 +182,7 @@ Variants {
                         }
                         FText {
                             visible: SystemStats.processes.length === 0
-                            text: "Loading…"
+                            text: I18n.tr("Loading…")
                             dim: true
                         }
                     }

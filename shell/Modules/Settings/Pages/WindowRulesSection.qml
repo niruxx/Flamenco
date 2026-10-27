@@ -10,7 +10,7 @@ import qs.Widgets
 // config by `flamenco compositor apply`, for windows opened afterwards.
 Group {
     id: root
-    title: "Window rules"
+    title: I18n.tr("Window rules")
     readonly property var rules: Settings.data.windows.rules || []
 
     function add(app) {
@@ -19,19 +19,19 @@ Group {
     }
 
     SettingRow {
-        title: rules.length ? rules.length + (rules.length === 1 ? " rule" : " rules") : "No rules yet"
-        subtitle: "How an app's windows open: floating, a size, a screen or workspace, see-through, hidden from screen sharing. For windows opened after a change"
+        title: rules.length ? rules.length + (rules.length === 1 ? " rule" : " rules") : I18n.tr("No rules yet")
+        subtitle: I18n.tr("How an app's windows open: floating, a size, a screen or workspace, see-through, hidden from screen sharing. For windows opened after a change")
         icon: "rule"
         Row {
             spacing: 6
             FDropdown {
                 implicitWidth: 200
-                placeholder: "Add for an open app…"
+                placeholder: I18n.tr("Add for an open app…")
                 options: [...new Set(Niri.windows.map(w => w.app_id).filter(Boolean))].map(a => ({ value: a, label: Apps.lookup(a)?.name ?? a }))
                 onSelected: v => root.add(v)
             }
             FButton {
-                text: "New rule"
+                text: I18n.tr("New rule")
                 icon: "add"
                 variant: "tonal"
                 onClicked: root.add("")

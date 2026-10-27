@@ -25,12 +25,12 @@ Variants {
                 Layout.fillWidth: true
                 FText {
                     Layout.fillWidth: true
-                    text: "Volume"
+                    text: I18n.tr("Volume")
                     font.pixelSize: Theme.fsXl
                     font.weight: Font.Bold
                 }
                 FText {
-                    text: Audio.muted ? "Muted" : Math.round(Audio.volume * 100) + "%"
+                    text: Audio.muted ? I18n.tr("Muted") : Math.round(Audio.volume * 100) + "%"
                     mono: true
                     dim: true
                 }
@@ -46,7 +46,7 @@ Variants {
             }
 
             FText {
-                text: "Output"
+                text: I18n.tr("Output")
                 dim: true
                 font.pixelSize: Theme.fsSm
                 font.weight: Font.Bold
@@ -100,7 +100,7 @@ Variants {
                 Layout.topMargin: Theme.sp2
                 FText {
                     Layout.fillWidth: true
-                    text: "Apps" + (Audio.streamGroups.length ? " · " + Audio.streamGroups.length : "")
+                    text: I18n.tr("Apps") + (Audio.streamGroups.length ? " · " + Audio.streamGroups.length : "")
                     dim: true
                     font.pixelSize: Theme.fsSm
                     font.weight: Font.Bold
@@ -120,7 +120,7 @@ Variants {
             // ── microphone ──
             FText {
                 visible: Audio.source !== null
-                text: "Microphone"
+                text: I18n.tr("Microphone")
                 dim: true
                 font.pixelSize: Theme.fsSm
                 font.weight: Font.Bold
@@ -151,7 +151,7 @@ Variants {
             FButton {
                 Layout.alignment: Qt.AlignRight
                 Layout.topMargin: Theme.sp2
-                text: "Sound settings"
+                text: I18n.tr("Sound settings")
                 icon: "tune"
                 variant: "tonal"
                 implicitHeight: 32

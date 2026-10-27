@@ -9,8 +9,8 @@ import qs.Widgets
 // Runs `flamenco doctor` and shows what's missing, with the command to install it.
 Page {
     id: page
-    title: "System check"
-    subtitle: "Checks everything Flamenco uses. Required items must be fixed; the rest enable optional features."
+    title: I18n.tr("System check")
+    subtitle: I18n.tr("Checks everything Flamenco uses. Required items must be fixed; the rest enable optional features.")
 
     property var checks: []
     property string install: ""
@@ -62,7 +62,7 @@ Page {
                 Layout.fillWidth: true
                 spacing: 0
                 FText {
-                    text: !page.ran ? "Checking…" : page.missingRequired > 0 ? page.missingRequired + " required item(s) need attention" : "Everything required is in place"
+                    text: !page.ran ? I18n.tr("Checking…") : page.missingRequired > 0 ? page.missingRequired + " required item(s) need attention" : I18n.tr("Everything required is in place")
                     font.pixelSize: Theme.fsLg
                     font.weight: Font.Bold
                 }
@@ -84,7 +84,7 @@ Page {
     // install command
     Group {
         visible: page.install !== ""
-        title: "Install what's missing"
+        title: I18n.tr("Install what's missing")
         Rectangle {
             Layout.fillWidth: true
             Layout.margins: 12
@@ -106,12 +106,12 @@ Page {
             Layout.topMargin: 0
             spacing: 8
             FButton {
-                text: "Install in terminal"
+                text: I18n.tr("Install in terminal")
                 icon: "terminal"
                 onClicked: Quickshell.execDetached(Paths.termHold(page.install + " && echo && echo 'Done. Re-run the check in Flamenco Settings.'"))
             }
             FButton {
-                text: "Copy command"
+                text: I18n.tr("Copy command")
                 icon: "content_copy"
                 variant: "tonal"
                 onClicked: Quickshell.execDetached(["wl-copy", page.install])
@@ -135,7 +135,7 @@ Page {
                     subtitle: modelData.purpose + (!modelData.ok && modelData.hint ? "\n→ " + modelData.hint : "")
                     icon: modelData.ok ? "check_circle" : modelData.required ? "error" : "radio_button_unchecked"
                     FText {
-                        text: crow.modelData.ok ? "OK" : crow.modelData.package ? crow.modelData.package + (crow.modelData.aur ? " (AUR)" : "") : crow.modelData.required ? "fix" : "optional"
+                        text: crow.modelData.ok ? I18n.tr("OK") : crow.modelData.package ? crow.modelData.package + (crow.modelData.aur ? " (AUR)" : "") : crow.modelData.required ? "fix" : "optional"
                         color: crow.modelData.ok ? Theme.success : crow.modelData.required ? Theme.error : Theme.textDim
                         font.weight: Font.DemiBold
                         mono: !crow.modelData.ok && crow.modelData.package !== ""
@@ -146,23 +146,23 @@ Page {
     }
 
     Group {
-        title: "Logs"
+        title: I18n.tr("Logs")
         SettingRow {
-            title: "Shell log"
+            title: I18n.tr("Shell log")
             subtitle: "~/.cache/flamenco/shell.log, written when niri starts the shell"
             icon: "receipt_long"
             FButton {
-                text: "View log"
+                text: I18n.tr("View log")
                 variant: "tonal"
                 onClicked: Quickshell.execDetached(Paths.term(["sh", "-c", Paths.shellQuote(Paths.bin) + " logs | less +G"]))
             }
         }
         SettingRow {
             title: "niri config"
-            subtitle: "Replace ~/.config/niri/config.kdl with a complete Flamenco config (your current one is backed up)"
+            subtitle: I18n.tr("Replace ~/.config/niri/config.kdl with a complete Flamenco config (your current one is backed up)")
             icon: "settings_applications"
             FButton {
-                text: "Write config"
+                text: I18n.tr("Write config")
                 variant: "outlined"
                 onClicked: Quickshell.execDetached(Paths.termHold(Paths.shellQuote(Paths.bin) + " niri-config"))
             }

@@ -61,7 +61,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: 38
             icon: "search"
-            placeholder: "Search Wallhaven (nature, city, minimal…)"
+            placeholder: I18n.tr("Search Wallhaven (nature, city, minimal…)")
             onAccepted: {
                 root.query = text;
                 root.search(false);
@@ -70,7 +70,7 @@ ColumnLayout {
         FSegmented {
             implicitWidth: 320
             implicitHeight: 38
-            options: [{ value: "toplist", label: "Top" }, { value: "date_added", label: "Latest" }, { value: "random", label: "Random" }, { value: "relevance", label: "Relevant" }]
+            options: [{ value: "toplist", label: I18n.tr("Top") }, { value: "date_added", label: I18n.tr("Latest") }, { value: "random", label: I18n.tr("Random") }, { value: "relevance", label: I18n.tr("Relevant") }]
             current: root.sorting
             onSelected: v => {
                 root.sorting = v;
@@ -97,7 +97,7 @@ ColumnLayout {
         FText {
             anchors.centerIn: parent
             visible: grid.count === 0
-            text: root.loading ? "Searching…" : root.error || "Nothing found"
+            text: root.loading ? I18n.tr("Searching…") : root.error || "Nothing found"
             color: root.error ? Theme.error : Theme.textDim
         }
 
@@ -121,7 +121,7 @@ ColumnLayout {
                     anchors.fill: parent
                     color: Theme.alpha(Theme.bg, 0.55)
                     visible: root.busy === cell.modelData.path
-                    FText { anchors.centerIn: parent; text: "Downloading…"; color: "white" }
+                    FText { anchors.centerIn: parent; text: I18n.tr("Downloading…"); color: "white" }
                 }
                 FText {
                     anchors.right: parent.right
@@ -147,7 +147,7 @@ ColumnLayout {
 
     FText {
         Layout.fillWidth: true
-        text: "From wallhaven.cc · saved to " + Wallpapers.dir + "/wallhaven"
+        text: I18n.tr("From wallhaven.cc · saved to ") + Wallpapers.dir + "/wallhaven"
         dim: true
         font.pixelSize: Theme.fsXs
     }

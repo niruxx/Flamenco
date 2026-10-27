@@ -9,12 +9,12 @@ import qs.Widgets
 // on a computer without one); "Preview" tries other levels and charging.
 Group {
     id: root
-    title: "Battery"
+    title: I18n.tr("Battery")
     readonly property var b: Settings.data.bar
     readonly property var themes: [
-        { value: "battery", label: "Battery" }, { value: "pill", label: "Capsule" }, { value: "outline", label: "Outline" },
-        { value: "cells", label: "Cells" }, { value: "vertical", label: "Upright" }, { value: "ring", label: "Ring" },
-        { value: "icon", label: "Symbol" }, { value: "dot", label: "Dot" }, { value: "line", label: "Line" }, { value: "text", label: "Text" }
+        { value: "battery", label: I18n.tr("Battery") }, { value: "pill", label: I18n.tr("Capsule") }, { value: "outline", label: I18n.tr("Outline") },
+        { value: "cells", label: I18n.tr("Cells") }, { value: "vertical", label: I18n.tr("Upright") }, { value: "ring", label: I18n.tr("Ring") },
+        { value: "icon", label: I18n.tr("Symbol") }, { value: "dot", label: I18n.tr("Dot") }, { value: "line", label: I18n.tr("Line") }, { value: "text", label: I18n.tr("Text") }
     ]
     // what the previews show
     property string sample: "live"             // live | low | half | charging
@@ -22,12 +22,12 @@ Group {
     readonly property bool demoCharging: sample === "charging" || sample === "live" && Power.charging
 
     SettingRow {
-        title: "Preview"
-        subtitle: Power.hasBattery ? "The previews show your battery now, or try a level" : "No battery here: the previews show a sample"
+        title: I18n.tr("Preview")
+        subtitle: Power.hasBattery ? I18n.tr("The previews show your battery now, or try a level") : I18n.tr("No battery here: the previews show a sample")
         icon: "preview"
         FSegmented {
             implicitWidth: 360
-            options: [{ value: "live", label: Power.hasBattery ? "Now" : "Sample" }, { value: "half", label: "Half" }, { value: "low", label: "Low" }, { value: "charging", label: "Charging" }]
+            options: [{ value: "live", label: Power.hasBattery ? I18n.tr("Now") : I18n.tr("Sample") }, { value: "half", label: I18n.tr("Half") }, { value: "low", label: I18n.tr("Low") }, { value: "charging", label: I18n.tr("Charging") }]
             current: root.sample
             onSelected: v => root.sample = v
         }
@@ -112,16 +112,16 @@ Group {
     }
 
     ChoiceRow {
-        title: "Colors"
-        subtitle: root.b.batteryColors === "level" ? "Green when full, amber halfway, red when low" : root.b.batteryColors === "mono" ? "The bar's text color; red only when low" : "Your accent color; red when low, green while charging"
+        title: I18n.tr("Colors")
+        subtitle: root.b.batteryColors === "level" ? I18n.tr("Green when full, amber halfway, red when low") : root.b.batteryColors === "mono" ? I18n.tr("The bar's text color; red only when low") : I18n.tr("Your accent color; red when low, green while charging")
         icon: "palette"
         target: root.b
         key: "batteryColors"
         segWidth: 110
-        options: [{ value: "theme", label: "Accent" }, { value: "level", label: "By level" }, { value: "mono", label: "Plain" }]
+        options: [{ value: "theme", label: I18n.tr("Accent") }, { value: "level", label: I18n.tr("By level") }, { value: "mono", label: I18n.tr("Plain") }]
     }
-    SwitchRow { title: "Show the percent"; icon: "percent"; target: root.b; key: "batteryPercent" }
-    SliderRow { title: "Low battery"; subtitle: "Turns red at this level"; icon: "battery_alert"; target: root.b; key: "batteryLow"; from: 5; to: 40; stepSize: 1; suffix: "%" }
-    SwitchRow { title: "Blink when nearly empty"; subtitle: "Five points below low, while not charging"; icon: "emergency_home"; target: root.b; key: "batteryBlink" }
-    SwitchRow { title: "Charging animation"; subtitle: "A sweep through the fill (cells light up, the ring turns)"; icon: "bolt"; target: root.b; key: "batteryChargeAnim" }
+    SwitchRow { title: I18n.tr("Show the percent"); icon: "percent"; target: root.b; key: "batteryPercent" }
+    SliderRow { title: I18n.tr("Low battery"); subtitle: I18n.tr("Turns red at this level"); icon: "battery_alert"; target: root.b; key: "batteryLow"; from: 5; to: 40; stepSize: 1; suffix: "%" }
+    SwitchRow { title: I18n.tr("Blink when nearly empty"); subtitle: I18n.tr("Five points below low, while not charging"); icon: "emergency_home"; target: root.b; key: "batteryBlink" }
+    SwitchRow { title: I18n.tr("Charging animation"); subtitle: I18n.tr("A sweep through the fill (cells light up, the ring turns)"); icon: "bolt"; target: root.b; key: "batteryChargeAnim" }
 }

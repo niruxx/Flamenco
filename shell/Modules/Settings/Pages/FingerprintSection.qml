@@ -11,7 +11,7 @@ import qs.Widgets
 Group {
     id: root
 
-    title: "Fingerprint"
+    title: I18n.tr("Fingerprint")
 
     readonly property var st: Fingerprint.st
     readonly property var free: Fingerprint.names.filter(f => !Fingerprint.fingers.includes(f))
@@ -85,7 +85,7 @@ Group {
     }
 
     SettingRow {
-        title: !Fingerprint.loaded ? "Checking for a fingerprint reader…"
+        title: !Fingerprint.loaded ? I18n.tr("Checking for a fingerprint reader…")
             : !Fingerprint.installed ? "fprintd isn't installed"
             : !Fingerprint.reader ? "No fingerprint reader found"
             : root.st.device
@@ -99,7 +99,7 @@ Group {
             spacing: 8
             FButton {
                 visible: Fingerprint.loaded && !Fingerprint.installed
-                text: "Install fprintd"
+                text: I18n.tr("Install fprintd")
                 variant: "tonal"
                 onClicked: Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed fprintd"))
             }
@@ -118,7 +118,7 @@ Group {
             title: Fingerprint.label(modelData)
             icon: "fingerprint"
             FButton {
-                text: "Remove"
+                text: I18n.tr("Remove")
                 variant: "text"
                 disabled: remover.running || enroller.running
                 onClicked: {
@@ -131,8 +131,8 @@ Group {
 
     SettingRow {
         visible: Fingerprint.reader && root.phase === "idle" && root.free.length > 0
-        title: "Add a fingerprint"
-        subtitle: "You'll touch the reader several times"
+        title: I18n.tr("Add a fingerprint")
+        subtitle: I18n.tr("You'll touch the reader several times")
         icon: "add"
         Row {
             spacing: 8
@@ -143,7 +143,7 @@ Group {
                 onSelected: v => root.choice = v
             }
             FButton {
-                text: "Add"
+                text: I18n.tr("Add")
                 icon: "fingerprint"
                 disabled: remover.running
                 onClicked: root.enroll(root.free.includes(root.choice) ? root.choice : root.free[0])
@@ -158,7 +158,7 @@ Group {
             : root.phase === "failed" ? "Couldn't add " + Fingerprint.label(root.finger).toLowerCase()
             : root.scans === 0 ? "Touch the reader with your " + Fingerprint.label(root.finger).toLowerCase()
             : "Lift and touch again" + (root.stages > 0 ? " (" + root.scans + " of " + root.stages + ")" : " (" + root.scans + " so far)")
-        subtitle: root.hint || (root.phase === "scanning" ? (root.st.scanType === "swipe" ? "Swipe your finger across the reader each time" : "Press, lift, and press again, moving your finger a little each time") : "")
+        subtitle: root.hint || (root.phase === "scanning" ? (root.st.scanType === "swipe" ? I18n.tr("Swipe your finger across the reader each time") : I18n.tr("Press, lift, and press again, moving your finger a little each time")) : "")
         icon: root.phase === "done" ? "check_circle" : root.phase === "failed" ? "error" : "fingerprint"
         Row {
             spacing: 12
@@ -179,7 +179,7 @@ Group {
                 }
             }
             FButton {
-                text: root.phase === "scanning" ? "Cancel" : root.phase === "failed" ? "Try again" : "Done"
+                text: root.phase === "scanning" ? I18n.tr("Cancel") : root.phase === "failed" ? I18n.tr("Try again") : I18n.tr("Done")
                 variant: root.phase === "scanning" ? "text" : "tonal"
                 onClicked: {
                     if (root.phase === "scanning") {
@@ -197,8 +197,8 @@ Group {
 
     SwitchRow {
         visible: Fingerprint.enrolled
-        title: "Unlock the lock screen with a fingerprint"
-        subtitle: Settings.data.lock.backend === "command" ? "Only on Flamenco's own lock screen and SDDM themes, not with a lock command" : "Your password still works too"
+        title: I18n.tr("Unlock the lock screen with a fingerprint")
+        subtitle: Settings.data.lock.backend === "command" ? I18n.tr("Only on Flamenco's own lock screen and SDDM themes, not with a lock command") : I18n.tr("Your password still works too")
         icon: "lock_open"
         target: Settings.data.lock
         key: "fingerprint"
@@ -206,7 +206,7 @@ Group {
 
     SettingRow {
         visible: Fingerprint.enrolled && !!root.st.pam?.login
-        title: "Your login PAM setup also asks for a fingerprint"
+        title: I18n.tr("Your login PAM setup also asks for a fingerprint")
         subtitle: "/etc/pam.d/login (or a file it includes) loads pam_fprintd, so typing a password on the lock screen may wait for the reader first. Remove it there if unlocking with a password gets slow."
         icon: "warning"
     }

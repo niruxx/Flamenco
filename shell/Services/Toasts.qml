@@ -23,7 +23,7 @@ Singleton {
     function show(kind, icon, text, sub) {
         if (!on || !(cfg[kind] ?? true))
             return;
-        current = { icon: icon, text: text, sub: sub || "", seq: ++seq };
+        current = { icon: icon, text: I18n.tr(text), sub: sub ? I18n.tr(sub) : "", seq: ++seq };
         hide.restart();
     }
     function test() {

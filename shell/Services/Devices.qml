@@ -19,12 +19,12 @@ Singleton {
     property int seq: 0
 
     readonly property var kinds: ({
-            drive: { label: "Drive", icon: "usb" }, phone: { label: "Phone", icon: "smartphone" },
-            keyboard: { label: "Keyboard", icon: "keyboard" }, mouse: { label: "Mouse", icon: "mouse" },
-            input: { label: "Input device", icon: "videogame_asset" }, camera: { label: "Camera", icon: "photo_camera" },
-            audio: { label: "Audio device", icon: "headphones" }, bluetooth: { label: "Bluetooth adapter", icon: "bluetooth" },
-            printer: { label: "Printer", icon: "print" }, network: { label: "Network adapter", icon: "lan" },
-            device: { label: "USB device", icon: "devices" }
+            drive: { label: I18n.tr("Drive"), icon: "usb" }, phone: { label: I18n.tr("Phone"), icon: "smartphone" },
+            keyboard: { label: I18n.tr("Keyboard"), icon: "keyboard" }, mouse: { label: I18n.tr("Mouse"), icon: "mouse" },
+            input: { label: I18n.tr("Input device"), icon: "videogame_asset" }, camera: { label: I18n.tr("Camera"), icon: "photo_camera" },
+            audio: { label: I18n.tr("Audio device"), icon: "headphones" }, bluetooth: { label: I18n.tr("Bluetooth adapter"), icon: "bluetooth" },
+            printer: { label: I18n.tr("Printer"), icon: "print" }, network: { label: I18n.tr("Network adapter"), icon: "lan" },
+            device: { label: I18n.tr("USB device"), icon: "devices" }
         })
 
     function show(e) {

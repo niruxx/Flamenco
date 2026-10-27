@@ -297,7 +297,7 @@ Variants {
                             FText {
                                 visible: app.part === "clock"
                                 anchors.centerIn: parent
-                                text: Qt.formatTime(Time.now, Time.use24h ? "HH:mm" : "h:mm AP")
+                                text: Qt.formatTime(Time.now, Time.use24h ? I18n.tr("HH:mm") : "h:mm AP")
                                 font.pixelSize: Math.round(win.iconSize * 0.32)
                                 font.weight: Font.Medium
                             }

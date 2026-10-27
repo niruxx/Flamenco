@@ -7,8 +7,8 @@ import qs.Widgets
 
 Page {
     id: page
-    title: "Flatpak permissions"
-    subtitle: "Override what a Flatpak app can reach. Changes are saved as your own overrides and apply the next time the app starts."
+    title: I18n.tr("Flatpak permissions")
+    subtitle: I18n.tr("Override what a Flatpak app can reach. Changes are saved as your own overrides and apply the next time the app starts.")
 
     property bool available: true
     property var apps: []
@@ -17,11 +17,11 @@ Page {
     property string status: ""
 
     readonly property var groups: [
-        { key: "filesystems", title: "Files and folders" },
-        { key: "shared", title: "Network & sharing" },
-        { key: "sockets", title: "Display, sound & services" },
-        { key: "devices", title: "Devices" },
-        { key: "features", title: "Features" }
+        { key: "filesystems", title: I18n.tr("Files and folders") },
+        { key: "shared", title: I18n.tr("Network & sharing") },
+        { key: "sockets", title: I18n.tr("Display, sound & services") },
+        { key: "devices", title: I18n.tr("Devices") },
+        { key: "features", title: I18n.tr("Features") }
     ]
     readonly property var labels: ({
             "network": "Internet and network",
@@ -131,8 +131,8 @@ Page {
     Group {
         visible: !page.available
         SettingRow {
-            title: "Flatpak isn't installed"
-            subtitle: "Install the flatpak package to manage Flatpak apps here"
+            title: I18n.tr("Flatpak isn't installed")
+            subtitle: I18n.tr("Install the flatpak package to manage Flatpak apps here")
             icon: "inventory_2"
         }
     }
@@ -140,7 +140,7 @@ Page {
     Group {
         visible: page.available
         SettingRow {
-            title: page.apps.length ? "App" : "No Flatpak apps installed"
+            title: page.apps.length ? I18n.tr("App") : I18n.tr("No Flatpak apps installed")
             subtitle: page.info ? page.app + (page.info.hasOverrides ? " · has your overrides" : "") : ""
             icon: "apps"
             RowLayout {
@@ -161,11 +161,11 @@ Page {
         }
         SettingRow {
             visible: page.info !== null && page.info.hasOverrides
-            title: "Reset this app"
-            subtitle: "Drop your overrides and use what the app asks for"
+            title: I18n.tr("Reset this app")
+            subtitle: I18n.tr("Drop your overrides and use what the app asks for")
             icon: "restart_alt"
             FButton {
-                text: "Reset"
+                text: I18n.tr("Reset")
                 variant: "tonal"
                 onClicked: page.run([Paths.bin, "flatpak", "reset", page.app])
             }
@@ -184,13 +184,13 @@ Page {
                     id: prow
                     required property var modelData
                     title: page.labels[modelData.name] || modelData.name
-                    subtitle: (modelData.requested ? "Requested by the app" : "Not requested") + " · " + (modelData.effective ? (modelData.access === "ro" ? "read-only" : "allowed") : "blocked")
+                    subtitle: (modelData.requested ? I18n.tr("Requested by the app") : I18n.tr("Not requested")) + " · " + (modelData.effective ? (modelData.access === "ro" ? "read-only" : "allowed") : "blocked")
                     icon: modelData.effective ? "check_circle" : "block"
                     FSegmented {
                         readonly property bool fs: grp.modelData.key === "filesystems"
                         implicitWidth: options.length * 82
-                        options: fs ? [{ value: "default", label: "Default" }, { value: "ro", label: "Read" }, { value: "allow", label: "Allow" }, { value: "deny", label: "Deny" }]
-                                    : [{ value: "default", label: "Default" }, { value: "allow", label: "Allow" }, { value: "deny", label: "Deny" }]
+                        options: fs ? [{ value: "default", label: I18n.tr("Default") }, { value: "ro", label: I18n.tr("Read") }, { value: "allow", label: I18n.tr("Allow") }, { value: "deny", label: I18n.tr("Deny") }]
+                                    : [{ value: "default", label: I18n.tr("Default") }, { value: "allow", label: I18n.tr("Allow") }, { value: "deny", label: I18n.tr("Deny") }]
                         current: page.stateOf(prow.modelData, grp.modelData.key)
                         onSelected: v => page.change(grp.modelData.key, prow.modelData.name, v === "allow" && fs ? "rw" : v)
                     }

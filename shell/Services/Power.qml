@@ -46,9 +46,9 @@ Singleton {
     readonly property string profileId: profile === PowerProfile.Performance ? "performance" : profile === PowerProfile.PowerSaver ? "power-saver" : "balanced"
     readonly property bool hasPerformance: PowerProfiles.hasPerformanceProfile
     readonly property var profileOptions: [
-        { value: "power-saver", label: "Power saver", icon: "eco" },
-        { value: "balanced", label: "Balanced", icon: "balance" }
-    ].concat(hasPerformance ? [{ value: "performance", label: "Performance", icon: "rocket_launch" }] : [])
+        { value: "power-saver", label: I18n.tr("Power saver"), icon: "eco" },
+        { value: "balanced", label: I18n.tr("Balanced"), icon: "balance" }
+    ].concat(hasPerformance ? [{ value: "performance", label: I18n.tr("Performance"), icon: "rocket_launch" }] : [])
 
     function setProfile(id) {
         PowerProfiles.profile = id === "performance" ? PowerProfile.Performance : id === "power-saver" ? PowerProfile.PowerSaver : PowerProfile.Balanced;

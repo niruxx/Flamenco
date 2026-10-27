@@ -13,27 +13,27 @@ import qs.Widgets
 // Google / Microsoft sign-in of its own), as does any other calendar link.
 Page {
     id: page
-    title: "Online Accounts"
-    subtitle: "Calendars from iCloud, Nextcloud, Google, Outlook and others, shown in the calendar and the desktop calendar widget."
+    title: I18n.tr("Online Accounts")
+    subtitle: I18n.tr("Calendars from iCloud, Nextcloud, Google, Outlook and others, shown in the calendar and the desktop calendar widget.")
     readonly property var cal: Settings.data.calendar
     readonly property var accounts: cal.accounts || []
 
     readonly property var providers: [
-        { kind: "icloud", label: "iCloud", icon: "cloud", tint: "#4a90e2", server: "https://caldav.icloud.com/", userHint: "Apple ID email",
+        { kind: "icloud", label: I18n.tr("iCloud"), icon: "cloud", tint: "#4a90e2", server: "https://caldav.icloud.com/", userHint: I18n.tr("Apple ID email"),
           help: "Use an app-specific password: appleid.apple.com → Sign-In and Security → App-Specific Passwords", helpUrl: "https://appleid.apple.com/account/manage" },
-        { kind: "nextcloud", label: "Nextcloud", icon: "cloud_circle", tint: "#0082c9", server: "", serverHint: "https://cloud.example.com", userHint: "User name",
+        { kind: "nextcloud", label: I18n.tr("Nextcloud"), icon: "cloud_circle", tint: "#0082c9", server: "", serverHint: "https://cloud.example.com", userHint: I18n.tr("User name"),
           help: "Create an app password in Nextcloud: Settings → Security → Devices & sessions" },
-        { kind: "fastmail", label: "Fastmail", icon: "mail", tint: "#2c6ce0", server: "https://caldav.fastmail.com/dav/", userHint: "Fastmail email",
+        { kind: "fastmail", label: I18n.tr("Fastmail"), icon: "mail", tint: "#2c6ce0", server: "https://caldav.fastmail.com/dav/", userHint: I18n.tr("Fastmail email"),
           help: "Create an app password with CalDAV access: Settings → Privacy & Security → App passwords", helpUrl: "https://app.fastmail.com/settings/security/apps" },
-        { kind: "caldav", label: "Other CalDAV", icon: "dns", tint: "#6b7380", server: "", serverHint: "https://dav.example.com (or just the host)", userHint: "User name",
+        { kind: "caldav", label: I18n.tr("Other CalDAV"), icon: "dns", tint: "#6b7380", server: "", serverHint: "https://dav.example.com (or just the host)", userHint: I18n.tr("User name"),
           help: "Radicale, Baïkal, mailbox.org, Zoho, Yahoo, Synology… the server's address and your sign-in" },
-        { kind: "google", label: "Google", icon: "event", tint: "#34a853", ics: true,
+        { kind: "google", label: I18n.tr("Google"), icon: "event", tint: "#34a853", ics: true,
           help: "Google Calendar on the web → Settings → pick a calendar → Integrate calendar → copy \"Secret address in iCal format\" and paste it below. One link per calendar.",
           helpUrl: "https://calendar.google.com/calendar/r/settings" },
-        { kind: "outlook", label: "Outlook", icon: "calendar_month", tint: "#0f6cbd", ics: true,
+        { kind: "outlook", label: I18n.tr("Outlook"), icon: "calendar_month", tint: "#0f6cbd", ics: true,
           help: "Outlook on the web → Settings → Calendar → Shared calendars → Publish a calendar (Can view all details) → copy the ICS link and paste it below.",
           helpUrl: "https://outlook.live.com/calendar/0/options/calendar/SharedCalendars" },
-        { kind: "ics", label: "Calendar link", icon: "link", tint: "#8e6cf0", ics: true,
+        { kind: "ics", label: I18n.tr("Calendar link"), icon: "link", tint: "#8e6cf0", ics: true,
           help: "Any ICS or webcal:// address: a team calendar, holidays, sports fixtures…" }
     ]
     property var adding: null                 // the provider being set up
@@ -131,11 +131,11 @@ Page {
 
     // ── accounts you've added ──
     Group {
-        title: "Accounts"
+        title: I18n.tr("Accounts")
         SettingRow {
             visible: page.accounts.length === 0
-            title: "No accounts yet"
-            subtitle: "Add one below; its calendars join the ones in Clock & Weather → Calendars"
+            title: I18n.tr("No accounts yet")
+            subtitle: I18n.tr("Add one below; its calendars join the ones in Clock & Weather → Calendars")
             icon: "person_add"
         }
         Repeater {
@@ -153,13 +153,13 @@ Page {
                     spacing: 6
                     FButton {
                         visible: !arow.asking
-                        text: "Remove"
+                        text: I18n.tr("Remove")
                         variant: "text"
                         onClicked: arow.asking = true
                     }
                     FButton {
                         visible: arow.asking
-                        text: "Remove account and its calendars"
+                        text: I18n.tr("Remove account and its calendars")
                         onClicked: page.removeAccount(arow.modelData)
                     }
                     FIconButton {
@@ -175,11 +175,11 @@ Page {
         }
         SettingRow {
             visible: (page.cal.sources || []).some(s => !s.account)
-            title: "Calendar links"
+            title: I18n.tr("Calendar links")
             subtitle: (page.cal.sources || []).filter(s => !s.account).map(s => s.name).join(", ")
             icon: "link"
             FButton {
-                text: "Manage"
+                text: I18n.tr("Manage")
                 variant: "text"
                 onClicked: Panels.findSetting("clock", "Calendars")
             }
@@ -188,7 +188,7 @@ Page {
 
     // ── add one: the services as tiles ──
     Group {
-        title: "Add an account"
+        title: I18n.tr("Add an account")
         visible: page.adding === null
         Item {
             Layout.fillWidth: true
@@ -227,7 +227,7 @@ Page {
                                 Layout.fillWidth: true
                                 spacing: 0
                                 FText { Layout.fillWidth: true; text: ptile.modelData.label; font.weight: Font.DemiBold; elide: Text.ElideRight }
-                                FText { Layout.fillWidth: true; text: ptile.modelData.ics ? "Calendar link" : "Sign in (CalDAV)"; dim: true; font.pixelSize: Theme.fsXs; elide: Text.ElideRight }
+                                FText { Layout.fillWidth: true; text: ptile.modelData.ics ? I18n.tr("Calendar link") : I18n.tr("Sign in (CalDAV)"); dim: true; font.pixelSize: Theme.fsXs; elide: Text.ElideRight }
                             }
                         }
                         StateLayer {
@@ -243,15 +243,15 @@ Page {
     // ── setting one up ──
     Group {
         visible: page.adding !== null
-        title: page.adding ? "Add " + page.adding.label : ""
+        title: page.adding ? I18n.tr("Add ") + page.adding.label : ""
 
         SettingRow {
-            title: page.adding?.ics ? "How to get the link" : "Before you sign in"
+            title: page.adding?.ics ? I18n.tr("How to get the link") : I18n.tr("Before you sign in")
             subtitle: page.adding?.help ?? ""
             icon: "help"
             FButton {
                 visible: !!page.adding?.helpUrl
-                text: "Open"
+                text: I18n.tr("Open")
                 icon: "open_in_new"
                 variant: "text"
                 onClicked: Qt.openUrlExternally(page.adding.helpUrl)
@@ -261,34 +261,34 @@ Page {
         // a link (Google, Outlook, any ICS)
         SettingRow {
             visible: !!page.adding?.ics
-            title: "Calendar address"
+            title: I18n.tr("Calendar address")
             icon: "link"
-            FTextField { id: icsUrl; implicitWidth: 300; placeholder: "https://… or webcal://…" }
+            FTextField { id: icsUrl; implicitWidth: 300; placeholder: I18n.tr("https://… or webcal://…") }
         }
         SettingRow {
             visible: !!page.adding?.ics
-            title: "Name"
+            title: I18n.tr("Name")
             icon: "label"
-            FTextField { id: icsName; implicitWidth: 300; placeholder: "Calendar" }
+            FTextField { id: icsName; implicitWidth: 300; placeholder: I18n.tr("Calendar") }
         }
 
         // CalDAV
         SettingRow {
             visible: !page.adding?.ics && page.step !== "pick"
-            title: "Server"
+            title: I18n.tr("Server")
             icon: "dns"
             FTextField { id: server; implicitWidth: 300; placeholder: page.adding?.serverHint ?? "https://" }
         }
         SettingRow {
             visible: !page.adding?.ics && page.step !== "pick"
-            title: page.adding?.userHint ?? "User name"
+            title: page.adding?.userHint ?? I18n.tr("User name")
             icon: "person"
             FTextField { id: user; implicitWidth: 300 }
         }
         SettingRow {
             visible: !page.adding?.ics && page.step !== "pick"
-            title: "App password"
-            subtitle: "Kept in your keyring (or a file only you can read), never in the settings file"
+            title: I18n.tr("App password")
+            subtitle: I18n.tr("Kept in your keyring (or a file only you can read), never in the settings file")
             icon: "key"
             FTextField { id: pass; implicitWidth: 300; password: true; onAccepted: page.signIn() }
         }
@@ -330,30 +330,30 @@ Page {
         }
 
         SettingRow {
-            title: page.step === "signing" ? "Signing in…" : page.step === "pick" ? page.found.filter(c => c.on).length + " of " + page.found.length + " calendars" : ""
+            title: page.step === "signing" ? I18n.tr("Signing in…") : page.step === "pick" ? page.found.filter(c => c.on).length + " of " + page.found.length + " calendars" : ""
             icon: ""
             Row {
                 spacing: 8
                 FButton {
-                    text: "Cancel"
+                    text: I18n.tr("Cancel")
                     variant: "text"
                     onClicked: page.cancel()
                 }
                 FButton {
                     visible: !!page.adding?.ics
-                    text: "Add calendar"
+                    text: I18n.tr("Add calendar")
                     disabled: icsUrl.text.trim() === ""
                     onClicked: page.addLink()
                 }
                 FButton {
                     visible: !page.adding?.ics && page.step !== "pick"
-                    text: page.step === "signing" ? "Signing in…" : "Sign in"
+                    text: page.step === "signing" ? I18n.tr("Signing in…") : I18n.tr("Sign in")
                     disabled: page.step === "signing" || server.text.trim() === "" || user.text.trim() === "" || pass.text === ""
                     onClicked: page.signIn()
                 }
                 FButton {
                     visible: page.step === "pick"
-                    text: "Add account"
+                    text: I18n.tr("Add account")
                     disabled: !page.found.some(c => c.on)
                     onClicked: page.addAccount()
                 }

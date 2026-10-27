@@ -150,7 +150,7 @@ Item {
             FText {
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.min(implicitWidth, 130)
-                text: root.look === "text" ? (Audio.micMuted ? "MUTED" : "MIC")
+                text: root.look === "text" ? (Audio.micMuted ? I18n.tr("MUTED") : I18n.tr("MIC"))
                     : Audio.micMuted ? "Muted" : root.live ? (Audio.micUsers || "Recording") : "Mic"
                 color: root.tone
                 font.pixelSize: root.look === "text" ? Theme.fsXs : Theme.fsSm

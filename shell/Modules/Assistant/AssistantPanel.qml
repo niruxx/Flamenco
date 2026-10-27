@@ -35,10 +35,10 @@ Variants {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
-                    FText { text: "Assistant"; font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
+                    FText { text: I18n.tr("Assistant"); font.pixelSize: Theme.fsXl; font.weight: Font.Bold }
                     FText {
                         Layout.fillWidth: true
-                        text: Ai.current ? Ai.current.name + (Ai.model ? " · " + Ai.model : "") : "Not set up"
+                        text: Ai.current ? Ai.current.name + (Ai.model ? " · " + Ai.model : "") : I18n.tr("Not set up")
                         dim: true
                         font.pixelSize: Theme.fsSm
                         elide: Text.ElideRight
@@ -72,13 +72,13 @@ Variants {
                     FText {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
-                        text: !Ai.current ? "Choose a provider in Settings → AI."
+                        text: !Ai.current ? I18n.tr("Choose a provider in Settings → AI.")
                             : Ai.current.kind === "anthropic" && !Ai.status.anthropicSdk ? "Claude needs the Anthropic SDK: install python-anthropic, or pick another provider."
                             : Ai.current.key === "required" && !Ai.current.keyFrom ? "Add your " + Ai.current.name + " API key in Settings → AI."
                             : "Choose a model for " + Ai.current.name + " in Settings → AI."
                     }
                     FButton {
-                        text: "Open AI settings"
+                        text: I18n.tr("Open AI settings")
                         icon: "tune"
                         variant: "tonal"
                         onClicked: Panels.openSettings("ai")
@@ -107,7 +107,7 @@ Variants {
                     visible: list.count === 0 && Ai.ready
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.Wrap
-                    text: "Ask anything. " + (Ai.current?.id === "lmstudio" || Ai.current?.id === "ollama" ? "This model runs on your computer." : "Messages go to " + (Ai.current?.name ?? "the provider") + ".")
+                    text: I18n.tr("Ask anything. ") + (Ai.current?.id === "lmstudio" || Ai.current?.id === "ollama" ? I18n.tr("This model runs on your computer.") : I18n.tr("Messages go to ") + (Ai.current?.name ?? "the provider") + ".")
                     dim: true
                 }
 
@@ -184,7 +184,7 @@ Variants {
                     Layout.fillWidth: true
                     implicitHeight: 44
                     icon: "chat"
-                    placeholder: Ai.ready ? "Message" : "Set up AI first"
+                    placeholder: Ai.ready ? I18n.tr("Message") : I18n.tr("Set up AI first")
                     onAccepted: if (Ai.ready && !Ai.busy && text.trim() !== "") {
                         Ai.send(text);
                         text = "";

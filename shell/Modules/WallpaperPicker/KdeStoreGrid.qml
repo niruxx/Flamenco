@@ -58,7 +58,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: 38
             icon: "search"
-            placeholder: "Search the KDE Store (abstract, space, nature…)"
+            placeholder: I18n.tr("Search the KDE Store (abstract, space, nature…)")
             onAccepted: {
                 root.query = text;
                 root.search(false);
@@ -67,7 +67,7 @@ ColumnLayout {
         FSegmented {
             implicitWidth: 300
             implicitHeight: 38
-            options: [{ value: "rating", label: "Top rated" }, { value: "downloads", label: "Popular" }, { value: "new", label: "Newest" }]
+            options: [{ value: "rating", label: I18n.tr("Top rated") }, { value: "downloads", label: I18n.tr("Popular") }, { value: "new", label: I18n.tr("Newest") }]
             current: root.sorting
             onSelected: v => {
                 root.sorting = v;
@@ -94,7 +94,7 @@ ColumnLayout {
         FText {
             anchors.centerIn: parent
             visible: grid.count === 0
-            text: root.loading ? "Searching…" : root.error || "Nothing found"
+            text: root.loading ? I18n.tr("Searching…") : root.error || "Nothing found"
             color: root.error ? Theme.error : Theme.textDim
         }
 
@@ -123,7 +123,7 @@ ColumnLayout {
                     anchors.fill: parent
                     color: Theme.alpha(Theme.bg, 0.55)
                     visible: root.busy === cell.modelData.id
-                    FText { anchors.centerIn: parent; text: "Downloading…"; color: "white" }
+                    FText { anchors.centerIn: parent; text: I18n.tr("Downloading…"); color: "white" }
                 }
                 // its name, and whether it's here already
                 Rectangle {
@@ -170,7 +170,7 @@ ColumnLayout {
 
     FText {
         Layout.fillWidth: true
-        text: "From store.kde.org · saved to " + Wallpapers.dir + "/kde-store · remove them in Settings → Get themes"
+        text: I18n.tr("From store.kde.org · saved to ") + Wallpapers.dir + "/kde-store · remove them in Settings → Get themes"
         dim: true
         font.pixelSize: Theme.fsXs
         elide: Text.ElideRight

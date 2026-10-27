@@ -24,7 +24,7 @@ Rectangle {
         }
         FText {
             anchors.verticalCenter: parent.verticalCenter
-            text: "LIVE"
+            text: I18n.tr("LIVE")
             color: "#ffffff"
             font.pixelSize: root.big ? Theme.fsXs : 9
             font.weight: Font.Black

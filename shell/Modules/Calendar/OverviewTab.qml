@@ -106,7 +106,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 FText {
                     Layout.fillWidth: true
-                    text: month.selected.toDateString() === Time.now.toDateString() ? "Today" : Qt.formatDate(month.selected, "dddd, d MMMM")
+                    text: month.selected.toDateString() === Time.now.toDateString() ? I18n.tr("Today") : I18n.locale.toString(month.selected, "dddd, d MMMM")
                     font.weight: Font.Bold
                 }
                 FIconButton {
@@ -118,7 +118,7 @@ ColumnLayout {
             }
             FText {
                 visible: evCol.dayEvents.length === 0
-                text: Events.loading ? "Loading…" : "Nothing planned"
+                text: Events.loading ? I18n.tr("Loading…") : I18n.tr("Nothing planned")
                 dim: true
                 font.pixelSize: Theme.fsSm
             }
@@ -181,13 +181,13 @@ ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
                     FText {
-                        text: Weather.ready ? Math.round(Weather.temp) + Weather.unit : (Settings.data.weather.city ? "Loading…" : "Set a city")
+                        text: Weather.ready ? Math.round(Weather.temp) + Weather.unit : (Settings.data.weather.city ? I18n.tr("Loading…") : I18n.tr("Set a city"))
                         font.pixelSize: Theme.fsXl
                         font.weight: Font.Bold
                     }
                     FText {
                         Layout.fillWidth: true
-                        text: Weather.ready ? Weather.description + " · " + Weather.place : "Settings → Clock & Weather"
+                        text: Weather.ready ? Weather.description + " · " + Weather.place : I18n.tr("Settings → Clock & Weather")
                         dim: true
                         font.pixelSize: Theme.fsSm
                         elide: Text.ElideRight
@@ -225,7 +225,7 @@ ColumnLayout {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
-                    FText { Layout.fillWidth: true; text: Media.active ? Media.title : "No media playing"; font.weight: Font.Bold; elide: Text.ElideRight }
+                    FText { Layout.fillWidth: true; text: Media.active ? Media.title : I18n.tr("No media playing"); font.weight: Font.Bold; elide: Text.ElideRight }
                     FText { Layout.fillWidth: true; text: Media.artist; dim: true; font.pixelSize: Theme.fsSm; elide: Text.ElideRight; visible: Media.active }
                 }
                 FIconButton {

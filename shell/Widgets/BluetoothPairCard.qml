@@ -34,14 +34,14 @@ Rectangle {
             }
             FText {
                 Layout.fillWidth: true
-                text: root.busy ? (root.p ? BluetoothState.pairName : "Pairing with " + BluetoothState.pairName + "…")
+                text: root.busy ? (root.p ? BluetoothState.pairName : I18n.tr("Pairing with ") + BluetoothState.pairName + "…")
                     : BluetoothState.pairStatus === "Connected" ? BluetoothState.pairName + " is connected" : BluetoothState.pairStatus
                 font.weight: Font.DemiBold
                 wrapMode: Text.Wrap
             }
             FButton {
                 visible: root.busy
-                text: "Cancel"
+                text: I18n.tr("Cancel")
                 variant: "text"
                 implicitHeight: 30
                 onClicked: BluetoothState.cancelPair()
@@ -52,7 +52,7 @@ Rectangle {
         FText {
             Layout.fillWidth: true
             visible: !!root.p
-            text: !root.p ? "" : root.p.kind === "confirm" ? "Does it show this code?"
+            text: !root.p ? "" : root.p.kind === "confirm" ? I18n.tr("Does it show this code?")
                 : root.p.kind === "display" ? "Type this code on it, then press Enter:"
                 : root.p.kind === "pin" ? "Type its PIN (often 0000 or 1234 if it doesn't say)" : "Type the passkey it shows"
             dim: true
@@ -70,8 +70,8 @@ Rectangle {
         RowLayout {
             visible: !!root.p && root.p.kind === "confirm"
             spacing: Theme.sp2
-            FButton { text: "Yes, it does"; icon: "check"; onClicked: BluetoothState.answer("yes") }
-            FButton { text: "No"; variant: "tonal"; onClicked: BluetoothState.answer("no") }
+            FButton { text: I18n.tr("Yes, it does"); icon: "check"; onClicked: BluetoothState.answer("yes") }
+            FButton { text: I18n.tr("No"); variant: "tonal"; onClicked: BluetoothState.answer("no") }
         }
         RowLayout {
             visible: !!root.p && (root.p.kind === "pin" || root.p.kind === "passkey")
@@ -81,14 +81,14 @@ Rectangle {
                 id: code
                 Layout.fillWidth: true
                 implicitHeight: 36
-                placeholder: root.p?.kind === "pin" ? "PIN" : "Passkey"
+                placeholder: root.p?.kind === "pin" ? I18n.tr("PIN") : I18n.tr("Passkey")
                 onAccepted: {
                     BluetoothState.answer(text.trim());
                     text = "";
                 }
             }
             FButton {
-                text: "Pair"
+                text: I18n.tr("Pair")
                 disabled: code.text.trim() === ""
                 onClicked: {
                     BluetoothState.answer(code.text.trim());

@@ -10,8 +10,8 @@ import qs.Widgets
 // edited right here (`flamenco net`), no nm-connection-editor needed.
 Page {
     id: page
-    title: "Wi-Fi & Network"
-    subtitle: page.editing ? "" : "Wi-Fi, wired and VPN connections, through NetworkManager."
+    title: I18n.tr("Wi-Fi & Network")
+    subtitle: page.editing ? "" : I18n.tr("Wi-Fi, wired and VPN connections, through NetworkManager.")
 
     property var st: ({ connections: [], devices: [] })
     property string editing: ""              // uuid of the connection open in the editor
@@ -224,18 +224,18 @@ Page {
 
     Group {
         visible: !page.editing
-        title: "Editing connections"
+        title: I18n.tr("Editing connections")
         SwitchRow {
-            title: "Use Flamenco's editor"
-            subtitle: page.inShell ? "Wi-Fi and wired settings open right here" : "Edit opens " + page.external + " instead"
+            title: I18n.tr("Use Flamenco's editor")
+            subtitle: page.inShell ? I18n.tr("Wi-Fi and wired settings open right here") : I18n.tr("Edit opens ") + page.external + " instead"
             icon: "tune"
             target: Settings.data.general
             key: "nativeNetworkEditor"
         }
         TextRow {
             visible: !page.inShell
-            title: "Network app"
-            subtitle: "The app to open for editing connections"
+            title: I18n.tr("Network app")
+            subtitle: I18n.tr("The app to open for editing connections")
             icon: "apps"
             target: Settings.data.general
             key: "networkEditor"
@@ -243,11 +243,11 @@ Page {
         }
         SettingRow {
             visible: !page.inShell
-            title: "Open " + page.external
-            subtitle: "Everything NetworkManager can do, including VPNs, bridges and 802.1X"
+            title: I18n.tr("Open ") + page.external
+            subtitle: I18n.tr("Everything NetworkManager can do, including VPNs, bridges and 802.1X")
             icon: "open_in_new"
             FButton {
-                text: "Open"
+                text: I18n.tr("Open")
                 variant: "tonal"
                 onClicked: page.openExternal([])
             }
@@ -256,9 +256,9 @@ Page {
 
     Group {
         visible: !page.editing
-        title: "Wi-Fi"
+        title: I18n.tr("Wi-Fi")
         SettingRow {
-            title: "Wi-Fi"
+            title: I18n.tr("Wi-Fi")
             subtitle: Network.label
             icon: Network.icon
             FSwitch {
@@ -268,11 +268,11 @@ Page {
         }
         SettingRow {
             visible: Network.ssid !== ""
-            title: "Share this Wi-Fi"
-            subtitle: "A QR code a phone can scan to join " + Network.ssid + " (needs qrencode)"
+            title: I18n.tr("Share this Wi-Fi")
+            subtitle: I18n.tr("A QR code a phone can scan to join ") + Network.ssid + " (needs qrencode)"
             icon: "qr_code_2"
             FButton {
-                text: "Show QR code"
+                text: I18n.tr("Show QR code")
                 variant: "tonal"
                 onClicked: {
                     Panels.settingsOpen = false;
@@ -281,11 +281,11 @@ Page {
             }
         }
         SettingRow {
-            title: "Networks nearby"
-            subtitle: "Pick a network from the control center"
+            title: I18n.tr("Networks nearby")
+            subtitle: I18n.tr("Pick a network from the control center")
             icon: "wifi_find"
             FButton {
-                text: "Show networks"
+                text: I18n.tr("Show networks")
                 variant: "tonal"
                 onClicked: Panels.openControl("wifi", "")
             }
@@ -296,15 +296,15 @@ Page {
         }
         SettingRow {
             id: hiddenRow
-            title: "Hidden network"
-            subtitle: "Join a network that doesn't show its name"
+            title: I18n.tr("Hidden network")
+            subtitle: I18n.tr("Join a network that doesn't show its name")
             icon: "wifi_password"
             Row {
                 spacing: 8
-                FTextField { id: hSsid; implicitWidth: 150; placeholder: "Network name" }
-                FTextField { id: hPw; implicitWidth: 150; placeholder: "Password"; password: true }
+                FTextField { id: hSsid; implicitWidth: 150; placeholder: I18n.tr("Network name") }
+                FTextField { id: hPw; implicitWidth: 150; placeholder: I18n.tr("Password"); password: true }
                 FButton {
-                    text: "Join"
+                    text: I18n.tr("Join")
                     disabled: hSsid.text === "" || runner.running
                     onClicked: page.run(["add-wifi", "--json", JSON.stringify({ ssid: hSsid.text, password: hPw.text, hidden: true })], () => {
                         hSsid.text = "";
@@ -317,7 +317,7 @@ Page {
 
     Group {
         visible: !page.editing
-        title: "Wired"
+        title: I18n.tr("Wired")
         Repeater {
             model: page.st.devices.filter(d => d.type === "ethernet")
             SettingRow {
@@ -331,7 +331,7 @@ Page {
         }
         SettingRow {
             visible: page.st.devices.every(d => d.type !== "ethernet")
-            title: "No wired network adapter"
+            title: I18n.tr("No wired network adapter")
             icon: "settings_ethernet"
         }
         Repeater {
@@ -339,11 +339,11 @@ Page {
             ConnRow { pg: page }
         }
         SettingRow {
-            title: "Add a wired connection"
-            subtitle: "A separate profile, e.g. a fixed address for one network"
+            title: I18n.tr("Add a wired connection")
+            subtitle: I18n.tr("A separate profile, e.g. a fixed address for one network")
             icon: "add"
             FButton {
-                text: "Add"
+                text: I18n.tr("Add")
                 icon: "add"
                 variant: "tonal"
                 disabled: runner.running
@@ -357,12 +357,12 @@ Page {
 
     Group {
         visible: !page.editing
-        title: "VPN"
+        title: I18n.tr("VPN")
 
         SettingRow {
             visible: Network.vpns.length === 0
-            title: "No VPN connections yet"
-            subtitle: "Import one below"
+            title: I18n.tr("No VPN connections yet")
+            subtitle: I18n.tr("Import one below")
             icon: "vpn_key_off"
         }
 
@@ -372,7 +372,7 @@ Page {
                 id: vrow
                 required property var modelData
                 title: modelData.name
-                subtitle: (modelData.type === "wireguard" ? "WireGuard" : "VPN") + " · " + (Network.vpnBusy === modelData.name ? "working…" : modelData.active ? "Connected" : "Disconnected")
+                subtitle: (modelData.type === "wireguard" ? I18n.tr("WireGuard") : I18n.tr("VPN")) + " · " + (Network.vpnBusy === modelData.name ? "working…" : modelData.active ? I18n.tr("Connected") : I18n.tr("Disconnected"))
                 icon: modelData.active ? "vpn_lock" : "vpn_key"
                 Row {
                     spacing: 6
@@ -392,8 +392,8 @@ Page {
         }
 
         SettingRow {
-            title: "Import"
-            subtitle: "WireGuard .conf or OpenVPN .ovpn file. OpenVPN needs networkmanager-openvpn."
+            title: I18n.tr("Import")
+            subtitle: I18n.tr("WireGuard .conf or OpenVPN .ovpn file. OpenVPN needs networkmanager-openvpn.")
             icon: "upload_file"
             Row {
                 spacing: 8
@@ -405,7 +405,7 @@ Page {
                     onAccepted: if (text) Network.importVpn(text)
                 }
                 FButton {
-                    text: "Import"
+                    text: I18n.tr("Import")
                     disabled: importPath.text === ""
                     onClicked: Network.importVpn(importPath.text)
                 }
@@ -414,7 +414,7 @@ Page {
 
         SettingRow {
             visible: Network.lastError !== ""
-            title: "Last error"
+            title: I18n.tr("Last error")
             subtitle: Network.lastError
             icon: "error"
         }
@@ -424,21 +424,21 @@ Page {
 
     Group {
         visible: !!page.editing
-        title: page.ed ? (page.ed.type === "wifi" ? "Wi-Fi network" : "Wired connection") : "Loading…"
+        title: page.ed ? (page.ed.type === "wifi" ? I18n.tr("Wi-Fi network") : I18n.tr("Wired connection")) : I18n.tr("Loading…")
         SettingRow {
             title: page.ed?.name ?? ""
-            subtitle: !page.ed ? "" : page.ed.active ? "Connected" + (page.ed.device ? " on " + page.ed.device : "") : "Not connected"
+            subtitle: !page.ed ? "" : page.ed.active ? I18n.tr("Connected") + (page.ed.device ? " on " + page.ed.device : "") : I18n.tr("Not connected")
             icon: page.ed?.type === "wifi" ? "wifi" : "lan"
             Row {
                 spacing: 8
                 FButton {
-                    text: page.ed?.active ? "Disconnect" : "Connect"
+                    text: page.ed?.active ? I18n.tr("Disconnect") : I18n.tr("Connect")
                     variant: "tonal"
                     disabled: !page.ed || runner.running
                     onClicked: page.run([page.ed.active ? "down" : "up", page.ed.uuid], () => page.open(page.ed.uuid))
                 }
                 FButton {
-                    text: "Back"
+                    text: I18n.tr("Back")
                     icon: "arrow_back"
                     variant: "text"
                     onClicked: page.close()
@@ -449,72 +449,72 @@ Page {
 
     Group {
         visible: !!page.ed
-        title: "General"
-        TextRow { title: "Name"; icon: "label"; target: draft; key: "name"; onEdited: draft.dirty = true }
-        SwitchRow { title: "Connect automatically"; icon: "autorenew"; target: draft; key: "autoconnect"; onEdited: draft.dirty = true }
-        SliderRow { visible: draft.autoconnect; title: "Priority"; subtitle: "Higher wins when several saved networks are around"; icon: "low_priority"; target: draft; key: "priority"; from: -10; to: 10; stepSize: 1; onEdited: draft.dirty = true }
+        title: I18n.tr("General")
+        TextRow { title: I18n.tr("Name"); icon: "label"; target: draft; key: "name"; onEdited: draft.dirty = true }
+        SwitchRow { title: I18n.tr("Connect automatically"); icon: "autorenew"; target: draft; key: "autoconnect"; onEdited: draft.dirty = true }
+        SliderRow { visible: draft.autoconnect; title: I18n.tr("Priority"); subtitle: I18n.tr("Higher wins when several saved networks are around"); icon: "low_priority"; target: draft; key: "priority"; from: -10; to: 10; stepSize: 1; onEdited: draft.dirty = true }
         ChoiceRow {
-            title: "Metered"
-            subtitle: "Apps may hold back big downloads on a metered connection"
+            title: I18n.tr("Metered")
+            subtitle: I18n.tr("Apps may hold back big downloads on a metered connection")
             icon: "data_usage"
             target: draft
             key: "metered"
-            options: [{ value: "unknown", label: "Automatic" }, { value: "yes", label: "Yes" }, { value: "no", label: "No" }]
+            options: [{ value: "unknown", label: I18n.tr("Automatic") }, { value: "yes", label: I18n.tr("Yes") }, { value: "no", label: I18n.tr("No") }]
             onEdited: draft.dirty = true
         }
         DropdownRow {
-            title: "MAC address"
-            subtitle: "What this computer shows the network"
+            title: I18n.tr("MAC address")
+            subtitle: I18n.tr("What this computer shows the network")
             icon: "fingerprint"
             target: draft
             key: "mac"
             options: {
-                const o = [{ value: "", label: "Default" }, { value: "permanent", label: "The adapter's own" }, { value: "stable", label: "Random, the same for this network" }, { value: "random", label: "Random each time" }, { value: "preserve", label: "Keep what's set" }];
+                const o = [{ value: "", label: I18n.tr("Default") }, { value: "permanent", label: I18n.tr("The adapter's own") }, { value: "stable", label: I18n.tr("Random, the same for this network") }, { value: "random", label: I18n.tr("Random each time") }, { value: "preserve", label: I18n.tr("Keep what's set") }];
                 if (draft.mac && !o.some(x => x.value === draft.mac))
                     o.push({ value: draft.mac, label: draft.mac });
                 return o;
             }
             onEdited: draft.dirty = true
         }
-        TextRow { title: "MTU"; subtitle: "Empty for automatic"; icon: "straighten"; target: draft; key: "mtu"; placeholder: "automatic"; onEdited: draft.dirty = true }
+        TextRow { title: I18n.tr("MTU"); subtitle: I18n.tr("Empty for automatic"); icon: "straighten"; target: draft; key: "mtu"; placeholder: I18n.tr("automatic"); onEdited: draft.dirty = true }
     }
 
     Group {
         visible: page.ed?.type === "wifi"
-        title: "Wi-Fi"
-        TextRow { title: "Network name (SSID)"; icon: "wifi"; target: draft; key: "ssid"; onEdited: draft.dirty = true }
-        SwitchRow { title: "Hidden network"; subtitle: "Look for it even when it doesn't show its name"; icon: "visibility_off"; target: draft; key: "hidden"; onEdited: draft.dirty = true }
+        title: I18n.tr("Wi-Fi")
+        TextRow { title: I18n.tr("Network name (SSID)"); icon: "wifi"; target: draft; key: "ssid"; onEdited: draft.dirty = true }
+        SwitchRow { title: I18n.tr("Hidden network"); subtitle: I18n.tr("Look for it even when it doesn't show its name"); icon: "visibility_off"; target: draft; key: "hidden"; onEdited: draft.dirty = true }
         ChoiceRow {
-            title: "Band"
+            title: I18n.tr("Band")
             icon: "settings_input_antenna"
             target: draft
             key: "band"
-            options: [{ value: "", label: "Any" }, { value: "bg", label: "2.4 GHz" }, { value: "a", label: "5 GHz" }]
+            options: [{ value: "", label: I18n.tr("Any") }, { value: "bg", label: I18n.tr("2.4 GHz") }, { value: "a", label: I18n.tr("5 GHz") }]
             onEdited: draft.dirty = true
         }
         DropdownRow {
-            title: "Security"
+            title: I18n.tr("Security")
             icon: "lock"
             target: draft
             key: "security"
             options: {
-                const o = [{ value: "none", label: "None (open)" }, { value: "wpa-psk", label: "WPA/WPA2 Personal" }, { value: "sae", label: "WPA3 Personal" }];
+                const o = [{ value: "none", label: I18n.tr("None (open)") }, { value: "wpa-psk", label: I18n.tr("WPA/WPA2 Personal") }, { value: "sae", label: I18n.tr("WPA3 Personal") }];
                 if (page.ed && !o.some(x => x.value === page.ed.security))
-                    o.push({ value: page.ed.security, label: page.ed.security === "wpa-eap" ? "Enterprise (802.1X)" : page.ed.security });
+                    o.push({ value: page.ed.security, label: page.ed.security === "wpa-eap" ? I18n.tr("Enterprise (802.1X)") : page.ed.security });
                 return o;
             }
             onEdited: draft.dirty = true
         }
         SettingRow {
             visible: draft.security === "wpa-psk" || draft.security === "sae"
-            title: "Password"
-            subtitle: page.ed?.security === draft.security ? "Leave empty to keep the saved one" : "Needed for this security type"
+            title: I18n.tr("Password")
+            subtitle: page.ed?.security === draft.security ? I18n.tr("Leave empty to keep the saved one") : I18n.tr("Needed for this security type")
             icon: "password"
             FTextField {
                 id: pw
                 implicitWidth: 220
                 password: true
-                placeholder: page.ed?.security === draft.security ? "Unchanged" : "Password"
+                placeholder: page.ed?.security === draft.security ? I18n.tr("Unchanged") : I18n.tr("Password")
                 onEdited: t => {
                     draft.password = t;
                     draft.dirty = true;
@@ -523,7 +523,7 @@ Page {
         }
         SettingRow {
             visible: page.ed?.security === "wpa-eap"
-            title: "Enterprise sign-in"
+            title: I18n.tr("Enterprise sign-in")
             subtitle: "802.1X settings (certificates, identities) aren't edited here; the rest of this page is."
             icon: "badge"
         }
@@ -534,35 +534,35 @@ Page {
 
     Group {
         visible: !!page.ed && !!page.dev
-        title: "Details"
-        SettingRow { title: "Device"; icon: "memory"; FText { text: (page.dev?.device ?? "") + (page.dev?.driver ? " · " + page.dev.driver : ""); dim: true } }
-        SettingRow { title: "Hardware address"; icon: "fingerprint"; FText { text: page.dev?.mac ?? ""; dim: true; mono: true } }
-        SettingRow { visible: (page.dev?.speed ?? "") !== "" && page.dev?.speed !== "unknown"; title: "Link speed"; icon: "speed"; FText { text: page.dev?.speed ?? ""; dim: true } }
-        SettingRow { title: "IPv4"; icon: "public"; FText { text: page.list(page.dev?.ip4) || "none"; dim: true; mono: true } }
-        SettingRow { visible: !!page.dev?.gateway4; title: "Gateway"; icon: "router"; FText { text: page.dev?.gateway4 ?? ""; dim: true; mono: true } }
-        SettingRow { visible: (page.dev?.dns4 ?? []).length > 0; title: "DNS"; icon: "dns"; FText { text: page.list(page.dev?.dns4); dim: true; mono: true } }
-        SettingRow { visible: (page.dev?.ip6 ?? []).length > 0; title: "IPv6"; icon: "public"; FText { text: page.list(page.dev?.ip6); dim: true; mono: true; elide: Text.ElideMiddle; Layout.maximumWidth: 320 } }
+        title: I18n.tr("Details")
+        SettingRow { title: I18n.tr("Device"); icon: "memory"; FText { text: (page.dev?.device ?? "") + (page.dev?.driver ? " · " + page.dev.driver : ""); dim: true } }
+        SettingRow { title: I18n.tr("Hardware address"); icon: "fingerprint"; FText { text: page.dev?.mac ?? ""; dim: true; mono: true } }
+        SettingRow { visible: (page.dev?.speed ?? "") !== "" && page.dev?.speed !== "unknown"; title: I18n.tr("Link speed"); icon: "speed"; FText { text: page.dev?.speed ?? ""; dim: true } }
+        SettingRow { title: I18n.tr("IPv4"); icon: "public"; FText { text: page.list(page.dev?.ip4) || "none"; dim: true; mono: true } }
+        SettingRow { visible: !!page.dev?.gateway4; title: I18n.tr("Gateway"); icon: "router"; FText { text: page.dev?.gateway4 ?? ""; dim: true; mono: true } }
+        SettingRow { visible: (page.dev?.dns4 ?? []).length > 0; title: I18n.tr("DNS"); icon: "dns"; FText { text: page.list(page.dev?.dns4); dim: true; mono: true } }
+        SettingRow { visible: (page.dev?.ip6 ?? []).length > 0; title: I18n.tr("IPv6"); icon: "public"; FText { text: page.list(page.dev?.ip6); dim: true; mono: true; elide: Text.ElideMiddle; Layout.maximumWidth: 320 } }
     }
 
     Group {
         visible: !!page.ed
-        title: "Save"
+        title: I18n.tr("Save")
         SettingRow {
-            title: draft.dirty ? "Unsaved changes" : "Saved"
-            subtitle: page.ed?.active ? "Saving applies the changes to the connection right away" : "Used the next time it connects"
+            title: draft.dirty ? I18n.tr("Unsaved changes") : I18n.tr("Saved")
+            subtitle: page.ed?.active ? I18n.tr("Saving applies the changes to the connection right away") : I18n.tr("Used the next time it connects")
             icon: draft.dirty ? "edit" : "check_circle"
             Row {
                 spacing: 8
-                FButton { visible: draft.dirty; text: "Revert"; variant: "text"; onClicked: page.loadDraft() }
-                FButton { text: "Save"; icon: "done"; disabled: !draft.dirty || runner.running; onClicked: page.save() }
+                FButton { visible: draft.dirty; text: I18n.tr("Revert"); variant: "text"; onClicked: page.loadDraft() }
+                FButton { text: I18n.tr("Save"); icon: "done"; disabled: !draft.dirty || runner.running; onClicked: page.save() }
             }
         }
         SettingRow {
-            title: "Forget this connection"
-            subtitle: page.ed?.type === "wifi" ? "Removes the saved password and settings" : "Removes this profile"
+            title: I18n.tr("Forget this connection")
+            subtitle: page.ed?.type === "wifi" ? I18n.tr("Removes the saved password and settings") : I18n.tr("Removes this profile")
             icon: "delete"
             FButton {
-                text: page.armed === page.editing ? "Click again to forget" : "Forget"
+                text: page.armed === page.editing ? I18n.tr("Click again to forget") : I18n.tr("Forget")
                 variant: "text"
                 onClicked: {
                     if (page.armed !== page.editing) {
@@ -579,14 +579,14 @@ Page {
     // errors, wherever they came from
     Group {
         visible: page.error !== ""
-        title: "Couldn't do that"
+        title: I18n.tr("Couldn't do that")
         SettingRow {
-            title: page.needsRoot ? "NetworkManager wants administrator rights" : page.error
-            subtitle: page.needsRoot ? "Run the same change in a terminal with sudo." : ""
+            title: page.needsRoot ? I18n.tr("NetworkManager wants administrator rights") : page.error
+            subtitle: page.needsRoot ? I18n.tr("Run the same change in a terminal with sudo.") : ""
             icon: "error"
             FButton {
                 visible: page.needsRoot
-                text: "Use sudo"
+                text: I18n.tr("Use sudo")
                 variant: "tonal"
                 onClicked: page.retryAsRoot()
             }
@@ -599,7 +599,7 @@ Page {
         required property var modelData
         required property var pg
         title: modelData.name
-        subtitle: (modelData.active ? "Connected" + (modelData.device ? " on " + modelData.device : "") : "Saved")
+        subtitle: (modelData.active ? I18n.tr("Connected") + (modelData.device ? " on " + modelData.device : "") : I18n.tr("Saved"))
             + (modelData.autoconnect ? "" : " · doesn't connect automatically")
         icon: modelData.type === "wifi" ? (modelData.active ? "wifi" : "wifi_lock") : (modelData.active ? "lan" : "settings_ethernet")
         Row {
@@ -625,21 +625,21 @@ Page {
         property int fam: 4
         readonly property string p: "ip" + fam
         visible: !!ig.pg.ed
-        title: "IPv" + fam
+        title: I18n.tr("IPv") + fam
         DropdownRow {
-            title: "Method"
+            title: I18n.tr("Method")
             icon: "settings_ethernet"
             target: ig.pg.d
             key: ig.p + "method"
             options: ig.fam === 4
-                ? [{ value: "auto", label: "Automatic (DHCP)" }, { value: "manual", label: "Manual" }, { value: "link-local", label: "Link-local only" }, { value: "shared", label: "Share with other computers" }, { value: "disabled", label: "Off" }]
-                : [{ value: "auto", label: "Automatic" }, { value: "dhcp", label: "Automatic, DHCP only" }, { value: "manual", label: "Manual" }, { value: "link-local", label: "Link-local only" }, { value: "ignore", label: "Ignore" }, { value: "disabled", label: "Off" }]
+                ? [{ value: "auto", label: I18n.tr("Automatic (DHCP)") }, { value: "manual", label: I18n.tr("Manual") }, { value: "link-local", label: I18n.tr("Link-local only") }, { value: "shared", label: I18n.tr("Share with other computers") }, { value: "disabled", label: I18n.tr("Off") }]
+                : [{ value: "auto", label: I18n.tr("Automatic") }, { value: "dhcp", label: I18n.tr("Automatic, DHCP only") }, { value: "manual", label: I18n.tr("Manual") }, { value: "link-local", label: I18n.tr("Link-local only") }, { value: "ignore", label: I18n.tr("Ignore") }, { value: "disabled", label: I18n.tr("Off") }]
             onEdited: ig.pg.d.dirty = true
         }
         TextRow {
             visible: ig.pg.d[ig.p + "method"] === "manual"
-            title: "Addresses"
-            subtitle: "With the prefix length; separate several with commas"
+            title: I18n.tr("Addresses")
+            subtitle: I18n.tr("With the prefix length; separate several with commas")
             icon: "pin"
             target: ig.pg.d
             key: ig.p + "addresses"
@@ -648,7 +648,7 @@ Page {
         }
         TextRow {
             visible: ig.pg.d[ig.p + "method"] === "manual"
-            title: "Gateway"
+            title: I18n.tr("Gateway")
             icon: "router"
             target: ig.pg.d
             key: ig.p + "gateway"
@@ -657,8 +657,8 @@ Page {
         }
         SwitchRow {
             visible: ig.pg.d[ig.p + "method"] === "auto" || ig.pg.d[ig.p + "method"] === "dhcp"
-            title: "Automatic DNS"
-            subtitle: "Off: use only the servers below"
+            title: I18n.tr("Automatic DNS")
+            subtitle: I18n.tr("Off: use only the servers below")
             icon: "dns"
             target: ig.pg.d
             key: ig.p + "autoDns"
@@ -666,8 +666,8 @@ Page {
         }
         TextRow {
             visible: ig.pg.d[ig.p + "method"] !== "disabled" && ig.pg.d[ig.p + "method"] !== "ignore"
-            title: "DNS servers"
-            subtitle: "Separate several with commas"
+            title: I18n.tr("DNS servers")
+            subtitle: I18n.tr("Separate several with commas")
             icon: "dns"
             target: ig.pg.d
             key: ig.p + "dns"
@@ -676,7 +676,7 @@ Page {
         }
         TextRow {
             visible: ig.pg.d[ig.p + "method"] !== "disabled" && ig.pg.d[ig.p + "method"] !== "ignore"
-            title: "Search domains"
+            title: I18n.tr("Search domains")
             icon: "travel_explore"
             target: ig.pg.d
             key: ig.p + "search"
@@ -685,18 +685,18 @@ Page {
         }
         DropdownRow {
             visible: ig.fam === 6 && ig.pg.d.ip6method !== "disabled" && ig.pg.d.ip6method !== "ignore"
-            title: "Privacy extensions"
-            subtitle: "Temporary addresses make this computer harder to track"
+            title: I18n.tr("Privacy extensions")
+            subtitle: I18n.tr("Temporary addresses make this computer harder to track")
             icon: "shield"
             target: ig.pg.d
             key: "ip6privacy"
-            options: [{ value: "default", label: "System default" }, { value: "off", label: "Off" }, { value: "public", label: "On, prefer the public address" }, { value: "temporary", label: "On, prefer temporary addresses" }]
+            options: [{ value: "default", label: I18n.tr("System default") }, { value: "off", label: I18n.tr("Off") }, { value: "public", label: I18n.tr("On, prefer the public address") }, { value: "temporary", label: I18n.tr("On, prefer temporary addresses") }]
             onEdited: ig.pg.d.dirty = true
         }
         SwitchRow {
             visible: ig.pg.d[ig.p + "method"] !== "disabled" && ig.pg.d[ig.p + "method"] !== "ignore"
-            title: "Only for its own network"
-            subtitle: "Don't send other traffic (the internet) through this connection"
+            title: I18n.tr("Only for its own network")
+            subtitle: I18n.tr("Don't send other traffic (the internet) through this connection")
             icon: "alt_route"
             target: ig.pg.d
             key: ig.p + "neverDefault"

@@ -151,7 +151,7 @@ PopupWindow {
                         }
                         FText {
                             Layout.fillWidth: true
-                            text: root.live?.title ?? (root.appWindows > 0 ? "" : "Not running")
+                            text: root.live?.title ?? (root.appWindows > 0 ? "" : I18n.tr("Not running"))
                             color: Theme.textDim
                             font.pixelSize: Theme.fsSm
                             elide: Text.ElideRight
@@ -162,7 +162,7 @@ PopupWindow {
                 // back row on the sub-pages
                 MenuRow {
                     visible: root.page !== "main"
-                    label: root.page === "workspaces" ? "Move to workspace" : root.page === "monitors" ? "Move to monitor" : "Open windows"
+                    label: root.page === "workspaces" ? I18n.tr("Move to workspace") : root.page === "monitors" ? I18n.tr("Move to monitor") : I18n.tr("Open windows")
                     leadIcon: "arrow_back"
                     bold: true
                     onActivated: root.page = "main"
@@ -173,45 +173,45 @@ PopupWindow {
                 // ── main page ──
                 MenuRow {
                     visible: root.page === "main" && !!root.live
-                    label: "Move to workspace"
+                    label: I18n.tr("Move to workspace")
                     leadIcon: "move_group"
                     submenu: true
                     onActivated: root.page = "workspaces"
                 }
                 MenuRow {
                     visible: root.page === "main" && !!root.live && root.outputs.length > 1
-                    label: "Move to monitor"
+                    label: I18n.tr("Move to monitor")
                     leadIcon: "monitor"
                     submenu: true
                     onActivated: root.page = "monitors"
                 }
                 MenuRow {
                     visible: root.page === "main" && !!root.live
-                    label: root.live?.is_floating ? "Tile window" : "Float window"
+                    label: root.live?.is_floating ? I18n.tr("Tile window") : I18n.tr("Float window")
                     leadIcon: root.live?.is_floating ? "view_column" : "picture_in_picture"
                     onActivated: root.run(w => Niri.toggleFloating(w))
                 }
                 MenuRow {
                     visible: root.page === "main" && !!root.live
-                    label: "Resize…"
+                    label: I18n.tr("Resize…")
                     leadIcon: "open_in_full"
                     onActivated: root.run(w => Resize.open(w.id, ""))
                 }
                 MenuRow {
                     visible: root.page === "main" && !!root.live
-                    label: "Fullscreen"
+                    label: I18n.tr("Fullscreen")
                     leadIcon: "fullscreen"
                     onActivated: root.run(w => Niri.toggleFullscreen(w))
                 }
                 MenuRow {
                     visible: root.page === "main" && !!root.live && !Niri.hyprland && !root.live?.is_floating
-                    label: "Maximize column"
+                    label: I18n.tr("Maximize column")
                     leadIcon: "width_full"
                     onActivated: root.run(w => Niri.action("maximize-column"))
                 }
                 MenuRow {
                     visible: root.page === "main" && !!root.live && !Niri.hyprland && !root.live?.is_floating
-                    label: "Center column"
+                    label: I18n.tr("Center column")
                     leadIcon: "align_horizontal_center"
                     onActivated: root.run(w => Niri.action("center-column"))
                 }
@@ -220,13 +220,13 @@ PopupWindow {
 
                 MenuRow {
                     visible: root.page === "main" && root.entry !== null
-                    label: root.appWindows > 0 ? "New window" : "Open"
+                    label: root.appWindows > 0 ? I18n.tr("New window") : I18n.tr("Open")
                     leadIcon: root.appWindows > 0 ? "add" : "open_in_new"
                     onActivated: root.runApp(() => Apps.launch(root.entry))
                 }
                 MenuRow {
                     visible: root.page === "main" && root.app !== ""
-                    label: root.pinned ? "Unpin from dock" : "Pin to dock"
+                    label: root.pinned ? I18n.tr("Unpin from dock") : I18n.tr("Pin to dock")
                     leadIcon: root.pinned ? "keep_off" : "keep"
                     onActivated: root.runApp(() => {
                         const id = root.app;
@@ -240,7 +240,7 @@ PopupWindow {
                 }
                 MenuRow {
                     visible: root.page === "main" && Niri.windows.length > 1
-                    label: "Open windows"
+                    label: I18n.tr("Open windows")
                     leadIcon: "select_window"
                     submenu: true
                     onActivated: root.page = "windows"
@@ -250,13 +250,13 @@ PopupWindow {
 
                 MenuRow {
                     visible: root.page === "main" && !!root.live
-                    label: "Close window"
+                    label: I18n.tr("Close window")
                     leadIcon: "close"
                     onActivated: root.run(w => Niri.closeWindow(w.id))
                 }
                 MenuRow {
                     visible: root.page === "main" && root.appWindows > 1
-                    label: "Close all " + root.appWindows + " windows"
+                    label: I18n.tr("Close all ") + root.appWindows + " windows"
                     leadIcon: "close_fullscreen"
                     onActivated: root.runApp(() => {
                         for (const w of Niri.windows.filter(x => String(x.app_id).toLowerCase() === root.app.toLowerCase()))
@@ -265,7 +265,7 @@ PopupWindow {
                 }
                 MenuRow {
                     visible: root.page === "main" && !!root.live && (root.live?.pid ?? 0) > 0
-                    label: root.armed ? "Click again to force quit" : "Force quit"
+                    label: root.armed ? I18n.tr("Click again to force quit") : I18n.tr("Force quit")
                     leadIcon: "dangerous"
                     danger: true
                     bold: root.armed

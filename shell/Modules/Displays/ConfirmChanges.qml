@@ -49,8 +49,8 @@ Variants {
                     FIcon { icon: "monitor"; size: 28; color: Theme.accent }
                     ColumnLayout {
                         spacing: 0
-                        FText { text: "Keep these display settings?"; font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
-                        FText { text: "Reverting in " + Displays.countdown + " s"; dim: true }
+                        FText { text: I18n.tr("Keep these display settings?"); font.pixelSize: Theme.fsLg; font.weight: Font.Bold }
+                        FText { text: I18n.tr("Reverting in ") + Displays.countdown + " s"; dim: true }
                     }
                 }
 
@@ -71,8 +71,8 @@ Variants {
                 RowLayout {
                     Layout.alignment: Qt.AlignRight
                     spacing: 8
-                    FButton { text: "Revert"; variant: "outlined"; onClicked: Displays.revert() }
-                    FButton { text: "Keep changes"; icon: "check"; onClicked: Displays.keep() }
+                    FButton { text: I18n.tr("Revert"); variant: "outlined"; onClicked: Displays.revert() }
+                    FButton { text: I18n.tr("Keep changes"); icon: "check"; onClicked: Displays.keep() }
                 }
             }
         }

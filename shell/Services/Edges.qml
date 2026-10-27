@@ -81,20 +81,20 @@ Singleton {
     }
 
     readonly property var actions: [
-        { value: "none", label: "Nothing" },
-        { value: "overview", label: "Overview (niri's)", niriOnly: true },
-        { value: "activities", label: "Overview (Flamenco)" },
-        { value: "launcher", label: "App launcher" },
-        { value: "control", label: "Control center" },
-        { value: "notifications", label: "Notifications" },
-        { value: "calendar", label: "Calendar & dashboard" },
-        { value: "power", label: "Power menu" },
-        { value: "wallpaper", label: "Wallpapers" },
-        { value: "settings", label: "Settings" },
-        { value: "screenshot", label: "Screenshot" },
-        { value: "workspace-up", label: "Previous workspace" },
-        { value: "workspace-down", label: "Next workspace" },
-        { value: "lock", label: "Lock the screen" }
+        { value: "none", label: I18n.tr("Nothing") },
+        { value: "overview", label: I18n.tr("Overview (niri's)"), niriOnly: true },
+        { value: "activities", label: I18n.tr("Overview (Flamenco)") },
+        { value: "launcher", label: I18n.tr("App launcher") },
+        { value: "control", label: I18n.tr("Control center") },
+        { value: "notifications", label: I18n.tr("Notifications") },
+        { value: "calendar", label: I18n.tr("Calendar & dashboard") },
+        { value: "power", label: I18n.tr("Power menu") },
+        { value: "wallpaper", label: I18n.tr("Wallpapers") },
+        { value: "settings", label: I18n.tr("Settings") },
+        { value: "screenshot", label: I18n.tr("Screenshot") },
+        { value: "workspace-up", label: I18n.tr("Previous workspace") },
+        { value: "workspace-down", label: I18n.tr("Next workspace") },
+        { value: "lock", label: I18n.tr("Lock the screen") }
     ]
 
     function run(action, screen) {

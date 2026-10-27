@@ -23,7 +23,7 @@ ColumnLayout {
         return n ? n.charAt(0).toUpperCase() + n.slice(1) : "";
     }
     // the time to the minute: things that only need minutes follow this, not every second
-    readonly property string minute: Qt.formatDateTime(Time.now, "yyyy-MM-ddTHH:mm")
+    readonly property string minute: I18n.locale.toString(Time.now, "yyyy-MM-ddTHH:mm")
     readonly property string greeting: {
         const h = new Date(minute).getHours();
         return (h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening") + (firstName ? ", " + firstName : "");
@@ -211,7 +211,7 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: Network.icon
-                        title: "Wi-Fi"
+                        title: I18n.tr("Wi-Fi")
                         subtitle: Network.label
                         active: Network.wifiEnabled
                         tint: Theme.accent
@@ -222,7 +222,7 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: BluetoothState.icon
-                        title: "Bluetooth"
+                        title: I18n.tr("Bluetooth")
                         subtitle: BluetoothState.label
                         active: BluetoothState.enabled
                         tint: Theme.accent2
@@ -233,8 +233,8 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: "do_not_disturb_on"
-                        title: "Do not disturb"
-                        subtitle: Notifs.dnd ? "On" : "Off"
+                        title: I18n.tr("Do not disturb")
+                        subtitle: Notifs.dnd ? I18n.tr("On") : I18n.tr("Off")
                         active: Notifs.dnd
                         tint: Theme.accent3
                         onClicked: Notifs.setDnd(!Notifs.dnd)
@@ -242,8 +242,8 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: "coffee"
-                        title: "Caffeine"
-                        subtitle: Toggles.caffeine ? "Staying awake" : "Off"
+                        title: I18n.tr("Caffeine")
+                        subtitle: Toggles.caffeine ? I18n.tr("Staying awake") : I18n.tr("Off")
                         active: Toggles.caffeine
                         tint: Theme.accent2
                         onClicked: Toggles.caffeine = !Toggles.caffeine
@@ -251,7 +251,7 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: "nightlight"
-                        title: "Night light"
+                        title: I18n.tr("Night light")
                         subtitle: Toggles.status
                         active: Toggles.nightLight
                         tint: Theme.warning
@@ -262,8 +262,8 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: Audio.micMuted ? "mic_off" : "mic"
-                        title: "Microphone"
-                        subtitle: Audio.micMuted ? "Muted" : Audio.micInUse ? "Live" : "On"
+                        title: I18n.tr("Microphone")
+                        subtitle: Audio.micMuted ? I18n.tr("Muted") : Audio.micInUse ? I18n.tr("Live") : I18n.tr("On")
                         active: !Audio.micMuted
                         tint: Theme.accent3
                         hasMore: true
@@ -273,7 +273,7 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: Power.profileIcon
-                        title: "Power"
+                        title: I18n.tr("Power")
                         subtitle: Power.profileName
                         active: Power.profileName !== "Balanced"
                         tint: Theme.accent
@@ -284,8 +284,8 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: Theme.dark ? "dark_mode" : "light_mode"
-                        title: "Dark mode"
-                        subtitle: Theme.dark ? "On" : "Off"
+                        title: I18n.tr("Dark mode")
+                        subtitle: Theme.dark ? I18n.tr("On") : I18n.tr("Off")
                         active: Theme.dark
                         tint: Theme.accent2
                         onClicked: Settings.data.appearance.mode = Theme.dark ? "light" : "dark"
@@ -293,16 +293,16 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: "content_paste"
-                        title: "Clipboard"
-                        subtitle: Clipboard.entries.length ? Clipboard.entries.length + " items" : "History"
+                        title: I18n.tr("Clipboard")
+                        subtitle: Clipboard.entries.length ? Clipboard.entries.length + " items" : I18n.tr("History")
                         tint: Theme.accent3
                         onClicked: Panels.open("clipboard", root.screenName)
                     }
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: Recorder.recording ? "stop_circle" : "screen_record"
-                        title: Recorder.recording ? "Stop" : "Record"
-                        subtitle: Recorder.recording ? Recorder.clock : "Screen · ⋯ area"
+                        title: Recorder.recording ? I18n.tr("Stop") : I18n.tr("Record")
+                        subtitle: Recorder.recording ? Recorder.clock : I18n.tr("Screen · ⋯ area")
                         active: Recorder.recording
                         tint: Theme.error
                         hasMore: !Recorder.recording
@@ -318,8 +318,8 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: "screenshot_region"
-                        title: "Screenshot"
-                        subtitle: "Area · ⋯ screen"
+                        title: I18n.tr("Screenshot")
+                        subtitle: I18n.tr("Area · ⋯ screen")
                         tint: Theme.accent
                         hasMore: true
                         onClicked: {
@@ -334,7 +334,7 @@ ColumnLayout {
                     FToggleTile {
                         Layout.fillWidth: true
                         icon: "wallpaper"
-                        title: "Wallpaper"
+                        title: I18n.tr("Wallpaper")
                         subtitle: Paths.fileName(Wallpapers.forScreen(root.screenName)) || "Pick one"
                         tint: Theme.accent2
                         onClicked: root.openTab("wallpapers")
@@ -529,7 +529,7 @@ ColumnLayout {
                     visible: !Media.active
                     spacing: 6
                     FIcon { Layout.alignment: Qt.AlignHCenter; icon: "music_off"; size: 36; color: Theme.textDim }
-                    FText { Layout.alignment: Qt.AlignHCenter; text: "No media"; font.weight: Font.DemiBold; dim: true }
+                    FText { Layout.alignment: Qt.AlignHCenter; text: I18n.tr("No media"); font.weight: Font.DemiBold; dim: true }
                 }
 
                 MouseArea {
@@ -557,7 +557,7 @@ ColumnLayout {
                     RowLayout {
                         Layout.fillWidth: true
                         FIcon { icon: "event_upcoming"; size: 20; color: Theme.accent }
-                        FText { Layout.fillWidth: true; text: "Up next"; font.weight: Font.Bold; font.pixelSize: Theme.fsMd }
+                        FText { Layout.fillWidth: true; text: I18n.tr("Up next"); font.weight: Font.Bold; font.pixelSize: Theme.fsMd }
                         FText { text: Time.format("ddd d MMM"); color: Theme.accent; font.weight: Font.Bold }
                     }
                     Repeater {
@@ -581,12 +581,12 @@ ColumnLayout {
                         wrapMode: Text.Wrap
                         dim: true
                         font.pixelSize: Theme.fsSm
-                        text: Settings.data.calendar.sources.length ? "Nothing else today." : "Nothing today. Add calendars in Settings → Clock & Weather to see your events here."
+                        text: Settings.data.calendar.sources.length ? I18n.tr("Nothing else today.") : I18n.tr("Nothing today. Add calendars in Settings → Clock & Weather to see your events here.")
                     }
                     Item { Layout.fillHeight: true }
                     FButton {
                         Layout.alignment: Qt.AlignRight
-                        text: "Calendar"
+                        text: I18n.tr("Calendar")
                         icon: "calendar_month"
                         variant: "text"
                         onClicked: root.openTab("calendar")
@@ -618,7 +618,7 @@ ColumnLayout {
                         ColumnLayout {
                             spacing: 0
                             FText { text: Weather.ready ? Math.round(Weather.temp) + "°" : "—"; font.pixelSize: 36; font.weight: Font.Bold }
-                            FText { text: Weather.ready ? Weather.description + " · feels " + Math.round(Weather.feelsLike) + "°" : "Loading…"; dim: true; font.pixelSize: Theme.fsSm }
+                            FText { text: Weather.ready ? Weather.description + " · feels " + Math.round(Weather.feelsLike) + "°" : I18n.tr("Loading…"); dim: true; font.pixelSize: Theme.fsSm }
                         }
                     }
                     Flow {
@@ -654,7 +654,7 @@ ColumnLayout {
                                 required property var modelData
                                 Layout.fillWidth: true
                                 spacing: 2
-                                FText { Layout.alignment: Qt.AlignHCenter; text: Qt.formatTime(new Date(modelData.time), Settings.data.general.use24h ? "HH" : "h AP"); dim: true; font.pixelSize: Theme.fsXs }
+                                FText { Layout.alignment: Qt.AlignHCenter; text: Qt.formatTime(new Date(modelData.time), Settings.data.general.use24h ? I18n.tr("HH") : "h AP"); dim: true; font.pixelSize: Theme.fsXs }
                                 FIcon { Layout.alignment: Qt.AlignHCenter; icon: Weather.iconFor(modelData.code, modelData.day); size: 18; color: Theme.warning }
                                 FText { Layout.alignment: Qt.AlignHCenter; text: Math.round(modelData.temp) + "°"; font.pixelSize: Theme.fsXs; font.weight: Font.Bold }
                             }
@@ -672,7 +672,7 @@ ColumnLayout {
                             required property int index
                             Layout.fillWidth: true
                             spacing: 8
-                            FText { Layout.preferredWidth: 42; text: index === 0 ? "Today" : Qt.formatDate(new Date(modelData.date), "ddd"); font.weight: Font.DemiBold; font.pixelSize: Theme.fsSm }
+                            FText { Layout.preferredWidth: 42; text: index === 0 ? I18n.tr("Today") : I18n.locale.toString(new Date(modelData.date), "ddd"); font.weight: Font.DemiBold; font.pixelSize: Theme.fsSm }
                             FIcon { icon: Weather.iconFor(modelData.code, true); size: 16; color: Theme.warning }
                             FText { text: Math.round(modelData.min) + "°"; dim: true; font.pixelSize: Theme.fsXs }
                             Rectangle {
@@ -712,15 +712,15 @@ ColumnLayout {
                 RowLayout {
                     anchors.fill: parent
                     anchors.margins: 12
-                    FRing { Layout.fillWidth: true; value: SystemStats.cpu; text: Math.round(SystemStats.cpu * 100) + "%"; label: "CPU" }
-                    FRing { Layout.fillWidth: true; value: SystemStats.mem; text: Math.round(SystemStats.mem * 100) + "%"; label: "RAM"; color: Theme.accent }
-                    FRing { Layout.fillWidth: true; value: SystemStats.temp / 100; text: Math.round(SystemStats.temp) + "°"; label: "TEMP"; color: Theme.warning }
+                    FRing { Layout.fillWidth: true; value: SystemStats.cpu; text: Math.round(SystemStats.cpu * 100) + "%"; label: I18n.tr("CPU") }
+                    FRing { Layout.fillWidth: true; value: SystemStats.mem; text: Math.round(SystemStats.mem * 100) + "%"; label: I18n.tr("RAM"); color: Theme.accent }
+                    FRing { Layout.fillWidth: true; value: SystemStats.temp / 100; text: Math.round(SystemStats.temp) + "°"; label: I18n.tr("TEMP"); color: Theme.warning }
                     FRing {
                         Layout.fillWidth: true
                         readonly property var d: parent.parent.root_
                         value: d && d.size ? d.used / d.size : 0
                         text: d && d.size ? Math.round(d.used / d.size * 100) + "%" : "—"
-                        label: "DISK"
+                        label: I18n.tr("DISK")
                         color: Theme.accent3
                     }
                 }

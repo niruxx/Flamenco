@@ -84,7 +84,7 @@ Rectangle {
             columnSpacing: Theme.sp3
             rowSpacing: Theme.sp2
 
-            FText { text: "App"; dim: true }
+            FText { text: I18n.tr("App"); dim: true }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Theme.sp2
@@ -92,56 +92,56 @@ Rectangle {
                     Layout.fillWidth: true
                     implicitHeight: 36
                     text: root.r.app || ""
-                    placeholder: "The name it sends, e.g. Discord"
+                    placeholder: I18n.tr("The name it sends, e.g. Discord")
                     onEditingFinished: if (text.trim() !== (root.r.app || "")) root.set("app", text.trim())
                 }
                 FDropdown {
                     implicitWidth: 170
                     implicitHeight: 36
-                    placeholder: "From history"
+                    placeholder: I18n.tr("From history")
                     options: Notifs.apps
                     onSelected: v => root.set("app", v)
                 }
             }
-            FText { text: "Text has"; dim: true }
+            FText { text: I18n.tr("Text has"); dim: true }
             FTextField {
                 Layout.fillWidth: true
                 implicitHeight: 36
                 text: root.r.contains || ""
-                placeholder: "Optional: only notifications with these words"
+                placeholder: I18n.tr("Optional: only notifications with these words")
                 onEditingFinished: if (text.trim() !== (root.r.contains || "")) root.set("contains", text.trim())
             }
-            FText { text: "Pop-ups"; dim: true }
+            FText { text: I18n.tr("Pop-ups"); dim: true }
             FSegmented {
                 implicitWidth: 330
                 implicitHeight: 34
-                options: [{ value: "default", label: "As usual" }, { value: "never", label: "Never" }, { value: "always", label: "Even in DND" }]
+                options: [{ value: "default", label: I18n.tr("As usual") }, { value: "never", label: I18n.tr("Never") }, { value: "always", label: I18n.tr("Even in DND") }]
                 current: root.r.popup || "default"
                 onSelected: v => root.set("popup", v)
             }
-            FText { text: "Urgency"; dim: true }
+            FText { text: I18n.tr("Urgency"); dim: true }
             FSegmented {
                 implicitWidth: 330
                 implicitHeight: 34
-                options: [{ value: "default", label: "As sent" }, { value: "low", label: "Low" }, { value: "normal", label: "Normal" }, { value: "critical", label: "Critical" }]
+                options: [{ value: "default", label: I18n.tr("As sent") }, { value: "low", label: I18n.tr("Low") }, { value: "normal", label: I18n.tr("Normal") }, { value: "critical", label: I18n.tr("Critical") }]
                 current: root.r.urgency || "default"
                 onSelected: v => root.set("urgency", v)
             }
-            FText { text: "Stays"; dim: true }
+            FText { text: I18n.tr("Stays"); dim: true }
             FDropdown {
                 implicitWidth: 220
                 implicitHeight: 36
-                options: [{ value: 0, label: "As usual" }, { value: 3, label: "3 seconds" }, { value: 5, label: "5 seconds" }, { value: 10, label: "10 seconds" },
-                    { value: 20, label: "20 seconds" }, { value: 60, label: "A minute" }, { value: -1, label: "Until dismissed" }]
+                options: [{ value: 0, label: I18n.tr("As usual") }, { value: 3, label: I18n.tr("3 seconds") }, { value: 5, label: I18n.tr("5 seconds") }, { value: 10, label: I18n.tr("10 seconds") },
+                    { value: 20, label: I18n.tr("20 seconds") }, { value: 60, label: I18n.tr("A minute") }, { value: -1, label: I18n.tr("Until dismissed") }]
                 current: root.r.timeout || 0
                 onSelected: v => root.set("timeout", v)
             }
-            FText { text: "Also"; dim: true }
+            FText { text: I18n.tr("Also"); dim: true }
             Flow {
                 Layout.fillWidth: true
                 spacing: Theme.sp3
                 Repeater {
-                    model: [{ k: "sound", t: "Sound" }, { k: "history", t: "Keep in history" }]
+                    model: [{ k: "sound", t: I18n.tr("Sound") }, { k: "history", t: I18n.tr("Keep in history") }]
                     Row {
                         required property var modelData
                         spacing: 6

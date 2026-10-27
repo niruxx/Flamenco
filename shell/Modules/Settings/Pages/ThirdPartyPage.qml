@@ -11,8 +11,8 @@ import qs.Widgets
 // their settings, and what of each Flamenco can and can't run.
 Page {
     id: page
-    title: "Plugins (3rd party)"
-    subtitle: "Run plugins made for Noctalia Shell and DankMaterialShell. Flamenco runs their bar widgets, panels, settings and background parts with its own look; it checks each one and says what won't work. Plugins run with your permissions, so only turn on ones you trust."
+    title: I18n.tr("Plugins (3rd party)")
+    subtitle: I18n.tr("Run plugins made for Noctalia Shell and DankMaterialShell. Flamenco runs their bar widgets, panels, settings and background parts with its own look; it checks each one and says what won't work. Plugins run with your permissions, so only turn on ones you trust.")
 
     property string status: ""
     property string source: "noctalia"
@@ -80,7 +80,7 @@ Page {
         id: settingsGroup
         visible: plugin !== null
         readonly property var plugin: ThirdParty.find(ThirdParty.settingsKey)
-        title: plugin ? plugin.name + " settings" : "Settings"
+        title: plugin ? plugin.name + " settings" : I18n.tr("Settings")
         property var item: null
         property string error: ""
 
@@ -126,26 +126,26 @@ Page {
         }
         SettingRow {
             visible: settingsGroup.error !== ""
-            title: "Its settings didn't load"
+            title: I18n.tr("Its settings didn't load")
             subtitle: settingsGroup.error
             icon: "error"
         }
         SettingRow {
-            title: settingsGroup.plugin?.kind === "noctalia" ? "Save" : "Done"
-            subtitle: settingsGroup.plugin?.kind === "noctalia" ? "Noctalia plugins keep changes when you save" : "Changes are kept as you make them"
+            title: settingsGroup.plugin?.kind === "noctalia" ? I18n.tr("Save") : I18n.tr("Done")
+            subtitle: settingsGroup.plugin?.kind === "noctalia" ? I18n.tr("Noctalia plugins keep changes when you save") : I18n.tr("Changes are kept as you make them")
             icon: "save"
             Row {
                 spacing: 8
                 FButton {
                     visible: settingsGroup.plugin?.kind === "noctalia" && typeof settingsGroup.item?.saveSettings === "function"
-                    text: "Save"
+                    text: I18n.tr("Save")
                     onClicked: {
                         settingsGroup.item.saveSettings();
                         page.status = settingsGroup.plugin.name + ": saved";
                     }
                 }
                 FButton {
-                    text: "Close"
+                    text: I18n.tr("Close")
                     variant: "tonal"
                     onClicked: ThirdParty.settingsKey = ""
                 }
@@ -155,41 +155,41 @@ Page {
 
     Group {
         visible: ThirdParty.plugins.length > 0
-        title: "Updates"
+        title: I18n.tr("Updates")
         SettingRow {
-            title: ThirdParty.checking ? "Checking…" : ThirdParty.updates.length ? ThirdParty.updates.length + (ThirdParty.updates.length === 1 ? " update" : " updates") : "Up to date"
-            subtitle: ThirdParty.updates.length ? ThirdParty.updates.map(u => u.name + (u.from && u.to ? " " + u.from + " → " + u.to : "")).join(", ") : "Checked once a day; a notification says when there are new versions"
+            title: ThirdParty.checking ? I18n.tr("Checking…") : ThirdParty.updates.length ? ThirdParty.updates.length + (ThirdParty.updates.length === 1 ? " update" : " updates") : I18n.tr("Up to date")
+            subtitle: ThirdParty.updates.length ? ThirdParty.updates.map(u => u.name + (u.from && u.to ? " " + u.from + " → " + u.to : "")).join(", ") : I18n.tr("Checked once a day; a notification says when there are new versions")
             icon: "system_update"
             Row {
                 spacing: 6
                 FButton {
                     visible: ThirdParty.updates.length > 0
-                    text: "Update all"
+                    text: I18n.tr("Update all")
                     icon: "download"
                     onClicked: ThirdParty.updateAll()
                 }
                 FButton {
-                    text: "Check now"
+                    text: I18n.tr("Check now")
                     variant: "tonal"
                     disabled: ThirdParty.checking
                     onClicked: ThirdParty.checkUpdates()
                 }
             }
         }
-        SwitchRow { title: "Check for updates"; icon: "update"; target: ThirdParty.cfg; key: "checkUpdates" }
+        SwitchRow { title: I18n.tr("Check for updates"); icon: "update"; target: ThirdParty.cfg; key: "checkUpdates" }
         SettingRow {
-            title: "Lock file"
+            title: I18n.tr("Lock file")
             subtitle: "~/.config/flamenco/plugins.lock.json lists every plugin, where it came from and which version, and stays up to date. On another computer: flamenco compat restore"
             icon: "lock"
         }
     }
 
     Group {
-        title: "Installed"
+        title: I18n.tr("Installed")
         SettingRow {
             visible: ThirdParty.plugins.length === 0
-            title: ThirdParty.loading ? "Looking…" : "None yet"
-            subtitle: "Get some from the catalogs below, or install one from its address"
+            title: ThirdParty.loading ? I18n.tr("Looking…") : I18n.tr("None yet")
+            subtitle: I18n.tr("Get some from the catalogs below, or install one from its address")
             icon: "extension"
         }
         Repeater {
@@ -199,7 +199,7 @@ Page {
                 required property var modelData
                 readonly property bool on: ThirdParty.isEnabled(modelData.key)
                 readonly property bool runs: modelData.status !== "unsupported"
-                title: modelData.name + (modelData.version ? " " + modelData.version : "") + "  ·  " + (modelData.kind === "noctalia" ? "Noctalia" : "DMS")
+                title: modelData.name + (modelData.version ? " " + modelData.version : "") + "  ·  " + (modelData.kind === "noctalia" ? I18n.tr("Noctalia") : I18n.tr("DMS"))
                 subtitle: page.statusText(modelData) + (modelData.description ? "\n" + modelData.description : "") + (modelData.author ? " · by " + modelData.author : "")
                 icon: ThirdParty.errors[modelData.key] || !runs ? "extension_off" : modelData.status === "ok" ? "extension" : "warning"
                 Row {
@@ -263,21 +263,21 @@ Page {
         }
         SettingRow {
             visible: Object.keys(ThirdParty.barWidgets).length > 0
-            title: "Their bar widgets"
-            subtitle: "Turned-on plugins with a bar widget are listed in Bar → Widgets, as \"name (Noctalia)\" or \"name (DMS)\""
+            title: I18n.tr("Their bar widgets")
+            subtitle: I18n.tr("Turned-on plugins with a bar widget are listed in Bar → Widgets, as \"name (Noctalia)\" or \"name (DMS)\"")
             icon: "toolbar"
             FButton {
-                text: "Bar settings"
+                text: I18n.tr("Bar settings")
                 variant: "text"
                 onClicked: Panels.settingsPage = "bar"
             }
         }
         SettingRow {
-            title: "Reload"
-            subtitle: "After editing a plugin's files, or updating one"
+            title: I18n.tr("Reload")
+            subtitle: I18n.tr("After editing a plugin's files, or updating one")
             icon: "refresh"
             FButton {
-                text: "Reload"
+                text: I18n.tr("Reload")
                 variant: "tonal"
                 onClicked: {
                     for (const p of ThirdParty.plugins)
@@ -290,17 +290,17 @@ Page {
     }
 
     Group {
-        title: "Get plugins"
+        title: I18n.tr("Get plugins")
         SettingRow {
-            title: "Catalog"
-            subtitle: page.source === "noctalia" ? "Noctalia's plugin repository (noctalia-plugins). Each is checked once downloaded."
+            title: I18n.tr("Catalog")
+            subtitle: page.source === "noctalia" ? I18n.tr("Noctalia's plugin repository (noctalia-plugins). Each is checked once downloaded.")
                 : "DMS's plugin registry. Plugins come from their authors' repositories; each is checked once installed."
             icon: "storefront"
             Row {
                 spacing: 8
                 FSegmented {
                     implicitWidth: 240
-                    options: [{ value: "noctalia", label: "Noctalia" }, { value: "dms", label: "DMS" }]
+                    options: [{ value: "noctalia", label: I18n.tr("Noctalia") }, { value: "dms", label: I18n.tr("DMS") }]
                     current: page.source
                     onSelected: v => {
                         page.source = v;
@@ -310,7 +310,7 @@ Page {
                     }
                 }
                 FButton {
-                    text: page.catalogFor === "" ? "Show" : "Refresh"
+                    text: page.catalogFor === "" ? I18n.tr("Show") : I18n.tr("Refresh")
                     variant: "tonal"
                     disabled: catalogProc.running
                     onClicked: page.loadCatalog(page.catalogFor !== "")
@@ -319,11 +319,11 @@ Page {
         }
         SettingRow {
             visible: page.catalogFor !== ""
-            title: catalogProc.running ? "Downloading the list…" : page.matches.length + " plugins"
+            title: catalogProc.running ? I18n.tr("Downloading the list…") : page.matches.length + " plugins"
             icon: "search"
             FTextField {
                 implicitWidth: 280
-                placeholder: "Search"
+                placeholder: I18n.tr("Search")
                 onEdited: t => {
                     page.query = t;
                     page.shown = 30;
@@ -336,12 +336,12 @@ Page {
                 id: cat
                 required property var modelData
                 title: modelData.name + (modelData.version ? " " + modelData.version : "") + (modelData.official ? "  ·  official" : "")
-                subtitle: (modelData.status === "ok" ? "Should work fully" : modelData.status === "partial" ? "Partly works: " + modelData.issues.concat(modelData.notes).slice(0, 2).join("; ")
+                subtitle: (modelData.status === "ok" ? I18n.tr("Should work fully") : modelData.status === "partial" ? I18n.tr("Partly works: ") + modelData.issues.concat(modelData.notes).slice(0, 2).join("; ")
                     : modelData.status === "unknown" ? "Checked once installed" : "Won't run: " + modelData.issues.concat(modelData.notes).slice(0, 2).join("; "))
                     + (modelData.description ? "\n" + modelData.description : "") + (modelData.author ? " · by " + modelData.author : "")
                 icon: modelData.status === "unsupported" ? "extension_off" : modelData.status === "ok" ? "extension" : "help"
                 FButton {
-                    text: cat.modelData.installed ? "Installed" : "Install"
+                    text: cat.modelData.installed ? I18n.tr("Installed") : I18n.tr("Install")
                     variant: cat.modelData.installed ? "text" : "filled"
                     disabled: cat.modelData.installed || runner.running || cat.modelData.status === "unsupported"
                     onClicked: page.cli(["install", cat.modelData.spec])
@@ -353,20 +353,20 @@ Page {
             title: (page.matches.length - page.shown) + " more"
             icon: "expand_more"
             FButton {
-                text: "Show more"
+                text: I18n.tr("Show more")
                 variant: "tonal"
                 onClicked: page.shown += 30
             }
         }
         SettingRow {
-            title: "Install from an address"
-            subtitle: "A git address (a GitHub folder link works too; add #ID when a repository has several plugins) or a folder"
+            title: I18n.tr("Install from an address")
+            subtitle: I18n.tr("A git address (a GitHub folder link works too; add #ID when a repository has several plugins) or a folder")
             icon: "download"
             Row {
                 spacing: 8
-                FTextField { id: src; implicitWidth: 300; placeholder: "https://github.com/someone/dms-plugins#myPlugin" }
+                FTextField { id: src; implicitWidth: 300; placeholder: I18n.tr("https://github.com/someone/dms-plugins#myPlugin") }
                 FButton {
-                    text: "Install"
+                    text: I18n.tr("Install")
                     disabled: src.text.trim() === "" || runner.running
                     onClicked: {
                         page.cli(["install", src.text.trim()]);
@@ -383,20 +383,20 @@ Page {
     }
 
     Group {
-        title: "What works"
+        title: I18n.tr("What works")
         SettingRow {
-            title: "Noctalia plugins"
-            subtitle: "Plugins for Noctalia 4 (QML): bar widgets, panels, settings and Main.qml. Not yet: desktop widgets, control center buttons and launcher providers. Noctalia 5's plugins (Luau) can't run."
+            title: I18n.tr("Noctalia plugins")
+            subtitle: I18n.tr("Plugins for Noctalia 4 (QML): bar widgets, panels, settings and Main.qml. Not yet: desktop widgets, control center buttons and launcher providers. Noctalia 5's plugins (Luau) can't run.")
             icon: "check_circle"
         }
         SettingRow {
-            title: "DMS plugins"
-            subtitle: "Plugins for DankMaterialShell 1.x: bar widgets with their popouts, settings, and daemons. Not yet: launcher, desktop and control center plugins, or ones that talk to DMS's own backend (dms)."
+            title: I18n.tr("DMS plugins")
+            subtitle: I18n.tr("Plugins for DankMaterialShell 1.x: bar widgets with their popouts, settings, and daemons. Not yet: launcher, desktop and control center plugins, or ones that talk to DMS's own backend (dms).")
             icon: "check_circle"
         }
         SettingRow {
-            title: "How it works"
-            subtitle: "Flamenco keeps a copy of each plugin with its imports pointed at a compatibility layer: Noctalia's and DMS's widgets (both MIT licensed) colored by Flamenco's theme, and their services backed by Flamenco's. From a terminal: flamenco compat list | catalog | install | update | remove"
+            title: I18n.tr("How it works")
+            subtitle: I18n.tr("Flamenco keeps a copy of each plugin with its imports pointed at a compatibility layer: Noctalia's and DMS's widgets (both MIT licensed) colored by Flamenco's theme, and their services backed by Flamenco's. From a terminal: flamenco compat list | catalog | install | update | remove")
             icon: "info"
         }
     }

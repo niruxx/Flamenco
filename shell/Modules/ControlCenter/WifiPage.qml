@@ -6,7 +6,7 @@ import qs.Widgets
 
 DetailPage {
     id: page
-    title: "Wi-Fi"
+    title: I18n.tr("Wi-Fi")
     property string askFor: ""
 
     Component.onCompleted: Network.scan(true)
@@ -44,7 +44,7 @@ DetailPage {
             ListRow {
                 icon: modelData.signal > 75 ? "signal_wifi_4_bar" : modelData.signal > 50 ? "network_wifi_3_bar" : modelData.signal > 25 ? "network_wifi_2_bar" : "network_wifi_1_bar"
                 title: modelData.ssid
-                subtitle: modelData.active ? "Connected" : Network.connecting === modelData.ssid ? "Connecting…" : (modelData.secure ? "Secured" : "Open") + " · " + modelData.signal + "%"
+                subtitle: modelData.active ? I18n.tr("Connected") : Network.connecting === modelData.ssid ? I18n.tr("Connecting…") : (modelData.secure ? I18n.tr("Secured") : I18n.tr("Open")) + " · " + modelData.signal + "%"
                 selected: modelData.active
                 onClicked: {
                     if (modelData.active)
@@ -70,7 +70,7 @@ DetailPage {
                     Layout.fillWidth: true
                     password: true
                     icon: "key"
-                    placeholder: "Password (blank = saved)"
+                    placeholder: I18n.tr("Password (blank = saved)")
                     onAccepted: {
                         Network.connect(modelData.ssid, text);
                         page.askFor = "";
@@ -79,7 +79,7 @@ DetailPage {
                     onVisibleChanged: if (visible) focusInput()
                 }
                 FButton {
-                    text: "Join"
+                    text: I18n.tr("Join")
                     onClicked: pw.accepted()
                 }
             }

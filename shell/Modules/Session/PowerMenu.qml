@@ -46,14 +46,14 @@ Variants {
 
         // the buttons; hibernate, firmware setup and switching user are optional (Settings → Power)
         readonly property var actions: [
-            { id: "lock", icon: "lock", label: "Lock", run: () => Quickshell.execDetached([Paths.bin, "lock"]) },
-            { id: "suspend", icon: "bedtime", label: "Suspend", run: () => { Quickshell.execDetached([Paths.bin, "lock"]); suspendDelay.start(); } }
-        ].concat(pcfg.menuHibernate ? [{ id: "hibernate", icon: "downloading", label: "Hibernate", run: () => { Quickshell.execDetached([Paths.bin, "lock"]); hibernateDelay.start(); } }] : [],
-            pcfg.menuSwitchUser && Power.canSwitchUser ? [{ id: "switch", icon: "switch_account", label: "Switch user", run: () => Power.switchUser() }] : [], [
-            { id: "logout", icon: "logout", label: "Log out", verb: "Logging out", run: () => Power.logout() },
-            { id: "reboot", icon: "restart_alt", label: "Restart", verb: "Restarting", run: () => Power.reboot() }
-        ], pcfg.menuFirmware ? [{ id: "firmware", icon: "developer_board", label: "Firmware setup", verb: "Restarting into firmware setup", run: () => Power.rebootFirmware() }] : [], [
-            { id: "shutdown", icon: "power_settings_new", label: "Shut down", verb: "Shutting down", run: () => Power.shutdown() }
+            { id: "lock", icon: "lock", label: I18n.tr("Lock"), run: () => Quickshell.execDetached([Paths.bin, "lock"]) },
+            { id: "suspend", icon: "bedtime", label: I18n.tr("Suspend"), run: () => { Quickshell.execDetached([Paths.bin, "lock"]); suspendDelay.start(); } }
+        ].concat(pcfg.menuHibernate ? [{ id: "hibernate", icon: "downloading", label: I18n.tr("Hibernate"), run: () => { Quickshell.execDetached([Paths.bin, "lock"]); hibernateDelay.start(); } }] : [],
+            pcfg.menuSwitchUser && Power.canSwitchUser ? [{ id: "switch", icon: "switch_account", label: I18n.tr("Switch user"), run: () => Power.switchUser() }] : [], [
+            { id: "logout", icon: "logout", label: I18n.tr("Log out"), verb: I18n.tr("Logging out"), run: () => Power.logout() },
+            { id: "reboot", icon: "restart_alt", label: I18n.tr("Restart"), verb: I18n.tr("Restarting"), run: () => Power.reboot() }
+        ], pcfg.menuFirmware ? [{ id: "firmware", icon: "developer_board", label: I18n.tr("Firmware setup"), verb: I18n.tr("Restarting into firmware setup"), run: () => Power.rebootFirmware() }] : [], [
+            { id: "shutdown", icon: "power_settings_new", label: I18n.tr("Shut down"), verb: I18n.tr("Shutting down"), run: () => Power.shutdown() }
         ])
 
         // run an action, after the goodbye screen; niri's own logout shows its prompt
@@ -212,7 +212,7 @@ Variants {
 
             FText {
                 Layout.alignment: Qt.AlignHCenter
-                text: win.pendingAction ? win.pendingAction.verb + " in " + win.remaining + "…" : "Goodbye, " + Paths.user
+                text: win.pendingAction ? win.pendingAction.verb + " in " + win.remaining + "…" : I18n.tr("Goodbye, ") + Paths.user
                 font.pixelSize: Theme.fsXxl
                 font.weight: Font.Bold
             }
@@ -220,7 +220,7 @@ Variants {
             FText {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: -Theme.sp5
-                text: win.pending ? "Let go to cancel" : win.hint
+                text: win.pending ? I18n.tr("Let go to cancel") : win.hint
                 dim: true
             }
 

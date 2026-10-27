@@ -17,7 +17,7 @@ BarChip {
     BarFlow {
         spacing: 4
         Repeater {
-            model: [{ on: LockKeys.caps, t: "A", show: root.always || LockKeys.caps }, { on: LockKeys.num, t: "1", show: root.always || LockKeys.num }]
+            model: [{ on: LockKeys.caps, t: I18n.tr("A"), show: root.always || LockKeys.caps }, { on: LockKeys.num, t: "1", show: root.always || LockKeys.num }]
             Rectangle {
                 required property var modelData
                 visible: modelData.show
