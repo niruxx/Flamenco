@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Services
@@ -44,6 +45,18 @@ Page {
             onStreamFinished: if (text.trim()) page.status = text.trim().split("\n").pop()
         }
         onExited: getter.running = true
+    }
+
+    Group {
+        title: "Links"
+        SwitchRow {
+            title: "Ask which browser"
+            subtitle: Settings.data.general.browserPicker ? "Links you click elsewhere ask which browser opens them (with \"always\" to stop asking)" : "Off: links open in the default browser"
+            icon: "travel_explore"
+            target: Settings.data.general
+            key: "browserPicker"
+            onEdited: Quickshell.execDetached([Paths.bin, "browser-picker", Settings.data.general.browserPicker ? "on" : "off"])
+        }
     }
 
     Group {

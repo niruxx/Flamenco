@@ -69,4 +69,13 @@ Page {
             }
         }
     }
+
+    Group {
+        title: "Dynamic island"
+        SwitchRow { title: "Dynamic island"; subtitle: "A pill at the top that shows what's playing and grows for notifications and volume or brightness changes"; icon: "pill"; target: Settings.data.island; key: "enabled" }
+        SwitchRow { visible: Settings.data.island.enabled; title: "What's playing"; icon: "music_note"; target: Settings.data.island; key: "media" }
+        SwitchRow { visible: Settings.data.island.enabled; title: "Notifications"; subtitle: "Turn off notification pop-ups in Notifications if you only want them here"; icon: "notifications"; target: Settings.data.island; key: "notifications" }
+        SwitchRow { visible: Settings.data.island.enabled; title: "Volume and brightness"; subtitle: "Turn off the OSD (Sound) if you only want them here"; icon: "volume_up"; target: Settings.data.island; key: "levels" }
+        SwitchRow { visible: Settings.data.island.enabled; title: "Always there"; subtitle: "Off: only while it has something to show"; icon: "visibility"; target: Settings.data.island; key: "idle" }
+    }
 }

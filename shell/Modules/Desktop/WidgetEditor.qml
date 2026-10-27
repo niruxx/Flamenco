@@ -71,7 +71,7 @@ Variants {
                 height: body.height
                 x: Desk.px(modelData.x, ed.width, width)
                 y: Desk.px(modelData.y, ed.height, height)
-                z: drag.active ? 10 : hov.hovered ? 5 : 0
+                z: drag.active ? 10 : toolsShown ? 5 : 0
 
                 WidgetBody {
                     id: body
@@ -91,7 +91,15 @@ Variants {
                 HoverHandler {
                     id: hov
                     cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    onHoveredChanged: if (!hovered) linger.restart()
                 }
+                // the toolbar sits above the widget: it stays a moment after the pointer
+                // leaves the widget, and while it's on the toolbar, so it can be reached
+                Timer {
+                    id: linger
+                    interval: 600
+                }
+                readonly property bool toolsShown: (hov.hovered || toolHov.hovered || linger.running) && !drag.active
                 DragHandler {
                     id: drag
                     target: slot
@@ -105,9 +113,10 @@ Variants {
                 // size and remove, above the widget while it's hovered
                 Rectangle {
                     anchors.bottom: parent.top
-                    anchors.bottomMargin: 10
+                    anchors.bottomMargin: 4
                     anchors.horizontalCenter: parent.horizontalCenter
-                    visible: hov.hovered && !drag.active
+                    visible: slot.toolsShown
+                    HoverHandler { id: toolHov }
                     width: tools.width + 12
                     height: tools.height + 8
                     radius: height / 2
@@ -195,55 +204,73 @@ Variants {
                     font.pixelSize: Theme.fsSm
                 }
 
-                Repeater {
-                    model: Desk.catalog
-
-                    Rectangle {
-                        id: card
-                        required property var modelData
-                        Layout.fillWidth: true
-                        implicitHeight: 62
-                        radius: Theme.rLg
-                        color: cardHov.hovered ? Theme.alpha(Theme.accent, 0.14) : Theme.alpha(Theme.text, 0.05)
-                        Behavior on color { CAnim {} }
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.margins: Theme.sp3
-                            spacing: Theme.sp3
-                            Rectangle {
-                                implicitWidth: 38
-                                implicitHeight: 38
-                                radius: Theme.rMd
-                                color: Theme.alpha(Theme.accent, 0.18)
-                                FIcon { anchors.centerIn: parent; icon: card.modelData.icon; color: Theme.accent; fill: 1 }
-                            }
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 0
-                                FText { text: card.modelData.name; font.weight: Font.DemiBold }
-                                FText { Layout.fillWidth: true; text: card.modelData.about; dim: true; font.pixelSize: Theme.fsSm; elide: Text.ElideRight }
-                            }
-                            FIcon { icon: "drag_indicator"; color: Theme.textDim }
+                // the catalog scrolls (by wheel and the scrollbar) inside the sidebar; cards
+                // are dragged out onto the desktop, so a drag doesn't scroll it
+                FScroll {
+                    id: catalog
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    contentHeight: cards.implicitHeight
+                    interactive: false
+                    WheelHandler {
+                        onWheel: event => {
+                            const d = event.pixelDelta.y !== 0 ? event.pixelDelta.y : event.angleDelta.y / 120 * 70;
+                            catalog.contentY = Math.max(0, Math.min(catalog.maxY, catalog.contentY - d));
                         }
+                    }
+                    ColumnLayout {
+                        id: cards
+                        width: catalog.width - catalog.gutter
+                        spacing: Theme.sp2
+                        Repeater {
+                            model: Desk.catalog
 
-                        HoverHandler { id: cardHov; cursorShape: Qt.OpenHandCursor }
-                        TapHandler { onTapped: Desk.addHere(card.modelData.type, ed.screenName) }
-                        DragHandler {
-                            target: null
-                            onActiveChanged: {
-                                if (active) {
-                                    ghost.type = card.modelData.type;
-                                } else {
-                                    ghost.drop();
+                            Rectangle {
+                                id: card
+                                required property var modelData
+                                Layout.fillWidth: true
+                                implicitHeight: 62
+                                radius: Theme.rLg
+                                color: cardHov.hovered ? Theme.alpha(Theme.accent, 0.14) : Theme.alpha(Theme.text, 0.05)
+                                Behavior on color { CAnim {} }
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: Theme.sp3
+                                    spacing: Theme.sp3
+                                    Rectangle {
+                                        implicitWidth: 38
+                                        implicitHeight: 38
+                                        radius: Theme.rMd
+                                        color: Theme.alpha(Theme.accent, 0.18)
+                                        FIcon { anchors.centerIn: parent; icon: card.modelData.icon; color: Theme.accent; fill: 1 }
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 0
+                                        FText { text: card.modelData.name; font.weight: Font.DemiBold }
+                                        FText { Layout.fillWidth: true; text: card.modelData.about; dim: true; font.pixelSize: Theme.fsSm; elide: Text.ElideRight }
+                                    }
+                                    FIcon { icon: "drag_indicator"; color: Theme.textDim }
+                                }
+
+                                HoverHandler { id: cardHov; cursorShape: Qt.OpenHandCursor }
+                                TapHandler { onTapped: Desk.addHere(card.modelData.type, ed.screenName) }
+                                DragHandler {
+                                    target: null
+                                    onActiveChanged: {
+                                        if (active) {
+                                            ghost.type = card.modelData.type;
+                                        } else {
+                                            ghost.drop();
+                                        }
+                                    }
+                                    onCentroidChanged: if (active) ghost.at = centroid.scenePosition
                                 }
                             }
-                            onCentroidChanged: if (active) ghost.at = centroid.scenePosition
                         }
                     }
                 }
-
-                Item { Layout.fillHeight: true }
 
                 FText { text: "Style"; font.weight: Font.DemiBold }
                 FSegmented {

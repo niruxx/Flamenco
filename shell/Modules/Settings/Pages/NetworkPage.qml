@@ -267,6 +267,20 @@ Page {
             }
         }
         SettingRow {
+            visible: Network.ssid !== ""
+            title: "Share this Wi-Fi"
+            subtitle: "A QR code a phone can scan to join " + Network.ssid + " (needs qrencode)"
+            icon: "qr_code_2"
+            FButton {
+                text: "Show QR code"
+                variant: "tonal"
+                onClicked: {
+                    Panels.settingsOpen = false;
+                    Panels.qr = "@wifi";
+                }
+            }
+        }
+        SettingRow {
             title: "Networks nearby"
             subtitle: "Pick a network from the control center"
             icon: "wifi_find"

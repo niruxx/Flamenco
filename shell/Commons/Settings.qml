@@ -46,6 +46,8 @@ Singleton {
                 property bool showSeconds: false
                 property string avatar: "~/.face"
                 property string terminal: "kitty"
+                property bool browserPicker: false   // links ask which browser opens them
+                property string seenVersion: ""      // the version whose "What's new" was seen
                 property bool setupDone: false        // first-run setup finished (or skipped)
                 property bool nativeNetworkEditor: true          // edit connections in Settings → Network
                 property string networkEditor: "nm-connection-editor"  // …or with this app
@@ -389,6 +391,14 @@ Singleton {
                 property bool shadeCalendar: true     // shade: the month above the notifications
             }
 
+            // the Dynamic island at the top (Settings → Desktop widgets)
+            property JsonObject island: JsonObject {
+                property bool enabled: false
+                property bool media: true             // the track while something plays
+                property bool notifications: true     // grows for a notification
+                property bool levels: true            // the volume / brightness as they change
+                property bool idle: true              // a small pill when there's nothing to show
+            }
             property JsonObject osd: JsonObject {
                 property bool enabled: true
                 property string position: "bottom"    // top | bottom

@@ -13,6 +13,9 @@ Singleton {
     property bool settingsOpen: false
     property bool setupOpen: false
     property string settingsPage: "appearance"
+    property bool whatsNew: false
+    property string browserUrl: ""            // a link waiting for "which browser?" (Modules/Extras/BrowserPicker)
+    property string qr: ""                    // the QR window: "@wifi", or text (Modules/Extras/QrPanel)             // the "What's new" window (Modules/Extras/WhatsNew)
     // Settings search: the row or section to scroll to and flash on the page
     // just opened (matched by its title); findSeq makes the same one re-trigger
     property string settingsFind: ""

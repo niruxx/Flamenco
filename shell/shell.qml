@@ -39,6 +39,7 @@ import qs.Modules.Volume
 import qs.Modules.Setup
 import qs.Modules.Windows
 import qs.Modules.Polkit
+import qs.Modules.Extras
 
 ShellRoot {
     id: shell
@@ -83,6 +84,10 @@ ShellRoot {
     DevicePopups {}
     ToastPopup {}
     PolkitDialog {}
+    WhatsNew {}
+    Island {}
+    BrowserPicker {}
+    QrPanel {}
     Osd { id: osd }
 
     ControlCenter {}
@@ -161,6 +166,11 @@ ShellRoot {
     IpcHandler {
         target: "share"
         function pick(id: string, outputs: string): void { Share.ask(id, outputs); }
+    }
+
+    IpcHandler {
+        target: "browser"
+        function pick(url: string): void { Panels.browserUrl = url; }
     }
 
     IpcHandler {

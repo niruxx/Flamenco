@@ -65,6 +65,10 @@
   flamenco bar toggle|show|hide | mode never|auto|windows   hide the bar (by hand, automatically, or while windows are open)
   flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO
                                live (video) wallpapers: find them online (wikimedia, pexels, pixabay), download, API keys
+  flamenco open-url URL | open-with DESKTOP_ID URL | browser-picker on|off
+                               ask which browser opens a link
+  flamenco qr TEXT | --wifi    a QR code (SVG) of the text, or of this Wi-Fi network
+  flamenco mux                 tmux and zellij sessions (JSON)
   flamenco region [status] | set LANG [FORMATS] | enable LOCALE
                                the system language and formats (localectl), turning on another language
   flamenco files QUERY          files and folders in your home folder whose name has QUERY (JSON; the launcher's / search)
@@ -90,7 +94,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.59.0"
+VERSION = "0.60.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -5197,6 +5201,131 @@ def cmd_region(args: list[str]) -> int:
                   'elif ! grep -q "^$l\\b" "$f"; then printf "%s UTF-8\\n" "$l" >> "$f"; fi; locale-gen')
         return privileged(["sh", "-c", script, "sh", loc])
     die("usage: flamenco region [status] | set LANG [FORMATS] | enable LOCALE")
+
+
+# ─────────────────────────────── browser picker ──────────────────────────────
+# "Ask which browser" (Settings → Default apps): a small handler set as the default
+# for web links; each link opens the shell's picker (`flamenco open-url`), which then
+# opens it with the chosen browser (`flamenco open-with`).
+
+PICKER_DESKTOP = XDG_DATA / "applications" / "flamenco-browser-picker.desktop"
+PICKER_PREV = CONFIG_DIR / "browser-before-picker"
+
+
+def exec_args(path: Path, url: str) -> list[str]:
+    """A desktop file's Exec line as arguments, with the URL in place of %u / %U / %f / %F."""
+    cp = read_index(path)
+    line = cp.get("Desktop Entry", "Exec", fallback="")
+    out = []
+    for a in shlex.split(line):
+        if a in ("%u", "%U", "%f", "%F"):
+            out.append(url)
+        elif re.fullmatch(r"%[a-zA-Z]", a):
+            continue
+        else:
+            out.append(a.replace("%%", "%"))
+    if url not in out:
+        out.append(url)
+    return out
+
+
+def cmd_browser(args: list[str], cmd: str) -> int:
+    if cmd == "open-url":
+        url = args[0] if args else ""
+        if not re.match(r"^(https?|file|ftp)://|^about:|^mailto:", url):
+            die("not a link")
+        if is_running() and ipc("browser", "pick", url) == 0:
+            return 0
+        # the shell isn't there: the browser from before
+        prev = PICKER_PREV.read_text().strip() if PICKER_PREV.is_file() else ""
+        return cmd_browser([prev, url], "open-with") if prev else 1
+    if cmd == "open-with" and len(args) == 2:
+        did, url = args
+        if not re.fullmatch(r"[\w.-]+\.desktop", did):
+            die("not a desktop file id")
+        f = next((d / "applications" / did for d in data_dirs() if (d / "applications" / did).is_file()), None)
+        if not f or did == PICKER_DESKTOP.name:
+            die(f"no app {did}")
+        subprocess.Popen(exec_args(f, url), start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return 0
+    if cmd == "browser-picker":
+        on = (args[0] if args else "") == "on"
+        if on:
+            cur = subprocess.run(["xdg-settings", "get", "default-web-browser"], capture_output=True, text=True).stdout.strip() if shutil.which("xdg-settings") else ""
+            if cur and cur != PICKER_DESKTOP.name:
+                PICKER_PREV.parent.mkdir(parents=True, exist_ok=True)
+                PICKER_PREV.write_text(cur + "\n")
+            PICKER_DESKTOP.parent.mkdir(parents=True, exist_ok=True)
+            PICKER_DESKTOP.write_text("[Desktop Entry]\nType=Application\nName=Ask which browser\nComment=Flamenco asks which browser opens the link\n"
+                                      f"Exec={self_path()} open-url %u\nIcon=web-browser\nNoDisplay=true\n"
+                                      "MimeType=x-scheme-handler/http;x-scheme-handler/https;text/html;\n")
+            target = PICKER_DESKTOP.name
+        else:
+            target = PICKER_PREV.read_text().strip() if PICKER_PREV.is_file() else ""
+        if target and shutil.which("xdg-settings"):
+            subprocess.run(["xdg-settings", "set", "default-web-browser", target], capture_output=True)
+        if target and shutil.which("xdg-mime"):
+            subprocess.run(["xdg-mime", "default", target, "x-scheme-handler/http", "x-scheme-handler/https", "text/html"], capture_output=True)
+        if not on:
+            PICKER_DESKTOP.unlink(missing_ok=True)
+        print("on" if on else "off")
+        return 0
+    die("usage: flamenco open-url URL | open-with DESKTOP_ID URL | browser-picker on|off")
+
+
+# ─────────────────────────────── QR codes ────────────────────────────────────
+
+def cmd_qr(args: list[str]) -> int:
+    """A QR code (SVG, in the cache) of the text, or with --wifi of this Wi-Fi network."""
+    import hashlib
+    if not shutil.which("qrencode"):
+        die("qrencode isn't installed (sudo pacman -S qrencode)")
+    if args[:1] == ["--wifi"]:
+        r = subprocess.run(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"], capture_output=True, text=True)
+        ssid = next((nm_terse_fields(l)[1] for l in r.stdout.splitlines() if l.startswith("yes:")), "")
+        if not ssid:
+            die("not connected to a Wi-Fi network")
+        r = subprocess.run(["nmcli", "-s", "-g", "802-11-wireless-security.psk,802-11-wireless-security.key-mgmt", "connection", "show", ssid],
+                           capture_output=True, text=True)
+        lines = r.stdout.splitlines()
+        psk, mgmt = (lines + ["", ""])[:2]
+        esc = lambda v: re.sub(r'([\\;,:"])', r"\\\1", v)
+        kind = "nopass" if not psk else "SAE" if "sae" in mgmt else "WPA"
+        text = f"WIFI:T:{kind};S:{esc(ssid)};" + (f"P:{esc(psk)};" if psk else "") + ";"
+        label = ssid
+    else:
+        text = " ".join(args)
+        label = ""
+        if not text:
+            die("usage: flamenco qr TEXT | --wifi")
+    out = RUN_DIR / ("qr-" + hashlib.sha1(text.encode()).hexdigest()[:12] + ".svg")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(["qrencode", "-t", "SVG", "-m", "2", "-o", str(out), "--", text], capture_output=True, text=True)
+    if r.returncode != 0:
+        die("qrencode failed: " + r.stderr.strip())
+    os.chmod(out, 0o600)
+    print(json.dumps({"path": str(out), "label": label}))
+    return 0
+
+
+# ─────────────────────────────── terminal sessions ───────────────────────────
+
+def cmd_mux(args: list[str]) -> int:
+    """tmux and zellij sessions, for the launcher's "@" search (JSON)."""
+    out = []
+    if shutil.which("tmux"):
+        r = subprocess.run(["tmux", "list-sessions", "-F", "#{session_name}\t#{session_windows}\t#{session_attached}"], capture_output=True, text=True)
+        for l in r.stdout.splitlines():
+            name, wins, att = (l.split("\t") + ["", "", ""])[:3]
+            out.append({"tool": "tmux", "name": name, "detail": f"{wins} windows" + (" · attached" if att not in ("", "0") else "")})
+    if shutil.which("zellij"):
+        r = subprocess.run(["zellij", "list-sessions", "-n"], capture_output=True, text=True)
+        for l in r.stdout.splitlines():
+            name = ANSI.sub("", l).split()[0] if l.strip() else ""
+            if name:
+                out.append({"tool": "zellij", "name": name, "detail": "exited" if "EXITED" in l else ""})
+    print(json.dumps({"sessions": out, "tools": [t for t in ("tmux", "zellij") if shutil.which(t)]}))
+    return 0
 
 
 # ─────────────────────────────── file search ─────────────────────────────────
@@ -11253,6 +11382,12 @@ def main(argv: list[str]) -> int:
         return cmd_files(rest)
     if cmd == "region":
         return cmd_region(rest)
+    if cmd in ("open-url", "open-with", "browser-picker"):
+        return cmd_browser(rest, cmd)
+    if cmd == "qr":
+        return cmd_qr(rest)
+    if cmd == "mux":
+        return cmd_mux(rest)
     if cmd == "users":
         return cmd_users(rest)
     if cmd == "accounts":

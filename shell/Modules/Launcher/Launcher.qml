@@ -26,7 +26,7 @@ Variants {
         property string query: ""
         readonly property var lc: Settings.data.launcher
         readonly property string mode: query.startsWith("=") && lc.calculator ? "calc" : query.startsWith(">") ? "run" : query.startsWith(";") && lc.clipboard ? "clip"
-            : query.startsWith(":") && lc.emoji ? "emoji" : query.startsWith("#") && lc.colors ? "color" : query.startsWith("/") && (lc.files ?? true) ? "files"
+            : query.startsWith(":") && lc.emoji ? "emoji" : query.startsWith("#") && lc.colors ? "color" : query.startsWith("/") && (lc.files ?? true) ? "files" : query.startsWith("@") ? "mux"
             : plugin ? "plugin" : "apps"
         // a plugin's launcher extension whose prefix starts the query (Settings → Plugins)
         readonly property var plugin: Plugins.launchers.find(l => query.startsWith(l.prefix)) ?? null
@@ -41,6 +41,7 @@ Variants {
         }
         property var clips: []
         property var files: []
+        property var mux: ({ sessions: [], tools: [] })
         property var settingsIndex: []
         property string category: "all"
         readonly property bool grid: (lc.view || "list") === "grid" && mode === "apps" && query === ""
@@ -127,8 +128,18 @@ Variants {
                     return [{ kind: "hint", title: "Search your files", subtitle: "Type a name after /", icon: "folder_open" }];
                 return files.map(f => ({ kind: "file", path: f.path, title: f.name, subtitle: f.dir, icon: f.folder ? "folder" : "description" }));
             }
+            if (mode === "mux") {
+                const q = term.toLowerCase();
+                const out = mux.sessions.filter(m => m.name.toLowerCase().includes(q))
+                    .map(m => ({ kind: "mux", tool: m.tool, name: m.name, title: m.name, subtitle: m.tool + (m.detail ? " · " + m.detail : ""), icon: "terminal" }));
+                for (const t of mux.tools)
+                    out.push({ kind: "mux", tool: t, name: term, fresh: true, title: "New " + t + " session" + (term ? " “" + term + "”" : ""), subtitle: "In " + (Settings.data.general.terminal || "kitty"), icon: "add" });
+                return out.length ? out : [{ kind: "hint", title: "No tmux or zellij", subtitle: "Install one to keep terminal sessions running", icon: "terminal" }];
+            }
             if (term === "")
                 return gridApps.slice(0, 50).map(e => appItem(e));
+            if (/^qr\s+\S/i.test(term))
+                return [{ kind: "qr", title: "QR code of “" + term.slice(3).trim() + "”", subtitle: "Shows it, to scan with a phone", icon: "qr_code_2" }];
             const q = term.toLowerCase();
             const out = Apps.search(term).slice(0, 40).map(e => appItem(e));
             // open windows
@@ -191,7 +202,13 @@ Variants {
                 Apps.launch(item.entry);
             else if (item.kind === "window")
                 Niri.focusWindow(item.win.id);
-            else if (item.kind === "file")
+            else if (item.kind === "mux") {
+                const args = item.tool === "tmux" ? (item.fresh ? ["tmux", "new-session"].concat(item.name ? ["-s", item.name] : []) : ["tmux", "attach-session", "-t", item.name])
+                    : (item.fresh ? ["zellij"].concat(item.name ? ["--session", item.name] : []) : ["zellij", "attach", item.name]);
+                Quickshell.execDetached(Paths.term(args));
+            } else if (item.kind === "qr") {
+                Panels.qr = term.slice(3).trim();
+            } else if (item.kind === "file")
                 Quickshell.execDetached(["xdg-open", item.path]);
             else if (item.kind === "web")
                 Qt.openUrlExternally(webUrl.replace("%s", encodeURIComponent(term)));
@@ -251,6 +268,8 @@ Variants {
                 clipProc.running = true;
             if (mode !== "files")
                 files = [];
+            if (mode === "mux" && !muxProc.running)
+                muxProc.running = true;
             else if (mode === "emoji" && emojis.length === 0 && !emojiProc.running)
                 emojiProc.running = true;
         }
@@ -331,6 +350,17 @@ Variants {
             }
         }
         Process {
+            id: muxProc
+            command: [Paths.bin, "mux"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    try {
+                        panel.mux = JSON.parse(text);
+                    } catch (e) {}
+                }
+            }
+        }
+        Process {
             id: indexProc
             command: [Paths.bin, "settings-index", "--json"]
             stdout: StdioCollector {
@@ -360,7 +390,7 @@ Variants {
                 implicitHeight: 52
                 radius: Theme.rLg
                 icon: panel.mode === "calc" ? "calculate" : panel.mode === "run" ? "terminal" : panel.mode === "clip" ? "content_paste" : panel.mode === "emoji" ? "mood" : panel.mode === "color" ? "palette" : panel.mode === "files" ? "folder_open" : "search"
-                placeholder: "Search apps, windows, settings   ·   = calc   > run   ; clips   : emoji   # color   / files"
+                placeholder: "Search apps, windows, settings   ·   = calc   > run   ; clips   : emoji   # color   / files   @ terminals"
                 fontSize: Theme.fsLg
                 onEdited: t => {
                     panel.query = t;

@@ -68,6 +68,15 @@ Page {
     }
 
     Group {
+        SettingRow {
+            title: "What's new"
+            subtitle: "The latest changes to Flamenco"
+            icon: "auto_awesome"
+            FButton { text: "Show"; variant: "tonal"; onClicked: { Panels.settingsOpen = false; Panels.whatsNew = true; } }
+        }
+    }
+
+    Group {
         title: "This computer"
         visible: page.rows.length > 0
         Repeater {
