@@ -114,6 +114,38 @@ Page {
     }
 
     Group {
+        visible: Power.hasBattery
+        title: "Battery warnings"
+        SwitchRow {
+            title: "Warn when the battery runs low"
+            subtitle: "A notification at the low level, and a critical one (it shows even with Do Not Disturb) at the critical level"
+            icon: "battery_alert"
+            target: page.pw
+            key: "batteryWarnings"
+        }
+        SliderRow { visible: page.pw.batteryWarnings; title: "Low"; icon: "battery_2_bar"; target: page.pw; key: "batteryWarnLow"; from: 10; to: 40; stepSize: 1; suffix: "%" }
+        SliderRow { visible: page.pw.batteryWarnings; title: "Critical"; icon: "battery_alert"; target: page.pw; key: "batteryWarnCritical"; from: 3; to: 20; stepSize: 1; suffix: "%" }
+        ChoiceRow {
+            visible: page.pw.batteryWarnings
+            title: "When it's nearly empty"
+            subtitle: (page.pw.batteryEmptyAction || "none") === "none" ? "Nothing: it runs until the battery gives out"
+                : "At " + Math.max(2, Math.min(page.pw.batteryWarnLow - 1, page.pw.batteryWarnCritical) - 5) + "%, after a minute's warning (plugging in cancels it)"
+            icon: "battery_0_bar"
+            target: page.pw
+            key: "batteryEmptyAction"
+            segWidth: 96
+            options: [{ value: "none", label: "Nothing" }, { value: "suspend", label: "Suspend" }, { value: "hibernate", label: "Hibernate" }, { value: "poweroff", label: "Shut down" }]
+        }
+        SettingRow {
+            visible: page.pw.batteryWarnings
+            title: "Try it"
+            subtitle: "Shows the low battery warning"
+            icon: "science"
+            FButton { text: "Show a test"; variant: "tonal"; onClicked: BatteryAlerts.test() }
+        }
+    }
+
+    Group {
         title: "Sleep"
         SwitchRow {
             title: "Allow the computer to sleep"
@@ -154,6 +186,56 @@ Page {
             stepSize: 5
             suffix: " min"
         }
+        ChoiceRow {
+            visible: page.pw.allowSleep && (page.pw.idleSuspendBattery > 0 || page.pw.idleSuspendAC > 0)
+            title: "Idle sleep means"
+            subtitle: ({ suspend: "Suspend: quick to wake, uses a little battery", hibernate: "Hibernate: saves to disk and powers off (needs swap set up for it)",
+                         "suspend-then-hibernate": "Suspend, then hibernate after a while (systemd's HibernateDelaySec)" })[page.pw.idleSleep || "suspend"]
+            icon: "bedtime"
+            target: page.pw
+            key: "idleSleep"
+            segWidth: 130
+            options: [{ value: "suspend", label: "Suspend" }, { value: "hibernate", label: "Hibernate" }, { value: "suspend-then-hibernate", label: "Both" }]
+        }
+        SettingRow {
+            title: "Lock and screen off when idle"
+            subtitle: "Their times, on battery and plugged in, are in Lock & Login"
+            icon: "lock_clock"
+            FButton { text: "Lock & Login"; variant: "text"; onClicked: Panels.openSettings("lock") }
+        }
+    }
+
+    Group {
+        title: "Password dialog"
+        SwitchRow {
+            title: "Flamenco's password dialog"
+            subtitle: !page.pw.polkitAgent ? "Off: another polkit agent has to be running, or apps can't ask for your password"
+                : !PolkitAuth.available ? "Your Quickshell was built without polkit support, so another agent (polkit-gnome, polkit-kde…) is needed"
+                : PolkitAuth.other !== "" ? PolkitAuth.other + " is running and answers instead. Take it out of your startup (niri: its spawn-at-startup line) and log in again"
+                : "When an app (or Flamenco) needs your password for something that changes the system"
+            icon: "admin_panel_settings"
+            target: page.pw
+            key: "polkitAgent"
+        }
+        SettingRow {
+            visible: page.pw.polkitAgent && PolkitAuth.available
+            title: "Try it"
+            subtitle: "Asks for your password the way apps do (nothing is changed)"
+            icon: "science"
+            Row {
+                spacing: 6
+                FButton {
+                    text: "Test"
+                    variant: "tonal"
+                    onClicked: Quickshell.execDetached(["pkexec", "--disable-internal-agent", "true"])
+                }
+                FButton {
+                    text: "Check again"
+                    variant: "text"
+                    onClicked: PolkitAuth.findOthers()
+                }
+            }
+        }
     }
 
     Group {
@@ -176,6 +258,10 @@ Page {
         SliderRow { title: "Log out"; subtitle: page.pw.holdLogout === 0 ? "Instant" : ""; icon: "logout"; target: page.pw; key: "holdLogout"; from: 0; to: 10; stepSize: 0.5; decimals: 1; suffix: " s" }
         SliderRow { title: "Restart"; subtitle: page.pw.holdReboot === 0 ? "Instant" : ""; icon: "restart_alt"; target: page.pw; key: "holdReboot"; from: 0; to: 10; stepSize: 0.5; decimals: 1; suffix: " s" }
         SliderRow { title: "Shut down"; subtitle: page.pw.holdShutdown === 0 ? "Instant" : ""; icon: "power_settings_new"; target: page.pw; key: "holdShutdown"; from: 0; to: 10; stepSize: 0.5; decimals: 1; suffix: " s" }
+        SliderRow { title: "Countdown"; subtitle: page.pw.countdown > 0 ? "Actions that aren't held count down first; Esc cancels" : "Off: they run at once (or once held)"; icon: "timer"; target: page.pw; key: "countdown"; from: 0; to: 15; stepSize: 1; suffix: " s" }
+        SwitchRow { title: "Hibernate button"; icon: "downloading"; target: page.pw; key: "menuHibernate" }
+        SwitchRow { title: "Firmware setup button"; subtitle: "Restarts into the computer's UEFI setup"; icon: "developer_board"; target: page.pw; key: "menuFirmware" }
+        SwitchRow { title: "Switch user button"; subtitle: Power.canSwitchUser ? "Back to the login screen, this session kept" : "Needs a login manager that can (LightDM's dm-tool, GDM)"; icon: "switch_account"; target: page.pw; key: "menuSwitchUser" }
         SettingRow {
             title: "Open the power menu"
             subtitle: "Mod+Escape, or the power button in the bar"

@@ -26,7 +26,9 @@ Item {
 
     readonly property var actions: JSON.parse(actionsJson || "[]")
     readonly property bool critical: urgency === 2
+    // -1: stays until dismissed (an app rule)
     readonly property int life: timeout > 0 ? timeout : Settings.data.notifications.timeout * 1000
+    readonly property bool stays: critical || timeout < 0
     readonly property int pad: 14
 
     implicitWidth: 380
@@ -203,7 +205,7 @@ Item {
 
         // timeout bar
         Rectangle {
-            visible: root.popup && !root.critical
+            visible: root.popup && !root.stays
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.bottomMargin: 4
@@ -223,7 +225,7 @@ Item {
         NumberAnimation {
             target: lifeAnim
             property: "progress"
-            running: root.popup && !root.critical
+            running: root.popup && !root.stays
             paused: running && (hover.hovered || drag.active)
             from: 1
             to: 0

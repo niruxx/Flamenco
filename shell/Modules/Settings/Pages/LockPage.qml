@@ -136,8 +136,16 @@ Page {
     Group {
         title: "Idle"
         SwitchRow { title: "Lock when idle"; icon: "lock_clock"; target: page.l; key: "autoLock" }
-        SliderRow { title: "Lock after"; icon: "timer"; target: page.l; key: "idleMinutes"; from: 1; to: 60; stepSize: 1; suffix: " min" }
-        SliderRow { title: "Turn screens off after"; subtitle: "0 disables"; icon: "monitor"; target: page.l; key: "screenOffMinutes"; from: 0; to: 90; stepSize: 1; suffix: " min" }
+        SliderRow { visible: page.l.autoLock; title: Power.hasBattery ? "Lock after, plugged in" : "Lock after"; subtitle: Power.hasBattery && !Power.onBattery ? "Now" : ""; icon: "timer"; target: page.l; key: "idleMinutes"; from: 1; to: 60; stepSize: 1; suffix: " min" }
+        SliderRow { visible: page.l.autoLock && Power.hasBattery; title: "Lock after, on battery"; subtitle: Power.onBattery ? "Now" : ""; icon: "battery_5_bar"; target: page.l; key: "idleMinutesBattery"; from: 1; to: 60; stepSize: 1; suffix: " min" }
+        SliderRow { title: Power.hasBattery ? "Turn screens off, plugged in" : "Turn screens off after"; subtitle: "0 disables"; icon: "monitor"; target: page.l; key: "screenOffMinutes"; from: 0; to: 90; stepSize: 1; suffix: " min" }
+        SliderRow { visible: Power.hasBattery; title: "Turn screens off, on battery"; subtitle: "0 disables"; icon: "battery_5_bar"; target: page.l; key: "screenOffMinutesBattery"; from: 0; to: 90; stepSize: 1; suffix: " min" }
+        SettingRow {
+            title: "Sleep when idle"
+            subtitle: "Suspend or hibernate after a while, on battery and plugged in, is in Power"
+            icon: "bedtime"
+            FButton { text: "Power"; variant: "text"; onClicked: Panels.openSettings("power") }
+        }
         SwitchRow { title: "Media controls on lock screen"; icon: "music_note"; target: page.l; key: "showMedia" }
         TextRow { title: "Avatar image"; subtitle: "Or choose a picture in Users"; icon: "account_circle"; target: Settings.data.general; key: "avatar"; placeholder: "~/.face" }
     }

@@ -94,5 +94,24 @@ GridView {
             cursorShape: Qt.PointingHandCursor
             onClicked: Wallpapers.set(cell.modelData, grid.screenName)
         }
+
+        // the star: a favorite (shown on hover, or always once starred)
+        Rectangle {
+            readonly property bool fav: Wallpapers.isFavorite(cell.modelData)
+            visible: fav || area.containsMouse || starArea.containsMouse
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 12
+            width: 28; height: 28; radius: 14
+            color: Theme.alpha(Theme.shadow, 0.45)
+            FIcon { anchors.centerIn: parent; icon: "star"; size: 18; fill: parent.fav ? 1 : 0; color: parent.fav ? Theme.warning : "#ffffff" }
+            MouseArea {
+                id: starArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Wallpapers.toggleFavorite(cell.modelData)
+            }
+        }
     }
 }

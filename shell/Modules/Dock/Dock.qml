@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import qs.Commons
@@ -59,9 +60,16 @@ Variants {
         // App ids only, so the list (and its delegates) stays stable while
         // windows change titles. Pinned apps that aren't installed and aren't
         // running are skipped. "|" is the separator before unpinned running apps.
+        // the windows it counts: all, or (Settings → Dock) just this screen's
+        readonly property var myWindows: {
+            if (!cfg.thisScreen)
+                return Niri.windows;
+            const here = Niri.workspaces.filter(ws => ws.output === modelData.name).map(ws => ws.id);
+            return Niri.windows.filter(w => here.includes(w.workspace_id));
+        }
         readonly property var ids: {
             const running = [];
-            for (const w of Niri.windows) {
+            for (const w of myWindows) {
                 const id = w.app_id || "";
                 if (id && !running.some(r => r.toLowerCase() === id.toLowerCase()))
                     running.push(id);
@@ -230,7 +238,7 @@ Variants {
                         readonly property string part: modelData.startsWith("@") ? modelData.slice(1) : ""
                         readonly property var entry: sep || part ? null : Apps.lookup(modelData)
                         readonly property bool pinned: win.cfg.pinned.includes(modelData)
-                        readonly property var windows: sep || part ? [] : Niri.windows.filter(w => (w.app_id || "").toLowerCase() === modelData.toLowerCase())
+                        readonly property var windows: sep || part ? [] : win.myWindows.filter(w => (w.app_id || "").toLowerCase() === modelData.toLowerCase())
                         readonly property bool focused: windows.some(w => w.id === Niri.activeWindowId)
                         readonly property real center: win.restStart + (win.restStarts[index] ?? 0) + win.iconSize / 2
                         readonly property real mag: !sep && !part && win.magnifying ? Math.max(0, 1 - Math.abs(win.mouse - center) / (win.iconSize * 2.2)) : 0
@@ -371,13 +379,19 @@ Variants {
                             name: app.entry?.icon ?? app.modelData
                             scale: area.pressed ? 0.85 : 1
                             Behavior on scale { Anim { easing.bezierCurve: Theme.curves.springFast } }
+                            // tinted toward the accent (Settings → Dock → Tint icons)
+                            layer.enabled: (win.cfg.tint ?? 0) > 0
+                            layer.effect: MultiEffect {
+                                colorization: win.cfg.tint ?? 0
+                                colorizationColor: Theme.accent
+                            }
                         }
 
                         // running indicator, on the screen-edge side
                         Rectangle {
                             readonly property bool dot: win.cfg.indicator === "dot"
                             readonly property real len: dot ? (app.windows.length > 0 ? 5 : 0) : app.focused ? 16 : app.windows.length > 0 ? 6 : 0
-                            visible: !app.sep && !app.part && win.cfg.indicator !== "none" && !win.unity
+                            visible: !app.sep && !app.part && win.cfg.indicator !== "none" && win.cfg.indicator !== "count" && !win.unity
                             x: win.edge === "left" ? -width - 2 : win.edge === "right" ? parent.width + 2 : (parent.width - width) / 2
                             y: win.edge === "bottom" ? parent.height + 2 : (parent.height - height) / 2
                             width: win.vertical ? (dot ? len : 4) : len
@@ -386,6 +400,24 @@ Variants {
                             color: app.focused ? Theme.accent : Theme.textDim
                             Behavior on width { Anim { easing.bezierCurve: Theme.curves.spring } }
                             Behavior on height { Anim { easing.bezierCurve: Theme.curves.spring } }
+                        }
+
+                        // count: a dot per window (up to four), on the screen-edge side
+                        Grid {
+                            visible: win.cfg.indicator === "count" && !win.unity && app.windows.length > 0
+                            columns: win.vertical ? 1 : 4
+                            spacing: 3
+                            x: win.edge === "left" ? -width - 3 : win.edge === "right" ? parent.width + 3 : (parent.width - width) / 2
+                            y: win.edge === "bottom" ? parent.height + 2 : (parent.height - height) / 2
+                            Repeater {
+                                model: Math.min(4, app.windows.length)
+                                Rectangle {
+                                    width: 5
+                                    height: 5
+                                    radius: 2.5
+                                    color: app.focused ? Theme.accent : Theme.textDim
+                                }
+                            }
                         }
 
                         // Unity: a pip per window (up to three) on the edge side, an arrow on the other for the one in front

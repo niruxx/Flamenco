@@ -41,6 +41,8 @@ Singleton {
 
             property JsonObject general: JsonObject {
                 property bool use24h: true
+                property string dateStyle: "dmy"   // dmy (Wednesday, 28 October) | mdy (Wednesday, October 28) | iso (2026-10-28)
+                property int firstDay: -1          // first day of the week: -1 as the language has it | 0 Sunday | 1 Monday | 6 Saturday
                 property bool showSeconds: false
                 property string avatar: "~/.face"
                 property string terminal: "kitty"
@@ -129,6 +131,20 @@ Singleton {
                 // hiding: never | auto (until the pointer reaches the edge) | windows (while windows are open on the workspace)
                 property string hide: "never"
                 property int hideDelay: 600         // ms after the pointer leaves before it hides
+                property bool hideOnOverview: false // out of the way while niri's overview is open
+                property bool showOnSwitch: true    // an auto-hidden bar shows for a moment when switching workspaces
+                // the empty bar: what scrolling and middle / right clicks do
+                property string wheelAction: "none"  // none | workspaces | volume | brightness
+                property string middleAction: "none" // none | overview | launcher | control | settings | command
+                property string rightAction: "none"
+                property string middleCommand: ""
+                property string rightCommand: ""
+                // widgets' options
+                property bool lockKeysAlways: false // Caps / Num Lock: only while on, or always
+                property string diskMount: "/"      // the disk widget's disk
+                property int lyricsWidth: 320       // the lyric line's widest
+                property string lastVpn: ""         // the VPN widget toggles this one
+                property var customs: ({})          // custom widgets: { "custom:1": { name, exec, interval, watch, icon, onClick, onRightClick, onMiddleClick } }
                 property int revealSize: 3          // px strip at the edge that brings it back
                 property bool hideKeepSpace: false  // windows keep the bar's space while it's hidden
                 // battery indicator theme: icon | battery (shape, percent inside) | outline | cells | vertical | ring | pill | dot | text
@@ -171,7 +187,9 @@ Singleton {
                 property real opacity: 1.0           // background opacity (on top of the panel opacity)
                 property real roundness: 1.0         // corner radius, as a share of the theme's
                 property bool border: true
-                property string indicator: "line"    // line | dot | none
+                property string indicator: "line"    // line | dot | count (a dot per window) | none
+                property real tint: 0                 // icons tinted toward the accent: 0 (as drawn) … 1
+                property bool thisScreen: false       // only apps with windows on the dock's own screen
                 property bool separator: true        // line between pinned and other running apps
                 property bool labels: true           // app name on hover
             }
@@ -191,6 +209,7 @@ Singleton {
             // Added and arranged from quick settings → Desktop widgets.
             property JsonObject desktop: JsonObject {
                 property bool enabled: true
+                property bool menu: true              // right-clicking the desktop opens its menu
                 property string style: "card"         // card | glass | bare
                 property real opacity: 0.8            // card background opacity
                 // [{ id, type, screen, x, y, size, text }]; x / y: the top-left corner as a
@@ -242,6 +261,8 @@ Singleton {
             // Noctalia and DMS plugins turned on (Settings → Plugins (3rd party)): "noctalia/<id>", "dms/<id>"
             property JsonObject thirdParty: JsonObject {
                 property var enabled: []
+                property bool checkUpdates: true      // look for newer versions once a day (a notification when there are)
+                property string notified: ""          // the updates last told about (not repeated)
             }
 
             // Package updates in the bar (`flamenco updates`)
@@ -280,8 +301,68 @@ Singleton {
                 property bool emoji: true             // ":" searches emoji
                 property bool colors: true            // "#" color tools and the screen color picker
                 property var recentEmoji: []
+                // what searching also finds (Settings → Launcher → Search)
+                property bool searchWindows: true     // open windows
+                property bool searchSettings: true    // Flamenco's settings pages and options
+                property bool searchSession: true     // lock, log out, restart…
+                property bool webSearch: true         // "search the web for …" last
+                property string webEngine: "duckduckgo" // duckduckgo | google | bing | brave | startpage | ecosia | a URL with %s
+                property bool files: true             // "/" searches files in your home folder
+                property string view: "list"          // list | grid (apps as a grid with categories, until you type)
+                property var pinned: []               // desktop ids, first when nothing's typed (Ctrl+P pins)
             }
 
+            // brightness (Settings → Displays): the lowest it goes, so the screen never goes black
+            property JsonObject brightness: JsonObject {
+                property real minimum: 0.05           // 0.01–0.5, for the built-in screen and external monitors
+            }
+            // warning and critical levels for the CPU/RAM widget and the Performance panel
+            // (Settings → System check → Levels): percent, or °C for temperatures
+            property JsonObject monitor: JsonObject {
+                property int cpuWarn: 70
+                property int cpuCrit: 90
+                property int memWarn: 75
+                property int memCrit: 90
+                property int tempWarn: 75
+                property int tempCrit: 90
+                property int gpuWarn: 80
+                property int gpuCrit: 95
+                property int diskWarn: 85
+                property int diskCrit: 95
+                property string warnColor: ""         // "" = the theme's warning color
+                property string critColor: ""         // "" = the theme's error color
+            }
+            // Settings → Bluetooth
+            property JsonObject bluetooth: JsonObject {
+                property bool autoConnect: true       // reconnect trusted devices when Bluetooth comes on
+                property bool showUnnamed: false      // list nearby devices that only have an address
+                property bool signal: true            // signal strength while searching
+            }
+            // media players (Settings → Sound → Media players), by the name they give (Spotify, mpv, Firefox…)
+            property JsonObject media: JsonObject {
+                property string preferred: ""         // followed when it has something, unless another one is playing
+                property var ignored: []              // never shown
+                property var seen: []                 // names seen so far, for the settings list
+            }
+            // your own commands when something happens (Settings → Auto-start → Hooks)
+            property JsonObject hooks: JsonObject {
+                property string wallpaper: ""
+                property string darkMode: ""
+                property string lock: ""
+                property string unlock: ""
+                property string startup: ""
+                property string colors: ""
+            }
+            // small pop-ups when something changes (Caps Lock, keyboard layout, power profile, Wi-Fi…)
+            property JsonObject toasts: JsonObject {
+                property bool enabled: true
+                property string position: "bottom-center" // top-center | bottom-center | center
+                property bool lockKeys: true          // Caps Lock, Num Lock
+                property bool layout: true            // keyboard layout
+                property bool powerProfile: true
+                property bool connections: true       // Wi-Fi, Bluetooth, airplane mode
+                property bool modes: true             // Do Not Disturb, night light, keep awake, dark mode
+            }
             // a pop-up when a drive or an accessory is plugged in or taken out (Settings → Notifications → Devices)
             property JsonObject devices: JsonObject {
                 property bool enabled: true
@@ -299,6 +380,10 @@ Singleton {
                 property string backend: "flamenco"
                 property string position: "top-right" // top-right | top-left | top-center | bottom-right | bottom-left
                 property int timeout: 6
+                // per-app rules (Settings → Notifications → App rules):
+                // [{ app, contains, popup: default|never|always, sound: bool, urgency: default|low|normal|critical,
+                //    timeout: 0 (as usual) | seconds | -1 (stays), history: bool }]
+                property var rules: []
                 property string style: "panel"        // the notification center: panel (drop-down) | shade (a full-height sheet from a side)
                 property string shadeSide: "auto"     // shade: auto (the bell's side of the bar) | left | right
                 property bool shadeCalendar: true     // shade: the month above the notifications
@@ -314,7 +399,18 @@ Singleton {
                 property string current: ""
                 property string transition: "mosaic"  // fade | focus | circle | ripple | wipe | sweep | blinds | mosaic | random
                 property int duration: 1200
-                property string fillMode: "crop"      // crop | fit | stretch
+                property string fillMode: "crop"      // crop | fit | stretch | center | tile
+                // a plain color instead of a picture
+                property bool solid: false
+                property string solidColor: "#1e1f24"
+                property var favorites: []            // paths; starred in the switcher
+                property bool cycleFavorites: false   // shuffle and auto-change pick from favorites only
+                // a wallpaper for light mode and one for dark mode (switching mode swaps them)
+                property bool byMode: false
+                property string light: ""
+                property string dark: ""
+                // per-screen wallpapers: each screen shuffles / cycles from its own folder ({ "DP-1": "~/Pictures/Portrait" })
+                property var screenFolders: ({})
                 property bool cycle: false
                 property int cycleMinutes: 30
                 // a different wallpaper on each screen: output name → image. A screen
@@ -333,8 +429,10 @@ Singleton {
 
             property JsonObject lock: JsonObject {
                 property bool autoLock: true
-                property int idleMinutes: 10
+                property int idleMinutes: 10          // plugged in (and computers without a battery)
                 property int screenOffMinutes: 15
+                property int idleMinutesBattery: 5    // on battery
+                property int screenOffMinutesBattery: 7
                 property bool showMedia: true
                 property string backend: "flamenco"  // flamenco | sddm | command
                 property string sddmTheme: ""         // theme folder (full path, or a name under /usr/share/sddm/themes)
@@ -437,6 +535,9 @@ Singleton {
                 property int hideCursorAfter: 0       // ms idle before hiding the pointer (0 = never)
                 property bool preferNoCsd: true       // ask apps not to draw their own title bars
                 property bool floatingFrames: true    // floating mode: apps keep their frames (resize edges and cursors) anyway
+                // per-app rules (Settings → Windows → Window rules), written as niri / Hyprland window rules:
+                // [{ app, title, floating: ""|yes|no, width, height ("1200" or "50%"), maximized, fullscreen, output, workspace, opacity, noScreencast }]
+                property var rules: []
                 property bool hotCorners: true        // niri's own corner (before Screen edges took it over)
                 property bool skipHotkeyOverlay: true // niri: don't show the shortcut cheat sheet at login
                 property bool workspaceBackForth: false // switching to the current workspace goes back
@@ -485,8 +586,20 @@ Singleton {
                 property real holdLogout: 3
                 property real holdReboot: 3
                 property real holdShutdown: 3
+                property int countdown: 0              // seconds a chosen action counts down first (when it isn't held), 0 = none
+                property bool menuHibernate: false     // the power menu's extra buttons
+                property bool menuFirmware: false      // restart into the firmware (UEFI) setup
+                property bool menuSwitchUser: true     // when the login manager can (dm-tool, gdmflexiserver)
                 property int idleSuspendBattery: 15   // minutes idle before suspending on battery (0 = never)
                 property int idleSuspendAC: 0         // … when plugged in
+                property string idleSleep: "suspend"  // what idle sleep does: suspend | hibernate | suspend-then-hibernate
+                // battery warnings (a notification), and what happens when it's nearly empty
+                property bool batteryWarnings: true
+                property int batteryWarnLow: 20       // percent
+                property int batteryWarnCritical: 10
+                property string batteryEmptyAction: "none" // at the critical level - 5: none | suspend | hibernate | poweroff
+                // the password dialog apps ask for (polkit): Flamenco's own agent
+                property bool polkitAgent: true
             }
 
             // Sounds: theme for apps (gsettings / GTK / KDE) and the shell's own event sounds

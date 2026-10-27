@@ -26,9 +26,11 @@ Variants {
 
         property string source: "folder"           // folder | wallhaven | kde | live
         property string query: ""
+        property bool favOnly: false               // ★: favorites only
         readonly property var files: {
             const q = query.trim().toLowerCase();
-            return q ? Wallpapers.files.filter(f => Paths.fileName(f).toLowerCase().includes(q)) : Wallpapers.files;
+            const all = favOnly ? Wallpapers.files.filter(f => (Wallpapers.cfg.favorites || []).includes(f)) : Wallpapers.files;
+            return q ? all.filter(f => Paths.fileName(f).toLowerCase().includes(q)) : all;
         }
         readonly property string selected: files[view.currentIndex] ?? ""
         readonly property string applied: Wallpapers.forScreen(screenName)
@@ -140,6 +142,8 @@ Variants {
                     search.focusInput();
                 else if (k === Qt.Key_R)
                     win.shuffle();
+                else if (k === Qt.Key_F && win.selected)
+                    Wallpapers.toggleFavorite(win.selected);
                 else
                     return;
                 event.accepted = true;
@@ -199,6 +203,18 @@ Variants {
                     flat: false
                     icon: "casino"
                     onClicked: win.shuffle()
+                }
+                // favorites only
+                FIconButton {
+                    visible: win.source === "folder"
+                    size: 44
+                    flat: false
+                    icon: "star"
+                    active: win.favOnly
+                    onClicked: {
+                        win.favOnly = !win.favOnly;
+                        view.currentIndex = 0;
+                    }
                 }
                 // per screen, or every screen at once
                 FSegmented {
@@ -530,6 +546,12 @@ Variants {
                         mono: true
                         font.pixelSize: Theme.fsSm
                     }
+                    FIconButton {
+                        readonly property bool fav: Wallpapers.isFavorite(win.selected)
+                        icon: "star"
+                        iconColor: fav ? Theme.warning : "#ffffff"
+                        onClicked: Wallpapers.toggleFavorite(win.selected)
+                    }
                     FButton {
                         text: win.selected === win.applied ? "Applied" : "Apply"
                         icon: "check"
@@ -539,7 +561,7 @@ Variants {
                 }
                 FText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "← → browse  ·  ↑ ↓ wallpapers / Wallhaven / KDE Store / Live  ·  Enter apply  ·  / search  ·  R shuffle  ·  click the centre card to apply"
+                    text: "← → browse  ·  ↑ ↓ wallpapers / Wallhaven / KDE Store / Live  ·  Enter apply  ·  / search  ·  R shuffle  ·  F favorite  ·  click the centre card to apply"
                     color: Qt.rgba(1, 1, 1, 0.6)
                     font.pixelSize: Theme.fsXs
                 }

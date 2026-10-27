@@ -65,6 +65,10 @@
   flamenco bar toggle|show|hide | mode never|auto|windows   hide the bar (by hand, automatically, or while windows are open)
   flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO
                                live (video) wallpapers: find them online (wikimedia, pexels, pixabay), download, API keys
+  flamenco region [status] | set LANG [FORMATS] | enable LOCALE
+                               the system language and formats (localectl), turning on another language
+  flamenco files QUERY          files and folders in your home folder whose name has QUERY (JSON; the launcher's / search)
+  flamenco lockkeys [watch]     Caps Lock / Num Lock (JSON; watch: a line on every change)
   flamenco bluetooth scan [SECONDS] | pair MAC | connect MAC | disconnect MAC | remove MAC | unblock
                                find, pair (with passkey / PIN questions as JSON lines), connect and forget devices
   flamenco devices watch | open /dev/DISK | eject /dev/DISK
@@ -86,7 +90,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.56.0"
+VERSION = "0.59.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -5143,6 +5147,142 @@ def cmd_live(args: list[str]) -> int:
     die("usage: flamenco live search SOURCE [QUERY] [PAGE] | get URL | key SOURCE [--clear] | keys | poster VIDEO")
 
 
+# ─────────────────────────────── region & language ───────────────────────────
+# Settings → Region & Language: the system's language and its formats (dates,
+# numbers, measurements, paper, money) with localectl, and turning on a language
+# that isn't generated yet (/etc/locale.gen + locale-gen). Apps see it after logging in again.
+
+LOCALE_RE = re.compile(r"^[A-Za-z]{2,3}(_[A-Z]{2})?(\.(UTF-8|utf8))?(@[a-z]+)?$")
+LOCALE_FORMATS = ("LC_TIME", "LC_NUMERIC", "LC_MEASUREMENT", "LC_PAPER", "LC_MONETARY")
+
+
+def region_state() -> dict:
+    state = {"lang": "", "formats": "", "available": [], "installable": []}
+    if shutil.which("localectl"):
+        r = subprocess.run(["localectl", "status"], capture_output=True, text=True, timeout=10)
+        vals = dict(re.findall(r"\b(LANG|LC_TIME)=(\S+)", r.stdout))
+        state["lang"] = vals.get("LANG", "")
+        state["formats"] = vals.get("LC_TIME", "")
+        r = subprocess.run(["localectl", "list-locales"], capture_output=True, text=True, timeout=10)
+        state["available"] = [l.strip() for l in r.stdout.splitlines() if LOCALE_RE.match(l.strip())]
+    try:
+        sup = Path("/usr/share/i18n/SUPPORTED").read_text().splitlines()
+        state["installable"] = sorted({l.split()[0] for l in sup if l.split() and l.split()[0].endswith(".UTF-8")} - set(state["available"]))
+    except OSError:
+        pass
+    if not state["lang"]:
+        state["lang"] = os.environ.get("LANG", "")
+    return state
+
+
+def cmd_region(args: list[str]) -> int:
+    sub = args[0] if args else ""
+    if sub in ("", "status"):
+        print(json.dumps(region_state()))
+        return 0
+    if sub == "set" and len(args) > 1:
+        lang, fmt = args[1], args[2] if len(args) > 2 else ""
+        for v in (lang, fmt):
+            if v and not LOCALE_RE.match(v):
+                die(f"not a locale: {v!r} (like en_GB.UTF-8)")
+        assigns = [f"LANG={lang}"] + ([f"{k}={fmt}" for k in LOCALE_FORMATS] if fmt and fmt != lang else [])
+        return privileged(["localectl", "set-locale", *assigns])
+    if sub == "enable" and len(args) > 1:
+        loc = args[1]
+        if not LOCALE_RE.match(loc) or not loc.endswith("UTF-8"):
+            die(f"not a UTF-8 locale: {loc!r} (like de_DE.UTF-8)")
+        # uncomment its line in /etc/locale.gen (or add it), then generate it
+        script = ('set -e; f=/etc/locale.gen; l="$1"; '
+                  'if grep -q "^#\\s*$l\\b" "$f"; then sed -i "s/^#\\s*\\($l\\b.*\\)/\\1/" "$f"; '
+                  'elif ! grep -q "^$l\\b" "$f"; then printf "%s UTF-8\\n" "$l" >> "$f"; fi; locale-gen')
+        return privileged(["sh", "-c", script, "sh", loc])
+    die("usage: flamenco region [status] | set LANG [FORMATS] | enable LOCALE")
+
+
+# ─────────────────────────────── file search ─────────────────────────────────
+# The launcher's "/" search: files and folders in your home folder whose name has
+# what's typed. plocate / locate when there's a database (instant), else fd, else a
+# short walk (hidden folders skipped).
+
+def file_search(query: str, limit: int = 40) -> list[dict]:
+    import time
+    q = query.strip()
+    if not q:
+        return []
+    home = str(HOME)
+    words = q.lower().split()
+    hits: list[str] = []
+
+    def keep(p: str) -> bool:
+        if not p.startswith(home + "/") or "/." in p[len(home):]:
+            return False
+        name = os.path.basename(p).lower()
+        return all(w in name for w in words)
+
+    for tool in ("plocate", "locate"):
+        if shutil.which(tool):
+            r = subprocess.run([tool, "-i", "-l", "2000", "-b", "--", words[0]], capture_output=True, text=True, timeout=5)
+            if r.returncode in (0, 1) and r.stdout:
+                hits = [p for p in r.stdout.splitlines() if keep(p)]
+                break
+    if not hits and shutil.which("fd"):
+        r = subprocess.run(["fd", "-i", "--max-results", "2000", "--", re.escape(words[0]), home], capture_output=True, text=True, timeout=5)
+        hits = [p.rstrip("/") for p in r.stdout.splitlines() if keep(p.rstrip("/"))]
+    if not hits:
+        end = time.monotonic() + 1.5
+        for dirpath, dirnames, filenames in os.walk(home):
+            dirnames[:] = [d for d in dirnames if not d.startswith(".") and d not in ("node_modules", "__pycache__")]
+            hits += [os.path.join(dirpath, n) for n in dirnames + filenames if keep(os.path.join(dirpath, n))]
+            if len(hits) > 400 or time.monotonic() > end:
+                break
+    # names that start with it first, then shorter (closer to home) paths
+    hits.sort(key=lambda p: (not os.path.basename(p).lower().startswith(words[0]), p.count("/"), len(p)))
+    out = []
+    for p in hits[:limit]:
+        out.append({"path": p, "name": os.path.basename(p), "dir": os.path.dirname(p).replace(home, "~", 1), "folder": os.path.isdir(p)})
+    return out
+
+
+def cmd_files(args: list[str]) -> int:
+    print(json.dumps(file_search(" ".join(args))))
+    return 0
+
+
+# ─────────────────────────────── lock keys ───────────────────────────────────
+# Caps Lock and Num Lock for the toasts (and any widget that wants them): the
+# keyboards' LEDs in sysfs (any keyboard's light on = on). niri doesn't report them.
+
+def lock_keys() -> dict:
+    state = {"caps": False, "num": False}
+    for led in Path("/sys/class/leds").glob("*::*lock"):
+        kind = "caps" if led.name.endswith("::capslock") else "num" if led.name.endswith("::numlock") else ""
+        if not kind:
+            continue
+        try:
+            if int((led / "brightness").read_text().strip() or 0) > 0:
+                state[kind] = True
+        except (OSError, ValueError):
+            pass
+    return state
+
+
+def cmd_lockkeys(args: list[str]) -> int:
+    import time
+    if args[:1] != ["watch"]:
+        print(json.dumps(lock_keys()))
+        return 0
+    last = None
+    try:
+        while True:
+            now = lock_keys()
+            if now != last:
+                print(json.dumps({**now, "initial": last is None}), flush=True)
+                last = now
+            time.sleep(0.25)
+    except (KeyboardInterrupt, BrokenPipeError):
+        return 0
+
+
 # ─────────────────────────────── bluetooth ───────────────────────────────────
 # Scanning and pairing for quick settings and Settings → Bluetooth. Pairing needs a
 # BlueZ agent (to show or confirm a passkey, or ask for a PIN), which the shell
@@ -5271,6 +5411,23 @@ def cmd_bluetooth(args: list[str]) -> int:
         # discovery lasts while this runs; the devices show up in the shell as BlueZ finds them
         subprocess.run([bt_need(), "--timeout", str(max(5, min(300, secs))), "scan", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return 0
+    if sub == "signal":
+        # every device's signal (RSSI, dBm) BlueZ knows, in one call: {address: rssi}
+        out = {}
+        if shutil.which("busctl"):
+            r = subprocess.run(["busctl", "--system", "--json=short", "call", "org.bluez", "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects"],
+                               capture_output=True, text=True, timeout=10)
+            try:
+                objs = json.loads(r.stdout)["data"][0]
+            except (ValueError, KeyError, IndexError, TypeError):
+                objs = {}
+            for ifaces in objs.values():
+                dev = ifaces.get("org.bluez.Device1") or {}
+                addr, rssi = (dev.get("Address") or {}).get("data"), (dev.get("RSSI") or {}).get("data")
+                if addr and isinstance(rssi, int):
+                    out[addr] = rssi
+        print(json.dumps(out))
+        return 0
     if sub == "unblock":
         if shutil.which("rfkill"):
             subprocess.run(["rfkill", "unblock", "bluetooth"], capture_output=True)
@@ -5287,7 +5444,7 @@ def cmd_bluetooth(args: list[str]) -> int:
         last = (ANSI.sub("", r.stdout).strip().splitlines() or [""])[-1]
         print(json.dumps({"ok": ok, "message": "" if ok else last}))
         return 0 if ok else 1
-    die("usage: flamenco bluetooth scan [SECONDS] | pair MAC | connect MAC | disconnect MAC | remove MAC | unblock")
+    die("usage: flamenco bluetooth scan [SECONDS] | pair MAC | connect MAC | disconnect MAC | remove MAC | signal | unblock")
 
 
 # ─────────────────────────────── devices plugged in ──────────────────────────
@@ -5590,7 +5747,114 @@ GET_KINDS = {
     "colors": {"name": "Color schemes", "cat": "112"},
     "wallpapers": {"name": "Wallpapers", "cat": "299"},
     "fonts": {"name": "Fonts", "cat": ""},
+    "palettes": {"name": "Palettes", "cat": ""},
 }
+# shell color themes: DMS's theme registry, turned into Flamenco palettes
+THEME_REGISTRY = "https://github.com/duxlabs-dev/dux-plugin-registry"
+THEME_RAW = "https://raw.githubusercontent.com/duxlabs-dev/dux-plugin-registry/master/themes/"
+PALETTE_DIR = CONFIG_DIR / "palettes"
+PALETTE_ROLES = ("bg", "surface", "surfaceHigh", "surfaceHighest", "border", "text", "textDim", "accent", "onAccent",
+                 "accent2", "accent3", "error", "warning", "success")
+
+
+def dms_palette(theme: dict) -> dict:
+    """A DMS theme.json → a Flamenco palette {name, dark, light}: its default flavor and accent for each mode."""
+    def mode(m: str) -> dict:
+        c = dict(theme.get(m) or {})
+        var = theme.get("variants") or {}
+        d = (var.get("defaults") or {}).get(m) or {}
+        flavor = next((f for f in var.get("flavors") or [] if f.get("id") == d.get("flavor")), None)
+        if flavor:
+            c.update(flavor.get(m) or flavor.get("dark" if m == "dark" else "light") or {})
+        accent = next((a for a in var.get("accents") or [] if a.get("id") == d.get("accent")), None)
+        if accent:
+            c.update(accent.get(d.get("flavor", "")) or accent.get(m) or {})
+        ok = lambda k: isinstance(c.get(k), str) and re.fullmatch(r"#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?", c[k])
+        pick = lambda *ks, default="": next((c[k][:7] for k in ks if ok(k)), default)
+        dark = m == "dark"
+        bg = pick("background", "surface", default="#1e1e2e" if dark else "#f5f5f5")
+        out = {
+            "bg": bg,
+            "surface": pick("surfaceContainer", "surface", default=bg),
+            "surfaceHigh": pick("surfaceContainerHigh", "surfaceVariant", default=bg),
+            "surfaceHighest": pick("surfaceContainerHighest", "surfaceContainerHigh", default=bg),
+            "border": pick("outline", "outlineVariant", default="#555555" if dark else "#cccccc"),
+            "text": pick("surfaceText", "backgroundText", default="#eeeeee" if dark else "#222222"),
+            "textDim": pick("surfaceVariantText", "outline", default="#aaaaaa" if dark else "#666666"),
+            "accent": pick("primary", default="#8caaee"),
+            "onAccent": pick("primaryText", "onPrimary", default="#111111" if dark else "#ffffff"),
+            "accent2": pick("secondary", "primary", default="#8caaee"),
+            "accent3": pick("tertiary", "info", "secondary", "primary", default="#8caaee"),
+            "error": pick("error", default="#e5534b"),
+            "warning": pick("warning", default="#d29922"),
+            "success": pick("success", default="#57ab5a"),
+        }
+        return out
+    return {"name": str(theme.get("name") or theme.get("id") or "Theme")[:60], "dark": mode("dark"), "light": mode("light"),
+            "author": str(theme.get("author", ""))[:60], "from": "dms"}
+
+
+def get_palettes(query: str, page: int) -> dict:
+    repo = compat_repo(THEME_REGISTRY)
+    done = get_manifest().get("palettes", {})
+    q = query.strip().lower()
+    items = []
+    for d in sorted((repo / "themes").iterdir() if (repo / "themes").is_dir() else []):
+        try:
+            t = json.loads((d / "theme.json").read_text())
+        except (OSError, ValueError):
+            continue
+        sid = d.name
+        if not GET_NAME.match(sid):
+            continue
+        name, desc = str(t.get("name") or sid), str(t.get("description") or "")
+        if q and q not in (name + " " + desc + " " + sid).lower():
+            continue
+        prev = next((p for p in ("preview-dark.svg", "preview.svg", "preview-light.svg") if (d / p).is_file()), "")
+        pal = dms_palette(t)
+        items.append({"id": sid, "name": name, "author": str(t.get("author", "")), "summary": desc[:240],
+                      "thumb": THEME_RAW + sid + "/" + prev if prev else "", "preview": "",
+                      "page": "https://github.com/duxlabs-dev/dux-plugin-registry/tree/master/themes/" + sid,
+                      "swatch": [pal["dark"][k] for k in ("bg", "surfaceHigh", "accent", "accent2", "accent3")],
+                      "installed": sid in done, "ours": sid in done, "names": (done.get(sid) or {}).get("names", []), "files": []})
+    per = 24
+    return {"results": items[(page - 1) * per: page * per], "more": page * per < len(items), "total": len(items)}
+
+
+def get_install_palette(sid: str) -> dict:
+    if not GET_NAME.match(sid):
+        die("not a theme id")
+    repo = compat_repo(THEME_REGISTRY)
+    try:
+        t = json.loads((repo / "themes" / sid / "theme.json").read_text())
+    except (OSError, ValueError):
+        die(f"no theme {sid!r} in the registry")
+    pal = dms_palette(t)
+    PALETTE_DIR.mkdir(parents=True, exist_ok=True)
+    f = PALETTE_DIR / f"{sid}.json"
+    f.write_text(json.dumps(pal, indent=1) + "\n")
+    m = get_manifest()
+    m.setdefault("palettes", {})[sid] = {"name": pal["name"], "names": ["x-" + sid], "paths": [str(f)], "file": "theme.json"}
+    get_manifest_save(m)
+    return {"installed": True, "names": ["x-" + sid], "paths": [str(f)], "skipped": []}
+
+
+def palettes_list() -> dict:
+    """Saved palettes (~/.config/flamenco/palettes/*.json) for the shell: {"x-ID": {name, dark, light}}."""
+    out = {}
+    for f in sorted(PALETTE_DIR.glob("*.json")) if PALETTE_DIR.is_dir() else []:
+        try:
+            p = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        if not GET_NAME.match(f.stem) or not all(isinstance(p.get(m), dict) for m in ("dark", "light")):
+            continue
+        ok = lambda v: isinstance(v, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", v)
+        clean = lambda m: {k: p[m][k] for k in PALETTE_ROLES if ok(p[m].get(k))}
+        dark, light = clean("dark"), clean("light")
+        if len(dark) == len(PALETTE_ROLES) and len(light) == len(PALETTE_ROLES):
+            out["x-" + f.stem] = {"name": str(p.get("name") or f.stem)[:60], "dark": dark, "light": light}
+    return out
 GET_OCS = "https://api.kde-look.org/ocs/v1/content/data"
 GET_MANIFEST = XDG_DATA / "flamenco" / "get.json"
 GET_MAX_DOWNLOAD = 400 * 1024 * 1024
@@ -5605,7 +5869,8 @@ GET_POPULAR_FONTS = ["inter", "roboto", "open-sans", "lato", "montserrat", "popp
 
 def get_dirs() -> dict[str, Path]:
     return {"icons": XDG_DATA / "icons", "cursors": XDG_DATA / "icons", "gtk": XDG_DATA / "themes",
-            "colors": XDG_DATA / "color-schemes", "wallpapers": wallpaper_dir() / "kde-store", "fonts": XDG_DATA / "fonts" / "flamenco"}
+            "colors": XDG_DATA / "color-schemes", "wallpapers": wallpaper_dir() / "kde-store", "fonts": XDG_DATA / "fonts" / "flamenco",
+            "palettes": PALETTE_DIR}
 
 
 def get_stage() -> Path:
@@ -6031,6 +6296,9 @@ def cmd_get(args: list[str]) -> int:
     if sub == "list":
         print(json.dumps(get_manifest()))
         return 0
+    if sub == "palettes":
+        print(json.dumps(palettes_list()))
+        return 0
     if sub not in ("search", "install", "remove") or kind not in GET_KINDS:
         die("usage: flamenco get search KIND [QUERY] [PAGE] [SORT|CATEGORY] | install KIND ID [FILE] | remove KIND ID | list | kinds\n"
             "  KIND: " + ", ".join(GET_KINDS) + "; SORT (store): rating, downloads, new; CATEGORY (fonts): sans-serif, serif, monospace, display, handwriting")
@@ -6039,9 +6307,9 @@ def cmd_get(args: list[str]) -> int:
         page = max(1, int(args[3])) if len(args) > 3 and args[3].isdigit() else 1
         extra = args[4] if len(args) > 4 else ""
         try:
-            res = get_fonts(query, page, extra) if kind == "fonts" else get_ocs(kind, query, page, extra)
+            res = get_fonts(query, page, extra) if kind == "fonts" else get_palettes(query, page) if kind == "palettes" else get_ocs(kind, query, page, extra)
         except Exception as e:
-            res = {"results": [], "more": False, "error": f"{'Fontsource' if kind == 'fonts' else 'KDE Store'}: {ai_http_error(e)}"}
+            res = {"results": [], "more": False, "error": f"{({'fonts': 'Fontsource', 'palettes': 'The theme registry'}).get(kind, 'KDE Store')}: {ai_http_error(e)}"}
         print(json.dumps(res))
         return 0
     if len(args) < 3:
@@ -6050,7 +6318,7 @@ def cmd_get(args: list[str]) -> int:
         print(json.dumps(get_remove(kind, args[2])))
         return 0
     n = int(args[3]) if len(args) > 3 and args[3].isdigit() else 0
-    res = get_install_font(args[2]) if kind == "fonts" else get_install_ocs(kind, args[2], n)
+    res = get_install_font(args[2]) if kind == "fonts" else get_install_palette(args[2]) if kind == "palettes" else get_install_ocs(kind, args[2], n)
     print(json.dumps(res))
     return 0
 
@@ -6660,7 +6928,41 @@ def compat_find_plugin(root: Path, want: str = "") -> Path:
     die("it has several plugins; add #ID to the address. They are: " + ", ".join(sorted(str(i) for _, i in found)))
 
 
+def compat_tree_hash(d: Path) -> str:
+    """A fingerprint of a plugin's files (not its settings or Flamenco's notes), to notice changes."""
+    import hashlib
+    h = hashlib.sha256()
+    for f in sorted(x for x in d.rglob("*") if x.is_file() and ".git" not in x.parts
+                    and x.name not in ("settings.json", ".flamenco-origin.json")):
+        h.update(str(f.relative_to(d)).encode() + b"\0")
+        h.update(f.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def compat_lock_write() -> Path:
+    """~/.config/flamenco/plugins.lock.json: every 3rd-party plugin, where it came from and
+    which version, to set the same ones up elsewhere (`flamenco compat restore`)."""
+    out = []
+    for p in compat_list():
+        d = Path(p["source"])
+        try:
+            o = json.loads((d / ".flamenco-origin.json").read_text())
+        except Exception:
+            o = {}
+        out.append({"key": p["key"], "spec": o.get("spec", ""), "version": p["version"], "hash": o.get("hash", ""), "installed": o.get("installed", 0)})
+    f = CONFIG_DIR / "plugins.lock.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps({"version": 1, "plugins": out}, indent=1) + "\n")
+    return f
+
+
 def compat_install(spec: str, refresh: bool = False) -> str:
+    src = compat_resolve(spec, refresh)
+    return compat_install_from(src, spec)
+
+
+def compat_resolve(spec: str, refresh: bool = False) -> Path:
+    """The folder of the plugin `spec` names (downloading it if needed)."""
     want = ""
     if spec.startswith("noctalia:"):
         want = spec.split(":", 1)[1]
@@ -6690,6 +6992,10 @@ def compat_install(spec: str, refresh: bool = False) -> str:
         if not p.is_dir():
             die(f"{spec}: no such folder")
         src = compat_find_plugin(p)
+    return src
+
+
+def compat_install_from(src: Path, spec: str) -> str:
     found = compat_manifest(src)
     if not found:
         die("that isn't a Noctalia or DMS plugin")
@@ -6708,9 +7014,35 @@ def compat_install(spec: str, refresh: bool = False) -> str:
     if keep is not None:
         (dest / "settings.json").write_bytes(keep)
     import time
-    (dest / ".flamenco-origin.json").write_text(json.dumps({"spec": spec, "installed": int(time.time())}) + "\n")
+    (dest / ".flamenco-origin.json").write_text(json.dumps({"spec": spec, "installed": int(time.time()), "hash": compat_tree_hash(dest)}) + "\n")
     compat_convert(kind, pid)
+    compat_lock_write()
     return f"{kind}/{pid}"
+
+
+def compat_updates() -> list[dict]:
+    """Installed plugins whose source changed since they were installed (sources are fetched again)."""
+    out, fetched = [], set()
+    for p in compat_list():
+        d = Path(p["source"])
+        try:
+            o = json.loads((d / ".flamenco-origin.json").read_text())
+        except Exception:
+            continue
+        spec = o.get("spec", "")
+        if not spec or not re.match(r"^(noctalia:|dms:|https://|git@)", spec):
+            continue                                  # a local folder: nothing to fetch
+        try:
+            src = compat_resolve(spec, refresh=spec not in fetched)
+        except SystemExit:
+            continue
+        fetched.add(spec)
+        new = compat_tree_hash(src)
+        old = o.get("hash") or compat_tree_hash(d)
+        if new != old:
+            m = compat_manifest(src)
+            out.append({"key": p["key"], "name": p["name"], "from": p["version"], "to": str((m[1] if m else {}).get("version", ""))})
+    return out
 
 
 def compat_key(arg: str) -> tuple[str, str]:
@@ -6766,7 +7098,40 @@ def cmd_compat(args: list[str]) -> int:
         kind, pid = compat_key(rest[0])
         shutil.rmtree(COMPAT_SRC / kind / pid)
         shutil.rmtree(COMPAT_RUN / kind / pid, ignore_errors=True)
+        compat_lock_write()
         print(f"compat: removed {kind}/{pid}")
+        return 0
+    if sub == "updates":
+        ups = compat_updates()
+        if js:
+            print(json.dumps(ups))
+        else:
+            for u in ups:
+                print(f"{u['key']:<34} {u['from'] or '?'} → {u['to'] or 'newer'}")
+            if not ups:
+                print("compat: everything is up to date")
+        return 0
+    if sub == "lock":
+        print(compat_lock_write())
+        return 0
+    if sub == "restore":
+        f = Path(os.path.expanduser(rest[0])) if rest else CONFIG_DIR / "plugins.lock.json"
+        try:
+            locked = json.loads(f.read_text()).get("plugins", [])
+        except (OSError, ValueError):
+            die(f"can't read {f}")
+        have = {p["key"] for p in compat_list()}
+        for e in locked:
+            if e.get("key") in have or not e.get("spec"):
+                continue
+            try:
+                key = compat_install(e["spec"])
+            except SystemExit:
+                print(f"compat: {e.get('key')}: couldn't install it from {e['spec']}", file=sys.stderr)
+                continue
+            o = json.loads((COMPAT_SRC / key / ".flamenco-origin.json").read_text())
+            note = "" if not e.get("hash") or o.get("hash") == e["hash"] else " (a newer version than the lock file's)"
+            print(f"compat: installed {key}{note}")
         return 0
     if sub == "scan" and rest:
         kind, pid = compat_key(rest[0])
@@ -6775,7 +7140,7 @@ def cmd_compat(args: list[str]) -> int:
         print(json.dumps(r) if js else "\n".join([r["status"]] + ["· " + x for x in r["issues"] + r["notes"]]))
         return 0
     die("usage: flamenco compat list | catalog noctalia|dms [--refresh] | install noctalia:ID|dms:ID|GIT_URL[#ID]|FOLDER"
-        " | update KEY|all | remove KEY | scan KEY   (KEY: noctalia/ID or dms/ID; --json for JSON)")
+        " | update KEY|all | updates | lock | restore [FILE] | remove KEY | scan KEY   (KEY: noctalia/ID or dms/ID; --json for JSON)")
 
 
 # ─────────────────────────────── fingerprints (fprintd) ──────────────────────
@@ -10101,7 +10466,102 @@ WINDOW_DEFAULTS = {
     "floating": False,
     # blur behind the shell's see-through surfaces (Hyprland layer rules; Settings → Appearance → Transparency)
     "blur": False,
+    # per-app rules (Settings → Windows → Window rules): [{app, title, floating, width, height, maximized,
+    # fullscreen, output, workspace, opacity, noScreencast}]
+    "windowRules": [],
 }
+WRULE_SIZE = re.compile(r"^\d{1,5}%?$")
+
+
+def rx_escape(s: str) -> str:
+    """Escapes regex metacharacters only (niri's Rust regex rejects escaped spaces or #)."""
+    return re.sub(r"([\\.^$*+?()\[\]{}|])", r"\\\1", s)
+
+
+def window_rules_norm(rules) -> list[dict]:
+    out = []
+    for r in rules if isinstance(rules, list) else []:
+        if not isinstance(r, dict):
+            continue
+        clean = lambda v, n=200: re.sub(r"[\x00-\x1f\x7f]", "", str(v or "")).strip()[:n]
+        app, title = clean(r.get("app")), clean(r.get("title"))
+        if not app and not title:
+            continue
+        size = lambda v: (str(v).strip() if WRULE_SIZE.match(str(v or "").strip()) and str(v).strip() not in ("0", "0%") else "")
+        try:
+            opacity = max(0.1, min(1.0, float(r.get("opacity", 1) or 1)))
+        except (TypeError, ValueError):
+            opacity = 1.0
+        out.append({"app": app, "title": title,
+                    "floating": r.get("floating") if r.get("floating") in ("yes", "no") else "",
+                    "width": size(r.get("width")), "height": size(r.get("height")),
+                    "maximized": bool(r.get("maximized")), "fullscreen": bool(r.get("fullscreen")),
+                    "output": clean(r.get("output"), 64) if re.fullmatch(r"[\w.:-]*", clean(r.get("output"), 64)) else "",
+                    "workspace": clean(r.get("workspace"), 64), "opacity": round(opacity, 2),
+                    "noScreencast": bool(r.get("noScreencast"))})
+        if len(out) >= 100:
+            break
+    return out
+
+
+def niri_window_rules(rules: list[dict]) -> list[str]:
+    def amount(v: str, name: str) -> str:
+        return f"{name} {{ proportion {int(v[:-1]) / 100:.4g}; }}" if v.endswith("%") else f"{name} {{ fixed {int(v)}; }}"
+    out = []
+    for r in rules:
+        lines = ["window-rule {"]
+        m = []
+        if r["app"]:
+            m.append(f"app-id={kdl_quote('(?i)^' + rx_escape(r['app']) + '$')}")
+        if r["title"]:
+            m.append(f"title={kdl_quote('(?i)' + rx_escape(r['title']))}")
+        lines.append("    match " + " ".join(m))
+        if r["floating"]:
+            lines.append(f"    open-floating {'true' if r['floating'] == 'yes' else 'false'}")
+        if r["width"]:
+            lines.append("    " + amount(r["width"], "default-column-width"))
+        if r["height"]:
+            lines.append("    " + amount(r["height"], "default-window-height"))
+        if r["maximized"]:
+            lines.append("    open-maximized true")
+        if r["fullscreen"]:
+            lines.append("    open-fullscreen true")
+        if r["output"]:
+            lines.append(f"    open-on-output {kdl_quote(r['output'])}")
+        if r["workspace"]:
+            lines.append(f"    open-on-workspace {kdl_quote(r['workspace'])}")
+        if r["opacity"] < 1:
+            lines.append(f"    opacity {r['opacity']:g}")
+        if r["noScreencast"]:
+            lines.append('    block-out-from "screencast"')
+        if len(lines) > 2:
+            out += lines + ["}"]
+    return out
+
+
+def hypr_window_rules(rules: list[dict]) -> list[str]:
+    out = []
+    for r in rules:
+        m = ", ".join(([f"class:(?i)^({rx_escape(r['app'])})$"] if r["app"] else []) + ([f"title:(?i)({rx_escape(r['title'])})"] if r["title"] else []))
+        props = []
+        if r["floating"]:
+            props.append("float" if r["floating"] == "yes" else "tile")
+        if r["width"] and r["height"]:
+            props.append(f"size {r['width']} {r['height']}")
+        if r["maximized"]:
+            props.append("maximize")
+        if r["fullscreen"]:
+            props.append("fullscreen")
+        if r["output"]:
+            props.append(f"monitor {r['output']}")
+        if r["workspace"]:
+            props.append(f"workspace {r['workspace'] if r['workspace'].isdigit() else 'name:' + r['workspace'].replace(',', ' ')}")
+        if r["opacity"] < 1:
+            props.append(f"opacity {r['opacity']:g}")
+        if r["noScreencast"]:
+            props.append("noscreenshare")
+        out += [f"windowrule = {p}, {m}" for p in props]
+    return out
 HOT_CORNERS = ("top-left", "top-right", "bottom-left", "bottom-right")
 CENTER_MODES = ("never", "always", "on-overflow")
 LAYOUT_BEGIN = "// ── flamenco: window corners & named workspaces (edit in Flamenco Settings) ──"
@@ -10125,6 +10585,7 @@ def window_norm(w: dict) -> dict:
             out[k] = str(v) if v is not None else d
         else:
             out[k] = list(v) if isinstance(v, list) else list(d)
+    out["windowRules"] = window_rules_norm(w.get("windowRules", []))
     # which corners niri itself turns into overview corners (Settings → Screen edges);
     # specs from before that only had the top-left on/off switch
     if "overviewCorners" not in w:
@@ -10428,6 +10889,8 @@ def niri_windows_apply(text: str, w: dict) -> str:
     if w["floating"]:
         # window mode: floating (new windows open floating; Mod+V still tiles one)
         region += ["window-rule {", "    open-floating true", "}"]
+    # per-app rules, after the window mode so theirs wins
+    region += niri_window_rules(w["windowRules"])
     for ws in w["workspaces"]:
         inner = f" {{ open-on-output {kdl_quote(ws['output'])}; }}" if ws["output"] else ""
         region.append(f"workspace {kdl_quote(ws['name'])}{inner}")
@@ -10463,6 +10926,7 @@ def hypr_layout_lines(w: dict) -> list[str]:
              "binds {", f"    workspace_back_and_forth = {b(w['workspaceBackForth'])}", "}"]
     if w["floating"]:
         lines.append("windowrule = float, class:.*")
+    lines += hypr_window_rules(w["windowRules"])
     if w["blur"]:
         # the shell's surfaces, not the wallpaper / desktop layers or the invisible ones
         lines += ["layerrule = blur, ^(flamenco-.*)$", "layerrule = ignorealpha 0.2, ^(flamenco-.*)$",
@@ -10494,6 +10958,16 @@ def lua_layout_lines(w: dict) -> list[str]:
         lines.append('if hl.layer_rule then pcall(hl.layer_rule, { name = "flamenco-blur", match = { namespace = "^flamenco-(bar|dock|osd|notifications|notification-shade|overview|power|switcher|wallpapers|widgets|display-confirm|control|calendar|volume|launcher|clipboard|notepad|assistant|keys|performance|wallpaper-grid|thirdparty|power-menu)$" }, blur = true, ignore_alpha = 0.2 }) end')
     if w["floating"]:
         lines += ["hl.window_rule({", '    name  = "flamenco-window-mode-floating",', '    match = { class = ".*" },', "    float = true,", "})"]
+    # per-app rules: one call per property, so a key this Hyprland doesn't know only skips that one
+    for i, r in enumerate(w["windowRules"]):
+        match = ", ".join(([f"class = {lua_str('(?i)^(' + rx_escape(r['app']) + ')$')}"] if r["app"] else [])
+                          + ([f"title = {lua_str('(?i)(' + rx_escape(r['title']) + ')')}"] if r["title"] else []))
+        props = ([f"float = {'true' if r['floating'] == 'yes' else 'false'}"] if r["floating"] else []) \
+            + (["maximize = true"] if r["maximized"] else []) + (["fullscreen = true"] if r["fullscreen"] else []) \
+            + ([f"monitor = {lua_str(r['output'])}"] if r["output"] else []) + ([f"workspace = {lua_str(r['workspace'])}"] if r["workspace"] else []) \
+            + ([f"opacity = {r['opacity']:g}"] if r["opacity"] < 1 else []) + (["no_screen_share = true"] if r["noScreencast"] else [])
+        for j, p in enumerate(props):
+            lines.append(f'pcall(hl.window_rule, {{ name = "flamenco-rule-{i}-{j}", match = {{ {match} }}, {p} }})')
     for i, ws in enumerate(w["workspaces"], 1):
         fields = f"workspace = {lua_str(i)}, default_name = {lua_str(ws['name'])}, persistent = true"
         if ws["output"]:
@@ -10773,6 +11247,12 @@ def main(argv: list[str]) -> int:
         return cmd_devices(rest)
     if cmd == "bluetooth":
         return cmd_bluetooth(rest)
+    if cmd == "lockkeys":
+        return cmd_lockkeys(rest)
+    if cmd == "files":
+        return cmd_files(rest)
+    if cmd == "region":
+        return cmd_region(rest)
     if cmd == "users":
         return cmd_users(rest)
     if cmd == "accounts":

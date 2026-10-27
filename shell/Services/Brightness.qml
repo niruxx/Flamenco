@@ -54,8 +54,10 @@ Singleton {
         setKbdLevel(kbdLevel > 0 ? 0 : (kbdLastOn || kbdMax));
     }
 
+    // the lowest it goes (Settings → Displays → Lowest brightness)
+    readonly property real floor: Math.max(0.01, Math.min(0.5, Settings.data.brightness.minimum ?? 0.05))
     function set(v) {
-        v = Math.max(0.01, Math.min(1, v));
+        v = Math.max(floor, Math.min(1, v));
         value = v;
         pending = v;
         writeTimer.restart();
@@ -88,7 +90,7 @@ Singleton {
 
     // v: 0–1. Shown at once; written a moment later (DDC is slow), one monitor at a time
     function setDdc(bus, v) {
-        v = Math.max(0, Math.min(1, v));
+        v = Math.max(floor, Math.min(1, v));
         ddc = ddc.map(d => d.bus === bus ? Object.assign({}, d, { value: Math.round(v * d.max) }) : d);
         const p = Object.assign({}, ddcPending);
         p[bus] = v;

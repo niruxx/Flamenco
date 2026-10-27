@@ -51,6 +51,39 @@ Page {
         SliderRow { title: "Popup timeout"; icon: "timer"; target: page.n; key: "timeout"; from: 2; to: 20; stepSize: 1; suffix: "s" }
     }
 
+    NotificationRulesSection {}
+
+    Group {
+        title: "Toasts"
+        SwitchRow {
+            title: "Show what changed"
+            subtitle: "A small pop-up for a moment when Caps Lock, the keyboard layout, the power profile, Wi-Fi, Bluetooth, Do Not Disturb, night light or keep awake change. Clicks go through it"
+            icon: "chat_bubble"
+            target: Settings.data.toasts
+            key: "enabled"
+        }
+        ChoiceRow {
+            visible: Settings.data.toasts.enabled
+            title: "Where"
+            icon: "picture_in_picture"
+            target: Settings.data.toasts
+            key: "position"
+            segWidth: 96
+            options: [{ value: "top-center", label: "Top" }, { value: "center", label: "Middle" }, { value: "bottom-center", label: "Bottom" }]
+        }
+        SwitchRow { visible: Settings.data.toasts.enabled; title: "Caps Lock and Num Lock"; icon: "keyboard_capslock"; target: Settings.data.toasts; key: "lockKeys" }
+        SwitchRow { visible: Settings.data.toasts.enabled; title: "Keyboard layout"; icon: "keyboard"; target: Settings.data.toasts; key: "layout" }
+        SwitchRow { visible: Settings.data.toasts.enabled; title: "Power profile"; icon: "bolt"; target: Settings.data.toasts; key: "powerProfile" }
+        SwitchRow { visible: Settings.data.toasts.enabled; title: "Wi-Fi and Bluetooth"; icon: "wifi"; target: Settings.data.toasts; key: "connections" }
+        SwitchRow { visible: Settings.data.toasts.enabled; title: "Do Not Disturb, night light, keep awake, dark mode"; icon: "do_not_disturb_on"; target: Settings.data.toasts; key: "modes" }
+        SettingRow {
+            visible: Settings.data.toasts.enabled
+            title: "Try it"
+            icon: "science"
+            FButton { text: "Show a toast"; variant: "tonal"; onClicked: Toasts.test() }
+        }
+    }
+
     Group {
         title: "Devices"
         SwitchRow {

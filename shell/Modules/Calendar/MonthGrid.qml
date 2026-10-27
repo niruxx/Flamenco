@@ -54,7 +54,7 @@ ColumnLayout {
         transform: Translate { id: gridShift }
 
         Repeater {
-            model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+            model: Time.weekdays("")
             FText {
                 required property string modelData
                 Layout.fillWidth: true
@@ -71,7 +71,7 @@ ColumnLayout {
             Rectangle {
                 id: cell
                 required property int index
-                readonly property int lead: (root.shown.getDay() + 6) % 7
+                readonly property int lead: Time.lead(root.shown)
                 readonly property date day: new Date(root.shown.getFullYear(), root.shown.getMonth(), index - lead + 1)
                 readonly property bool inMonth: day.getMonth() === root.shown.getMonth()
                 readonly property bool today: day.toDateString() === Time.now.toDateString()

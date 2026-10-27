@@ -73,6 +73,7 @@ Singleton {
         s.overviewCorners = S.Edges.overviewCorners();
         s.hotCorners = s.overviewCorners.length > 0;
         s.workspaces = Settings.data.workspaces.named || [];
+        s.windowRules = cfg.rules || [];
         s.screenshotPath = Settings.data.screenshot.path;
         s.blur = !!Settings.data.appearance.blur;
         return s;

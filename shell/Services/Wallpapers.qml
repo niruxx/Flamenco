@@ -11,7 +11,37 @@ Singleton {
     property var files: []
     readonly property var cfg: Settings.data.wallpaper
     readonly property string dir: Paths.normalize(cfg.dir)
-    readonly property string current: Paths.expand(cfg.current)
+    // the main wallpaper; with light and dark ones (Settings → Wallpaper), the one for the mode
+    readonly property string current: Paths.expand(cfg.byMode ? ((Theme.dark ? cfg.dark : cfg.light) || cfg.current) : cfg.current)
+
+    // ── favorites ──
+    function isFavorite(path) {
+        return (cfg.favorites || []).includes(Paths.expand(path));
+    }
+    function toggleFavorite(path) {
+        const p = Paths.expand(path);
+        const all = cfg.favorites || [];
+        cfg.favorites = all.includes(p) ? all.filter(f => f !== p) : all.concat([p]);
+    }
+
+    // what shuffle and auto-change pick from: the screen's own folder (if it has one),
+    // only favorites (if that's on and there are some), else the whole folder
+    function pool(screen) {
+        let p = files;
+        const folder = cfg.perScreen && screen ? (cfg.screenFolders || {})[screen] : "";
+        if (folder) {
+            const abs = Paths.normalize(folder);
+            const mine = p.filter(f => f.startsWith(abs + "/"));
+            if (mine.length)
+                p = mine;
+        }
+        if (cfg.cycleFavorites && (cfg.favorites || []).length) {
+            const fav = p.filter(f => cfg.favorites.includes(f));
+            if (fav.length)
+                p = fav;
+        }
+        return p;
+    }
 
     // scan state, for the folder field and the grid's empty message
     property bool scanning: scanner.running
@@ -147,14 +177,22 @@ Singleton {
                 cfg.current = path;
         } else {
             cfg.current = path;
+            // light and dark wallpapers: this one is for the mode it's in now
+            if (cfg.byMode) {
+                if (Theme.dark)
+                    cfg.dark = path;
+                else
+                    cfg.light = path;
+            }
             if (cfg.perScreen)
                 cfg.screens = {};
         }
     }
 
-    function pick(exclude) {
-        const pool = files.filter(f => !exclude.includes(f));
-        return pool.length ? pool[Math.floor(Math.random() * pool.length)] : (files[0] ?? "");
+    function pick(exclude, screen) {
+        const from = pool(screen ?? "");
+        const left = from.filter(f => !exclude.includes(f));
+        return left.length ? left[Math.floor(Math.random() * left.length)] : (from[0] ?? "");
     }
 
     // a random wallpaper; in per-screen mode without a screen, a different one on each
@@ -164,19 +202,22 @@ Singleton {
         if (cfg.perScreen && !screen) {
             const used = [];
             for (const s of Quickshell.screens) {
-                const f = pick(used.concat([forScreen(s.name)]));
+                const f = pick(used.concat([forScreen(s.name)]), s.name);
                 used.push(f);
                 set(f, s.name);
             }
             return;
         }
-        set(pick([forScreen(screen)]), screen);
+        set(pick([forScreen(screen)], screen), screen);
     }
 
     function next(screen) {
         if (files.length === 0)
             return;
-        const step = s => files[(files.indexOf(forScreen(s)) + 1) % files.length];
+        const step = s => {
+            const from = pool(s);
+            return from[(from.indexOf(forScreen(s)) + 1) % from.length];
+        };
         if (cfg.perScreen && !screen) {
             for (const s of Quickshell.screens)
                 set(step(s.name), s.name);

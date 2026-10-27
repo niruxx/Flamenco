@@ -35,6 +35,30 @@ Singleton {
         };
     }
 
+    // the first rule for this notification's app (and text, when the rule says)
+    function ruleFor(e) {
+        const app = String(e.appName || "").toLowerCase();
+        const text = (e.summary + " " + e.body).toLowerCase();
+        for (const r of Settings.data.notifications.rules || []) {
+            if (!r.app || String(r.app).toLowerCase() !== app)
+                continue;
+            if (r.contains && !text.includes(String(r.contains).toLowerCase()))
+                continue;
+            return r;
+        }
+        return null;
+    }
+    // apps that have sent notifications (for adding rules)
+    readonly property var apps: {
+        const seen = [];
+        for (let i = 0; i < historyModel.count; i++) {
+            const a = historyModel.get(i).appName;
+            if (a && !seen.includes(a))
+                seen.push(a);
+        }
+        return seen.sort((a, b) => a.localeCompare(b));
+    }
+
     function indexIn(model, nid) {
         for (let i = 0; i < model.count; i++)
             if (model.get(i).nid === nid)
@@ -98,13 +122,24 @@ Singleton {
                 root.live[n.id] = n;
                 n.closed.connect(() => delete root.live[n.id]);
 
-                historyModel.insert(0, e);
-                while (historyModel.count > 100)
-                    historyModel.remove(historyModel.count - 1);
-                root.unread++;
+                // App rules (Settings → Notifications): urgency, how long, pop-up, sound, history
+                const r = root.ruleFor(e);
+                if (r && r.urgency && r.urgency !== "default")
+                    e.urgency = ({ low: 0, normal: 1, critical: 2 })[r.urgency] ?? e.urgency;
+                if (r && r.timeout)
+                    e.timeout = r.timeout < 0 ? -1 : r.timeout * 1000;
+                const popup = r?.popup === "never" ? false : r?.popup === "always" ? true : Settings.data.notifications.popups && (!root.dnd || e.urgency === 2);
 
-                if (Settings.data.notifications.popups && (!root.dnd || e.urgency === 2)) {
-                    Sounds.notification(e.urgency === 2);
+                if (r?.history !== false) {
+                    historyModel.insert(0, e);
+                    while (historyModel.count > 100)
+                        historyModel.remove(historyModel.count - 1);
+                    root.unread++;
+                }
+
+                if (popup) {
+                    if (r?.sound !== false)
+                        Sounds.notification(e.urgency === 2);
                     popupModel.insert(0, e);
                     while (popupModel.count > 5)
                         popupModel.remove(popupModel.count - 1);

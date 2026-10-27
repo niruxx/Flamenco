@@ -12,7 +12,7 @@ ColumnLayout {
     property var spec
     property bool editing: false
     readonly property date today: Time.now
-    readonly property int first: Qt.locale().firstDayOfWeek % 7           // 0 = Sunday
+    readonly property int first: Time.firstDay                            // 0 = Sunday
     // the days to show: blanks before the 1st, then 1…n
     readonly property var cells: {
         const y = today.getFullYear(), m = today.getMonth();

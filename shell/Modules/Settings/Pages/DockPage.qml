@@ -70,8 +70,9 @@ Page {
             icon: "more_horiz"
             target: page.d
             key: "indicator"
-            options: [{ value: "line", label: "Line" }, { value: "dot", label: "Dots" }, { value: "none", label: "None" }]
+            options: [{ value: "line", label: "Line" }, { value: "dot", label: "Dot" }, { value: "count", label: "Count" }, { value: "none", label: "None" }]
         }
+        SwitchRow { title: "Only this screen's apps"; subtitle: "Running apps (and window counts) from the dock's own screen; pinned apps always show"; icon: "monitor"; target: page.d; key: "thisScreen" }
     }
 
     Group {
@@ -92,6 +93,7 @@ Page {
     Group {
         title: "Look"
         SliderRow { visible: page.d.style !== "unity"; title: "Distance from the edge"; subtitle: "0 sits flush against the screen edge"; icon: "border_bottom"; target: page.d; key: "margin"; from: 0; to: 48; stepSize: 1; suffix: " px" }
+        SliderRow { title: "Tint icons"; subtitle: page.d.tint > 0 ? "Toward the accent color, so they match the theme" : "As the icon theme draws them"; icon: "colors"; target: page.d; key: "tint"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
         SliderRow { title: "Background opacity"; subtitle: "0% leaves only the icons"; icon: "opacity"; target: page.d; key: "opacity"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
         SliderRow { visible: page.d.style !== "unity"; title: "Corner roundness"; icon: "rounded_corner"; target: page.d; key: "roundness"; from: 0; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
         SwitchRow { visible: page.d.style !== "unity"; title: "Border"; icon: "border_style"; target: page.d; key: "border" }

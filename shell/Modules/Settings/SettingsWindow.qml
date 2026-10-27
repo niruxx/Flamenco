@@ -78,6 +78,7 @@ LazyLoader {
             { id: "accounts", icon: "cloud_sync", label: "Online Accounts", comp: accountsC },
             { id: "sharing", icon: "screen_share", label: "Screen sharing & files", comp: sharingC },
             { id: "datetime", icon: "more_time", label: "Date & Time", comp: datetimeC },
+            { id: "region", icon: "language", label: "Region & Language", comp: regionC },
             { id: "wellbeing", icon: "self_improvement", label: "Digital wellbeing", comp: wellbeingC },
             { id: "lock", icon: "lock", label: "Lock & Login", comp: lockC },
             { id: "defaults", icon: "open_in_new", label: "Default apps", comp: defaultsC },
@@ -102,13 +103,13 @@ LazyLoader {
             { tint: "#8fa6ff", ids: ["bar", "dock", "quicksettings", "launcher", "desktop", "overview", "edges", "clock"] },
             { tint: "#ff9d6e", ids: ["keyboard", "pointer", "night", "printers", "screenshots"] },
             { tint: "#5fc9c2", ids: ["windows", "workspaces"] },
-            { tint: "#6fcf8f", ids: ["users", "accounts", "sharing", "datetime", "wellbeing", "lock"] },
+            { tint: "#6fcf8f", ids: ["users", "accounts", "sharing", "datetime", "region", "wellbeing", "lock"] },
             { tint: "#e98fd0", ids: ["defaults", "autostart", "flatpak", "ai", "plugins", "thirdparty"] },
             { tint: "#b8bcc8", ids: ["firewall", "keyring", "system", "about"] }
         ]
         // one line under each page's name
         readonly property var descs: ({
-                appearance: "Theme, palette, dark mode", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", bluetooth: "Devices, pairing", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session",
+                appearance: "Theme, palette, dark mode", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", bluetooth: "Devices, pairing", region: "Language and formats", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session",
                 bar: "Style, layout, widgets", dock: "Position, pinned apps, style", launcher: "Fuzzy search, fuzzel", quicksettings: "Tiles, sliders, layout",
                 desktop: "Clocks, photos, monitors", overview: "Workspaces at a glance", edges: "Hot corners and edges", clock: "Clock, weather, calendars",
                 notifications: "Popups, do not disturb, mako", wellbeing: "Screen time and app limits", sound: "Devices, sounds, app volumes", screenshots: "Capture, save, copy",
@@ -227,6 +228,7 @@ LazyLoader {
         Component { id: appsC; AppThemingPage {} }
         Component { id: getC; GetPage {} }
         Component { id: bluetoothC; BluetoothSettingsPage {} }
+        Component { id: regionC; RegionPage {} }
         Component { id: barC; BarPage {} }
         Component { id: dockC; DockPage {} }
         Component { id: quickC; QuickSettingsPage {} }

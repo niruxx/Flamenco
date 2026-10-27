@@ -133,4 +133,49 @@ Page {
             roomy: true
         }
     }
+
+    Group {
+        title: "Media players"
+        DropdownRow {
+            title: "Preferred player"
+            subtitle: Settings.data.media.preferred ? "The media controls follow it whenever it has something, unless another player is playing" : "None: the one playing, else the last with a track"
+            icon: "star"
+            target: Settings.data.media
+            key: "preferred"
+            options: [{ value: "", label: "None" }].concat((Settings.data.media.seen || []).map(n => ({ value: n, label: n + (Media.names.includes(n) ? "" : " (closed)") })))
+        }
+        SettingRow {
+            visible: (Settings.data.media.seen || []).length === 0
+            title: "No players yet"
+            subtitle: "Players show up here once they've been open (Spotify, mpv, a browser playing a video…)"
+            icon: "info"
+        }
+        Repeater {
+            model: Settings.data.media.seen || []
+            SettingRow {
+                id: prow
+                required property string modelData
+                readonly property bool ignored: (Settings.data.media.ignored || []).some(n => n.toLowerCase() === modelData.toLowerCase())
+                title: modelData
+                subtitle: ignored ? "Ignored: never shown in the bar, panels or lock screen" : Media.names.includes(modelData) ? "Open now" : "Closed"
+                icon: "music_note"
+                Row {
+                    spacing: 6
+                    FButton {
+                        text: prow.ignored ? "Show it" : "Ignore"
+                        variant: prow.ignored ? "filled" : "tonal"
+                        onClicked: {
+                            const all = Settings.data.media.ignored || [];
+                            Settings.data.media.ignored = prow.ignored ? all.filter(n => n.toLowerCase() !== prow.modelData.toLowerCase()) : all.concat([prow.modelData]);
+                        }
+                    }
+                    FIconButton {
+                        icon: "close"
+                        size: 30
+                        onClicked: Settings.data.media.seen = (Settings.data.media.seen || []).filter(n => n !== prow.modelData)
+                    }
+                }
+            }
+        }
+    }
 }

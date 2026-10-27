@@ -20,7 +20,7 @@ Singleton {
     readonly property var connected: devices.filter(d => d.connected)
     // yours (paired before), and the ones around that you could pair (with a name, like GNOME)
     readonly property var mine: devices.filter(d => d.paired || d.bonded)
-    readonly property var nearby: devices.filter(d => !d.paired && !d.bonded && hasName(d))
+    readonly property var nearby: devices.filter(d => !d.paired && !d.bonded && (hasName(d) || (Settings.data.bluetooth.showUnnamed ?? false)))
     readonly property string icon: !enabled ? "bluetooth_disabled" : connected.length > 0 ? "bluetooth_connected" : "bluetooth"
     readonly property string label: !enabled ? "Off" : connected.length > 0 ? connected[0].name : "On"
 
@@ -71,7 +71,51 @@ Singleton {
         else
             stopScan();
     }
-    onEnabledChanged: if (enabled && scanUsers > 0) startScan()
+    onEnabledChanged: {
+        if (enabled && scanUsers > 0)
+            startScan();
+        if (enabled)
+            reconnect.restart();
+    }
+
+    // ── known devices back, when Bluetooth comes on (and at startup) ──
+    Timer {
+        id: reconnect
+        interval: 2500
+        running: true
+        onTriggered: {
+            if (!(Settings.data.bluetooth.autoConnect ?? true) || !root.enabled)
+                return;
+            for (const d of root.mine)
+                if (!d.connected && (d.trusted ?? true) && !(d.blocked ?? false))
+                    d.connect();
+        }
+    }
+
+    // ── signal strength (RSSI, dBm) while searching: address → dBm ──
+    property var signals: ({})
+    function bars(d) {
+        const v = signals[d?.address];
+        return v === undefined ? -1 : v >= -60 ? 4 : v >= -70 ? 3 : v >= -80 ? 2 : 1;
+    }
+    Timer {
+        interval: 3000
+        repeat: true
+        triggeredOnStart: true
+        running: root.scanning && (Settings.data.bluetooth.signal ?? true)
+        onTriggered: if (!signalProc.running) signalProc.running = true
+    }
+    Process {
+        id: signalProc
+        command: [Paths.bin, "bluetooth", "signal"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.signals = JSON.parse(text);
+                } catch (e) {}
+            }
+        }
+    }
     Process {
         id: scanner
         command: [Paths.bin, "bluetooth", "scan", "60"]

@@ -27,7 +27,10 @@ Scope {
     id: root
 
     readonly property var kinds: ["fade", "focus", "circle", "ripple", "wipe", "sweep", "blinds", "mosaic"]
-    readonly property int fillMode: Settings.data.wallpaper.fillMode === "fit" ? Image.PreserveAspectFit : Settings.data.wallpaper.fillMode === "stretch" ? Image.Stretch : Image.PreserveAspectCrop
+    readonly property string fill: Settings.data.wallpaper.fillMode || "crop"
+    readonly property int fillMode: fill === "fit" ? Image.PreserveAspectFit : fill === "stretch" ? Image.Stretch : fill === "center" ? Image.Pad : fill === "tile" ? Image.Tile : Image.PreserveAspectCrop
+    // centered and tiled pictures keep their own size; the others are loaded at the screen's
+    readonly property bool natural: fill === "center" || fill === "tile"
 
     // ── desktop ──
     Variants {
@@ -41,7 +44,7 @@ Scope {
             readonly property string wanted: Wallpapers.still(picked)
             // ── live ──
             readonly property var cfg: Settings.data.wallpaper
-            readonly property string live: cfg.live && Paths.isAnimated(picked) ? picked : ""
+            readonly property string live: cfg.live && !cfg.solid && Paths.isAnimated(picked) ? picked : ""
             // once its still is in place underneath and no transition is running
             readonly property bool liveOn: live !== "" && !win.running && back.status === Image.Ready && String(back.source) === Paths.toUrl(wanted)
             readonly property var activeWs: Niri.workspaces.find(w => w.output === modelData.name && w.is_active) ?? null
@@ -90,7 +93,7 @@ Scope {
                 anchors.fill: parent
                 fillMode: root.fillMode
                 asynchronous: true
-                sourceSize: Qt.size(win.width, win.height)
+                sourceSize: root.natural ? undefined : Qt.size(win.width, win.height)
                 onStatusChanged: {
                     // once the new image is in place underneath, drop the transition layer
                     if (status === Image.Ready && String(source) === String(front.source) && !anim.running) {
@@ -136,7 +139,7 @@ Scope {
                 anchors.fill: parent
                 fillMode: root.fillMode
                 asynchronous: true
-                sourceSize: Qt.size(win.width, win.height)
+                sourceSize: root.natural ? undefined : Qt.size(win.width, win.height)
                 visible: false
                 onStatusChanged: {
                     if (status === Image.Ready && !win.running && String(source) !== String(back.source)) {
@@ -436,6 +439,30 @@ Scope {
                     }
                 }
             }
+
+            // right-click on the desktop: its menu (Settings → Desktop widgets → Desktop menu)
+            MouseArea {
+                anchors.fill: parent
+                z: 10
+                acceptedButtons: Qt.RightButton
+                enabled: Settings.data.desktop.menu ?? true
+                onClicked: mouse => menu.open(mouse.x, mouse.y)
+            }
+            DesktopMenu {
+                id: menu
+                window: win
+                screenName: win.modelData.name
+            }
+
+            // a plain color instead of a picture (Settings → Wallpaper), over the picture layers
+            Rectangle {
+                anchors.fill: parent
+                visible: opacity > 0
+                opacity: win.cfg.solid ? 1 : 0
+                color: /^#[0-9a-fA-F]{6}$/.test(win.cfg.solidColor || "") ? win.cfg.solidColor : Theme.bg
+                Behavior on opacity { Anim { duration: Settings.data.wallpaper.duration || 600 } }
+                Behavior on color { CAnim { duration: 600 } }
+            }
         }
     }
 
@@ -466,6 +493,11 @@ Scope {
 
             BackdropLayer { id: imgA; shown: backdrop.useA; fillMode: root.fillMode }
             BackdropLayer { id: imgB; shown: !backdrop.useA; fillMode: root.fillMode }
+            Rectangle {
+                anchors.fill: parent
+                visible: Settings.data.wallpaper.solid
+                color: /^#[0-9a-fA-F]{6}$/.test(Settings.data.wallpaper.solidColor || "") ? Settings.data.wallpaper.solidColor : Theme.bg
+            }
         }
     }
 }

@@ -3,14 +3,42 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Services.Mpris
+import qs.Commons
 
 Singleton {
     id: root
 
-    readonly property var players: Mpris.players.values
+    readonly property var cfg: Settings.data.media
+    function nameOf(p) {
+        return String(p?.identity || p?.desktopEntry || p?.dbusName || "");
+    }
+    function same(a, b) {
+        return a !== "" && String(a).toLowerCase() === String(b).toLowerCase();
+    }
+    // every player, minus the ones ignored in Settings → Sound
+    readonly property var players: Mpris.players.values.filter(p => !(cfg.ignored || []).some(n => same(n, nameOf(p))))
     property var manual: null
-    // the one playing, else one with a track loaded, else any
-    readonly property var player: (manual && players.includes(manual)) ? manual : (players.find(p => p.isPlaying) ?? players.find(p => (p.trackTitle ?? "") !== "") ?? players[0] ?? null)
+    readonly property var preferred: players.find(p => same(cfg.preferred, nameOf(p))) ?? null
+    readonly property bool anyPlaying: players.some(p => p.isPlaying)
+    // picked by hand, else the preferred one when it has something (unless another one is
+    // playing), else the one playing, else one with a track loaded, else any
+    readonly property var player: (manual && players.includes(manual)) ? manual
+        : (preferred && (preferred.isPlaying || !anyPlaying) && ((preferred.trackTitle ?? "") !== "" || preferred.isPlaying)) ? preferred
+        : (players.find(p => p.isPlaying) ?? players.find(p => (p.trackTitle ?? "") !== "") ?? players[0] ?? null)
+
+    // the names seen, for the settings list (kept, so a closed player can still be chosen)
+    readonly property var names: Mpris.players.values.map(p => nameOf(p)).filter(n => n !== "")
+    onNamesChanged: {
+        const seen = (cfg.seen || []).slice();
+        let added = false;
+        for (const n of names)
+            if (!seen.some(s => same(s, n))) {
+                seen.push(n);
+                added = true;
+            }
+        if (added && Settings.ready)
+            cfg.seen = seen.slice(-30);
+    }
     // something to show: a player with a track (an open but empty player doesn't count)
     readonly property bool active: player !== null && ((player.trackTitle ?? "") !== "" || player.isPlaying)
     readonly property bool playing: player?.isPlaying ?? false

@@ -64,6 +64,8 @@ Page {
         }
     }
 
+    WindowRulesSection {}
+
     Group {
         title: "Look"
         SliderRow { title: "Corner radius"; subtitle: "Rounds every window's corners"; icon: "rounded_corner"; target: page.w; key: "cornerRadius"; from: 0; to: 24; stepSize: 1; suffix: " px"; onEdited: Compositor.queue() }

@@ -13,6 +13,7 @@ Page {
 
     Group {
         SwitchRow { title: "Show desktop widgets"; icon: "widgets"; target: page.d; key: "enabled" }
+        SwitchRow { title: "Right-click menu on the desktop"; subtitle: "Wallpaper, widgets, a terminal, settings"; icon: "ads_click"; target: page.d; key: "menu" }
         SettingRow {
             title: "Arrange widgets"
             subtitle: "Opens the widget sidebar on the desktop: drag widgets in, move, resize or remove them. Also in quick settings."

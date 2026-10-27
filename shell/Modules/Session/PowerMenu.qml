@@ -24,10 +24,10 @@ Variants {
         function holdFor(a) {
             if (!a || !a.verb)
                 return 0;
-            const s = a.id === "logout" ? pcfg.holdLogout : a.id === "reboot" ? pcfg.holdReboot : pcfg.holdShutdown;
+            const s = a.id === "logout" ? pcfg.holdLogout : a.id === "reboot" || a.id === "firmware" ? pcfg.holdReboot : pcfg.holdShutdown;
             return Math.max(0, Math.round((Number(s) || 0) * 1000));
         }
-        readonly property int holdMs: Math.max(1, holdFor(pendingAction))
+        readonly property int holdMs: Math.max(1, holdFor(pendingAction) || (pcfg.countdown ?? 0) * 1000)
         property string pending: ""
         property real charge: 0          // 0 → 1 while held
         readonly property int remaining: Math.max(1, Math.ceil(holdMs / 1000 * (1 - charge)))
@@ -44,13 +44,17 @@ Variants {
         }
         readonly property var pendingAction: actions.find(a => a.id === pending) ?? null
 
+        // the buttons; hibernate, firmware setup and switching user are optional (Settings → Power)
         readonly property var actions: [
             { id: "lock", icon: "lock", label: "Lock", run: () => Quickshell.execDetached([Paths.bin, "lock"]) },
-            { id: "suspend", icon: "bedtime", label: "Suspend", run: () => { Quickshell.execDetached([Paths.bin, "lock"]); suspendDelay.start(); } },
+            { id: "suspend", icon: "bedtime", label: "Suspend", run: () => { Quickshell.execDetached([Paths.bin, "lock"]); suspendDelay.start(); } }
+        ].concat(pcfg.menuHibernate ? [{ id: "hibernate", icon: "downloading", label: "Hibernate", run: () => { Quickshell.execDetached([Paths.bin, "lock"]); hibernateDelay.start(); } }] : [],
+            pcfg.menuSwitchUser && Power.canSwitchUser ? [{ id: "switch", icon: "switch_account", label: "Switch user", run: () => Power.switchUser() }] : [], [
             { id: "logout", icon: "logout", label: "Log out", verb: "Logging out", run: () => Power.logout() },
-            { id: "reboot", icon: "restart_alt", label: "Restart", verb: "Restarting", run: () => Power.reboot() },
+            { id: "reboot", icon: "restart_alt", label: "Restart", verb: "Restarting", run: () => Power.reboot() }
+        ], pcfg.menuFirmware ? [{ id: "firmware", icon: "developer_board", label: "Firmware setup", verb: "Restarting into firmware setup", run: () => Power.rebootFirmware() }] : [], [
             { id: "shutdown", icon: "power_settings_new", label: "Shut down", verb: "Shutting down", run: () => Power.shutdown() }
-        ]
+        ])
 
         // run an action, after the goodbye screen; niri's own logout shows its prompt
         // instead (Settings → Lock & Login → Session), so nothing covers the screen if
@@ -74,6 +78,15 @@ Variants {
             const a = actions[i];
             if (a.verb && holdFor(a) > 0)
                 return;
+            // a countdown first (Settings → Power → Countdown), which Esc or a click cancels
+            if (a.verb && (pcfg.countdown ?? 0) > 0) {
+                cancel();
+                pending = a.id;
+                countdown.from = 0;
+                countdown.duration = pcfg.countdown * 1000;
+                countdown.restart();
+                return;
+            }
             cancel();
             Panels.close();
             if (a.verb)
@@ -95,7 +108,8 @@ Variants {
         }
 
         function holdEnd() {
-            if (!countdown.running)
+            // a countdown (not a hold) keeps going when the button is let go
+            if (!countdown.running || holdFor(pendingAction) === 0)
                 return;
             countdown.stop();
             release.restart();
@@ -135,6 +149,7 @@ Variants {
         }
 
         Timer { id: suspendDelay; interval: 600; onTriggered: Power.suspend() }
+        Timer { id: hibernateDelay; interval: 600; onTriggered: Power.hibernate() }
 
         screen: modelData
         visible: shouldShow || p > 0.01
@@ -177,10 +192,15 @@ Variants {
                 } else if (confirmKeys.includes(event.key)) {
                     win.trigger(win.sel);
                     win.holdStart(win.sel);
+                } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9 && event.key - Qt.Key_1 < win.actions.length) {
+                    // number keys: that button
+                    win.sel = event.key - Qt.Key_1;
+                    win.trigger(win.sel);
+                    win.holdStart(win.sel);
                 }
             }
             Keys.onReleased: event => {
-                if (!event.isAutoRepeat && confirmKeys.includes(event.key))
+                if (!event.isAutoRepeat && (confirmKeys.includes(event.key) || event.key >= Qt.Key_1 && event.key <= Qt.Key_9))
                     win.holdEnd();
             }
         }
@@ -276,6 +296,16 @@ Variants {
                                 text: btn.danger ? win.remaining + "s" : btn.modelData.label
                                 font.weight: Font.DemiBold
                                 color: btn.selected || btn.danger ? Theme.onAccent : Theme.text
+                            }
+                            // its number key
+                            FText {
+                                Layout.alignment: Qt.AlignHCenter
+                                visible: btn.index < 9
+                                text: String(btn.index + 1)
+                                mono: true
+                                font.pixelSize: Theme.fsXs
+                                opacity: 0.55
+                                color: btn.selected || btn.danger ? Theme.onAccent : Theme.textDim
                             }
                         }
 

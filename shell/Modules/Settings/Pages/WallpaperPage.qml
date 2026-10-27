@@ -80,9 +80,84 @@ Page {
             }
         }
         SliderRow { title: "Transition duration"; icon: "timer"; target: page.w; key: "duration"; from: 200; to: 3000; stepSize: 50; suffix: "ms" }
-        ChoiceRow { title: "Fill"; icon: "aspect_ratio"; target: page.w; key: "fillMode"; options: [{ value: "crop", label: "Crop" }, { value: "fit", label: "Fit" }, { value: "stretch", label: "Stretch" }] }
+        ChoiceRow {
+            title: "Fill"
+            subtitle: ({ crop: "Fills the screen, trimming the edges", fit: "The whole picture, with bars", stretch: "Fills the screen, out of proportion", center: "Its own size, in the middle", tile: "Its own size, repeated" })[page.w.fillMode || "crop"]
+            icon: "aspect_ratio"
+            target: page.w
+            key: "fillMode"
+            segWidth: 82
+            options: [{ value: "crop", label: "Crop" }, { value: "fit", label: "Fit" }, { value: "stretch", label: "Stretch" }, { value: "center", label: "Center" }, { value: "tile", label: "Tile" }]
+        }
         SwitchRow { title: "Cycle automatically"; icon: "shuffle"; target: page.w; key: "cycle" }
         SliderRow { visible: page.w.cycle; title: "Every"; icon: "schedule"; target: page.w; key: "cycleMinutes"; from: 1; to: 240; stepSize: 1; suffix: " min" }
+        SwitchRow {
+            title: "Favorites only"
+            subtitle: (page.w.favorites || []).length ? "Shuffle and changing automatically pick from your " + page.w.favorites.length + " favorites" : "Star wallpapers in the switcher (☆) to make favorites"
+            icon: "star"
+            target: page.w
+            key: "cycleFavorites"
+        }
+    }
+
+    Group {
+        title: "Color and mode"
+        SwitchRow {
+            title: "A plain color instead of a picture"
+            icon: "format_color_fill"
+            target: page.w
+            key: "solid"
+        }
+        ColorChoiceRow {
+            visible: page.w.solid
+            title: "Color"
+            icon: "palette"
+            target: page.w
+            key: "solidColor"
+            choices: []
+            swatches: ["#1e1f24", "#0f1115", "#2b2a27", "#1a2433", "#26323b", "#3b2a3a", "#f2f1f0", "#d9e4ec"]
+        }
+        SwitchRow {
+            visible: !page.w.solid
+            title: "One for light mode, one for dark mode"
+            subtitle: page.w.byMode ? "Switching the mode swaps them. Picking a wallpaper sets the one for the mode you're in" : "Off: the same wallpaper in both"
+            icon: "contrast"
+            target: page.w
+            key: "byMode"
+        }
+        Repeater {
+            model: page.w.byMode && !page.w.solid ? [{ key: "light", label: "Light mode", icon: "light_mode" }, { key: "dark", label: "Dark mode", icon: "dark_mode" }] : []
+            SettingRow {
+                id: mrow
+                required property var modelData
+                readonly property string path: page.w[modelData.key] || page.w.current
+                title: modelData.label
+                subtitle: (page.w[modelData.key] ? Paths.fileName(page.w[modelData.key]) : "Not chosen: the main wallpaper") + (Theme.dark === (modelData.key === "dark") ? " (now)" : "")
+                icon: modelData.icon
+                Row {
+                    spacing: 8
+                    ClippingRectangle {
+                        width: 96
+                        height: 56
+                        radius: Theme.rSm
+                        color: Theme.surfaceHigh
+                        Image {
+                            anchors.fill: parent
+                            source: Wallpapers.stillUrl(mrow.path)
+                            sourceSize: Qt.size(192, 112)
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+                    }
+                    FButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Use the current one"
+                        variant: "tonal"
+                        onClicked: page.w[mrow.modelData.key] = page.w.current
+                    }
+                }
+            }
+        }
     }
 
     // which screen the library below sets, in per-screen mode
@@ -128,6 +203,31 @@ Page {
                         text: "Pick below"
                         variant: page.target === srow.modelData.name ? "filled" : "tonal"
                         onClicked: page.target = srow.modelData.name
+                    }
+                    // its own folder to shuffle / cycle from
+                    FDropdown {
+                        anchors.verticalCenter: parent.verticalCenter
+                        implicitWidth: 170
+                        placeholder: "Folder: all"
+                        readonly property var subdirs: {
+                            const out = [];
+                            for (const f of Wallpapers.files) {
+                                const d = f.slice(0, f.lastIndexOf("/"));
+                                if (d !== Wallpapers.dir && !out.includes(d))
+                                    out.push(d);
+                            }
+                            return out.sort();
+                        }
+                        options: [{ value: "", label: "Folder: all" }].concat(subdirs.map(d => ({ value: d, label: d.slice(Wallpapers.dir.length + 1) })))
+                        current: (page.w.screenFolders || {})[srow.modelData.name] ?? ""
+                        onSelected: v => {
+                            const all = Object.assign({}, page.w.screenFolders || {});
+                            if (v)
+                                all[srow.modelData.name] = v;
+                            else
+                                delete all[srow.modelData.name];
+                            page.w.screenFolders = all;
+                        }
                     }
                     FButton {
                         anchors.verticalCenter: parent.verticalCenter

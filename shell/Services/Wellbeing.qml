@@ -46,7 +46,7 @@ Singleton {
     // the days of the week that `offset` weeks ago started (Sunday first, like the locale's start)
     function weekKeys(offset) {
         const d = new Date(Time.now);
-        const first = Qt.locale().firstDayOfWeek % 7;
+        const first = Time.firstDay;
         d.setDate(d.getDate() - ((d.getDay() - first + 7) % 7) - 7 * offset);
         const out = [];
         for (let i = 0; i < 7; i++) {

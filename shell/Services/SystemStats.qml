@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // CPU, memory, temperatures, disks, network and processes.
 // Cheap stats always update; the expensive ones (sensors, disks, processes,
@@ -19,6 +20,20 @@ Singleton {
     }
 
     // ── always on ──
+    // ── levels (Settings → System check): 0 fine, 1 warning, 2 critical ──
+    // kind: cpu | mem | temp | gpu | disk; v: percent (temperatures in °C)
+    function level(kind, v) {
+        const m = Settings.data.monitor;
+        const w = m[kind + "Warn"] ?? 80, c = m[kind + "Crit"] ?? 95;
+        return v >= c ? 2 : v >= w ? 1 : 0;
+    }
+    function colorFor(kind, v, normal) {
+        const m = Settings.data.monitor;
+        const ok = c => /^#[0-9a-fA-F]{6}$/.test(c || "");
+        const lv = level(kind, v);
+        return lv === 2 ? (ok(m.critColor) ? m.critColor : Theme.error) : lv === 1 ? (ok(m.warnColor) ? m.warnColor : Theme.warning) : normal;
+    }
+
     property real cpu: 0
     property real mem: 0
     property real memUsed: 0     // GiB
@@ -111,10 +126,14 @@ Singleton {
         }
     }
 
+    // bar widgets that need the GPU or the disks polled even with no panel open
+    property int gpuUsers: 0
+    property int diskUsers: 0
+
     // disks, the network interface and the machine change slowly
     Timer {
         interval: 30000
-        running: root.detailed
+        running: root.detailed || root.diskUsers > 0
         repeat: true
         triggeredOnStart: true
         onTriggered: {
@@ -127,10 +146,10 @@ Singleton {
         }
     }
 
-    // the GPU, every few seconds while detailed
+    // the GPU, every few seconds while detailed (or a bar widget shows it)
     Timer {
         interval: 3000
-        running: root.detailed
+        running: root.detailed || root.gpuUsers > 0
         repeat: true
         triggeredOnStart: true
         onTriggered: if (!gpuProc.running) gpuProc.running = true

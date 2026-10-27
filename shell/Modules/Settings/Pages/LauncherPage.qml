@@ -7,7 +7,7 @@ import qs.Widgets
 Page {
     id: page
     title: "Launcher"
-    subtitle: "Type  =  for the calculator,  >  to run a command,  ;  to search clipboard history."
+    subtitle: "Type  =  for the calculator,  >  to run a command,  ;  to search clipboard history,  /  for files. Searching also finds open windows, settings and session actions."
     readonly property var l: Settings.data.launcher
 
     Group {
@@ -66,6 +66,39 @@ Page {
                 icon: "apps"
                 onClicked: Panels.open("launcher", "")
             }
+        }
+    }
+
+    Group {
+        title: "Search"
+        ChoiceRow {
+            title: "View"
+            subtitle: (page.l.view || "list") === "grid" ? "Apps as a grid with categories until you type, then the list of results" : "A list of apps, most used first"
+            icon: "apps"
+            target: page.l
+            key: "view"
+            segWidth: 100
+            options: [{ value: "list", label: "List", icon: "view_list" }, { value: "grid", label: "Grid", icon: "grid_view" }]
+        }
+        SettingRow {
+            title: "Pinned apps"
+            subtitle: (page.l.pinned || []).length ? (page.l.pinned || []).map(id => Apps.all.find(e => e.id === id)?.name ?? id).join(", ") + ". First when nothing's typed" : "Alt+P or right-click an app in the launcher pins it; pinned apps come first"
+            icon: "keep"
+            FButton { visible: (page.l.pinned || []).length > 0; text: "Unpin all"; variant: "text"; onClicked: page.l.pinned = [] }
+        }
+        SwitchRow { title: "Open windows"; subtitle: "Typing finds windows by title or app, Enter switches to it"; icon: "select_window"; target: page.l; key: "searchWindows" }
+        SwitchRow { title: "Settings"; subtitle: "Flamenco's pages and options, Enter opens it"; icon: "settings"; target: page.l; key: "searchSettings" }
+        SwitchRow { title: "Session actions"; subtitle: "Lock, suspend, hibernate; log out, restart and shut down open the power menu to confirm"; icon: "power_settings_new"; target: page.l; key: "searchSession" }
+        SwitchRow { title: "Files"; subtitle: "Type / and a name to find files and folders in your home folder (instant with plocate)"; icon: "folder_open"; target: page.l; key: "files" }
+        SwitchRow { title: "Web search"; subtitle: "\"Search the web for …\" last in the results"; icon: "travel_explore"; target: page.l; key: "webSearch" }
+        DropdownRow {
+            visible: page.l.webSearch
+            title: "Search engine"
+            icon: "public"
+            target: page.l
+            key: "webEngine"
+            options: [{ value: "duckduckgo", label: "DuckDuckGo" }, { value: "google", label: "Google" }, { value: "bing", label: "Bing" },
+                { value: "brave", label: "Brave Search" }, { value: "startpage", label: "Startpage" }, { value: "ecosia", label: "Ecosia" }]
         }
     }
 

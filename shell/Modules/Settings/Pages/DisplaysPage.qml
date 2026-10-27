@@ -409,6 +409,22 @@ Page {
     }
 
     Group {
+        title: "Brightness"
+        SliderRow {
+            title: "Lowest brightness"
+            subtitle: "The brightness keys and sliders stop here, so the screen never goes black"
+            icon: "brightness_low"
+            target: Settings.data.brightness
+            key: "minimum"
+            from: 0.01
+            to: 0.5
+            stepSize: 0.01
+            factor: 100
+            suffix: "%"
+        }
+    }
+
+    Group {
         title: "Brightness (external monitors)"
         SettingRow {
             title: !Brightness.ddcInstalled ? "ddcutil isn't installed"

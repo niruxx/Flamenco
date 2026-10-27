@@ -15,6 +15,8 @@ Page {
         const out = Object.assign({}, builtinWidgets);
         for (const k in Plugins.barWidgets)
             out[k] = Plugins.barWidgets[k].label + " (plugin)";
+        for (const k in page.b.customs || {})
+            out[k] = (page.b.customs[k].name || "Custom") + " (custom)";
         for (const k in ThirdParty.barWidgets)
             out[k] = ThirdParty.barWidgets[k].label;
         return out;
@@ -22,7 +24,9 @@ Page {
     readonly property var builtinWidgets: ({
             launcher: "Start button (launcher)", workspaces: "Workspaces", window: "Active window", taskbar: "Taskbar (running apps)", clock: "Clock", media: "Media",
             tray: "System tray", sysstats: "CPU / RAM", keyboard: "Keyboard layout", network: "Network", bluetooth: "Bluetooth",
-            audio: "Volume", mic: "Microphone (while in use)", privacy: "Privacy (camera, screen sharing)", recording: "Screen recording (while recording)", updates: "Package updates (when there are some)", notepad: "Notepad", visualizer: "Audio visualizer (cava, while playing)", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", assistant: "AI assistant", power: "Power", clipboard: "Clipboard history", separator: "Separator (a thin line)"
+            audio: "Volume", mic: "Microphone (while in use)", privacy: "Privacy (camera, screen sharing)", recording: "Screen recording (while recording)", updates: "Package updates (when there are some)", notepad: "Notepad", visualizer: "Audio visualizer (cava, while playing)", brightness: "Brightness", battery: "Battery", notifications: "Notifications", weather: "Weather", quicksettings: "Quick settings", assistant: "AI assistant", power: "Power", clipboard: "Clipboard history", separator: "Separator (a thin line)",
+            lockkeys: "Caps Lock / Num Lock", netspeed: "Network speed", disk: "Disk usage", gpu: "Graphics card (usage, temperature)", vpn: "VPN",
+            lyrics: "Lyrics (the line being sung)", spacer: "Spacer (room between widgets)"
         })
     // which layout is being edited: "" = the shared one, else a screen with its own
     property string screenSel: ""
@@ -212,6 +216,8 @@ Page {
         }
         SliderRow { visible: page.b.hide !== "never"; title: "Hide after"; subtitle: "Once the pointer leaves the bar"; icon: "timer"; target: page.b; key: "hideDelay"; from: 0; to: 3000; stepSize: 100; suffix: " ms" }
         SliderRow { visible: page.b.hide !== "never"; title: "Edge to reveal it"; subtitle: "How close to the edge the pointer has to be"; icon: "border_outer"; target: page.b; key: "revealSize"; from: 1; to: 12; stepSize: 1; suffix: " px" }
+        SwitchRow { title: "Hide during the overview"; subtitle: "Out of the way while niri's overview is open"; icon: "overview_key"; target: page.b; key: "hideOnOverview" }
+        SwitchRow { visible: page.b.hide !== "never"; title: "Show when switching workspaces"; subtitle: "For a moment, so you see where you are"; icon: "view_carousel"; target: page.b; key: "showOnSwitch" }
         SwitchRow { visible: page.b.hide !== "never"; title: "Keep its space"; subtitle: "Windows stay clear of the bar's spot while it's hidden, so it never covers them"; icon: "space_bar"; target: page.b; key: "hideKeepSpace" }
         SettingRow {
             title: Panels.barHidden ? "Hidden by hand" : "Hide it now"
@@ -224,6 +230,52 @@ Page {
             }
         }
     }
+
+    Group {
+        title: "Clicks on the empty bar"
+        ChoiceRow {
+            title: "Scrolling"
+            icon: "swap_vert"
+            target: page.b
+            key: "wheelAction"
+            segWidth: 104
+            options: [{ value: "none", label: "Nothing" }, { value: "workspaces", label: "Workspaces" }, { value: "volume", label: "Volume" }, { value: "brightness", label: "Brightness" }]
+        }
+        Repeater {
+            model: [{ k: "middle", t: "Middle-click", i: "mouse" }, { k: "right", t: "Right-click", i: "ads_click" }]
+            ColumnLayout {
+                id: crow
+                required property var modelData
+                Layout.fillWidth: true
+                spacing: 0
+                DropdownRow {
+                    title: crow.modelData.t
+                    icon: crow.modelData.i
+                    target: page.b
+                    key: crow.modelData.k + "Action"
+                    options: [{ value: "none", label: "Nothing" }, { value: "overview", label: "Overview" }, { value: "launcher", label: "Launcher" },
+                        { value: "control", label: "Quick settings" }, { value: "settings", label: "Bar settings" }, { value: "command", label: "A command" }]
+                }
+                TextRow {
+                    visible: page.b[crow.modelData.k + "Action"] === "command"
+                    title: "Command"
+                    icon: "terminal"
+                    target: page.b
+                    key: crow.modelData.k + "Command"
+                    placeholder: "e.g. kitty"
+                }
+            }
+        }
+    }
+
+    Group {
+        title: "Widget options"
+        SwitchRow { title: "Caps Lock / Num Lock always shown"; subtitle: "Off: only while one is on"; icon: "keyboard_capslock"; target: page.b; key: "lockKeysAlways" }
+        TextRow { title: "Disk"; subtitle: "Where the disk widget's disk is mounted"; icon: "hard_drive"; target: page.b; key: "diskMount"; placeholder: "/" }
+        SliderRow { title: "Lyrics width"; subtitle: "The widest the lyric line gets"; icon: "lyrics"; target: page.b; key: "lyricsWidth"; from: 160; to: 600; stepSize: 20; suffix: " px" }
+    }
+
+    CustomWidgetsSection {}
 
     BatterySection {}
 
@@ -381,7 +433,7 @@ Page {
                 SettingRow {
                     required property string modelData
                     required property int index
-                    title: page.allWidgets[modelData] ?? (modelData.startsWith("separator") ? page.allWidgets.separator : modelData)
+                    title: page.allWidgets[modelData] ?? (modelData.startsWith("separator") ? page.allWidgets.separator : modelData.startsWith("spacer") ? page.allWidgets.spacer : modelData)
                     icon: "drag_indicator"
 
                     Row {
@@ -399,7 +451,7 @@ Page {
                 spacing: 6
                 Repeater {
                     // separators can go in as often as you like
-                    model: Object.keys(page.allWidgets).filter(k => k === "separator" || !page.used.includes(k))
+                    model: Object.keys(page.allWidgets).filter(k => k === "separator" || k === "spacer" || !page.used.includes(k))
                     FButton {
                         required property string modelData
                         text: page.allWidgets[modelData]
@@ -409,8 +461,8 @@ Page {
                         onClicked: {
                             let id = modelData;
                             let n = 1;
-                            while (modelData === "separator" && page.used.includes(id))
-                                id = "separator:" + (++n);
+                            while ((modelData === "separator" || modelData === "spacer") && page.used.includes(id))
+                                id = modelData + ":" + (++n);
                             page.setList(grp.modelData.key, page.list(grp.modelData.key).concat([id]));
                         }
                     }

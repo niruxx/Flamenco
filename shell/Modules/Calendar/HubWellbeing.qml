@@ -105,7 +105,7 @@ Item {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     anchors.top: parent.bottom
                                     anchors.topMargin: 4
-                                    text: Qt.locale().dayName((Qt.locale().firstDayOfWeek + parent.index) % 7, Locale.ShortFormat)
+                                    text: Qt.locale().dayName((Time.firstDay + parent.index) % 7, Locale.ShortFormat)
                                     font.pixelSize: Theme.fsXs
                                     font.weight: parent.today ? Font.Bold : Font.Normal
                                     color: parent.today ? Theme.accent : Theme.textDim

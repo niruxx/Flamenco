@@ -105,7 +105,15 @@ Variants {
         // (a freeroam bar floats wherever you put it: hiding to an edge doesn't apply)
         readonly property bool hides: !free && (Panels.barHidden || hideMode === "auto" || hideMode === "windows" && hasWindows)
         readonly property bool panelHere: Panels.current !== "" && Panels.screen === modelData.name
-        readonly property bool revealed: !hides || barHover.hovered || hideDelay.running || panelHere
+        // niri's overview open: out of the way (Settings → Bar → Hide)
+        readonly property bool overviewHides: !free && (cfg.hideOnOverview ?? false) && Niri.overviewOpen
+        readonly property bool revealed: !overviewHides && (!hides || barHover.hovered || hideDelay.running || panelHere || peek.running)
+        // an auto-hidden bar shows for a moment when switching workspaces
+        onActiveWsChanged: if (hides && (cfg.showOnSwitch ?? true)) peek.restart()
+        Timer {
+            id: peek
+            interval: 1500
+        }
         Item {
             id: hideAnim
             property real v: win.revealed ? 1 : 0
@@ -174,7 +182,15 @@ Variants {
                 notifications: notifC,
                 weather: weatherC,
                 quicksettings: quickC,
-                power: powerC
+                power: powerC,
+                lockkeys: lockKeysC,
+                netspeed: netSpeedC,
+                disk: diskC,
+                gpu: gpuC,
+                vpn: vpnC,
+                lyrics: lyricsC,
+                spacer: spacerC,
+                custom: customC
             })
 
         Component { id: launcherC; LauncherButton { screenName: win.modelData.name } }
@@ -205,6 +221,14 @@ Variants {
         Component { id: weatherC; WeatherChip { screenName: win.modelData.name } }
         Component { id: quickC; FIconButton { id: qsBtn; icon: "menu"; size: Theme.barItem; iconSize: Theme.barIcon; active: Panels.current === "control" && Panels.controlDetail === ""; onClicked: Panels.toggle("control", win.modelData.name, qsBtn) } }
         Component { id: assistantC; FIconButton { id: aiBtn; property bool barVisible: Settings.data.ai.enabled; icon: "auto_awesome"; size: Theme.barItem; iconSize: Theme.barIcon; active: Panels.current === "assistant"; onClicked: Panels.toggle("assistant", win.modelData.name, aiBtn) } }
+        Component { id: lockKeysC; LockKeysIndicator { screenName: win.modelData.name } }
+        Component { id: netSpeedC; NetSpeed { screenName: win.modelData.name } }
+        Component { id: diskC; DiskUsage { screenName: win.modelData.name } }
+        Component { id: gpuC; GpuStats { screenName: win.modelData.name } }
+        Component { id: vpnC; VpnIndicator { screenName: win.modelData.name } }
+        Component { id: lyricsC; LyricLine { screenName: win.modelData.name } }
+        Component { id: spacerC; Spacer {} }
+        Component { id: customC; CustomWidget { screenName: win.modelData.name } }
         Component { id: powerC; FIconButton { id: powerBtn; icon: "power_settings_new"; size: Theme.barItem; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name, powerBtn) } }
 
         Item {
@@ -308,6 +332,45 @@ Variants {
                     shadowBlur: 0.6
                     shadowVerticalOffset: 2
                 }
+            }
+
+            // ── the empty bar: scrolling and middle / right clicks (Settings → Bar → Clicks) ──
+            // under the widgets, which keep their own
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.MiddleButton | Qt.RightButton
+                function act(what, cmd) {
+                    const s = win.modelData.name;
+                    if (what === "overview")
+                        Settings.data.overview.enabled ? Panels.toggle("overview", s) : Niri.action(Niri.hyprland ? "overview" : "toggle-overview");
+                    else if (what === "launcher")
+                        Panels.toggle("launcher", s);
+                    else if (what === "control")
+                        Panels.toggle("control", s);
+                    else if (what === "settings")
+                        Panels.openSettings("bar");
+                    else if (what === "command" && cmd)
+                        Quickshell.execDetached(["sh", "-c", cmd]);
+                }
+                onClicked: mouse => mouse.button === Qt.MiddleButton ? act(win.cfg.middleAction, win.cfg.middleCommand) : act(win.cfg.rightAction, win.cfg.rightCommand)
+                onWheel: wheel => {
+                    if ((win.cfg.wheelAction || "none") === "none") {
+                        wheel.accepted = false;
+                        return;
+                    }
+                    const n = notches.take(wheel);
+                    if (n === 0)
+                        return;
+                    const a = win.cfg.wheelAction || "none";
+                    if (a === "workspaces")
+                        for (let i = 0; i < Math.min(3, Math.abs(n)); i++)
+                            Niri.action(n > 0 ? "focus-workspace-up" : "focus-workspace-down");
+                    else if (a === "volume")
+                        Audio.step(0.05 * n);
+                    else if (a === "brightness")
+                        Brightness.step(0.05 * n);
+                }
+                WheelSteps { id: notches }
             }
 
             // ── fit to the space available ──

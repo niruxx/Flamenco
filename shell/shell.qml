@@ -38,6 +38,7 @@ import qs.Modules.Performance
 import qs.Modules.Volume
 import qs.Modules.Setup
 import qs.Modules.Windows
+import qs.Modules.Polkit
 
 ShellRoot {
     id: shell
@@ -56,6 +57,11 @@ ShellRoot {
         Clipboard.available;
         // its one-time shortcut additions (Super+L, Alt+Tab) run at startup, not only once Settings → Keyboard opens
         Keyboard.cfg;
+        // battery warnings, and the polkit agent (built here, not first from a Connections
+        // target during loading, which DMS found could crash Quickshell)
+        BatteryAlerts.on;
+        Hooks.armed;
+        PolkitAuth.agent;
     }
 
     // first run: open setup once settings are loaded (after the login animation)
@@ -75,6 +81,8 @@ ShellRoot {
     HotCorners {}
     Popups {}
     DevicePopups {}
+    ToastPopup {}
+    PolkitDialog {}
     Osd { id: osd }
 
     ControlCenter {}

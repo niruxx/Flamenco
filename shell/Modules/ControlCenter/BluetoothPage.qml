@@ -91,8 +91,8 @@ DetailPage {
         ListRow {
             required property var modelData
             icon: BluetoothState.kindIcon(modelData)
-            title: modelData.name
-            subtitle: BluetoothState.pairing === modelData.address ? "Pairing…" : "Click to pair"
+            title: modelData.name || modelData.address
+            subtitle: BluetoothState.pairing === modelData.address ? "Pairing…" : "Click to pair" + (BluetoothState.bars(modelData) > 0 ? " · " + ["", "weak", "fair", "good", "strong"][BluetoothState.bars(modelData)] + " signal" : "")
             busy: BluetoothState.pairing === modelData.address
             onClicked: BluetoothState.pair(modelData)
         }

@@ -11,6 +11,7 @@ Scope {
     id: root
 
     property bool locked: false
+    onLockedChanged: Hooks.run(locked ? "lock" : "unlock")
     property bool unlocking: false
     property string buffer: ""
     property bool authenticating: false
@@ -209,16 +210,19 @@ Scope {
     }
 
     // ── idle ──
+    // lock and screen off: separate times on battery and plugged in (Settings → Lock & Login)
     IdleMonitor {
+        readonly property int minutes: Power.onBattery ? (Settings.data.lock.idleMinutesBattery ?? 5) : Settings.data.lock.idleMinutes
         enabled: Settings.data.lock.autoLock && !Toggles.caffeine
-        timeout: Math.max(1, Settings.data.lock.idleMinutes) * 60
+        timeout: Math.max(1, minutes) * 60
         respectInhibitors: true
         onIsIdleChanged: if (isIdle) root.lock()
     }
 
     IdleMonitor {
-        enabled: Settings.data.lock.screenOffMinutes > 0 && !Toggles.caffeine
-        timeout: Math.max(1, Settings.data.lock.screenOffMinutes) * 60
+        readonly property int minutes: Power.onBattery ? (Settings.data.lock.screenOffMinutesBattery ?? 7) : Settings.data.lock.screenOffMinutes
+        enabled: minutes > 0 && !Toggles.caffeine
+        timeout: Math.max(1, minutes) * 60
         respectInhibitors: true
         onIsIdleChanged: if (isIdle) Niri.action("power-off-monitors")
     }
@@ -232,7 +236,7 @@ Scope {
         onIsIdleChanged: if (isIdle) {
             if (Settings.data.power.lockOnSleep)
                 root.lock();
-            Power.suspend();
+            Power.idleSleep();
         }
     }
 

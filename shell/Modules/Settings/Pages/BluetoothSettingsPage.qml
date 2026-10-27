@@ -103,6 +103,14 @@ Page {
 
     Group {
         visible: BluetoothState.enabled
+        title: "Options"
+        SwitchRow { title: "Reconnect my devices"; subtitle: "When Bluetooth comes on (and at login), devices you've paired and trust connect again"; icon: "bluetooth_connected"; target: Settings.data.bluetooth; key: "autoConnect" }
+        SwitchRow { title: "Signal strength"; subtitle: "How close nearby devices are, while searching"; icon: "signal_cellular_alt"; target: Settings.data.bluetooth; key: "signal" }
+        SwitchRow { title: "Devices without a name"; subtitle: "Some devices only give an address until they're paired"; icon: "help"; target: Settings.data.bluetooth; key: "showUnnamed" }
+    }
+
+    Group {
+        visible: BluetoothState.enabled
         title: "Nearby"
         SettingRow {
             title: BluetoothState.scanning ? "Searching…" : "Not searching"
@@ -119,8 +127,9 @@ Page {
             SettingRow {
                 id: nrow
                 required property var modelData
-                title: modelData.name
-                subtitle: modelData.address
+                readonly property int bars: BluetoothState.bars(modelData)
+                title: modelData.name || modelData.address
+                subtitle: (bars > 0 ? ["", "Weak signal", "Fair signal", "Good signal", "Strong signal"][bars] + " · " : "") + modelData.address
                 icon: BluetoothState.kindIcon(modelData)
                 FButton {
                     text: BluetoothState.pairing === nrow.modelData.address ? "Pairing…" : "Pair"

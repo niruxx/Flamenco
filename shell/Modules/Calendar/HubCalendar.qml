@@ -20,7 +20,7 @@ Item {
         const [y, m] = todayKey.split("-").map(Number);
         return new Date(y, m - 1 + monthOffset, 1);
     }
-    readonly property int lead: (shown.getDay() + 6) % 7      // Monday first
+    readonly property int lead: Time.lead(shown)             // the first day of the week (Settings → Region & Language)
     // today as "yyyy-mm-dd": the clock ticks every second, this only changes at midnight,
     // so the tiles don't all recompute every second
     readonly property string todayKey: Events.key(Time.now)
@@ -95,7 +95,7 @@ Item {
                 Row {
                     Layout.fillWidth: true
                     Repeater {
-                        model: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                        model: Time.weekdays("short")
                         FText {
                             required property string modelData
                             required property int index

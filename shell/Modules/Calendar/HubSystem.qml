@@ -213,7 +213,7 @@ GridLayout {
         icon: "videogame_asset"
         title: "GPU"
         value: SystemStats.gpuBusy >= 0 ? Math.round(SystemStats.gpuBusy * 100) + "%" : ""
-        tint: Theme.accent2
+        tint: SystemStats.gpuBusy >= 0 ? SystemStats.colorFor("gpu", SystemStats.gpuBusy * 100, Theme.accent2) : Theme.accent2
         Column {
             width: parent.width
             spacing: 8

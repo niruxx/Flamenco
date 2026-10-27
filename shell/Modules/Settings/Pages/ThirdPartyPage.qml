@@ -154,6 +154,37 @@ Page {
     }
 
     Group {
+        visible: ThirdParty.plugins.length > 0
+        title: "Updates"
+        SettingRow {
+            title: ThirdParty.checking ? "Checking…" : ThirdParty.updates.length ? ThirdParty.updates.length + (ThirdParty.updates.length === 1 ? " update" : " updates") : "Up to date"
+            subtitle: ThirdParty.updates.length ? ThirdParty.updates.map(u => u.name + (u.from && u.to ? " " + u.from + " → " + u.to : "")).join(", ") : "Checked once a day; a notification says when there are new versions"
+            icon: "system_update"
+            Row {
+                spacing: 6
+                FButton {
+                    visible: ThirdParty.updates.length > 0
+                    text: "Update all"
+                    icon: "download"
+                    onClicked: ThirdParty.updateAll()
+                }
+                FButton {
+                    text: "Check now"
+                    variant: "tonal"
+                    disabled: ThirdParty.checking
+                    onClicked: ThirdParty.checkUpdates()
+                }
+            }
+        }
+        SwitchRow { title: "Check for updates"; icon: "update"; target: ThirdParty.cfg; key: "checkUpdates" }
+        SettingRow {
+            title: "Lock file"
+            subtitle: "~/.config/flamenco/plugins.lock.json lists every plugin, where it came from and which version, and stays up to date. On another computer: flamenco compat restore"
+            icon: "lock"
+        }
+    }
+
+    Group {
         title: "Installed"
         SettingRow {
             visible: ThirdParty.plugins.length === 0

@@ -62,6 +62,58 @@ Singleton {
 
     Component.onCompleted: refresh()
 
+    // ── updates: once a day (and on request), a notification when there are new ones ──
+    property var updates: []                     // [{ key, name, from, to }]
+    property bool checking: updater.running
+    function checkUpdates() {
+        if (!updater.running && plugins.length > 0)
+            updater.running = true;
+    }
+    function updateAll() {
+        updates = [];
+        upgrader.running = true;
+    }
+    Process {
+        id: upgrader
+        command: [Paths.bin, "compat", "update", "all"]
+        // the turned-on ones load their new version
+        onExited: {
+            root.refresh();
+            for (const k of root.enabledKeys)
+                root.reload(k);
+        }
+    }
+    Timer {
+        // a while after starting, then every day
+        interval: 120000
+        running: (root.cfg.checkUpdates ?? true) && root.plugins.length > 0
+        repeat: true
+        onTriggered: {
+            interval = 24 * 3600 * 1000;
+            root.checkUpdates();
+        }
+    }
+    Process {
+        id: updater
+        command: [Paths.bin, "compat", "updates", "--json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.updates = JSON.parse(text);
+                } catch (e) {
+                    return;
+                }
+                const sig = root.updates.map(u => u.key + "@" + u.to).join(",");
+                if (sig && sig !== (root.cfg.notified || "")) {
+                    root.cfg.notified = sig;
+                    Quickshell.execDetached(["notify-send", "-a", "Flamenco", "-i", "system-software-update",
+                        root.updates.length === 1 ? "A plugin update" : root.updates.length + " plugin updates",
+                        root.updates.map(u => u.name + (u.to ? " " + u.to : "")).join(", ") + ". Update them in Settings → Plugins (3rd party)"]);
+                }
+            }
+        }
+    }
+
     Process {
         id: lister
         command: [Paths.bin, "compat", "list", "--json"]

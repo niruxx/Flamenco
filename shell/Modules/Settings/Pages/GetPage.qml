@@ -40,9 +40,10 @@ Page {
         { value: "gtk", label: "GTK", icon: "web_asset" },
         { value: "colors", label: "Colors", icon: "palette" },
         { value: "wallpapers", label: "Wallpapers", icon: "wallpaper" },
-        { value: "fonts", label: "Fonts", icon: "font_download" }
+        { value: "fonts", label: "Fonts", icon: "font_download" },
+        { value: "palettes", label: "Palettes", icon: "palette" }
     ]
-    readonly property string source: fonts ? "Fontsource (fontsource.org)" : "the KDE Store (store.kde.org)"
+    readonly property string source: fonts ? "Fontsource (fontsource.org)" : kind === "palettes" ? "the DMS theme registry" : "the KDE Store (store.kde.org)"
 
     function search(again) {
         pageNo = again ? pageNo + 1 : 1;
@@ -101,6 +102,7 @@ Page {
         case "gtk": return n.includes(Settings.data.apps.gtkTheme);
         case "fonts": return r.name === Settings.data.appearance.fontFamily || r.name === Settings.data.appearance.monoFamily;
         case "wallpapers": return (r.paths || []).length > 0 && Wallpapers.current === r.paths[0];
+        case "palettes": return n.includes(Settings.data.appearance.palette);
         }
         return false;
     }
@@ -117,9 +119,10 @@ Page {
                 Settings.data.appearance.fontFamily = r.name;
             break;
         case "wallpapers": Wallpapers.set(r.paths[0], ""); break;
+        case "palettes": Settings.data.appearance.palette = n[0]; break;
         }
         status = kind === "fonts" ? r.name + " is now the shell's " + (r.category === "monospace" ? "monospace font" : "font")
-            : kind === "wallpapers" ? "Wallpaper set" : "Applied to apps (Settings → App Theming)";
+            : kind === "wallpapers" ? "Wallpaper set" : kind === "palettes" ? r.name + " is the palette now (Appearance has it too)" : "Applied to apps (Settings → App Theming)";
     }
     function fmtCount(v) {
         return v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1e3 ? Math.round(v / 1e3) + "k" : String(v);
@@ -147,7 +150,7 @@ Page {
         }
         FDropdown {
             implicitWidth: 170
-            visible: !page.fonts
+            visible: !page.fonts && page.kind !== "palettes"
             options: [{ value: "rating", label: "Best rated" }, { value: "downloads", label: "Most downloaded" }, { value: "new", label: "Newest" }]
             current: page.sort
             onSelected: v => page.sort = v
@@ -227,8 +230,22 @@ Page {
                                 opacity: pic.status === Image.Ready ? 1 : 0
                                 Behavior on opacity { Anim {} }
                             }
+                            // palettes: their colors, under the preview (or instead of it)
+                            Row {
+                                visible: page.kind === "palettes" && pic.status !== Image.Ready
+                                anchors.fill: parent
+                                Repeater {
+                                    model: card.r.swatch || []
+                                    Rectangle {
+                                        required property string modelData
+                                        width: parent.width / Math.max(1, (card.r.swatch || []).length)
+                                        height: parent.height
+                                        color: modelData
+                                    }
+                                }
+                            }
                             FIcon {
-                                visible: !page.fonts && pic.status !== Image.Ready
+                                visible: !page.fonts && page.kind !== "palettes" && pic.status !== Image.Ready
                                 anchors.centerIn: parent
                                 icon: pic.status === Image.Error || !(card.r.thumb || card.r.preview) ? "image_not_supported" : "hourglass_empty"
                                 size: 28
@@ -276,6 +293,7 @@ Page {
                         FText {
                             Layout.fillWidth: true
                             text: page.fonts ? [card.r.category, (card.r.weights || []).length + " weights" + (card.r.italic ? " + italics" : ""), card.r.author].filter(s => s).join(" · ")
+                                : page.kind === "palettes" ? (card.r.author ? "by " + card.r.author : "")
                                 : ["by " + card.r.author, "★ " + card.r.score, page.fmtCount(card.r.downloads) + " downloads"].join(" · ")
                             dim: true
                             font.pixelSize: Theme.fsXs
@@ -432,6 +450,8 @@ Page {
                         page.status = r.name + " installed" + ((d.skipped || []).length ? " (left alone, already there: " + d.skipped.join(", ") + ")" : "");
                     }
                     AppTheming.refreshInstalled();
+                    if (page.kind === "palettes")
+                        Palettes.refresh();
                     if (page.kind === "icons")
                         UiIcons.load();                 // a pack the shell uses may have changed
                     if (page.kind === "wallpapers")

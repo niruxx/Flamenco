@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 // Hand-tuned color schemes. Each has a dark and light variant using the
 // same semantic roles, which map cleanly onto Qt's QPalette when exported.
@@ -10,9 +11,18 @@ Singleton {
 
     // "noir" is shown as Flamenco (the shell's own black-and-grey look); "flamenco",
     // the original rose palette, is shown as Material Design (ids stay, so settings keep working)
-    readonly property var names: ["noir", "flamenco", "glass", "y2k", "aero", "unity", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
+    // built in, then the ones saved in ~/.config/flamenco/palettes (Get themes → Palettes), "x-<id>"
+    readonly property var names: builtin.concat(Object.keys(saved))
+    readonly property var builtin: ["noir", "flamenco", "glass", "y2k", "aero", "unity", "breeze", "catppuccin", "rosepine", "nord", "tokyonight", "gruvbox", "everforest", "dracula", "kanagawa", "solarized", "onedark", "monochrome"]
 
-    readonly property var labels: ({
+    readonly property var labels: Object.assign({}, builtinLabels, savedLabels)
+    readonly property var savedLabels: {
+        const out = {};
+        for (const k in saved)
+            out[k] = saved[k].name;
+        return out;
+    }
+    readonly property var builtinLabels: ({
             noir: "Flamenco",
             flamenco: "Material Design",
             glass: "Liquid Glass",
@@ -297,7 +307,40 @@ Singleton {
         })
 
     function get(name, dark) {
-        const s = schemes[name] || schemes.flamenco;
+        const s = schemes[name] || saved[name] || (name === current.id ? current : null) || schemes.flamenco;
         return dark ? s.dark : s.light;
+    }
+
+    // ── saved palettes ──
+    property var saved: ({})                 // "x-<id>" → { name, dark, light }
+    function refresh() {
+        if (!lister.running)
+            lister.running = true;
+    }
+    Component.onCompleted: refresh()
+    Process {
+        id: lister
+        command: [Paths.bin, "get", "palettes"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.saved = JSON.parse(text);
+                } catch (e) {}
+            }
+        }
+    }
+    // the one in use, read straight away at startup (so the shell doesn't start in another palette)
+    readonly property string chosen: Settings.data.appearance.palette || ""
+    property var current: ({ id: "" })
+    FileView {
+        path: root.chosen.startsWith("x-") ? Paths.configDir + "/palettes/" + root.chosen.slice(2) + ".json" : ""
+        blockLoading: true
+        onLoaded: {
+            try {
+                const p = JSON.parse(text());
+                if (p.dark && p.light)
+                    root.current = { id: root.chosen, name: p.name, dark: p.dark, light: p.light };
+            } catch (e) {}
+        }
     }
 }

@@ -64,7 +64,7 @@ Variants {
                         icon: "memory"
                         RowLayout {
                             Layout.fillWidth: true
-                            FText { text: Math.round(SystemStats.cpu * 100) + "%"; font.pixelSize: Theme.fsXxl; font.weight: Font.Bold; color: SystemStats.cpu > 0.85 ? Theme.error : Theme.text }
+                            FText { text: Math.round(SystemStats.cpu * 100) + "%"; font.pixelSize: Theme.fsXxl; font.weight: Font.Bold; color: SystemStats.colorFor("cpu", SystemStats.cpu * 100, Theme.text) }
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 0
@@ -97,7 +97,7 @@ Variants {
                                 label: modelData.chip + (modelData.label !== modelData.chip ? " · " + modelData.label : "")
                                 detail: Math.round(modelData.temp) + " °C"
                                 value: modelData.temp / 100
-                                barColor: modelData.temp > 80 ? Theme.error : modelData.temp > 65 ? Theme.warning : Theme.success
+                                barColor: SystemStats.colorFor("temp", modelData.temp, Theme.success)
                             }
                         }
                     }
@@ -109,7 +109,7 @@ Variants {
                             label: "RAM"
                             detail: SystemStats.memUsed.toFixed(1) + " / " + SystemStats.memTotal.toFixed(1) + " GiB"
                             value: SystemStats.mem
-                            barColor: Theme.accent2
+                            barColor: SystemStats.colorFor("mem", SystemStats.mem * 100, Theme.accent2)
                         }
                         PerfMeter {
                             visible: SystemStats.swapTotal > 0
@@ -137,6 +137,7 @@ Variants {
                                 label: modelData.mount
                                 detail: SystemStats.formatBytes(modelData.used) + " / " + SystemStats.formatBytes(modelData.size)
                                 value: modelData.size > 0 ? modelData.used / modelData.size : 0
+                                barColor: SystemStats.colorFor("disk", value * 100, Theme.accent)
                             }
                         }
                     }

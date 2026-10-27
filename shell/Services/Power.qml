@@ -63,8 +63,32 @@ Singleton {
             PowerProfiles.profile = PowerProfile.Balanced;
     }
 
+    function hibernate() {
+        Quickshell.execDetached(["systemctl", "hibernate"]);
+    }
+    function suspendThenHibernate() {
+        Quickshell.execDetached(["systemctl", "suspend-then-hibernate"]);
+    }
+    // sleep after being idle: suspend, hibernate, or suspend and hibernate later (Settings → Power)
+    function idleSleep() {
+        const how = Settings.data.power.idleSleep || "suspend";
+        how === "hibernate" ? hibernate() : how === "suspend-then-hibernate" ? suspendThenHibernate() : suspend();
+    }
     function suspend() {
         Quickshell.execDetached(["systemctl", "suspend"]);
+    }
+    function rebootFirmware() {
+        Quickshell.execDetached(["systemctl", "reboot", "--firmware-setup"]);
+    }
+    // back to the login screen, leaving this session running (LightDM, GDM)
+    function switchUser() {
+        Quickshell.execDetached(["sh", "-c", "command -v dm-tool >/dev/null && exec dm-tool switch-to-greeter; command -v gdmflexiserver >/dev/null && exec gdmflexiserver"]);
+    }
+    property bool canSwitchUser: false
+    Process {
+        running: true
+        command: ["sh", "-c", "command -v dm-tool || command -v gdmflexiserver"]
+        onExited: code => root.canSwitchUser = code === 0
     }
     function reboot() {
         Quickshell.execDetached(["systemctl", "reboot"]);

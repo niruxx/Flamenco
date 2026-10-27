@@ -147,4 +147,22 @@ Page {
         dim: true
         wrapMode: Text.Wrap
     }
+
+    Group {
+        title: "Hooks"
+        FText {
+            Layout.fillWidth: true
+            Layout.margins: Theme.sp3
+            text: "Commands Flamenco runs when something happens. They get FLAMENCO_WALLPAPER, FLAMENCO_MODE (dark or light), FLAMENCO_PALETTE, FLAMENCO_ACCENT and FLAMENCO_EVENT, e.g. to theme another app: pywal -i \"$FLAMENCO_WALLPAPER\""
+            dim: true
+            font.pixelSize: Theme.fsSm
+            wrapMode: Text.Wrap
+        }
+        TextRow { title: "Wallpaper changes"; icon: "wallpaper"; target: Settings.data.hooks; key: "wallpaper"; placeholder: "A command" }
+        TextRow { title: "Dark or light mode changes"; icon: "contrast"; target: Settings.data.hooks; key: "darkMode"; placeholder: "A command" }
+        TextRow { title: "Colors come from a new wallpaper"; icon: "palette"; target: Settings.data.hooks; key: "colors"; placeholder: "A command" }
+        TextRow { title: "The screen locks"; icon: "lock"; target: Settings.data.hooks; key: "lock"; placeholder: "A command" }
+        TextRow { title: "The screen unlocks"; icon: "lock_open"; target: Settings.data.hooks; key: "unlock"; placeholder: "A command" }
+        TextRow { title: "Flamenco starts"; icon: "rocket_launch"; target: Settings.data.hooks; key: "startup"; placeholder: "A command" }
+    }
 }

@@ -56,9 +56,13 @@ Rectangle {
                 // "tp:<kind>/<id>" are Noctalia and DMS plugins' widgets (ThirdParty service)
                 sourceComponent: sec.registry[modelData] ?? (modelData.startsWith("plugin:") ? sec.registry["plugin"] ?? null
                     : modelData.startsWith("tp:") ? sec.registry["thirdparty"] ?? null
-                    : modelData.startsWith("separator") ? sec.registry["separator"] ?? null : null)
+                    : modelData.startsWith("separator") ? sec.registry["separator"] ?? null
+                    : modelData.startsWith("spacer") ? sec.registry["spacer"] ?? null
+                    : modelData.startsWith("custom:") ? sec.registry["custom"] ?? null : null)
                 // widgets that adapt to tight bars declare `barLevel`
                 onLoaded: {
+                    if (item && item.customId !== undefined)
+                        item.customId = modelData;
                     if (item && item.pluginId !== undefined)
                         item.pluginId = modelData.slice(7);
                     if (item && item.key !== undefined && modelData.startsWith("tp:"))

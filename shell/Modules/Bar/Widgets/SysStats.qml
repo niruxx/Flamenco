@@ -21,6 +21,10 @@ BarChip {
         property string icon
         property real value
         property string label
+        property string kind: "cpu"
+        // percent, or °C for the temperature
+        readonly property real amount: kind === "temp" ? SystemStats.temp : value * 100
+        readonly property color tone: SystemStats.colorFor(kind, amount, Theme.accent2)
         property bool ring: false
         spacing: Theme.barVertical ? 0 : 4
 
@@ -34,7 +38,7 @@ BarChip {
                 visible: parent.parent.ring
                 readonly property real v: Math.max(0, Math.min(1, parent.parent.value))
                 readonly property color track: Theme.alpha(Theme.text, 0.15)
-                readonly property color fillColor: v > 0.85 ? Theme.error : Theme.accent2
+                readonly property color fillColor: parent.parent.tone
                 onVChanged: requestPaint()
                 onTrackChanged: requestPaint()
                 onFillColorChanged: requestPaint()
@@ -60,7 +64,7 @@ BarChip {
                 anchors.centerIn: parent
                 icon: parent.parent.icon
                 size: parent.parent.ring ? Math.round(parent.width * 0.5) : 16
-                color: parent.parent.value > 0.85 ? Theme.error : Theme.accent2
+                color: parent.parent.tone
             }
         }
         FText {
@@ -73,7 +77,7 @@ BarChip {
     BarFlow {
         spacing: Theme.barVertical ? 6 : root.rings ? 12 : 10
         Stat { icon: "memory"; value: SystemStats.cpu; ring: root.rings; label: Math.round(SystemStats.cpu * 100) + (Theme.barVertical ? "" : "%") }
-        Stat { icon: "developer_board"; value: SystemStats.mem; ring: root.rings; visible: root.barLevel < 1; label: Math.round(SystemStats.mem * 100) + (Theme.barVertical ? "" : "%") }
-        Stat { icon: "thermostat"; value: SystemStats.temp / 100; ring: root.rings; visible: root.b.statsTemp && root.barLevel < 1 && SystemStats.temp > 0; label: Math.round(SystemStats.temp) + "°" }
+        Stat { icon: "developer_board"; kind: "mem"; value: SystemStats.mem; ring: root.rings; visible: root.barLevel < 1; label: Math.round(SystemStats.mem * 100) + (Theme.barVertical ? "" : "%") }
+        Stat { icon: "thermostat"; kind: "temp"; value: SystemStats.temp / 100; ring: root.rings; visible: root.b.statsTemp && root.barLevel < 1 && SystemStats.temp > 0; label: Math.round(SystemStats.temp) + "°" }
     }
 }
