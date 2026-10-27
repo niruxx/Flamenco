@@ -4,6 +4,12 @@ Bluetooth Settings Options - Bluetooth does not scan from the quicksettings and 
 ## Features from Noctalia and DMS
 What those two shells have that Flamenco doesn't yet, from their settings, widgets and modules (Noctalia's default settings and translations, DMS's source tree, October 2026). Flamenco already covers the rest (greeter, users, online accounts, wellbeing, printers, keybinds, displays, OSD, desktop widgets, clipboard, notepad, color picker, updates…). (N) Noctalia, (D) DMS.
 
+
+### Remaining Fixes
+Desktop Widgets - When editing Desktop widgets the close button dissapears before the mouse can slide onto it.
+
+The Desktop Widgets quick settings toggle shows widgets but its not scroll-able and it's overlapping beyond the UI frame that houses the Widgets.
+
 ### Most useful first
 - [x] **Polkit authentication agent** (D) (done in 0.57.0): the "an app wants your password" dialog, in Flamenco's look. Today another agent (polkit-gnome, polkit-kde…) has to be running, and Flamenco's own pkexec actions depend on it.
 - [ ] **Task manager** (D): a process list to search, sort by CPU or memory, and end or kill processes. The Performance panel only shows the top few.
