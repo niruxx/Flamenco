@@ -88,6 +88,7 @@ ShellRoot {
     Island {}
     BrowserPicker {}
     QrPanel {}
+    TaskManager {}
     Osd { id: osd }
 
     ControlCenter {}
@@ -166,6 +167,11 @@ ShellRoot {
     IpcHandler {
         target: "share"
         function pick(id: string, outputs: string): void { Share.ask(id, outputs); }
+    }
+
+    IpcHandler {
+        target: "tasks"
+        function toggle(): void { Panels.tasks = !Panels.tasks; }
     }
 
     IpcHandler {

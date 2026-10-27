@@ -12,7 +12,7 @@ The Desktop Widgets quick settings toggle shows widgets but its not scroll-able 
 
 ### Most useful first
 - [x] **Polkit authentication agent** (D) (done in 0.57.0): the "an app wants your password" dialog, in Flamenco's look. Today another agent (polkit-gnome, polkit-kde…) has to be running, and Flamenco's own pkexec actions depend on it.
-- [ ] **Task manager** (D): a process list to search, sort by CPU or memory, and end or kill processes. The Performance panel only shows the top few.
+- [x] **Task manager** (D) (done in 0.61.0): a process list to search, sort by CPU or memory, and end or kill processes. The Performance panel only shows the top few.
 - [x] **Toasts for changes** (N) (done in 0.57.0; airplane mode not yet): a small pop-up when Caps Lock or Num Lock, the keyboard layout, the power profile, Wi-Fi, Bluetooth, airplane mode, Do Not Disturb or night light change.
 - [x] **Low and critical battery warnings** (N, D) (done in 0.57.0): a notification (and optionally a sound) at the low level, and before the battery runs out.
 - [x] **Separate idle timers on battery and plugged in** (D), and **hibernate** after a while (N, D) (done in 0.57.0): lock, screen off and suspend times for each.

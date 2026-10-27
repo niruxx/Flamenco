@@ -69,6 +69,7 @@
                                ask which browser opens a link
   flamenco qr TEXT | --wifi    a QR code (SVG) of the text, or of this Wi-Fi network
   flamenco mux                 tmux and zellij sessions (JSON)
+  flamenco procs [kill PID [term|kill]]  processes (JSON), or end one
   flamenco region [status] | set LANG [FORMATS] | enable LOCALE
                                the system language and formats (localectl), turning on another language
   flamenco files QUERY          files and folders in your home folder whose name has QUERY (JSON; the launcher's / search)
@@ -94,7 +95,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.60.0"
+VERSION = "0.61.0"
 MARKER = "flamenco-generated"
 
 HOME = Path.home()
@@ -1793,6 +1794,7 @@ SHELL_FUNCTIONS = {
     "bar-toggle": ("Show / hide the bar", ["bar", "toggle"]),
     "window-mode": ("Switch tiling / floating windows", ["ipc", "windows", "toggleMode"]),
     "window-resize": ("Resize the window (resize panel)", ["ipc", "windows", "resize"]),
+    "task-manager": ("Task manager", ["ipc", "tasks", "toggle"]),
     "night-light": ("Toggle night light", ["ipc", "toggles", "nightLight"]),
     "screenshot": ("Screenshot (select an area)", ["screenshot", "region"]),
     "screenshot-screen": ("Screenshot of the screen", ["screenshot", "screen"]),
@@ -5201,6 +5203,40 @@ def cmd_region(args: list[str]) -> int:
                   'elif ! grep -q "^$l\\b" "$f"; then printf "%s UTF-8\\n" "$l" >> "$f"; fi; locale-gen')
         return privileged(["sh", "-c", script, "sh", loc])
     die("usage: flamenco region [status] | set LANG [FORMATS] | enable LOCALE")
+
+
+# ─────────────────────────────── task manager ────────────────────────────────
+
+def cmd_procs(args: list[str]) -> int:
+    """Processes (JSON) for the task manager; `kill PID [term|kill]` ends one."""
+    import signal
+    if args[:1] == ["kill"] and len(args) > 1:
+        if not args[1].isdigit() or int(args[1]) <= 1:
+            die("not a process id")
+        pid, how = int(args[1]), (args[2] if len(args) > 2 else "term")
+        sig = signal.SIGKILL if how == "kill" else signal.SIGTERM
+        try:
+            os.kill(pid, sig)
+        except PermissionError:
+            # someone else's (root's…): asks for the password
+            return privileged(["kill", "-KILL" if how == "kill" else "-TERM", "--", str(pid)])
+        except ProcessLookupError:
+            die("it isn't running any more")
+        return 0
+    r = subprocess.run(["ps", "-eo", "pid=,user:32=,pcpu=,pmem=,rss=,etimes=,comm=,args="], capture_output=True, text=True)
+    me = os.environ.get("USER", "")
+    out = []
+    for l in r.stdout.splitlines():
+        f = l.split(None, 7)
+        if len(f) < 7 or not f[0].isdigit():
+            continue
+        pid, user, cpu, mem, rss, age, comm = f[:7]
+        if comm.startswith("[") or int(pid) <= 2:
+            continue                                  # kernel threads
+        out.append({"pid": int(pid), "user": user, "cpu": float(cpu), "mem": float(mem), "rss": int(rss) * 1024,
+                    "age": int(age), "name": comm, "cmd": (f[7] if len(f) > 7 else comm)[:300], "mine": user == me})
+    print(json.dumps(out))
+    return 0
 
 
 # ─────────────────────────────── browser picker ──────────────────────────────
@@ -11386,6 +11422,8 @@ def main(argv: list[str]) -> int:
         return cmd_browser(rest, cmd)
     if cmd == "qr":
         return cmd_qr(rest)
+    if cmd == "procs":
+        return cmd_procs(rest)
     if cmd == "mux":
         return cmd_mux(rest)
     if cmd == "users":

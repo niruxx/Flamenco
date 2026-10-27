@@ -398,6 +398,9 @@ Singleton {
                 property bool notifications: true     // grows for a notification
                 property bool levels: true            // the volume / brightness as they change
                 property bool idle: true              // a small pill when there's nothing to show
+                property string place: "float"        // float (its own spot on screen) | bar (in the bar, the island widget)
+                property string position: "top-center" // floating: top-left | top-center | top-right | bottom-left | bottom-center | bottom-right
+                property bool lyrics: true            // the lyric line instead of the title, when there is one
             }
             property JsonObject osd: JsonObject {
                 property bool enabled: true

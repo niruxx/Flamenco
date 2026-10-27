@@ -1,28 +1,82 @@
 [
-  { "version": "0.60.0", "items": [
-    "Bar widgets: Caps Lock / Num Lock, network speed, disk usage, graphics card, VPN, the line of the song being sung (lyrics), spacers, and custom widgets from your own commands",
-    "What scrolling, middle-click and right-click on the empty bar do; hide the bar during the overview; an auto-hidden bar shows for a moment when switching workspaces",
-    "A right-click menu on the desktop, and a Dynamic island at the top for media, notifications and volume",
-    "Session menu: a countdown, hibernate, restart into the firmware setup, switch user, number keys",
-    "Hooks: your own commands when the wallpaper, dark mode or colors change, on lock, unlock and startup",
-    "A browser picker for links, Wi-Fi as a QR code (and a QR code maker), terminal sessions (tmux, zellij) in the launcher, and this What's new" ] },
-  { "version": "0.59.0", "items": [
-    "Region & Language: the system language and formats, adding languages, the date style and the first day of the week",
-    "Wallpaper: a plain color, center and tile, favorites, one for light and one for dark mode, a folder per screen",
-    "A preferred media player and players to ignore; Bluetooth signal strength and reconnecting your devices",
-    "Dock: a dot per window, tinted icons, only this screen's apps; warning and critical levels for the system monitor; a lowest brightness",
-    "Plugin update notices and a lock file; palettes from the DMS theme registry in Get themes" ] },
-  { "version": "0.58.0", "items": [
-    "The launcher finds open windows, settings, session actions and files (/), searches the web, pins apps and has a grid view",
-    "Notification rules per app, and a window rules editor" ] },
-  { "version": "0.57.0", "items": [
-    "Flamenco's own password dialog (polkit)",
-    "Toasts when Caps Lock, the keyboard layout, the power profile, Wi-Fi or Do Not Disturb change",
-    "Low and critical battery warnings, and separate idle times on battery" ] },
-  { "version": "0.56.0", "items": [ "Bluetooth scanning and pairing, Settings → Bluetooth, and a tidier Settings order" ] },
-  { "version": "0.55.0", "items": [ "Resizing floating windows (their own frames, and a Resize… panel); the microphone indicator only while in use, in five looks" ] },
-  { "version": "0.54.0", "items": [ "Pop-ups when drives and accessories are plugged in or taken out" ] },
-  { "version": "0.53.0", "items": [ "The bar in a corner, its length and alignment, icon size; the Unity layout" ] },
-  { "version": "0.52.0", "items": [ "Text color, text cursor color and a recolored mouse pointer" ] },
-  { "version": "0.51.0", "items": [ "Get themes: icons, cursors, GTK themes, color schemes, wallpapers and fonts from one place" ] }
+  {
+    "version": "0.61.0",
+    "items": [
+      "The Dynamic island: six places on the screen or in the bar, and on hover a bigger pill with the cover, a seek bar and the controls",
+      "Lyrics also for YouTube and YouTube Music in Firefox and Chrome (their titles are cleaned up, and lrclib is searched when there's no exact match)",
+      "A task manager: search, sort by CPU, memory or name, end or kill processes"
+    ]
+  },
+  {
+    "version": "0.60.0",
+    "items": [
+      "Bar widgets: Caps Lock / Num Lock, network speed, disk usage, graphics card, VPN, the line of the song being sung (lyrics), spacers, and custom widgets from your own commands",
+      "What scrolling, middle-click and right-click on the empty bar do; hide the bar during the overview; an auto-hidden bar shows for a moment when switching workspaces",
+      "A right-click menu on the desktop, and a Dynamic island at the top for media, notifications and volume",
+      "Session menu: a countdown, hibernate, restart into the firmware setup, switch user, number keys",
+      "Hooks: your own commands when the wallpaper, dark mode or colors change, on lock, unlock and startup",
+      "A browser picker for links, Wi-Fi as a QR code (and a QR code maker), terminal sessions (tmux, zellij) in the launcher, and this What's new"
+    ]
+  },
+  {
+    "version": "0.59.0",
+    "items": [
+      "Region & Language: the system language and formats, adding languages, the date style and the first day of the week",
+      "Wallpaper: a plain color, center and tile, favorites, one for light and one for dark mode, a folder per screen",
+      "A preferred media player and players to ignore; Bluetooth signal strength and reconnecting your devices",
+      "Dock: a dot per window, tinted icons, only this screen's apps; warning and critical levels for the system monitor; a lowest brightness",
+      "Plugin update notices and a lock file; palettes from the DMS theme registry in Get themes"
+    ]
+  },
+  {
+    "version": "0.58.0",
+    "items": [
+      "The launcher finds open windows, settings, session actions and files (/), searches the web, pins apps and has a grid view",
+      "Notification rules per app, and a window rules editor"
+    ]
+  },
+  {
+    "version": "0.57.0",
+    "items": [
+      "Flamenco's own password dialog (polkit)",
+      "Toasts when Caps Lock, the keyboard layout, the power profile, Wi-Fi or Do Not Disturb change",
+      "Low and critical battery warnings, and separate idle times on battery"
+    ]
+  },
+  {
+    "version": "0.56.0",
+    "items": [
+      "Bluetooth scanning and pairing, Settings \u2192 Bluetooth, and a tidier Settings order"
+    ]
+  },
+  {
+    "version": "0.55.0",
+    "items": [
+      "Resizing floating windows (their own frames, and a Resize\u2026 panel); the microphone indicator only while in use, in five looks"
+    ]
+  },
+  {
+    "version": "0.54.0",
+    "items": [
+      "Pop-ups when drives and accessories are plugged in or taken out"
+    ]
+  },
+  {
+    "version": "0.53.0",
+    "items": [
+      "The bar in a corner, its length and alignment, icon size; the Unity layout"
+    ]
+  },
+  {
+    "version": "0.52.0",
+    "items": [
+      "Text color, text cursor color and a recolored mouse pointer"
+    ]
+  },
+  {
+    "version": "0.51.0",
+    "items": [
+      "Get themes: icons, cursors, GTK themes, color schemes, wallpapers and fonts from one place"
+    ]
+  }
 ]

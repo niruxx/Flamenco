@@ -14,6 +14,7 @@ Singleton {
     property bool setupOpen: false
     property string settingsPage: "appearance"
     property bool whatsNew: false
+    property bool tasks: false                // the task manager (Modules/Extras/TaskManager)
     property string browserUrl: ""            // a link waiting for "which browser?" (Modules/Extras/BrowserPicker)
     property string qr: ""                    // the QR window: "@wifi", or text (Modules/Extras/QrPanel)             // the "What's new" window (Modules/Extras/WhatsNew)
     // Settings search: the row or section to scroll to and flash on the page

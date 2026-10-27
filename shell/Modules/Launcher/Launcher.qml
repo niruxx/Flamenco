@@ -54,6 +54,7 @@ Variants {
             ?? (/^https:\/\/.*%s/.test(lc.webEngine || "") ? lc.webEngine : "https://duckduckgo.com/?q=%s")
         readonly property var sessionActions: [
             { id: "lock", title: "Lock the screen", keys: ["lock"], icon: "lock" },
+            { id: "tasks", title: "Task manager", keys: ["task manager", "processes", "kill"], icon: "monitoring" },
             { id: "suspend", title: "Suspend", keys: ["suspend", "sleep"], icon: "bedtime" },
             { id: "hibernate", title: "Hibernate", keys: ["hibernate"], icon: "downloading" },
             { id: "logout", title: "Log out", keys: ["log out", "logout", "sign out"], icon: "logout" },
@@ -224,7 +225,9 @@ Variants {
                     Panels.open("power", "");
                     return;
                 }
-                if (item.action === "lock")
+                if (item.action === "tasks")
+                    Panels.tasks = true;
+                else if (item.action === "lock")
                     Quickshell.execDetached([Paths.bin, "lock"]);
                 else if (item.action === "suspend")
                     Power.suspend();

@@ -163,6 +163,11 @@ Variants {
 
                     PerfSection {
                         title: "Top processes"
+                        action: "All processes"
+                        onActionClicked: {
+                            Panels.close();
+                            Panels.tasks = true;
+                        }
                         icon: "list"
                         Repeater {
                             model: SystemStats.processes

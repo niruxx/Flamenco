@@ -73,6 +73,31 @@ Page {
     Group {
         title: "Dynamic island"
         SwitchRow { title: "Dynamic island"; subtitle: "A pill at the top that shows what's playing and grows for notifications and volume or brightness changes"; icon: "pill"; target: Settings.data.island; key: "enabled" }
+        ChoiceRow {
+            visible: Settings.data.island.enabled
+            title: "Where"
+            subtitle: Settings.data.island.place === "bar" ? "In the bar: add \"Dynamic island\" to a section in Bar settings (it's added to the center if it isn't there)" : "Its own spot on the screen"
+            icon: "pill"
+            target: Settings.data.island
+            key: "place"
+            segWidth: 110
+            options: [{ value: "float", label: "Floating" }, { value: "bar", label: "In the bar" }]
+            onEdited: {
+                const b = Settings.data.bar;
+                if (Settings.data.island.place === "bar" && !["left", "center", "right"].some(k => (b[k] || []).includes("island")))
+                    b.center = ["island"].concat(b.center || []);
+            }
+        }
+        ChoiceRow {
+            visible: Settings.data.island.enabled && Settings.data.island.place !== "bar"
+            title: "Position"
+            icon: "picture_in_picture"
+            target: Settings.data.island
+            key: "position"
+            segWidth: 64
+            options: [{ value: "top-left", label: "↖" }, { value: "top-center", label: "↑" }, { value: "top-right", label: "↗" }, { value: "bottom-left", label: "↙" }, { value: "bottom-center", label: "↓" }, { value: "bottom-right", label: "↘" }]
+        }
+        SwitchRow { visible: Settings.data.island.enabled; title: "Lyrics"; subtitle: "The line being sung instead of the title, when the song has synced lyrics. Hover for the controls"; icon: "lyrics"; target: Settings.data.island; key: "lyrics" }
         SwitchRow { visible: Settings.data.island.enabled; title: "What's playing"; icon: "music_note"; target: Settings.data.island; key: "media" }
         SwitchRow { visible: Settings.data.island.enabled; title: "Notifications"; subtitle: "Turn off notification pop-ups in Notifications if you only want them here"; icon: "notifications"; target: Settings.data.island; key: "notifications" }
         SwitchRow { visible: Settings.data.island.enabled; title: "Volume and brightness"; subtitle: "Turn off the OSD (Sound) if you only want them here"; icon: "volume_up"; target: Settings.data.island; key: "levels" }

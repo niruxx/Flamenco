@@ -190,7 +190,8 @@ Variants {
                 vpn: vpnC,
                 lyrics: lyricsC,
                 spacer: spacerC,
-                custom: customC
+                custom: customC,
+                island: islandC
             })
 
         Component { id: launcherC; LauncherButton { screenName: win.modelData.name } }
@@ -228,6 +229,7 @@ Variants {
         Component { id: vpnC; VpnIndicator { screenName: win.modelData.name } }
         Component { id: lyricsC; LyricLine { screenName: win.modelData.name } }
         Component { id: spacerC; Spacer {} }
+        Component { id: islandC; IslandWidget { screenName: win.modelData.name; window: win } }
         Component { id: customC; CustomWidget { screenName: win.modelData.name } }
         Component { id: powerC; FIconButton { id: powerBtn; icon: "power_settings_new"; size: Theme.barItem; iconColor: Theme.error; onClicked: Panels.toggle("power", win.modelData.name, powerBtn) } }
 
