@@ -427,7 +427,7 @@ Every panel closes with `Esc` or a click outside it.
 
 | Widget | Click | Other |
 |---|---|---|
-| Start button (apps icon, distro logo, flame or your own) | open the launcher, or the overview when it's on | right-click opens the other one |
+| Start button (apps icon, distro logo, flame or your own) | open the simple application menu, launcher, or overview | right-click opens the launcher from the simple menu; otherwise the other one |
 | Workspaces | go to that workspace | scroll to switch workspaces |
 | Active window | window menu: move to another workspace or monitor, float/tile, fullscreen, maximize or center the column, new window, pin to dock, switch to another open window, close, force quit (click twice) | right-click opens the same menu, middle-click closes the window |
 | Taskbar | focus the app; click again to cycle through its windows | right-click opens the window menu (move to a workspace or monitor, float, fullscreen, pin, close all, force quit…), middle-click opens a new window |
@@ -468,7 +468,7 @@ Turn it on in **Settings → Overview**. Then the start button opens it, and so 
 
 Tapping Super needs keyboard access: niri and Hyprland run shortcuts as soon as a key goes down, so they can't tell Super alone from Super+T. Flamenco reads the keyboard itself (`flamenco super-watch`), which needs you in the `input` group. The Settings page has a button for that. Being in that group lets any program you run read the keyboard, so it's only suggested once you turn the feature on.
 
-**Settings → Bar → Start button** sets the start button's icon (apps, your distro's logo, the Flamenco flame, or any Material Symbols icon or picture), an optional label such as "Start", and what it opens.
+**Settings → Bar → Start button** sets the start button's icon (apps, your distro's logo, the Flamenco flame, or any Material Symbols icon or picture), an optional label such as "Start", and what it opens. Choose **Simple application menu** for a compact Windows 2000/XP-inspired app finder with categories, alphabetical app lists, search across all programs, and Settings and Power shortcuts. This works with any layout and independently of the launcher backend. **Classic** enables it by default, with Start and labeled running apps on the left and notification icons and the clock on the right. Reapply Classic to update an existing layout.
 
 ### 🔍 Launcher
 

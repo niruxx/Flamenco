@@ -104,9 +104,12 @@ Page {
                  left: ["workspaces"], center: ["clock"], right: ["recording", "privacy", "updates", "tray", "network", "audio", "mic", "battery", "quicksettings"] },
           dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-center" } },
         { id: "classic", label: I18n.tr("Classic"), icon: "desktop_windows", hint: I18n.tr("Taskbar at the bottom, Windows-style"),
-          bar: { position: "bottom", style: "attached", height: 44, workspaceStyle: "numbers", batteryStyle: "icon", statsStyle: "text", statsTemp: false, clockLayout: "inline",
-                 left: ["launcher", "workspaces", "taskbar"], center: [],
-                 right: ["recording", "privacy", "updates", "tray", "keyboard", "network", "bluetooth", "audio", "mic", "battery", "clock", "notifications", "quicksettings"] },
+          appearance: { screenFrame: false, blendPanels: false, roundness: 0.5 },
+          bar: { position: "bottom", style: "attached", height: 44, margin: 0, radius: 0, border: true, hide: "never", hideOnOverview: false,
+                 workspaceStyle: "numbers", taskbarTitles: true, taskbarScope: "screen", batteryStyle: "icon", statsStyle: "text", statsTemp: false, clockLayout: "inline", clockAlign: "center",
+                 startIcon: "flamenco", startLabel: I18n.tr("Start"), startAction: "startmenu",
+                 left: ["launcher", "separator", "taskbar"], center: [],
+                 right: ["recording", "privacy", "tray", "keyboard", "network", "audio", "battery", "notifications", "quicksettings", "clock"] },
           dock: { enabled: false }, launcher: { position: "bottom-left" }, notifications: { position: "bottom-right" } },
         { id: "mac", label: I18n.tr("Dock & menu bar"), icon: "dock_to_bottom", hint: I18n.tr("Thin top bar and a dock, macOS-style"),
           bar: { position: "top", style: "attached", height: 32, workspaceStyle: "pills", batteryStyle: "outline", statsStyle: "text", statsTemp: false, clockLayout: "inline",
@@ -134,7 +137,7 @@ Page {
                 a.monoFamily = "Google Sans Code";
         }
         // the bar's shape options go back to their defaults unless the layout sets them
-        const barDefaults = { length: "full", align: "center", arrange: "spread", iconScale: 1 };
+        const barDefaults = { length: "full", align: "center", arrange: "spread", iconScale: 1, startAction: "auto", startLabel: "", startIcon: "apps" };
         for (const k in barDefaults)
             if ((p.bar ?? {})[k] === undefined)
                 d.bar[k] = barDefaults[k];

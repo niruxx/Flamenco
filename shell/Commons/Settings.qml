@@ -171,7 +171,7 @@ Singleton {
                 property string startIcon: "apps"     // apps | distro | flamenco | custom
                 property string startCustom: ""       // custom: a Material Symbols name, or a picture file
                 property string startLabel: ""        // text beside the icon, e.g. "Start"
-                property string startAction: "auto"  // auto (the overview when it's on, else the launcher) | launcher | overview
+                property string startAction: "auto"  // auto (the overview when it's on, else the launcher) | launcher | overview | startmenu
                 // the "Islands" layout (Appearance → Layout presets)
                 property var left: ["launcher", "separator", "workspaces", "window"]
                 property var center: ["media", "visualizer"]

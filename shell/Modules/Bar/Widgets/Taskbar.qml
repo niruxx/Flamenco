@@ -51,6 +51,9 @@ BarFlow {
             property int cycle: 0
             highlighted: focusedWin !== null || menu.visible
             padding: root.titles ? 10 : 7
+            radius: Settings.data.appearance.layoutPreset === "classic" ? Math.round(3 * Theme.scale) : (vertical ? Theme.rMd : height / 2)
+            border.width: Settings.data.appearance.layoutPreset === "classic" ? 1 : 0
+            border.color: highlighted ? Theme.accent : Theme.border
 
             onClicked: {
                 if (wins.length === 0)

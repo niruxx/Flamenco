@@ -8,15 +8,15 @@ import qs.Widgets
 
 // The start button (bar widget "launcher"). Settings → Bar → Start button sets
 // its icon (the apps grid, your distro's logo, Flamenco's flame or your own),
-// an optional label, and what a click opens: the overview when it's turned on
-// (Settings → Overview), otherwise the app launcher.
+// an optional label, and what a click opens: a simple application menu,
+// the overview, or the full launcher.
 BarChip {
     id: root
     property string screenName
     readonly property var b: Settings.data.bar
     readonly property string kind: b.startIcon || "apps"
     readonly property string label: Theme.barVertical ? "" : (b.startLabel || "")
-    readonly property string opens: b.startAction === "launcher" ? "launcher"
+    readonly property string opens: b.startAction === "startmenu" ? "startmenu" : b.startAction === "launcher" ? "launcher"
         : b.startAction === "overview" || Settings.data.overview.enabled ? "overview" : "launcher"
     // an image to show instead of a Material Symbols icon: the distro logo (from
     // os-release, through the icon theme), the flame, or a custom picture
@@ -32,11 +32,12 @@ BarChip {
     readonly property string symbol: kind === "custom" && !image && b.startCustom ? b.startCustom : "apps"
     property string logo: ""
 
+    radius: Settings.data.appearance.layoutPreset === "classic" ? Math.round(3 * Theme.scale) : (vertical ? Theme.rMd : height / 2)
     padding: label ? 10 : (cross - glyph.width) / 2
     highlighted: Panels.current === opens && Panels.screen === screenName
     onClicked: Panels.toggle(opens, screenName, root)
     // right-click: the other one, so the launcher stays a click away with the overview on
-    onRightClicked: Panels.toggle(opens === "overview" ? "launcher" : "overview", screenName, root)
+    onRightClicked: Panels.toggle(opens === "overview" || opens === "startmenu" ? "launcher" : "overview", screenName, root)
 
     Row {
         spacing: 7

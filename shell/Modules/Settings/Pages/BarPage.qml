@@ -305,14 +305,13 @@ Page {
             placeholder: "rocket_launch"
         }
         TextRow { title: I18n.tr("Label"); subtitle: I18n.tr("Text beside the icon, e.g. Start. Empty for just the icon."); icon: "label"; target: page.b; key: "startLabel"; placeholder: I18n.tr("Start") }
-        ChoiceRow {
+        DropdownRow {
             title: I18n.tr("Opens")
-            subtitle: Settings.data.overview.enabled ? I18n.tr("Right-click it for the other one") : I18n.tr("The overview is off (Settings → Overview)")
+            subtitle: I18n.tr("The simple application menu browses apps by category. Right-click Start for the launcher or overview.")
             icon: "ads_click"
             target: page.b
             key: "startAction"
-            segWidth: 120
-            options: [{ value: "auto", label: I18n.tr("Automatic") }, { value: "overview", label: I18n.tr("Overview") }, { value: "launcher", label: I18n.tr("Launcher") }]
+            options: [{ value: "auto", label: I18n.tr("Automatic") }, { value: "overview", label: I18n.tr("Overview") }, { value: "launcher", label: I18n.tr("Launcher") }, { value: "startmenu", label: I18n.tr("Simple application menu") }]
         }
     }
 

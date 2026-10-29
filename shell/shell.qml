@@ -95,6 +95,7 @@ ShellRoot {
     NotificationCenter {}
     NotificationShade {}
     Launcher {}
+    StartMenu {}
     CalendarPanel {}
     PerformancePanel {}
     VolumePanel {}

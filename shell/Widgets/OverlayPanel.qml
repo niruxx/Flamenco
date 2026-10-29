@@ -20,6 +20,9 @@ PanelWindow {
     // center | top | bottom | top-left | top-right | bottom-left | bottom-right | bar
     property string placement: ""
     readonly property string place: placement !== "" ? placement : centered ? "center" : "bar"
+    // Start menus must stay outside the bar, including when it reserves no space.
+    property bool avoidBar: false
+    readonly property int barClearance: avoidBar && place === "bar" ? Theme.barHeight + Theme.barMargin : 0
     property bool exclusiveKeyboard: false
     // how it opens (Settings → Appearance → Motion): rise | fade | slide | zoom | none
     readonly property string chosenEffect: (Settings.data.appearance.panelEffects || {})[name] || Settings.data.appearance.panelEffect || "rise"
@@ -102,17 +105,17 @@ PanelWindow {
 
         // Blend (Settings → Appearance): the card grows out of the bar as one
         // surface, flush against it in the bar's color, joined by concave corners
-        readonly property bool blend: Theme.blendPanels && root.place === "bar"
+        readonly property bool blend: Theme.blendPanels && root.place === "bar" && !root.avoidBar
         readonly property int fillet: Math.min(Theme.rXl, 24)
         // keep clear of the bar's ends (margin + rounded corner) so the joins sit on its straight part
         readonly property int inset: blend ? Theme.barMargin + (Theme.barFlush ? 0 : Theme.barRadius) + fillet : Theme.edge
         readonly property bool alongTop: edge === "top" || edge === "bottom"
 
-        width: Math.max(0, Math.min(root.cardWidth, parent.width - Theme.edge * 2))
+        width: Math.max(0, Math.min(root.cardWidth, parent.width - Theme.edge * 2 - (Theme.barVertical ? root.barClearance : 0)))
         // never taller than the screen (minus a gap); the content scrolls instead
-        height: Math.max(0, Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.edge * 2))
+        height: Math.max(0, Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.edge * 2 - (root.place === "bar" && !Theme.barVertical ? root.barClearance : 0)))
         x: blend && edge === "left" ? 0 : blend && edge === "right" ? parent.width - width
-            : edge === "left" ? Theme.edge : edge === "right" ? parent.width - width - Theme.edge
+            : edge === "left" ? Theme.edge + root.barClearance : edge === "right" ? parent.width - width - Theme.edge - root.barClearance
             : hPos === "left" ? side : hPos === "right" ? parent.width - width - side
             : hPos === "anchor" && root.openedAt >= 0 ? clampTo(root.openedAt - width / 2, width, parent.width)
             : (parent.width - width) / 2
@@ -123,7 +126,7 @@ PanelWindow {
         y: root.place === "center" ? (parent.height - height) / 2
             : blend && edge === "top" ? 0 : blend && edge === "bottom" ? parent.height - height
             : edge === "left" || edge === "right" ? alongY
-            : edge === "bottom" ? parent.height - height - Theme.edge : Theme.edge
+            : edge === "bottom" ? parent.height - height - Theme.edge - root.barClearance : Theme.edge + root.barClearance
 
         radius: Theme.rXl
         // square where it meets the bar

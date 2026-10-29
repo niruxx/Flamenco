@@ -128,3 +128,12 @@ The new Pills quick-settings layout now has a dedicated **Wallpaper carousel** b
 The wallpaper browser is now a standard quick-settings tile rather than a separate full-width button. In Pills it appears first among enabled tiles and opens the existing configured carousel/grid browser on the current screen. Saved tile visibility remains respected.
 
 The compact calendar now includes **System**, using the same CPU, memory, temperatures, network, GPU, and process information as the original Hub. Its cards collapse to a single column at compact widths; process-bar widths are clamped to avoid negative geometry. System can also be selected as the default opening tab in Clock & Weather. Detailed collection remains active only while System is shown.
+
+
+## Classic taskbar and simple application menu
+
+Classic now explicitly selects a full-width, always-visible bottom taskbar with Start, a separator, and labeled running apps on the left. The notification area ends with the clock on the right. Workspace controls no longer interrupt the Start/app arrangement. Compact rectangular Start and app buttons follow the Classic preset. Reapply the preset to update a saved layout.
+
+Settings → Bar → Start button → Opens now offers **Simple application menu**, enabled by Classic and selectable with any layout. The separate app-only panel provides an alphabetical Programs list, category browsing, global app search, app icons, keyboard selection/activation, and Settings/Power shortcuts. Right-click Start opens the full launcher, including the configured fuzzel backend. The menu uses the current monitor and stays clear of the bar; category and application lists scroll independently. Selecting a different layout resets the preset's Start action.
+
+Validation: static QML checker passes (577 files, zero problems) and `git diff --check` passes. Quickshell and Qt lint tools are unavailable here; rendered appearance and live keyboard/pointer behavior remain unverified. In a live session, check Classic after switching from Unity and Aero, bottom/side bars, two monitors, empty categories/searches, Enter/Escape/Tab/arrow keys, short screens, and UI scaling.
