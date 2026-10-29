@@ -10,7 +10,7 @@ Variants {
 
     PanelWindow {
         id: win
-        readonly property string effect: Settings.data.appearance.notifEffect || "slide"
+        readonly property string effect: Theme.spatialMotion("notifications") ? Settings.data.appearance.notifEffect || "slide" : "fade"
 
         required property ShellScreen modelData
         readonly property string pos: Settings.data.notifications.position
@@ -21,7 +21,7 @@ Variants {
 
         Timer {
             id: linger
-            interval: Theme.durLong + 100
+            interval: Theme.motionDuration("exit", "notifications") + 50
         }
 
         screen: modelData
@@ -58,19 +58,19 @@ Variants {
             add: Transition {
                 ParallelAnimation {
                     // Settings → Appearance → Motion: slide in from the side, fade, or pop
-                    NumberAnimation { property: "x"; from: win.effect === "slide" ? (win.pos.endsWith("left") ? -420 : 420) : 0; to: 0; duration: Theme.durA("notifications", 650); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.spring }
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durA("notifications", 280) }
-                    NumberAnimation { property: "scale"; from: win.effect === "pop" ? 0.6 : win.effect === "slide" ? 0.85 : 1; to: 1; duration: Theme.durA("notifications", 450); easing.type: Theme.motion === "expressive" ? Easing.OutBack : Easing.OutCubic }
+                    Anim { property: "x"; from: win.effect === "slide" ? (win.pos.endsWith("left") ? -Theme.sp5 : Theme.sp5) : 0; to: 0; motionRole: "enter"; area: "notifications" }
+                    Anim { property: "opacity"; from: 0; to: 1; motionRole: "fade"; area: "notifications" }
+                    Anim { property: "scale"; from: win.effect === "pop" ? 0.94 : win.effect === "slide" ? 0.98 : 1; to: 1; motionRole: "enter"; area: "notifications" }
                 }
             }
             remove: Transition {
                 ParallelAnimation {
-                    NumberAnimation { property: "opacity"; to: 0; duration: Theme.durA("notifications", 280) }
-                    NumberAnimation { property: "scale"; to: win.effect === "fade" ? 1 : 0.8; duration: Theme.durA("notifications", 280); easing.type: Easing.InCubic }
+                    Anim { property: "opacity"; to: 0; motionRole: "exit"; area: "notifications" }
+                    Anim { property: "scale"; to: win.effect === "fade" ? 1 : 0.98; motionRole: "exit"; area: "notifications" }
                 }
             }
             displaced: Transition {
-                NumberAnimation { properties: "x,y"; duration: Theme.durA("notifications", 450); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+                Anim { properties: "x,y"; area: "notifications"; easing.bezierCurve: Theme.curves.emphasizedDecel }
             }
         }
     }

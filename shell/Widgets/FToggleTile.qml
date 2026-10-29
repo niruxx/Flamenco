@@ -8,6 +8,22 @@ import qs.Widgets
 Rectangle {
     id: root
 
+    activeFocusOnTab: true
+    Accessible.role: Accessible.Button
+    Accessible.name: title
+    Accessible.checkable: true
+    Accessible.checked: active
+    Accessible.onPressAction: if (enabled) clicked()
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (!event.isAutoRepeat)
+                root.clicked();
+            event.accepted = true;
+        }
+    }
+
+    FocusRing {}
+
     property string icon
     property string title
     property string subtitle
@@ -17,29 +33,30 @@ Rectangle {
     signal clicked
     signal moreClicked
 
-    readonly property color fg: active ? Theme.onAccent : Theme.text
-    implicitHeight: 92
+    readonly property color fg: active ? Theme.onColor(tint) : Theme.text
+    implicitHeight: Math.round(104 * Theme.scale)
     implicitWidth: 120
-    radius: Theme.rLg
-    color: active ? tint : Theme.alpha(Theme.text, area.containsMouse ? 0.09 : 0.05)
-    border.width: active ? 0 : 1
-    border.color: Theme.alpha(Theme.text, 0.08)
-    scale: area.pressed ? 0.96 : 1
+    radius: area.pressed ? Theme.rMd : Theme.rLg
+    color: active ? tint : Theme.controlSurface
+    scale: area.pressed && Theme.spatialMotion() ? 0.98 : 1
+
+    Behavior on radius { Anim { motionRole: "feedback" } }
+    Finish { strength: 0.4; visible: Theme.materialGlass }
 
     Behavior on color { CAnim {} }
-    Behavior on scale { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }
+    Behavior on scale { Anim { motionRole: "feedback"; easing.bezierCurve: Theme.curves.springFast } }
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.leftMargin: 16
-        anchors.rightMargin: 16
-        anchors.topMargin: 14
-        anchors.bottomMargin: 13
+        anchors.leftMargin: Theme.sp4
+        anchors.rightMargin: Theme.sp4
+        anchors.topMargin: Theme.sp3
+        anchors.bottomMargin: Theme.sp3
         spacing: 3
 
         FIcon {
             icon: root.icon
-            size: 20
+            size: Theme.iconSize
             fill: root.active ? 1 : 0
             color: root.active ? root.fg : root.tint
         }
@@ -48,15 +65,16 @@ Rectangle {
             Layout.fillWidth: true
             text: root.title
             font.weight: Font.Bold
-            font.pixelSize: Theme.fsSm
+            font.pixelSize: Theme.fsMd
             color: root.fg
             elide: Text.ElideRight
         }
         FText {
             Layout.fillWidth: true
+            visible: text !== ""
             text: root.subtitle
-            font.pixelSize: Theme.fsXs
-            color: root.active ? Theme.alpha(Theme.onAccent, 0.8) : Theme.textDim
+            font.pixelSize: Theme.fsSm
+            color: root.active ? Theme.alpha(root.fg, 0.8) : Theme.textDim
             elide: Text.ElideRight
         }
     }
@@ -70,13 +88,22 @@ Rectangle {
         onClicked: mouse => mouse.button === Qt.RightButton && root.hasMore ? root.moreClicked() : root.clicked()
     }
 
+    Rectangle {
+        anchors.fill: parent
+        radius: root.radius
+        color: root.fg
+        opacity: area.pressed ? 0.1 : area.containsMouse ? 0.08 : 0
+        Behavior on opacity { Anim { motionRole: "feedback" } }
+    }
+
     FIconButton {
-        visible: root.hasMore && area.containsMouse
+        visible: root.hasMore
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: 4
         size: 26
         icon: "more_horiz"
+        accessibleName: root.title + " · " + I18n.tr("More options")
         iconColor: root.fg
         onClicked: root.moreClicked()
     }

@@ -25,7 +25,7 @@ Variants {
 
         Timer {
             id: linger
-            interval: Theme.durLong + 100
+            interval: Theme.motionDuration("exit", "notifications") + 50
         }
 
         screen: modelData
@@ -159,19 +159,19 @@ Variants {
 
             add: Transition {
                 ParallelAnimation {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durA("notifications", 280) }
-                    NumberAnimation { property: "y"; from: win.atTop ? -40 : 40; duration: Theme.durA("notifications", 450); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
-                    NumberAnimation { property: "scale"; from: 0.9; to: 1; duration: Theme.durA("notifications", 450); easing.type: Theme.motion === "expressive" ? Easing.OutBack : Easing.OutCubic }
+                    Anim { property: "opacity"; from: 0; to: 1; motionRole: "fade"; area: "notifications" }
+                    Anim { property: "y"; from: Theme.spatialMotion("notifications") ? (win.atTop ? -Theme.sp5 : Theme.sp5) : 0; motionRole: "enter"; area: "notifications" }
+                    Anim { property: "scale"; from: Theme.spatialMotion("notifications") ? 0.96 : 1; to: 1; motionRole: "enter"; area: "notifications" }
                 }
             }
             remove: Transition {
                 ParallelAnimation {
-                    NumberAnimation { property: "opacity"; to: 0; duration: Theme.durA("notifications", 260) }
-                    NumberAnimation { property: "scale"; to: 0.9; duration: Theme.durA("notifications", 260); easing.type: Easing.InCubic }
+                    Anim { property: "opacity"; to: 0; motionRole: "exit"; area: "notifications" }
+                    Anim { property: "scale"; to: Theme.spatialMotion("notifications") ? 0.98 : 1; motionRole: "exit"; area: "notifications" }
                 }
             }
             displaced: Transition {
-                NumberAnimation { properties: "x,y"; duration: Theme.durA("notifications", 400); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+                Anim { properties: "x,y"; area: "notifications"; easing.bezierCurve: Theme.curves.emphasizedDecel }
             }
         }
     }

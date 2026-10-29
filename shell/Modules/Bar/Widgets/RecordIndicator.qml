@@ -19,9 +19,11 @@ BarChip {
             height: 9
             radius: 4.5
             color: Theme.error
+            id: recordingDot
             SequentialAnimation on opacity {
-                running: Recorder.recording
+                running: Recorder.recording && Theme.spatialMotion()
                 loops: Animation.Infinite
+                onRunningChanged: if (!running) recordingDot.opacity = 1
                 NumberAnimation { to: 0.3; duration: 600; easing.type: Easing.InOutSine }
                 NumberAnimation { to: 1; duration: 600; easing.type: Easing.InOutSine }
             }

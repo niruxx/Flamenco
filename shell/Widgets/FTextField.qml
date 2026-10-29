@@ -17,10 +17,10 @@ Rectangle {
     signal keyPressed(var event)
     signal editingFinished
 
-    implicitHeight: 42
+    implicitHeight: Theme.fieldHeight
     implicitWidth: 240
     radius: Theme.rMd
-    color: Theme.surfaceHighest
+    color: Theme.surfaceHigh
     border.width: input.activeFocus ? 2 : 1
     border.color: input.activeFocus ? Theme.accent : Theme.border
 
@@ -49,6 +49,8 @@ Rectangle {
             TextInput {
                 cursorDelegate: Component { Caret {} }
                 id: input
+                activeFocusOnTab: true
+                Accessible.name: root.placeholder
                 anchors.fill: parent
                 verticalAlignment: TextInput.AlignVCenter
                 color: Theme.text

@@ -13,7 +13,7 @@ Variants {
         // the drop-down; the shade (Settings → Notifications → Style) is NotificationShade
         name: Settings.data.notifications.style === "shade" ? "notifications-panel" : "notifications"
         hAlign: "right"
-        cardWidth: 440
+        cardWidth: Math.round(440 * Theme.scale)
         onOpened: Notifs.markRead()
 
         // tallest the list may grow before it scrolls
@@ -29,30 +29,31 @@ Variants {
                 spacing: 12
 
                 Rectangle {
-                    Layout.preferredWidth: 44
-                    Layout.preferredHeight: 44
-                    radius: 22
-                    gradient: Gradient {
-                        GradientStop { position: 0; color: Theme.accent }
-                        GradientStop { position: 1; color: Theme.accent2 }
-                    }
+                    Layout.preferredWidth: Theme.fieldHeight
+                    Layout.preferredHeight: Theme.fieldHeight
+                    radius: height / 2
+                    color: Theme.accentContainer
                     FIcon {
                         anchors.centerIn: parent
                         icon: Notifs.dnd ? "notifications_off" : "notifications"
                         size: 22
                         fill: 1
-                        color: Theme.onAccent
+                        color: Theme.onAccentContainer
                     }
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 0
                     FText {
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
                         text: I18n.tr("Notifications")
                         font.pixelSize: Theme.fsXl
                         font.weight: Font.Bold
                     }
                     FText {
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
                         text: (Notifs.history.count === 0 ? I18n.tr("Nothing new") : Notifs.history.count + (Notifs.history.count === 1 ? " notification" : " notifications"))
                             + (Notifs.dnd ? " · Do not disturb is on" : "")
                         dim: true
@@ -130,16 +131,16 @@ Variants {
                 }
 
                 add: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durMed }
+                    Anim { property: "opacity"; from: 0; to: 1; motionRole: "fade"; area: "notifications" }
                 }
                 remove: Transition {
                     ParallelAnimation {
-                        NumberAnimation { property: "x"; to: 440; duration: Theme.durMed; easing.type: Easing.InCubic }
-                        NumberAnimation { property: "opacity"; to: 0; duration: Theme.durMed }
+                        Anim { property: "x"; to: Theme.spatialMotion("notifications") ? list.width : 0; motionRole: "exit"; area: "notifications" }
+                        Anim { property: "opacity"; to: 0; motionRole: "exit"; area: "notifications" }
                     }
                 }
                 displaced: Transition {
-                    NumberAnimation { properties: "y"; duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+                    Anim { properties: "y"; area: "notifications"; easing.bezierCurve: Theme.curves.emphasizedDecel }
                 }
             }
         }

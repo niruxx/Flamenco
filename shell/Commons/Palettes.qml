@@ -64,16 +64,16 @@ Singleton {
             // Liquid Glass: Apple's system grays and blue (for the liquid glass finish, see-through panels)
             glass: {
                 dark: {
-                    bg: "#1c1c1e", surface: "#2c2c2e", surfaceHigh: "#3a3a3c", surfaceHighest: "#48484a",
-                    border: "#545458", text: "#f5f5f7", textDim: "#a1a1a6",
-                    accent: "#0a84ff", onAccent: "#ffffff", accent2: "#5e5ce6", accent3: "#64d2ff",
-                    error: "#ff453a", warning: "#ff9f0a", success: "#30d158"
+                    bg: "#101923", surface: "#1b2937", surfaceHigh: "#293a4b", surfaceHighest: "#344a5c",
+                    border: "#61758a", text: "#f1f6fc", textDim: "#b6c4d5",
+                    accent: "#8dc8ff", onAccent: "#062944", accent2: "#b4b4f8", accent3: "#8de3ef",
+                    error: "#ff8d88", warning: "#ffce82", success: "#8bd8b0"
                 },
                 light: {
-                    bg: "#f2f2f7", surface: "#ffffff", surfaceHigh: "#f2f2f7", surfaceHighest: "#e5e5ea",
-                    border: "#c6c6c8", text: "#1d1d1f", textDim: "#6e6e73",
-                    accent: "#007aff", onAccent: "#ffffff", accent2: "#5856d6", accent3: "#32ade6",
-                    error: "#ff3b30", warning: "#ff9500", success: "#34c759"
+                    bg: "#e9f0f7", surface: "#f4f8fc", surfaceHigh: "#e3ecf5", surfaceHighest: "#d3e0ed",
+                    border: "#a8bdcf", text: "#182839", textDim: "#48617a",
+                    accent: "#0056b3", onAccent: "#ffffff", accent2: "#6553b5", accent3: "#007a91",
+                    error: "#b92b37", warning: "#875600", success: "#217146"
                 }
             },
             // Y2K: pearl and deep violet, hot pink, cyber cyan and lilac (with the chrome finish)
@@ -118,7 +118,7 @@ Singleton {
                 light: {
                     bg: "#dff3ff", surface: "#f4fbff", surfaceHigh: "#e6f5ff", surfaceHighest: "#d2ecfb",
                     border: "#a9d4ee", text: "#0b2a3d", textDim: "#4a6f86",
-                    accent: "#1e9bff", onAccent: "#ffffff", accent2: "#3cc85a", accent3: "#18c3c9",
+                    accent: "#0066aa", onAccent: "#ffffff", accent2: "#27934b", accent3: "#008b95",
                     error: "#e0443e", warning: "#e69a12", success: "#2fb54f"
                 }
             },

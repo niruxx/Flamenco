@@ -4,6 +4,22 @@ import qs.Commons
 Rectangle {
     id: root
 
+    property string accessibleName: icon.replace(/_/g, " ")
+    activeFocusOnTab: true
+    enabled: !disabled
+    Accessible.role: Accessible.Button
+    Accessible.name: accessibleName
+    Accessible.onPressAction: if (enabled) clicked()
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (!event.isAutoRepeat)
+                root.clicked();
+            event.accepted = true;
+        }
+    }
+
+    FocusRing {}
+
     property string icon
     property int size: 34
     property int iconSize: Math.round(size * 0.56)
@@ -11,7 +27,7 @@ Rectangle {
     property bool flat: true
     property bool disabled: false
     property color activeColor: Theme.accent
-    property color iconColor: active ? Theme.onAccent : Theme.text
+    property color iconColor: active ? Theme.onColor(activeColor) : Theme.text
     readonly property bool hovered: sl.containsMouse
 
     signal clicked
@@ -22,13 +38,15 @@ Rectangle {
     implicitWidth: size
     implicitHeight: size
     radius: active ? Math.min(Theme.rMd, size / 2) : size / 2
-    color: active ? activeColor : flat ? "transparent" : Theme.surfaceHigh
+    color: active ? activeColor : flat ? "transparent" : Theme.controlSurface
     opacity: disabled ? 0.4 : 1
-    scale: sl.pressed ? 0.9 : 1
+    scale: sl.pressed && Theme.spatialMotion() ? 0.96 : 1
+
+    Finish { strength: 0.24; visible: Theme.materialGlass && (root.active || !root.flat) }
 
     Behavior on color { CAnim {} }
-    Behavior on radius { Anim { easing.bezierCurve: Theme.curves.spring } }
-    Behavior on scale { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }
+    Behavior on radius { Anim { motionRole: "shape" } }
+    Behavior on scale { Anim { motionRole: "feedback"; easing.bezierCurve: Theme.curves.springFast } }
 
     FIcon {
         anchors.centerIn: parent

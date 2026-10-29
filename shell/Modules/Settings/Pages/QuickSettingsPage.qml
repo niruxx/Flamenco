@@ -30,12 +30,12 @@ Page {
         title: I18n.tr("Look")
         ChoiceRow {
             title: I18n.tr("Style")
-            subtitle: page.q.style === "classic" ? I18n.tr("Icon beside the text, slim sliders") : page.q.style === "cards" ? I18n.tr("Icon on top, tinted when on, big sliders (like the dashboard)") : I18n.tr("Pill tiles in two columns, half or full width, that you arrange yourself")
+            subtitle: page.q.style === "pills" ? I18n.tr("Soft tonal pills, large sliders, and a focused two-column layout") : page.q.style === "classic" ? I18n.tr("Icon beside the text, slim sliders") : page.q.style === "cards" ? I18n.tr("Icon on top, tinted when on, big sliders (like the dashboard)") : I18n.tr("Pill tiles in two columns, half or full width, that you arrange yourself")
             icon: "view_module"
             target: page.q
             key: "style"
             segWidth: 120
-            options: [{ value: "grid", label: I18n.tr("Grid"), icon: "dashboard_customize" }, { value: "cards", label: I18n.tr("Cards"), icon: "grid_view" }, { value: "classic", label: I18n.tr("Classic"), icon: "view_list" }]
+            options: [{ value: "pills", label: I18n.tr("Pills"), icon: "view_agenda" }, { value: "grid", label: I18n.tr("Grid"), icon: "dashboard_customize" }, { value: "cards", label: I18n.tr("Cards"), icon: "grid_view" }, { value: "classic", label: I18n.tr("Classic"), icon: "view_list" }]
         }
         SettingRow {
             visible: (page.q.style || "grid") === "grid"
@@ -52,10 +52,23 @@ Page {
     }
 
     Group {
+        title: I18n.tr("Panel position")
+        DropdownRow {
+            title: I18n.tr("Placement")
+            icon: "align_horizontal_center"
+            target: page.q
+            key: "placement"
+            options: [{ value: "bar", label: I18n.tr("By the bar button") }, { value: "center", label: I18n.tr("Screen center") }, { value: "top", label: I18n.tr("Top center") }, { value: "bottom", label: I18n.tr("Bottom center") }, { value: "top-left", label: I18n.tr("Top left") }, { value: "top-right", label: I18n.tr("Top right") }, { value: "bottom-left", label: I18n.tr("Bottom left") }, { value: "bottom-right", label: I18n.tr("Bottom right") }]
+        }
+        SliderRow { title: I18n.tr("Button spacing"); subtitle: I18n.tr("More space between controls and larger button targets"); icon: "space_bar"; target: page.q; key: "panelSpacing"; from: 1; to: 1.6; stepSize: 0.05; factor: 100; suffix: "%" }
+
+    }
+
+    Group {
         title: I18n.tr("Placement")
         ChoiceRow {
-            title: I18n.tr("Opens")
-            subtitle: page.q.align === "auto" ? I18n.tr("On the side of the bar where its button is") : ""
+            title: I18n.tr("Bar alignment")
+            subtitle: page.q.placement !== "bar" ? I18n.tr("Used when panel placement is By the bar") : page.q.align === "auto" ? I18n.tr("On the side of the bar where its button is") : ""
             icon: "align_horizontal_right"
             target: page.q
             key: "align"

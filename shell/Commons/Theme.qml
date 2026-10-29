@@ -22,7 +22,7 @@ Singleton {
         const o = Object.assign({}, p);
         const q = Qt.color(c);
         o.accent = c;
-        o.onAccent = (0.2126 * q.r + 0.7152 * q.g + 0.0722 * q.b) > 0.55 ? "#161616" : "#ffffff";
+        o.onAccent = String(onColor(q));
         return o;
     }
 
@@ -71,7 +71,8 @@ Singleton {
         from: 0
         to: 1
         duration: root.durXl
-        easing.type: Easing.OutCubic
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: root.curves.standard
     }
 
     function role(r) {
@@ -95,6 +96,27 @@ Singleton {
     readonly property color shadow: "#000000"
     // the text cursor (Appearance → Text cursor)
     readonly property color caret: a.caretColor === "text" ? text : /^#[0-9a-fA-F]{6}$/.test(a.caretColor || "") ? a.caretColor : accent
+
+    // Tonal containers keep selected controls quieter than primary actions.
+    readonly property color accentContainer: mix(surfaceHigh, accent, dark ? 0.24 : 0.16)
+    readonly property color onAccentContainer: contrast(text, accentContainer) >= 4.5 ? text : onColor(accentContainer)
+
+    // Choose the foreground against the actual fill, including custom tile tints.
+    function onColor(fill) {
+        const light = Qt.color("#ffffff");
+        const ink = Qt.color("#000000");
+        return contrast(light, fill) >= contrast(ink, fill) ? light : ink;
+    }
+
+    // Shared material roles keep nested controls legible on translucent surfaces.
+    readonly property bool liquidGlass: a.finish === "liquid"
+    readonly property bool aeroGlass: a.finish === "gloss"
+    readonly property bool materialGlass: liquidGlass || aeroGlass
+    readonly property real materialStrength: Math.max(0, Math.min(1.5, a.materialStrength ?? 1))
+    readonly property real glassFrost: Math.max(0, Math.min(1, a.glassFrost ?? 0.7))
+    readonly property color surfaceStroke: materialGlass ? alpha(Qt.color("#ffffff"), dark ? 0.25 : 0.8) : alpha(border, 0.7)
+    readonly property color cardSurface: materialGlass ? alpha(surfaceHigh, liquidGlass ? (dark ? 0.58 : 0.72) : 0.78) : surfaceHigh
+    readonly property color controlSurface: materialGlass ? alpha(surfaceHighest, liquidGlass ? 0.58 : 0.76) : surfaceHigh
 
     // ── transparency (Appearance → Transparency) ──
     // each part's opacity (-1: the panels'), all scaled by the whole-UI slider
@@ -136,6 +158,10 @@ Singleton {
     readonly property int rMd: Math.round(16 * round * scale)
     readonly property int rLg: Math.round(22 * round * scale)
     readonly property int rXl: Math.round(30 * round * scale)
+
+    readonly property int controlHeight: Math.round(40 * scale)
+    readonly property int fieldHeight: Math.round(44 * scale)
+    readonly property int pageMaxWidth: Math.round(820 * scale)
 
     readonly property int gap: Math.round(8 * scale)
     readonly property int sp1: Math.round(4 * scale)
@@ -233,24 +259,49 @@ Singleton {
     // snappy and minimal also shorten everything a bit
     readonly property real styleFactor: motion === "snappy" ? 0.7 : motion === "minimal" ? 0.85 : 1
     function dur(ms) {
-        return speed <= 0 ? 0 : Math.round(ms * styleFactor / speed);
+        return !Number.isFinite(speed) || speed <= 0 ? 0 : Math.max(0, Math.round(ms * styleFactor / speed));
     }
-    // an area's own speed on top (Settings → Appearance → Motion): panels, notifications, bar,
-    // workspaces, dock, launcher, lock. 0 turns that area's animations off.
+    // Area overrides apply once, after the global speed and motion style.
     function areaSpeed(area) {
-        const v = (a.motionAreas || {})[area];
-        return v === undefined ? 1 : Number(v);
+        const areas = a.motionAreas || {};
+        const value = Number(areas[area] ?? (["control", "calendar"].includes(area) ? areas.panels : undefined) ?? 1);
+        return Number.isFinite(value) ? Math.max(0, value) : 1;
     }
     function durA(area, ms) {
         const m = areaSpeed(area);
         return m <= 0 ? 0 : Math.round(dur(ms) / m);
     }
-    readonly property bool hoverZoom: a.hoverZoom !== false && motion !== "minimal"
-    readonly property bool ripple: a.ripple !== false
-    readonly property int durShort: dur(150)
-    readonly property int durMed: dur(280)
-    readonly property int durLong: dur(450)
-    readonly property int durXl: dur(650)
+    readonly property var motionDefaults: ({ feedback: 120, color: 180, fade: 150, shape: 200, move: 240, enter: 320, exit: 180, palette: 650 })
+    readonly property var motionTiming: {
+        const out = Object.assign({}, motionDefaults);
+        for (const key in motionDefaults) {
+            const value = Number((a.motionDurations || {})[key] ?? motionDefaults[key]);
+            if (Number.isFinite(value))
+                out[key] = Math.max(0, Math.min(3000, value));
+        }
+        return out;
+    }
+    readonly property real springStrength: Math.max(0, Math.min(1, a.springStrength ?? 0.65))
+    readonly property bool ambientMotion: a.ambientMotion !== false && spatialMotion()
+    function travel(distance, area = "") {
+        return spatialMotion(area) ? distance * Math.max(0, Math.min(2, a.effectDistance ?? 1)) : 0;
+    }
+    readonly property bool pageSlide: a.pageEffect !== "fade" && a.pageEffect !== "none" && spatialMotion("panels")
+    function pageDuration(area = "panels") {
+        return a.pageEffect === "none" ? 0 : motionDuration("move", area);
+    }
+    function motionDuration(role, area = "") {
+        return durA(area, motionTiming[role] ?? motionTiming.move);
+    }
+    function spatialMotion(area = "") {
+        return motion !== "minimal" && speed > 0 && areaSpeed(area) > 0;
+    }
+    readonly property bool hoverZoom: a.hoverZoom !== false && spatialMotion()
+    readonly property bool ripple: a.ripple !== false && spatialMotion()
+    readonly property int durShort: motionDuration("fade")
+    readonly property int durMed: motionDuration("move")
+    readonly property int durLong: motionDuration("enter")
+    readonly property int durXl: motionDuration("palette")
 
     // Bezier splines, from the Material 3 expressive motion spec.
     // The motion style swaps these, so every animation follows it: expressive keeps the
@@ -263,7 +314,7 @@ Singleton {
         readonly property list<real> emphasized: m === "snappy" || m === "minimal" ? [0.2, 0, 0, 1, 1, 1] : [0.05, 0, 2 / 15, 0.06, 1 / 6, 0.4, 5 / 24, 0.82, 0.25, 1, 1, 1]
         readonly property list<real> emphasizedAccel: [0.3, 0, 0.8, 0.15, 1, 1]
         readonly property list<real> emphasizedDecel: m === "snappy" ? [0, 0, 0, 1, 1, 1] : [0.05, 0.7, 0.1, 1, 1, 1]
-        readonly property list<real> spring: m === "expressive" ? [0.38, 1.21, 0.22, 1, 1, 1] : m === "snappy" ? [0.1, 0.6, 0.2, 1, 1, 1] : [0.05, 0.7, 0.1, 1, 1, 1]
-        readonly property list<real> springFast: m === "expressive" ? [0.42, 1.67, 0.21, 0.9, 1, 1] : m === "snappy" ? [0.1, 0.6, 0.2, 1, 1, 1] : [0.05, 0.7, 0.1, 1, 1, 1]
+        readonly property list<real> spring: m === "expressive" ? [0.2, 1 + 0.12 * root.springStrength, 0.2, 1, 1, 1] : m === "snappy" ? [0.1, 0.6, 0.2, 1, 1, 1] : [0.05, 0.7, 0.1, 1, 1, 1]
+        readonly property list<real> springFast: m === "expressive" ? [0.2, 1 + 0.23 * root.springStrength, 0.2, 1, 1, 1] : m === "snappy" ? [0.1, 0.6, 0.2, 1, 1, 1] : [0.05, 0.7, 0.1, 1, 1, 1]
     }
 }

@@ -7,7 +7,7 @@ import qs.Widgets
 FCard {
     id: root
     signal openDetail(string name)
-    readonly property bool cards: (Settings.data.control.style || "cards") === "cards"
+    readonly property bool cards: ["cards", "pills"].includes(Settings.data.control.style || "cards")
 
     implicitHeight: col.implicitHeight + Theme.sp4 * 2
 

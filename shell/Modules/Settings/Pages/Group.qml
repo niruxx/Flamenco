@@ -62,8 +62,8 @@ ColumnLayout {
             SequentialAnimation {
                 id: flash
                 loops: 2
-                NumberAnimation { target: hl; property: "opacity"; to: 0.25; duration: 280 }
-                NumberAnimation { target: hl; property: "opacity"; to: 0; duration: 420 }
+                NumberAnimation { target: hl; property: "opacity"; to: 0.25; duration: Theme.motionDuration("fade", "panels") }
+                NumberAnimation { target: hl; property: "opacity"; to: 0; duration: Theme.motionDuration("enter", "panels") }
             }
         }
     }

@@ -47,8 +47,9 @@ ClippingRectangle {
         spacing: Theme.sp3
 
         ClippingRectangle {
-            Layout.preferredWidth: 120
-            Layout.preferredHeight: 120
+            visible: root.width >= 360 * Theme.scale
+            Layout.preferredWidth: Math.round(104 * Theme.scale)
+            Layout.preferredHeight: Math.round(104 * Theme.scale)
             radius: Theme.rMd
             color: Theme.surfaceHighest
             scale: Media.playing ? 1 : 0.92

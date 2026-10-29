@@ -77,7 +77,7 @@ Variants {
         Timer {
             id: restoreSpeed
             interval: Theme.durA("panels", 700)
-            onTriggered: view.highlightMoveDuration = Theme.durA("panels", 380)
+            onTriggered: view.highlightMoveDuration = Theme.motionDuration("move", "panels")
         }
 
         screen: modelData
@@ -93,7 +93,7 @@ Variants {
         Item {
             id: pAnim
             property real v: win.shown ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durA("panels", 450); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { motionRole: win.shown ? "enter" : "exit"; area: "panels" } }
         }
 
         // ── the selected wallpaper, blurred, behind it all; a click there closes ──
@@ -248,7 +248,7 @@ Variants {
                 preferredHighlightBegin: 0.5
                 preferredHighlightEnd: 0.5
                 highlightRangeMode: PathView.StrictlyEnforceRange
-                highlightMoveDuration: Theme.durA("panels", 380)
+                highlightMoveDuration: Theme.motionDuration("move", "panels")
                 snapMode: PathView.SnapOneItem
                 interactive: count > 1
 

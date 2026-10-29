@@ -22,7 +22,9 @@ PanelWindow {
     readonly property string place: placement !== "" ? placement : centered ? "center" : "bar"
     property bool exclusiveKeyboard: false
     // how it opens (Settings → Appearance → Motion): rise | fade | slide | zoom | none
-    readonly property string effect: Settings.data.appearance.panelEffect || "rise"
+    readonly property string chosenEffect: (Settings.data.appearance.panelEffects || {})[name] || Settings.data.appearance.panelEffect || "rise"
+    readonly property string effect: !Theme.spatialMotion(motionArea) && chosenEffect !== "none" ? "fade" : chosenEffect
+    property string motionArea: ["control", "calendar", "launcher"].includes(name) ? name : "panels"
     // open on the side of the bar widget that opened it (false: always at hAlign)
     property bool followOrigin: true
     property int cardWidth: 420
@@ -48,7 +50,7 @@ PanelWindow {
         Item {
             id: progressAnim
             property real v: shouldShow ? 1 : 0
-            Behavior on v { Anim { duration: root.effect === "none" ? 0 : Theme.durA("panels", 450); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { motionRole: root.shouldShow ? "enter" : "exit"; area: root.motionArea; duration: root.effect === "none" ? 0 : Theme.motionDuration(motionRole, area) } }
         }
     WlrLayershell.keyboardFocus: shouldShow ? (exclusiveKeyboard ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand) : WlrKeyboardFocus.None
 
@@ -83,10 +85,11 @@ PanelWindow {
 
     Rectangle {
         id: card
+        enabled: root.shouldShow
 
         // which edge the card grows from: the bar's edge, or none when centered
         readonly property string edge: root.place === "bar" ? Theme.barPos : root.place === "center" ? "" : root.place.startsWith("bottom") ? "bottom" : "top"
-        readonly property real travel: (edge === "top" || edge === "left" ? -1 : 1) * (root.effect === "slide" ? 70 : root.effect === "rise" ? 18 : 0)
+        readonly property real travel: (edge === "top" || edge === "left" ? -1 : 1) * (root.effect === "slide" ? Theme.travel(48, root.motionArea) : root.effect === "rise" || root.effect === "bloom" ? Theme.travel(18, root.motionArea) : 0)
         // opened from a bar widget: on that widget's side of the bar (Panels.side)
         readonly property string from: root.place === "bar" && root.followOrigin ? root.openedFrom : ""
         readonly property string fromAlign: from === "start" ? "left" : from === "end" ? "right" : from === "center" ? "anchor" : ""
@@ -105,9 +108,9 @@ PanelWindow {
         readonly property int inset: blend ? Theme.barMargin + (Theme.barFlush ? 0 : Theme.barRadius) + fillet : Theme.edge
         readonly property bool alongTop: edge === "top" || edge === "bottom"
 
-        width: Math.min(root.cardWidth, parent.width - Theme.edge * 2)
+        width: Math.max(0, Math.min(root.cardWidth, parent.width - Theme.edge * 2))
         // never taller than the screen (minus a gap); the content scrolls instead
-        height: Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.edge * 2)
+        height: Math.max(0, Math.min(inner.implicitHeight + root.cardPadding * 2, parent.height - Theme.edge * 2))
         x: blend && edge === "left" ? 0 : blend && edge === "right" ? parent.width - width
             : edge === "left" ? Theme.edge : edge === "right" ? parent.width - width - Theme.edge
             : hPos === "left" ? side : hPos === "right" ? parent.width - width - side
@@ -117,7 +120,7 @@ PanelWindow {
         readonly property real alongY: from === "end" ? parent.height - height - side
             : from === "center" && root.openedAt >= 0 ? clampTo(root.openedAt - height / 2, height, parent.height)
             : side
-        y: root.place === "center" ? (parent.height - height) / 2.6
+        y: root.place === "center" ? (parent.height - height) / 2
             : blend && edge === "top" ? 0 : blend && edge === "bottom" ? parent.height - height
             : edge === "left" || edge === "right" ? alongY
             : edge === "bottom" ? parent.height - height - Theme.edge : Theme.edge
@@ -130,7 +133,20 @@ PanelWindow {
         bottomRightRadius: blend && (edge === "bottom" || edge === "right") ? 0 : Theme.rXl
         color: blend ? Theme.barBg : Theme.panelBg
         border.width: blend ? 0 : 1
-        border.color: Theme.alpha(Theme.border, 0.7)
+        border.color: Theme.surfaceStroke
+
+        Loader {
+            anchors.fill: parent
+            active: Theme.materialGlass && Theme.glassFrost > 0 && !card.blend && root.visible
+            sourceComponent: GlassBackdrop {
+                screenName: root.modelData.name
+                screenWidth: root.width
+                screenHeight: root.height
+                sampleX: card.x
+                sampleY: card.y
+                cornerRadius: card.radius
+            }
+        }
 
         // the surface finish (gloss / chrome), under the content (not on a card joined to the bar,
         // whose square corners it wouldn't follow)
@@ -138,14 +154,14 @@ PanelWindow {
 
         opacity: card.blend || root.effect === "slide" ? Math.min(1, root.progress * 1.6) : root.progress
         // blended cards slide out from under the bar instead of zooming
-        scale: card.blend ? 1 : root.effect === "zoom" ? 0.8 + 0.2 * root.progress : root.effect === "rise" ? 0.94 + 0.06 * root.progress : 1
+        scale: card.blend ? 1 : root.effect === "zoom" ? 0.9 + 0.1 * root.progress : root.effect === "rise" || root.effect === "bloom" ? 0.94 + 0.06 * root.progress : 1
         transformOrigin: card.edge === "top" ? Item.Top : card.edge === "bottom" ? Item.Bottom : card.edge === "left" ? Item.TopLeft : card.edge === "right" ? Item.TopRight : Item.Center
         transform: Translate {
             readonly property bool sideways: card.edge === "left" || card.edge === "right"
             readonly property real dist: card.blend ? (sideways ? card.width : card.height) * 0.35 : Math.abs(card.travel)
             readonly property real sign: card.edge === "top" || card.edge === "left" ? -1 : 1
             x: sideways ? (1 - root.progress) * dist * sign : 0
-            y: sideways || card.edge === "" ? 0 : (1 - root.progress) * dist * sign
+            y: sideways ? 0 : card.edge === "" ? (root.effect === "bloom" || root.effect === "rise" ? (1 - root.progress) * Theme.travel(16, root.motionArea) : 0) : (1 - root.progress) * dist * sign
         }
 
         // the concave joins on either side of a blended card
@@ -161,7 +177,7 @@ PanelWindow {
             blurMax: 32
         }
 
-        Behavior on height { Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
+        Behavior on height { Anim { area: root.motionArea; easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
         // swallow clicks so they don't reach the close catcher
         MouseArea { anchors.fill: parent }
@@ -176,7 +192,7 @@ PanelWindow {
 
             Item {
                 id: inner
-                width: scroller.width
+                width: Math.max(0, scroller.width - scroller.gutter)
                 height: implicitHeight
                 implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
             }

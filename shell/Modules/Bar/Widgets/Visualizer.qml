@@ -10,7 +10,7 @@ Item {
 
     property string screenName
     property int barLevel: 0
-    property bool barVisible: Cava.available && Media.playing && barLevel < 2
+    property bool barVisible: Settings.data.visualizer.enabled !== false && Cava.available && Media.playing && barLevel < 2
     readonly property bool vertical: Theme.barVertical
     readonly property int count: 10
     readonly property int thick: Theme.barItem - 8

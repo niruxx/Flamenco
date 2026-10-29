@@ -83,6 +83,20 @@ Page {
     }
 
     Group {
+        title: I18n.tr("Panel position")
+        DropdownRow {
+            title: I18n.tr("Placement")
+            icon: "align_horizontal_center"
+            target: page.d
+            key: "placement"
+            options: [{ value: "bar", label: I18n.tr("By the bar button") }, { value: "center", label: I18n.tr("Screen center") }, { value: "top", label: I18n.tr("Top center") }, { value: "bottom", label: I18n.tr("Bottom center") }, { value: "top-left", label: I18n.tr("Top left") }, { value: "top-right", label: I18n.tr("Top right") }, { value: "bottom-left", label: I18n.tr("Bottom left") }, { value: "bottom-right", label: I18n.tr("Bottom right") }]
+        }
+        SliderRow { title: I18n.tr("Button spacing"); subtitle: I18n.tr("More space between controls and larger button targets"); icon: "space_bar"; target: page.d; key: "panelSpacing"; from: 1; to: 1.6; stepSize: 0.05; factor: 100; suffix: "%" }
+        SliderRow { visible: page.d.style === "tabs"; title: I18n.tr("Compact panel width"); icon: "width"; target: page.d; key: "width"; from: 480; to: 960; stepSize: 20; suffix: " px" }
+
+    }
+
+    Group {
         id: cals
         title: I18n.tr("Calendars")
         readonly property var list: Settings.data.calendar.sources || []
@@ -179,7 +193,7 @@ Page {
             icon: "dashboard"
             target: page.d
             key: "defaultTab"
-            options: [{ value: "overview", label: I18n.tr("Overview") }, { value: "media", label: I18n.tr("Media") }, { value: "wallpapers", label: I18n.tr("Wallpapers") }, { value: "weather", label: I18n.tr("Weather") }]
+            options: [{ value: "overview", label: I18n.tr("Overview") }, { value: "media", label: I18n.tr("Media") }, { value: "wallpapers", label: I18n.tr("Wallpapers") }, { value: "weather", label: I18n.tr("Weather") }, { value: "system", label: I18n.tr("System") }]
         }
         SwitchRow { visible: page.d.style === "tabs"; title: I18n.tr("User card"); subtitle: I18n.tr("Avatar, name and uptime on the Overview tab"); icon: "account_circle"; target: page.d; key: "showUser" }
         SwitchRow { visible: page.d.style === "tabs"; title: I18n.tr("Media card"); subtitle: I18n.tr("Now playing on the Overview tab"); icon: "music_note"; target: page.d; key: "showMedia" }

@@ -110,7 +110,7 @@ Scope {
                 active: win.liveOn && Paths.isVideo(win.live)
                 source: active ? "LiveVideo.qml" : ""
                 opacity: active && (item?.started ?? false) ? 1 : 0
-                Behavior on opacity { Anim { duration: 400 } }
+                Behavior on opacity { Anim { motionRole: "enter" } }
                 onLoaded: {
                     item.url = Qt.binding(() => Paths.toUrl(win.live));
                     item.playing = Qt.binding(() => win.livePlaying);
@@ -460,8 +460,8 @@ Scope {
                 visible: opacity > 0
                 opacity: win.cfg.solid ? 1 : 0
                 color: /^#[0-9a-fA-F]{6}$/.test(win.cfg.solidColor || "") ? win.cfg.solidColor : Theme.bg
-                Behavior on opacity { Anim { duration: Settings.data.wallpaper.duration || 600 } }
-                Behavior on color { CAnim { duration: 600 } }
+                Behavior on opacity { Anim { duration: Theme.dur(Settings.data.wallpaper.duration ?? 600) } }
+                Behavior on color { CAnim {} }
             }
         }
     }

@@ -21,7 +21,7 @@ Variants {
         placement: Settings.data.launcher.position
         hAlign: "left"
         exclusiveKeyboard: true
-        cardWidth: Settings.data.launcher.width
+        cardWidth: Math.round(Settings.data.launcher.width * Theme.scale)
 
         property string query: ""
         readonly property var lc: Settings.data.launcher
@@ -473,7 +473,9 @@ Variants {
                         target: row
                         property: "opacity"
                         to: 1
-                        duration: Theme.durA("launcher", 280)
+                        duration: Theme.motionDuration("fade", "launcher")
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Theme.curves.standard
                     }
 
                     RowLayout {

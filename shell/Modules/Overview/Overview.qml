@@ -110,7 +110,7 @@ Variants {
         Item {
             id: pAnim
             property real v: win.shown ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durA("panels", 420); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { motionRole: win.shown ? "enter" : "exit"; area: "panels" } }
         }
 
         // ── backdrop: the wallpaper, blurred and dimmed; a click on it closes ──

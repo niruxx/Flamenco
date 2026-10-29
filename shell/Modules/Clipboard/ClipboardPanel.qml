@@ -15,7 +15,7 @@ Variants {
         id: panel
         name: "clipboard"
         hAlign: "right"
-        cardWidth: 460
+        cardWidth: Math.round(460 * Theme.scale)
         exclusiveKeyboard: true
 
         property string query: ""

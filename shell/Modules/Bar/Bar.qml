@@ -117,7 +117,7 @@ Variants {
         Item {
             id: hideAnim
             property real v: win.revealed ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durA("bar", win.revealed ? 260 : 320); easing.bezierCurve: win.revealed ? Theme.curves.emphasizedDecel : Theme.curves.emphasizedAccel } }
+            Behavior on v { Anim { motionRole: win.revealed ? "enter" : "exit"; area: "bar" } }
         }
         Timer {
             id: hideDelay
@@ -150,7 +150,7 @@ Variants {
             id: enterAnim
             property real v: 0
             Component.onCompleted: v = 1
-            Behavior on v { Anim { duration: Theme.durA("bar", 650); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { motionRole: "enter"; area: "bar" } }
         }
 
         readonly property var registry: ({

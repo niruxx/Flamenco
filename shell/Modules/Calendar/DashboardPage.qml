@@ -30,11 +30,12 @@ Item {
 
     implicitHeight: loader.item ? loader.item.implicitHeight : 0
     visible: opacity > 0.01
+    enabled: active && loader.status === Loader.Ready
     opacity: active && loader.status === Loader.Ready ? 1 : 0
-    x: active ? 0 : (index < currentIndex ? -40 : 40)
+    x: active || !Theme.pageSlide ? 0 : Theme.travel(index < currentIndex ? -24 : 24, "calendar") * Theme.scale
 
-    Behavior on opacity { Anim { duration: Theme.durMed } }
-    Behavior on x { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+    Behavior on opacity { Anim { area: "calendar"; duration: Theme.pageDuration(area) } }
+    Behavior on x { Anim { area: "calendar"; duration: Theme.pageDuration(area); easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
     Loader {
         id: loader

@@ -16,10 +16,13 @@ Variants {
     OverlayPanel {
         id: panel
         name: "calendar"
+        placement: Settings.data.dashboard.placement || "bar"
+        cardPadding: Math.round(Theme.sp5 * panel.spacingScale)
 
+        readonly property real spacingScale: Math.max(1, Math.min(1.6, Settings.data.dashboard.panelSpacing ?? 1))
         readonly property bool hub: (Settings.data.dashboard.style || "hub") === "hub"
-        cardWidth: hub ? Math.min(1260, Math.round(modelData.width * 0.92)) : 560
-        followOrigin: !hub
+        cardWidth: hub ? Math.min(Math.round(1260 * Theme.scale), Math.round(modelData.width * 0.92)) : Math.round(Math.max(480, Math.min(960, Settings.data.dashboard.width || 620)) * Theme.scale)
+        followOrigin: true
         exclusiveKeyboard: hub
 
         // tabs with `action` open something else instead of a page
@@ -35,7 +38,8 @@ Variants {
             { value: "overview", label: I18n.tr("Overview"), icon: "dashboard" },
             { value: "media", label: I18n.tr("Media"), icon: "music_note" },
             { value: "wallpapers", label: I18n.tr("Wallpapers"), icon: "wallpaper" },
-            { value: "weather", label: I18n.tr("Weather"), icon: "partly_cloudy_day" }
+            { value: "weather", label: I18n.tr("Weather"), icon: "partly_cloudy_day" },
+            { value: "system", label: I18n.tr("System"), icon: "monitoring" }
         ].concat(Wellbeing.enabled ? [{ value: "wellbeing", label: I18n.tr("Wellbeing"), icon: "self_improvement" }] : [],
             [{ value: "settings", label: I18n.tr("Settings"), icon: "settings", action: true }])
         readonly property var pageTabs: tabs.filter(t => !t.action)
@@ -105,13 +109,13 @@ Variants {
 
         RowLayout {
             width: parent.width
-            spacing: Theme.sp4
+            spacing: Math.round(Theme.sp4 * panel.spacingScale)
 
             // ── hub: the rail ──
             Rectangle {
                 id: rail
                 visible: panel.hub
-                Layout.preferredWidth: 84
+                Layout.preferredWidth: Math.round(84 * Theme.scale)
                 Layout.fillHeight: true
                 radius: Theme.rXl
                 color: Theme.alpha(Theme.bg, 0.45)
@@ -131,13 +135,22 @@ Variants {
                             id: item
                             required property var modelData
                             readonly property bool sel: !modelData.action && panel.tab === modelData.value
-                            width: 68
-                            height: 64
+                            width: Math.round(68 * Theme.scale)
+                            height: Math.round(64 * Theme.scale)
                             radius: Theme.rLg
-                            gradient: Gradient {
-                                GradientStop { position: 0; color: item.sel ? Theme.accent : "transparent" }
-                                GradientStop { position: 1; color: item.sel ? Theme.accent2 : "transparent" }
+                            color: item.sel ? Theme.accentContainer : "transparent"
+                            activeFocusOnTab: true
+                            Accessible.role: Accessible.Button
+                            Accessible.name: modelData.label
+                            Accessible.onPressAction: panel.select(modelData.value)
+                            Keys.onPressed: event => {
+                                if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                    if (!event.isAutoRepeat)
+                                        panel.select(modelData.value);
+                                    event.accepted = true;
+                                }
                             }
+                            FocusRing {}
                             // a separator before the actions
                             Rectangle {
                                 visible: item.modelData.value === "system"
@@ -156,19 +169,19 @@ Variants {
                                     icon: item.modelData.icon
                                     size: 22
                                     fill: item.sel ? 1 : 0
-                                    color: item.sel ? Theme.onAccent : Theme.text
+                                    color: item.sel ? Theme.onAccentContainer : Theme.text
                                 }
                                 FText {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     text: item.modelData.label
                                     font.pixelSize: Theme.fsXs
                                     font.weight: item.sel ? Font.Bold : Font.DemiBold
-                                    color: item.sel ? Theme.onAccent : Theme.textDim
+                                    color: item.sel ? Theme.onAccentContainer : Theme.textDim
                                 }
                             }
                             StateLayer {
                                 radius: parent.radius
-                                tint: item.sel ? Theme.onAccent : Theme.text
+                                tint: item.sel ? Theme.onAccentContainer : Theme.text
                                 onClicked: panel.select(item.modelData.value)
                             }
                         }
@@ -187,68 +200,17 @@ Variants {
 
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: Theme.sp4
+                spacing: Math.round(Theme.sp4 * panel.spacingScale)
 
                 // ── tabs layout: the tab bar ──
-                Rectangle {
-                    id: tabBar
+                FSegmented {
                     visible: !panel.hub
                     Layout.fillWidth: true
-                    implicitHeight: 46
-                    radius: height / 2
-                    color: Theme.surfaceHigh
-
-                    readonly property real seg: (width - 8) / panel.tabs.length
-                    readonly property int selIndex: Math.max(0, panel.tabs.findIndex(t => t.value === panel.tab))
-
-                    Rectangle {
-                        y: 4
-                        x: 4 + tabBar.selIndex * parent.seg
-                        width: parent.seg
-                        height: parent.height - 8
-                        radius: height / 2
-                        color: Theme.accent
-                        Behavior on x { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
-                    }
-
-                    Row {
-                        x: 4
-                        y: 4
-                        Repeater {
-                            model: panel.hub ? [] : panel.tabs
-                            Item {
-                                required property var modelData
-                                required property int index
-                                readonly property bool sel: index === tabBar.selIndex
-                                width: tabBar.seg
-                                height: tabBar.height - 8
-
-                                Row {
-                                    anchors.centerIn: parent
-                                    spacing: 6
-                                    FIcon {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        icon: modelData.icon
-                                        size: 18
-                                        fill: sel ? 1 : 0
-                                        color: sel ? Theme.onAccent : Theme.text
-                                    }
-                                    FText {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: modelData.label
-                                        font.pixelSize: Theme.fsSm
-                                        font.weight: sel ? Font.Bold : Font.Medium
-                                        color: sel ? Theme.onAccent : Theme.text
-                                    }
-                                }
-                                StateLayer {
-                                    radius: height / 2
-                                    tint: sel ? Theme.onAccent : Theme.text
-                                    onClicked: panel.select(modelData.value)
-                                }
-                            }
-                        }
-                    }
+                    implicitHeight: Math.round(44 * Theme.scale * panel.spacingScale)
+                    segmentGap: Math.round(Theme.sp1 * panel.spacingScale)
+                    options: panel.tabs
+                    current: panel.tab
+                    onSelected: value => panel.select(value)
                 }
 
                 // ── pages ──

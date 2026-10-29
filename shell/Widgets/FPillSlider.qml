@@ -7,6 +7,33 @@ import qs.Widgets
 Rectangle {
     id: root
 
+    property string accessibleName: icon.replace(/_/g, " ")
+    activeFocusOnTab: true
+    Accessible.role: Accessible.Slider
+    Accessible.name: accessibleName
+    Accessible.description: Math.round(value * 100) + "%"
+    Accessible.onIncreaseAction: adjust(1)
+    Accessible.onDecreaseAction: adjust(-1)
+
+    function adjust(direction) {
+        const step = 0.05;
+        moved(Math.max(0, Math.min(1, value + direction * step)));
+    }
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Right || event.key === Qt.Key_Up)
+            adjust(1);
+        else if (event.key === Qt.Key_Left || event.key === Qt.Key_Down)
+            adjust(-1);
+        else if (event.key === Qt.Key_Home)
+            moved(0);
+        else if (event.key === Qt.Key_End)
+            moved(1);
+        else
+            return;
+        event.accepted = true;
+    }
+    FocusRing {}
+
     property real value: 0                 // 0–1
     property string icon
     property color from: Theme.accent
@@ -16,9 +43,9 @@ Rectangle {
     signal iconClicked
 
     readonly property real shown: drag.pressed ? drag.live : Math.max(0, Math.min(1, value))
-    implicitHeight: 40
+    implicitHeight: Theme.controlHeight
     radius: height / 2
-    color: Theme.alpha(Theme.text, 0.06)
+    color: Theme.surfaceHigh
     // the same faint edge as the tiles beside it
     border.width: 1
     border.color: Theme.alpha(Theme.text, 0.05)

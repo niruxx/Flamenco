@@ -12,21 +12,28 @@ Variants {
     OverlayPanel {
         id: panel
         name: "control"
+        placement: Settings.data.control.placement || "bar"
+        cardPadding: Math.round(Theme.sp5 * panel.spacingScale)
         hAlign: Settings.data.control.align === "auto" ? "right" : Settings.data.control.align
         followOrigin: Settings.data.control.align === "auto"
-        cardWidth: Math.max(340, Settings.data.control.width)
+        cardWidth: Math.round(Math.max(340, Settings.data.control.width) * Theme.scale)
 
         readonly property string detail: Panels.controlDetail
+        readonly property real spacingScale: Math.max(1, Math.min(1.6, Settings.data.control.panelSpacing ?? 1))
         readonly property var qs: Settings.data.control
         // the grid: pill tiles, editable by pressing and holding (TileGrid)
         readonly property bool grid: (qs.style || "grid") === "grid"
         readonly property var allTiles: ["wifi", "bluetooth", "dnd", "night", "caffeine", "power", "vpn", "dark", "record", "widgets", "wallpaper"]
-        readonly property var tileIds: (qs.tiles && qs.tiles.length ? qs.tiles : allTiles).filter(t => allTiles.includes(t))
+        readonly property var tileIds: {
+            const ids = (qs.tiles && qs.tiles.length ? qs.tiles : allTiles).filter(t => allTiles.includes(t));
+            // Keep the browser in the toggle grid, easy to find in the Pills layout.
+            return qs.style === "pills" && ids.includes("wallpaper") ? ["wallpaper"].concat(ids.filter(t => t !== "wallpaper")) : ids;
+        }
         readonly property var tileComps: ({ wifi: tile_wifi, bluetooth: tile_bluetooth, dnd: tile_dnd, night: tile_night, caffeine: tile_caffeine, power: tile_power, vpn: tile_vpn, dark: tile_dark, record: tile_record, widgets: tile_widgets, wallpaper: tile_wallpaper })
 
         ColumnLayout {
             width: parent.width
-            spacing: Theme.sp4
+            spacing: Math.round(Theme.sp4 * panel.spacingScale)
 
             Header { Layout.fillWidth: true; visible: !panel.grid && panel.qs.sections.header !== false }
 
@@ -38,15 +45,16 @@ Variants {
                 clip: true
 
                 property real slide: panel.detail !== "" ? 1 : 0
-                Behavior on slide { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasized } }
+                Behavior on slide { Anim { area: "control"; duration: Theme.pageDuration(area); easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
                 ColumnLayout {
                     id: main
+                    enabled: panel.detail === ""
                     width: parent.width
-                    x: -pager.slide * pager.width * 0.3
+                    x: Theme.pageSlide ? -pager.slide * Theme.travel(Theme.sp5, "control") : 0
                     opacity: 1 - pager.slide
                     visible: opacity > 0
-                    spacing: Theme.sp4
+                    spacing: Math.round(Theme.sp4 * panel.spacingScale)
 
                     TileGrid {
                         visible: panel.grid
@@ -64,9 +72,9 @@ Variants {
                     GridLayout {
                         visible: !panel.grid && panel.qs.sections.tiles !== false
                         Layout.fillWidth: true
-                        columns: Math.max(1, panel.qs.columns || 2)
-                        rowSpacing: Theme.gap
-                        columnSpacing: Theme.gap
+                        columns: Math.max(1, Math.min(panel.qs.columns || 2, Math.floor((width + Theme.gap) / (150 * Theme.scale + Theme.gap))))
+                        rowSpacing: Math.round(Theme.sp3 * panel.spacingScale)
+                        columnSpacing: Math.round(Theme.sp3 * panel.spacingScale)
 
                         // tiles in the order chosen in Settings → Quick settings
                         Repeater {
@@ -88,9 +96,10 @@ Variants {
                 Loader {
                     width: parent.width
                     height: pager.height
-                    x: (1 - pager.slide) * pager.width * 0.4
+                    x: Theme.pageSlide ? (1 - pager.slide) * Theme.travel(Theme.sp5, "control") : 0
                     opacity: pager.slide
                     visible: opacity > 0
+                    enabled: panel.detail !== ""
                     active: panel.detail !== "" || opacity > 0
                     sourceComponent: panel.detail === "wifi" ? wifiC : panel.detail === "bluetooth" ? btC : panel.detail === "audio" ? audioC : panel.detail === "mic" ? micC : panel.detail === "mixer" ? mixerC : panel.detail === "night" ? nightC : panel.detail === "vpn" ? vpnC : panel.detail === "power" ? powerC : null
                 }

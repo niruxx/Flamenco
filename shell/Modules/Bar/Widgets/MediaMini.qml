@@ -38,7 +38,7 @@ BarChip {
             }
 
             RotationAnimation on rotation {
-                running: Media.playing && Theme.speed > 0
+                running: Media.playing && Theme.ambientMotion && Theme.areaSpeed("bar") > 0
                 from: 0; to: 360
                 duration: 8000
                 loops: Animation.Infinite

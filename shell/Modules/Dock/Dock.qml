@@ -53,8 +53,8 @@ Variants {
         // animated value lives on an Item: Behaviors on the window itself crash Qt 6.12
         Item {
             id: hoverAnim
-            property real v: hover.hovered && win.zoom > 0 ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durA("dock", 280); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            property real v: hover.hovered && win.zoom > 0 && Theme.spatialMotion("dock") ? 1 : 0
+            Behavior on v { Anim { motionRole: "shape"; area: "dock"; easing.bezierCurve: Theme.curves.emphasizedDecel } }
         }
 
         // App ids only, so the list (and its delegates) stays stable while
@@ -175,7 +175,7 @@ Variants {
             id: dock
 
             property real shift: win.revealed ? 0 : win.thickness + win.margin * 2
-            Behavior on shift { Anim { duration: Theme.durA("dock", 450); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on shift { Anim { motionRole: win.revealed ? "enter" : "exit"; area: "dock" } }
 
             // x / y rather than anchors (see the hit area)
             x: win.edge === "left" ? win.margin : win.edge === "right" ? parent.width - width - win.margin : (parent.width - width) / 2
@@ -194,7 +194,21 @@ Variants {
             radius: win.unity ? 0 : Math.min(Theme.rXl * win.cfg.roundness, win.thickness / 2)
             color: win.unity ? win.unityBg : Qt.rgba(Theme.panelBg.r, Theme.panelBg.g, Theme.panelBg.b, Theme.panelBg.a * win.cfg.opacity)
             border.width: win.cfg.border && !win.unity ? 1 : 0
-            border.color: Theme.alpha(Theme.border, 0.6 * win.cfg.opacity)
+            border.color: Theme.materialGlass ? Theme.surfaceStroke : Theme.alpha(Theme.border, 0.6 * win.cfg.opacity)
+
+            Loader {
+                anchors.fill: parent
+                active: Theme.materialGlass && Theme.glassFrost > 0 && !win.unity && dock.visible && win.visible
+                sourceComponent: GlassBackdrop {
+                    screenName: win.modelData.name
+                    screenWidth: win.modelData.width
+                    screenHeight: win.modelData.height
+                    sampleX: dock.x + (win.edge === "right" ? win.modelData.width - win.width : 0)
+                    sampleY: dock.y + (win.vertical ? 0 : win.modelData.height - win.height)
+                    cornerRadius: dock.radius
+                    tintOpacity: Math.min(0.9, Theme.panelOp * win.cfg.opacity)
+                }
+            }
 
             // the surface finish (gloss / chrome), under the content
             Finish { visible: !win.unity; strength: win.cfg.opacity }

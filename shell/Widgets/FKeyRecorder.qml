@@ -70,9 +70,11 @@ Rectangle {
         FIcon {
             icon: root.recording ? "radio_button_checked" : "keyboard"
             color: root.recording ? Theme.accent : Theme.textDim
+            id: recordingGlyph
             SequentialAnimation on opacity {
-                running: root.recording
+                running: root.recording && Theme.spatialMotion()
                 loops: Animation.Infinite
+                onRunningChanged: if (!running) recordingGlyph.opacity = 1
                 NumberAnimation { to: 0.3; duration: 500 }
                 NumberAnimation { to: 1; duration: 500 }
             }

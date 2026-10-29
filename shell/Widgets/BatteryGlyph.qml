@@ -27,6 +27,7 @@ Item {
     property real size: Theme.barHeight       // what it's sized from (the bar's thickness)
     property bool compact: false              // a vertical bar: the percent goes under it, without "%"
 
+    readonly property bool motionEnabled: animate && Theme.ambientMotion && Theme.areaSpeed("bar") > 0
     readonly property real p: Math.max(0, Math.min(100, percent))
     readonly property bool isLow: p <= low && !charging
     readonly property color fill: {
@@ -131,7 +132,7 @@ Item {
                     radius: Math.max(1, parent.radius - 2)
                     color: root.fill
                     Behavior on width { Anim {} }
-                    Sweep { on: root.charging && root.animate && root.visible }
+                    Sweep { on: root.charging && root.motionEnabled && root.visible }
                 }
                 Row {
                     visible: !body.parent.slim
@@ -206,7 +207,7 @@ Item {
                             Behavior on opacity { Anim {} }
                             // charging: the cells light up one after another
                             SequentialAnimation on scale {
-                                running: root.charging && root.animate && root.visible
+                                running: root.charging && root.motionEnabled && root.visible
                                 loops: Animation.Infinite
                                 PauseAnimation { duration: index * 160 }
                                 NumberAnimation { to: 0.7; duration: 200 }
@@ -290,7 +291,7 @@ Item {
                 onSpinChanged: requestPaint()
                 onWidthChanged: requestPaint()
                 NumberAnimation on spin {
-                    running: root.charging && root.animate && root.visible
+                    running: root.charging && root.motionEnabled && root.visible
                     from: 0
                     to: Math.PI * 2
                     duration: 2400
@@ -351,7 +352,7 @@ Item {
                     radius: cap.radius
                     color: root.fill
                     Behavior on width { Anim {} }
-                    Sweep { on: root.charging && root.animate && root.visible }
+                    Sweep { on: root.charging && root.motionEnabled && root.visible }
                 }
             }
             Row {
@@ -388,7 +389,7 @@ Item {
             border.width: root.charging ? 2 : 0
             border.color: Theme.alpha(root.fill, 0.4)
             SequentialAnimation on scale {
-                running: root.charging && root.animate && root.visible
+                running: root.charging && root.motionEnabled && root.visible
                 loops: Animation.Infinite
                 NumberAnimation { to: 1.35; duration: 700; easing.type: Easing.InOutSine }
                 NumberAnimation { to: 1; duration: 700; easing.type: Easing.InOutSine }
@@ -444,7 +445,7 @@ Item {
                     radius: parent.radius
                     color: root.fill
                     Behavior on width { Anim {} }
-                    Sweep { on: root.charging && root.animate && root.visible }
+                    Sweep { on: root.charging && root.motionEnabled && root.visible }
                 }
             }
         }

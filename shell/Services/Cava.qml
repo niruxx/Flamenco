@@ -24,7 +24,7 @@ Singleton {
 
     Process {
         id: proc
-        running: root.users > 0 && Media.playing && root.available
+        running: Settings.data.visualizer.enabled !== false && root.users > 0 && Media.playing && root.available
         // the config goes in through a here-string; cava reads it from the path we give
         command: ["sh", "-c", 'f="$2/flamenco-cava.conf"; printf "%s" "$1" > "$f"; exec cava -p "$f"', "sh", root.config, Paths.runDir]
         stdout: SplitParser {
@@ -35,7 +35,7 @@ Singleton {
     // new bars / frame rate: start cava again with them
     onConfigChanged: if (proc.running) {
         proc.running = false;
-        Qt.callLater(() => proc.running = Qt.binding(() => root.users > 0 && Media.playing && root.available));
+        Qt.callLater(() => proc.running = Qt.binding(() => Settings.data.visualizer.enabled !== false && root.users > 0 && Media.playing && root.available));
     }
 
     // is cava installed?

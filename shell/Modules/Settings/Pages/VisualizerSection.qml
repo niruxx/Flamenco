@@ -38,7 +38,7 @@ Group {
         radius: Theme.rLg
         color: Theme.alpha(Theme.shadow, Theme.dark ? 0.35 : 0.08)
         Spectrum {
-            readonly property bool round: (root.v.style || "bars") === "radial"
+            readonly property bool round: ["radial", "orbit"].includes(root.v.style || "bars")
             anchors.centerIn: parent
             width: round ? 140 : parent.width - 32
             height: round ? 140 : parent.height - 24
@@ -55,21 +55,19 @@ Group {
         }
     }
 
-    ChoiceRow {
+    DropdownRow {
         title: I18n.tr("Style")
         icon: "graphic_eq"
         target: root.v
         key: "style"
-        segWidth: 78
-        options: [{ value: "bars", label: I18n.tr("Bars") }, { value: "mirror", label: I18n.tr("Mirror") }, { value: "wave", label: I18n.tr("Wave") }, { value: "dots", label: I18n.tr("Dots") }, { value: "radial", label: I18n.tr("Radial") }, { value: "peaks", label: I18n.tr("Peaks") }]
+        options: [{ value: "ribbon", label: I18n.tr("Ribbon") }, { value: "orbit", label: I18n.tr("Orbit") }, { value: "spark", label: I18n.tr("Spark") }, { value: "bars", label: I18n.tr("Bars") }, { value: "mirror", label: I18n.tr("Mirror") }, { value: "wave", label: I18n.tr("Wave") }, { value: "dots", label: I18n.tr("Dots") }, { value: "radial", label: I18n.tr("Radial") }, { value: "peaks", label: I18n.tr("Peaks") }]
     }
-    ChoiceRow {
+    DropdownRow {
         title: I18n.tr("Colors")
         icon: "palette"
         target: root.v
         key: "colors"
-        segWidth: 86
-        options: [{ value: "accent", label: I18n.tr("Accent") }, { value: "palette", label: I18n.tr("Palette") }, { value: "rainbow", label: I18n.tr("Rainbow") }, { value: "fire", label: I18n.tr("Fire") }, { value: "mono", label: I18n.tr("Plain") }]
+        options: [{ value: "neon", label: I18n.tr("Neon") }, { value: "ocean", label: I18n.tr("Ocean") }, { value: "accent", label: I18n.tr("Accent") }, { value: "palette", label: I18n.tr("Palette") }, { value: "rainbow", label: I18n.tr("Rainbow") }, { value: "fire", label: I18n.tr("Fire") }, { value: "mono", label: I18n.tr("Plain") }]
     }
     ChoiceRow {
         title: I18n.tr("Animation")
@@ -80,6 +78,12 @@ Group {
         segWidth: 90
         options: [{ value: "smooth", label: I18n.tr("Smooth") }, { value: "snappy", label: I18n.tr("Snappy") }, { value: "bouncy", label: I18n.tr("Bouncy") }, { value: "gravity", label: I18n.tr("Gravity") }]
     }
+    SwitchRow { title: I18n.tr("Enable visualizers"); icon: "graphic_eq"; target: root.v; key: "enabled" }
+    SliderRow { title: I18n.tr("Sensitivity"); icon: "equalizer"; target: root.v; key: "gain"; from: 0.25; to: 3; stepSize: 0.05; factor: 100; suffix: "%" }
+    SliderRow { title: I18n.tr("Response speed"); icon: "speed"; target: root.v; key: "response"; from: 0.25; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
+    SliderRow { title: I18n.tr("Peak fall speed"); icon: "south"; target: root.v; key: "decay"; from: 0.1; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
+    SliderRow { title: I18n.tr("Effect intensity"); subtitle: I18n.tr("Ribbon depth, orbit expansion, and spark drift"); icon: "flare"; target: root.v; key: "intensity"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
+    SwitchRow { title: I18n.tr("Symmetric frequencies"); subtitle: I18n.tr("Mirror the frequency bands around the center"); icon: "flip"; target: root.v; key: "symmetric" }
     SliderRow { title: I18n.tr("Detail"); subtitle: I18n.tr("How finely the sound is split into bands"); icon: "equalizer"; target: root.v; key: "bars"; from: 8; to: 64; stepSize: 4 }
     ChoiceRow { title: I18n.tr("Frame rate"); icon: "speed"; target: root.v; key: "fps"; segWidth: 90; options: [{ value: 30, label: I18n.tr("30 fps") }, { value: 60, label: I18n.tr("60 fps") }] }
 

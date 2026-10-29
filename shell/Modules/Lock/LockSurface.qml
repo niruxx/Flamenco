@@ -25,7 +25,7 @@ Item {
                 root.p = 1;
         }
     }
-    Behavior on p { Anim { duration: Theme.durA("lock", 650); easing.bezierCurve: Theme.curves.emphasized } }
+    Behavior on p { Anim { motionRole: root.ctx.unlocking ? "exit" : "enter"; area: "lock" } }
 
     // wallpaper, blurring in as we lock and clearing as we unlock so the
     // transition back to the desktop is seamless

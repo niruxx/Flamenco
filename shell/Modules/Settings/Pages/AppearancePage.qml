@@ -27,11 +27,23 @@ Page {
 
     // bar / dock / launcher / notification layouts in one click
     readonly property var presets: [
-        { id: "flamenco", label: I18n.tr("Flamenco"), icon: "local_fire_department", hint: I18n.tr("Black and grey: pills on a solid bar, a rounded screen frame"),
-          appearance: { palette: "noir", mode: "dark", accentOverride: "", screenFrame: true, frameWidth: 6, frameRadius: 18, blendPanels: false },
-          bar: { position: "top", style: "framed", height: 44, workspaceStyle: "pills", batteryStyle: "icon", statsStyle: "text", statsTemp: false, clockLayout: "inline", clockAlign: "center",
+        { id: "flamenco", label: I18n.tr("Flamenco"), icon: "local_fire_department", hint: I18n.tr("Roomy floating pills, lavender accents, panels beside their bar buttons"),
+          appearance: { palette: "noir", mode: "dark", accentOverride: "#c7b8ff", screenFrame: false, blendPanels: false, finish: "flat", roundness: 1.25, panelOpacity: 0.98, motionStyle: "expressive", panelEffect: "bloom", pageEffect: "slide" },
+          bar: { position: "top", style: "islands", height: 48, margin: 12, radius: 24, border: false, workspaceStyle: "pills", batteryStyle: "pill", statsStyle: "text", statsTemp: false, clockLayout: "inline", clockAlign: "center",
+                 left: ["launcher", "workspaces"], center: ["clock", "media"],
+                 right: ["recording", "privacy", "tray", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings"] },
+          control: { style: "pills", placement: "bar", align: "auto", width: 560, columns: 2, panelSpacing: 1.25 },
+          dashboard: { style: "tabs", placement: "bar", width: 720, panelSpacing: 1.25, defaultTab: "overview" },
+          visualizer: { style: "ribbon", colors: "accent", motion: "smooth" },
+          dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-right" } },
+        { id: "flamenco1", label: I18n.tr("Flamenco 1.0"), icon: "history", hint: I18n.tr("The original framed bar, editable quick-settings grid, and large calendar hub"),
+          appearance: { palette: "noir", mode: "dark", accentOverride: "", finish: "flat", roundness: 1, panelOpacity: 0.94, uiOpacity: 1, barOpacity: -1, popupOpacity: -1, switcherOpacity: -1, settingsOpacity: 1, screenFrame: true, frameWidth: 6, frameRadius: 18, blendPanels: false, panelEffect: "rise", pageEffect: "slide" },
+          bar: { position: "top", style: "framed", height: 44, margin: -1, radius: -1, border: false, workspaceStyle: "pills", batteryStyle: "icon", statsStyle: "text", statsTemp: false, clockLayout: "inline", clockAlign: "center",
                  left: ["launcher", "workspaces"], center: ["clock"],
                  right: ["recording", "privacy", "updates", "tray", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings", "power"] },
+          control: { style: "grid", placement: "bar", align: "auto", width: 440, columns: 2, panelSpacing: 1 },
+          dashboard: { style: "hub", placement: "bar", width: 560, panelSpacing: 1, defaultTab: "overview" },
+          visualizer: { style: "bars", colors: "accent", motion: "smooth" },
           dock: { enabled: false }, launcher: { position: "center" }, notifications: { position: "top-right" } },
         { id: "y2k", label: I18n.tr("Y2K"), icon: "auto_awesome", hint: I18n.tr("Chrome and pearl, hot pink and cyber cyan, bubbly"),
           appearance: { palette: "y2k", mode: "dark", accentOverride: "", finish: "chrome", roundness: 1.5, panelOpacity: 0.9, screenFrame: false, blendPanels: false },
@@ -39,21 +51,29 @@ Page {
                  left: ["launcher", "workspaces"], center: ["clock", "media"],
                  right: ["tray", "network", "bluetooth", "audio", "battery", "notifications", "quicksettings"] },
           dock: { enabled: true, autoHide: false, magnify: true }, launcher: { position: "center" }, notifications: { position: "top-right" } },
-        { id: "aero", label: I18n.tr("Frutiger Aero"), icon: "water_drop", hint: I18n.tr("Glossy glass, sky blue and grass green"),
-          appearance: { palette: "aero", mode: "light", accentOverride: "", finish: "gloss", roundness: 1.25, panelOpacity: 0.82, blur: true, screenFrame: false, blendPanels: false },
-          bar: { position: "bottom", style: "floating", height: 48, border: true, workspaceStyle: "apps", batteryStyle: "battery", statsStyle: "text", statsTemp: false, clockLayout: "stacked", clockAlign: "center",
+        { id: "aero", label: I18n.tr("Frutiger Aero"), icon: "water_drop", hint: I18n.tr("Luminous sky glass, aquatic reflections, fresh green accents"),
+          appearance: { palette: "aero", mode: "light", accentOverride: "", finish: "gloss", materialStrength: 1.05, glassFrost: 0.8, roundness: 1.15,
+                        panelOpacity: 0.78, uiOpacity: 1, barOpacity: 0.8, popupOpacity: 0.9, switcherOpacity: 0.85, settingsOpacity: 1,
+                        blur: true, screenFrame: false, blendPanels: false, shadows: true, motionStyle: "smooth", panelEffect: "bloom", pageEffect: "slide" },
+          bar: { position: "bottom", style: "floating", height: 48, margin: 8, radius: 18, border: true, workspaceStyle: "apps", batteryStyle: "battery", statsStyle: "text", statsTemp: false, clockLayout: "stacked", clockAlign: "center", startIcon: "apps", startLabel: "",
                  left: ["launcher", "taskbar"], center: [],
                  right: ["tray", "network", "bluetooth", "audio", "battery", "clock", "notifications", "quicksettings"] },
+          control: { style: "cards", placement: "bar", align: "right", width: 460, columns: 2 },
+          dashboard: { style: "tabs", placement: "bar", defaultTab: "overview" },
+          visualizer: { style: "wave", colors: "ocean", motion: "smooth" },
           dock: { enabled: false }, launcher: { position: "bottom-left" }, notifications: { position: "bottom-right" } },
-        { id: "liquidglass", label: I18n.tr("Liquid Glass"), icon: "water_drop", hint: I18n.tr("A macOS-style menu bar and dock, see-through glass everywhere"),
-          appearance: { palette: "glass", mode: "dark", accentOverride: "", finish: "liquid", roundness: 1.4, panelOpacity: 0.62, uiOpacity: 1,
-                        barOpacity: 0.55, popupOpacity: 0.7, switcherOpacity: 0.6, blur: true, screenFrame: false, blendPanels: false, shadows: true },
-          // the menu bar: the start button (the  menu), the app in front; status icons, then the clock last
-          bar: { position: "top", style: "attached", height: 32, border: false, hide: "never", workspaceStyle: "dots", batteryStyle: "pill", statsStyle: "text",
-                 statsTemp: false, clockLayout: "inline", clockAlign: "right", startIcon: "distro", startLabel: "",
+        { id: "liquidglass", label: I18n.tr("Liquid Glass"), icon: "water_drop", hint: I18n.tr("Frosted pearl glass, luminous contours, a quiet menu bar and floating dock"),
+          appearance: { palette: "glass", mode: "light", accentOverride: "", finish: "liquid", materialStrength: 0.9, glassFrost: 0.85, roundness: 1.25,
+                        panelOpacity: 0.76, uiOpacity: 1, barOpacity: 0.7, popupOpacity: 0.88, switcherOpacity: 0.8, settingsOpacity: 1,
+                        blur: true, screenFrame: false, blendPanels: false, shadows: true, motionStyle: "smooth", panelEffect: "bloom", pageEffect: "fade" },
+          bar: { position: "top", style: "attached", height: 36, margin: 0, radius: 18, border: false, hide: "never", workspaceStyle: "dots", batteryStyle: "pill", statsStyle: "text",
+                 statsTemp: false, clockLayout: "inline", clockAlign: "right", startIcon: "apps", startLabel: "",
                  left: ["launcher", "window"], center: [],
                  right: ["tray", "recording", "privacy", "battery", "network", "bluetooth", "audio", "quicksettings", "notifications", "clock"] },
-          dock: { enabled: true, position: "bottom", style: "classic", autoHide: false, magnify: true, zoom: 0.6, indicator: "dot", border: true, opacity: 0.85, roundness: 1.4 },
+          control: { style: "pills", placement: "bar", align: "right", width: 460, columns: 2 },
+          dashboard: { style: "tabs", placement: "bar", defaultTab: "overview" },
+          visualizer: { style: "ribbon", colors: "accent", motion: "smooth" },
+          dock: { enabled: true, position: "bottom", style: "classic", autoHide: false, magnify: true, zoom: 0.35, indicator: "dot", border: true, opacity: 0.92, roundness: 1.15, margin: 12 },
           launcher: { position: "center" }, notifications: { position: "top-right" } },
         { id: "unity", label: I18n.tr("Unity"), icon: "dock_to_left", hint: I18n.tr("Ubuntu Unity: a thin dark top panel, the launcher down the left with the Dash button, Ubuntu orange"),
           appearance: { palette: "unity", mode: "dark", accentOverride: "", roundness: 0.6, panelOpacity: 0.92, blur: true, screenFrame: false, blendPanels: false, shadows: true },
@@ -125,12 +145,17 @@ Page {
         const mono = (p.monoFonts || []).find(f => Sounds.fonts.includes(f));
         if (mono)
             a.monoFamily = mono;
-        for (const section of ["appearance", "bar", "dock", "launcher", "notifications"])
+        for (const section of ["appearance", "bar", "dock", "launcher", "notifications", "control", "dashboard", "visualizer"])
             for (const k in (p[section] ?? {}))
                 d[section][k] = Array.isArray(p[section][k]) ? p[section][k].slice() : p[section][k];
         // the screen frame belongs to the Flamenco look; other layouts leave it off
         if (p.appearance?.screenFrame === undefined)
             a.screenFrame = false;
+        // Material presets reset their finish parameters when switching to other looks.
+        if (p.appearance?.materialStrength === undefined)
+            a.materialStrength = 1;
+        if (p.appearance?.glassFrost === undefined)
+            a.glassFrost = 0.7;
         // likewise the gloss / chrome finish and the rounder shapes of Aero and Y2K
         if (p.appearance?.finish === undefined)
             a.finish = "flat";
@@ -461,6 +486,8 @@ Page {
             segWidth: 100
             options: [{ value: "flat", label: I18n.tr("Flat") }, { value: "gloss", label: I18n.tr("Gloss") }, { value: "chrome", label: I18n.tr("Chrome") }, { value: "liquid", label: I18n.tr("Liquid glass") }]
         }
+        SliderRow { visible: Theme.materialGlass; title: I18n.tr("Glass highlights"); subtitle: I18n.tr("Reflections and luminous contours"); icon: "light_mode"; target: page.a; key: "materialStrength"; from: 0; to: 1.5; stepSize: 0.05; factor: 100; suffix: "%" }
+        SliderRow { visible: Theme.materialGlass; title: I18n.tr("Frosted wallpaper"); subtitle: I18n.tr("Blurred wallpaper backing in panels and the dock; zero disables it"); icon: "blur_on"; target: page.a; key: "glassFrost"; from: 0; to: 1; stepSize: 0.05; factor: 100; suffix: "%" }
         SliderRow { title: I18n.tr("Corner roundness"); icon: "rounded_corner"; target: page.a; key: "roundness"; from: 0; to: 1.6; factor: 100; suffix: "%" }
         SwitchRow { title: I18n.tr("Drop shadows"); icon: "shadow"; target: page.a; key: "shadows" }
         SwitchRow { title: I18n.tr("Dim screen behind panels"); icon: "gradient"; target: page.a; key: "dimBehindPanels" }
@@ -474,74 +501,12 @@ Page {
     }
 
     Group {
-        title: I18n.tr("Motion")
-        SliderRow { title: I18n.tr("Animation speed"); subtitle: I18n.tr("0% turns animations off"); icon: "animation"; target: page.a; key: "animSpeed"; from: 0; to: 2; stepSize: 0.05; factor: 100; suffix: "%" }
-        ChoiceRow {
-            title: I18n.tr("Style")
-            subtitle: page.a.motionStyle === "smooth" ? I18n.tr("Gentle easing, nothing overshoots") : page.a.motionStyle === "snappy" ? I18n.tr("Quick and crisp") : page.a.motionStyle === "minimal" ? I18n.tr("Short and plain, no hover zoom") : I18n.tr("Springy, with a little bounce (Material 3 Expressive)")
-            icon: "motion_mode"
-            target: page.a
-            key: "motionStyle"
-            options: [{ value: "expressive", label: I18n.tr("Expressive") }, { value: "smooth", label: I18n.tr("Smooth") }, { value: "snappy", label: I18n.tr("Snappy") }, { value: "minimal", label: I18n.tr("Minimal") }]
-        }
-        ChoiceRow {
-            title: I18n.tr("Panels open with")
-            subtitle: I18n.tr("Quick settings, the calendar, the launcher and the other panels")
-            icon: "open_in_full"
-            target: page.a
-            key: "panelEffect"
-            options: [{ value: "rise", label: I18n.tr("Rise") }, { value: "fade", label: I18n.tr("Fade") }, { value: "slide", label: I18n.tr("Slide") }, { value: "zoom", label: I18n.tr("Zoom") }, { value: "none", label: I18n.tr("None") }]
-        }
-        ChoiceRow {
-            title: I18n.tr("Notifications arrive with")
-            icon: "notifications"
-            target: page.a
-            key: "notifEffect"
-            options: [{ value: "slide", label: I18n.tr("Slide") }, { value: "fade", label: I18n.tr("Fade") }, { value: "pop", label: I18n.tr("Pop") }]
-        }
-        SwitchRow { title: I18n.tr("Ripple where you click"); icon: "touch_app"; target: page.a; key: "ripple" }
-        SwitchRow { title: I18n.tr("Grow under the pointer"); subtitle: I18n.tr("Workspace dots, launcher icons…"); icon: "zoom_in"; target: page.a; key: "hoverZoom" }
-        SwitchRow { title: I18n.tr("Smooth scrolling"); subtitle: page.a.smoothScroll ? I18n.tr("Lists glide and keep a little momentum (Flamenco's own scrolling)") : I18n.tr("Off: lists scroll the standard way, with niri's scroll speed and direction (Mouse & Touchpad)"); icon: "swap_vert"; target: page.a; key: "smoothScroll" }
+        title: I18n.tr("Effects & motion")
         SettingRow {
-            title: I18n.tr("Speed of each part")
-            subtitle: I18n.tr("On top of the overall speed. Off removes that part's animations.")
-            icon: "speed"
-        }
-        Repeater {
-            model: [{ k: "panels", label: I18n.tr("Panels"), icon: "dashboard" }, { k: "notifications", label: I18n.tr("Notifications"), icon: "notifications" },
-                { k: "bar", label: I18n.tr("Bar (appearing at login)"), icon: "toolbar" }, { k: "workspaces", label: I18n.tr("Workspace indicator"), icon: "view_week" },
-                { k: "dock", label: I18n.tr("Dock (showing and hiding)"), icon: "dock_to_bottom" }, { k: "launcher", label: I18n.tr("Launcher results"), icon: "apps" },
-                { k: "lock", label: I18n.tr("Lock screen"), icon: "lock" }]
-            SettingRow {
-                id: ar
-                required property var modelData
-                readonly property real v: Theme.areaSpeed(modelData.k)
-                title: modelData.label
-                subtitle: v <= 0 ? I18n.tr("Off") : v === 1 ? I18n.tr("Normal") : Math.round(v * 100) + "%"
-                icon: modelData.icon
-                FSlider {
-                    width: 220
-                    from: 0
-                    to: 2
-                    stepSize: 0.1
-                    value: ar.v
-                    onMoved: val => {
-                        const all = Object.assign({}, page.a.motionAreas || {});
-                        all[ar.modelData.k] = Math.round(val * 10) / 10;
-                        page.a.motionAreas = all;
-                    }
-                }
-            }
-        }
-        SettingRow {
-            title: I18n.tr("Try it")
-            subtitle: I18n.tr("Opens quick settings with these settings")
-            icon: "play_circle"
-            FButton {
-                text: I18n.tr("Preview")
-                variant: "tonal"
-                onClicked: Panels.toggle("control", "")
-            }
+            title: I18n.tr("Effects")
+            subtitle: I18n.tr("Animation styles, timing, spring strength, and visualizer effects")
+            icon: "auto_awesome"
+            FButton { text: I18n.tr("Open Effects"); variant: "tonal"; onClicked: Panels.openSettings("effects") }
         }
     }
 

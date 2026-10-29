@@ -31,7 +31,7 @@ MouseArea {
             color: root.tint
             opacity: root.disabled ? 0 : root.pressed ? 0.14 : root.containsMouse ? 0.08 : 0
 
-            Behavior on opacity { Anim { duration: Theme.durShort } }
+            Behavior on opacity { Anim { motionRole: "feedback" } }
         }
 
         Rectangle {
@@ -62,12 +62,13 @@ MouseArea {
                     property: "width"
                     from: 0
                     to: Math.hypot(root.width, root.height) * 2.2
-                    duration: Theme.durXl
-                    easing.type: Easing.OutCubic
+                    duration: Theme.motionDuration("enter")
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Theme.curves.standardDecel
                 }
                 SequentialAnimation {
-                    NumberAnimation { target: ripple; property: "opacity"; to: 0.16; duration: 70 }
-                    NumberAnimation { target: ripple; property: "opacity"; to: 0; duration: Theme.durXl; easing.type: Easing.InQuad }
+                    NumberAnimation { target: ripple; property: "opacity"; to: 0.12; duration: Theme.motionDuration("feedback") }
+                    NumberAnimation { target: ripple; property: "opacity"; to: 0; duration: Theme.motionDuration("enter"); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.standardAccel }
                 }
             }
         }

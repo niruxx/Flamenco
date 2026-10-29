@@ -11,71 +11,30 @@ ColumnLayout {
     spacing: Theme.sp3
 
     // clock + user
-    RowLayout {
+    FCard {
         Layout.fillWidth: true
-        spacing: Theme.sp3
-
+        implicitHeight: Math.round(132 * Theme.scale)
+        radius: Theme.rXl
+        color: Theme.accentContainer
         ColumnLayout {
-            Layout.fillWidth: true
-            spacing: -4
-            RowLayout {
-                spacing: 0
-                FText { text: Time.hours; font.pixelSize: 52; font.weight: Font.Bold }
-                FText {
-                    text: ":"
-                    font.pixelSize: 52
-                    font.weight: Font.Bold
-                    color: Theme.accent
-                    SequentialAnimation on opacity {
-                        loops: Animation.Infinite
-                        running: Theme.speed > 0
-                        NumberAnimation { to: 0.25; duration: 500; easing.type: Easing.InOutSine }
-                        NumberAnimation { to: 1; duration: 500; easing.type: Easing.InOutSine }
-                    }
-                }
-                FText { text: Time.minutes; font.pixelSize: 52; font.weight: Font.Bold }
+            anchors.centerIn: parent
+            width: parent.width - Theme.sp5 * 2
+            spacing: Theme.sp1
+            FText {
+                Layout.fillWidth: true
+                text: Time.hours + ":" + Time.minutes
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: Math.round(54 * Theme.scale)
+                font.weight: Font.DemiBold
+                color: Theme.onAccentContainer
             }
-            FText { text: Time.date; dim: true }
-        }
-
-        // user
-        Rectangle {
-            visible: Settings.data.dashboard.showUser
-            implicitWidth: userRow.implicitWidth + 20
-            implicitHeight: 56
-            radius: Theme.rLg
-            color: Theme.surfaceHigh
-
-            RowLayout {
-                id: userRow
-                anchors.centerIn: parent
-                spacing: 10
-                ClippingRectangle {
-                    Layout.preferredWidth: 38
-                    Layout.preferredHeight: 38
-                    radius: 19
-                    color: Theme.accent
-                    FText {
-                        anchors.centerIn: parent
-                        visible: face.status !== Image.Ready
-                        text: Paths.user.charAt(0).toUpperCase()
-                        color: Theme.onAccent
-                        font.weight: Font.Bold
-                    }
-                    Image {
-                        id: face
-                        anchors.fill: parent
-                        source: Paths.toUrl(Settings.data.general.avatar)
-                        fillMode: Image.PreserveAspectCrop
-                        sourceSize: Qt.size(76, 76)
-                        asynchronous: true
-                    }
-                }
-                ColumnLayout {
-                    spacing: 0
-                    FText { text: Paths.user; font.weight: Font.Bold }
-                    FText { text: "up " + SystemStats.uptimeText; dim: true; font.pixelSize: Theme.fsXs }
-                }
+            FText {
+                Layout.fillWidth: true
+                text: Time.date + (Settings.data.dashboard.showUser ? " · " + Paths.user : "")
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                color: Theme.onAccentContainer
+                font.pixelSize: Theme.fsSm
             }
         }
     }

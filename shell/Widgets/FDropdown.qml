@@ -14,6 +14,25 @@ Rectangle {
     property bool searchable: options.length > 8
     property bool fontPreview: false      // draw each option in its own font (font pickers)
 
+    activeFocusOnTab: true
+    Accessible.role: Accessible.ComboBox
+    Accessible.name: currentItem ? currentItem.label : placeholder
+    Accessible.onPressAction: root.openMenu()
+    Keys.onPressed: event => {
+        if ([Qt.Key_Space, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Down, Qt.Key_Up].includes(event.key)) {
+            if (!event.isAutoRepeat)
+                root.openMenu();
+            event.accepted = true;
+        }
+    }
+    FocusRing {}
+
+    function openMenu() {
+        filter = "";
+        place();
+        popup.open();
+    }
+
     signal selected(var value)
 
     readonly property var items: options.map(o => typeof o === "object" ? o : { value: o, label: String(o) })
@@ -22,9 +41,9 @@ Rectangle {
     readonly property var filtered: filter === "" ? items : items.filter(o => o.label.toLowerCase().includes(filter.toLowerCase()) || String(o.value).toLowerCase().includes(filter.toLowerCase()))
 
     implicitWidth: 280
-    implicitHeight: 40
+    implicitHeight: Theme.fieldHeight
     radius: Theme.rMd
-    color: Theme.surfaceHighest
+    color: Theme.surfaceHigh
     border.width: popup.opened ? 2 : 1
     border.color: popup.opened ? Theme.accent : Theme.border
 
@@ -57,21 +76,17 @@ Rectangle {
     property bool up: false
 
     function place() {
-        const want = Math.min(360, root.items.length * 34 + (root.searchable ? 44 : 0) + 12);
+        const want = Math.min(360 * Theme.scale, root.items.length * Theme.controlHeight + (root.searchable ? Theme.fieldHeight + Theme.sp2 : 0) + Theme.sp3);
         const winH = root.Window.height > 0 ? root.Window.height : 800;
         const top = root.mapToItem(null, 0, 0).y;
         const below = winH - top - root.height - 12;
         const above = top - 12;
         up = below < want && above > below;
-        room = Math.max(120, Math.min(360, up ? above - 4 : below - 4));
+        room = Math.max(0, Math.min(360 * Theme.scale, up ? above - 4 : below - 4));
     }
 
     StateLayer {
-        onClicked: {
-            root.filter = "";
-            root.place();
-            popup.open();
-        }
+        onClicked: root.openMenu()
     }
 
     QQC.Popup {
@@ -79,7 +94,7 @@ Rectangle {
 
         y: root.up ? -height - 4 : root.height + 4
         width: Math.max(root.width, 240)
-        height: Math.min(root.room, list.contentHeight + (search.visible ? search.height + 8 : 0) + 12)
+        height: Math.min(root.room, list.contentHeight + (search.visible ? search.height + Theme.sp2 : 0) + (root.filtered.length ? 0 : emptyState.implicitHeight) + Theme.sp3)
         margins: 8                       // and Qt keeps it inside the window as a last resort
         padding: 6
         modal: false
@@ -87,19 +102,22 @@ Rectangle {
         closePolicy: QQC.Popup.CloseOnEscape | QQC.Popup.CloseOnPressOutside
 
         onOpened: {
-            list.positionViewAtIndex(Math.max(0, root.filtered.findIndex(o => o.value === root.current)), ListView.Center);
+            list.currentIndex = Math.max(0, root.filtered.findIndex(o => o.value === root.current));
+            list.positionViewAtIndex(list.currentIndex, ListView.Center);
             if (root.searchable)
                 search.focusInput();
+            else
+                list.forceActiveFocus();
         }
 
         enter: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durShort }
-                NumberAnimation { property: "scale"; from: 0.95; to: 1; duration: Theme.durMed; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+                Anim { property: "opacity"; from: 0; to: 1; motionRole: "fade"; area: "panels" }
+                Anim { property: "scale"; from: Theme.spatialMotion("panels") ? 0.96 : 1; to: 1; motionRole: "enter"; area: "panels" }
             }
         }
         exit: Transition {
-            NumberAnimation { property: "opacity"; to: 0; duration: Theme.durShort }
+            Anim { property: "opacity"; to: 0; motionRole: "exit"; area: "panels" }
         }
 
         background: Rectangle {
@@ -116,12 +134,18 @@ Rectangle {
                 id: search
                 visible: root.searchable
                 Layout.fillWidth: true
-                implicitHeight: 36
+                implicitHeight: Theme.fieldHeight
                 icon: "search"
                 placeholder: I18n.tr("Filter")
                 onEdited: t => root.filter = t
+                onKeyPressed: event => {
+                    if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
+                        list.forceActiveFocus();
+                        event.accepted = true;
+                    }
+                }
                 onAccepted: if (root.filtered.length > 0) {
-                    root.selected(root.filtered[0].value);
+                    root.selected(root.filtered[Math.max(0, Math.min(root.filtered.length - 1, list.currentIndex))].value);
                     popup.close();
                 }
             }
@@ -132,6 +156,18 @@ Rectangle {
                 Layout.fillHeight: true
                 clip: true
                 model: root.filtered
+                keyNavigationEnabled: true
+                keyNavigationWraps: true
+                onModelChanged: currentIndex = count ? 0 : -1
+                Keys.onPressed: event => {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                        if (!event.isAutoRepeat && currentIndex >= 0 && currentIndex < root.filtered.length) {
+                            root.selected(root.filtered[currentIndex].value);
+                            popup.close();
+                        }
+                        event.accepted = true;
+                    }
+                }
                 boundsBehavior: Flickable.OvershootBounds
 
                 SmoothWheel {
@@ -141,11 +177,20 @@ Rectangle {
                 delegate: Rectangle {
                     id: opt
                     required property var modelData
+                    required property int index
+                    Accessible.role: Accessible.ListItem
+                    Accessible.name: modelData.label
+                    Accessible.onPressAction: {
+                        root.selected(modelData.value);
+                        popup.close();
+                    }
                     readonly property bool sel: modelData.value === root.current
                     width: list.width
-                    height: 34
+                    height: Theme.controlHeight
                     radius: Theme.rSm
-                    color: sel ? Theme.alpha(Theme.accent, 0.16) : "transparent"
+                    color: sel || (list.activeFocus && list.currentIndex === index) ? Theme.accentContainer : "transparent"
+
+                    FocusRing { visible: list.activeFocus && list.currentIndex === opt.index }
 
                     RowLayout {
                         anchors.fill: parent
@@ -156,12 +201,14 @@ Rectangle {
                             Layout.fillWidth: true
                             font.family: root.fontPreview ? String(opt.modelData.value) : Theme.fontFamily
                             text: opt.modelData.label
-                            color: opt.sel ? Theme.accent : Theme.text
+                            color: opt.sel || (list.activeFocus && list.currentIndex === opt.index) ? Theme.onAccentContainer : Theme.text
                             font.weight: opt.sel ? Font.DemiBold : Font.Normal
                             elide: Text.ElideRight
                         }
                         FText {
                             visible: opt.modelData.label !== String(opt.modelData.value) && opt.modelData.value !== ""
+                            Layout.maximumWidth: list.width * 0.3
+                            elide: Text.ElideRight
                             text: opt.modelData.value
                             dim: true
                             mono: true
@@ -171,7 +218,7 @@ Rectangle {
                             visible: opt.sel
                             icon: "check"
                             size: 18
-                            color: Theme.accent
+                            color: Theme.onAccentContainer
                         }
                     }
 
@@ -185,6 +232,7 @@ Rectangle {
             }
 
             FText {
+                id: emptyState
                 visible: root.filtered.length === 0
                 Layout.alignment: Qt.AlignHCenter
                 text: I18n.tr("No matches")

@@ -70,7 +70,7 @@ Scope {
         Item {
             id: pAnim
             property real v: root.shown && here ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.spring } }
+            Behavior on v { Anim { motionRole: root.shown && win.here ? "enter" : "exit"; area: "panels" } }
         }
             mask: Region {}
 

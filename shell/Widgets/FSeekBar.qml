@@ -35,7 +35,7 @@ Item {
         height: root.hot ? 8 : 5
         radius: height / 2
         color: Theme.alpha(Theme.text, 0.15)
-        Behavior on height { Anim { duration: Theme.durShort } }
+        Behavior on height { Anim { motionRole: "feedback" } }
 
         Rectangle {
             height: parent.height
@@ -44,7 +44,7 @@ Item {
             color: root.accent
             // follow playback smoothly, but track the pointer exactly while dragging
             Behavior on width {
-                enabled: !root.dragging
+                enabled: !root.dragging && Theme.spatialMotion()
                 Anim { duration: 900; easing.type: Easing.Linear }
             }
         }
@@ -63,9 +63,9 @@ Item {
         border.color: Theme.surface
         opacity: root.hot ? 1 : 0
         scale: root.hot ? 1 : 0.4
-        Behavior on opacity { Anim { duration: Theme.durShort } }
-        Behavior on scale { Anim { duration: Theme.durShort; easing.bezierCurve: Theme.curves.springFast } }
-        Behavior on width { Anim { duration: Theme.durShort } }
+        Behavior on opacity { Anim { motionRole: "feedback" } }
+        Behavior on scale { Anim { motionRole: "feedback"; easing.bezierCurve: Theme.curves.springFast } }
+        Behavior on width { Anim { motionRole: "feedback" } }
     }
 
     // time bubble while dragging

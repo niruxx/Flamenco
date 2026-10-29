@@ -90,24 +90,26 @@ Item {
     // ── layout: two columns, a full-width tile starts a row of its own ──
     readonly property int gap: Theme.gap
     readonly property int tileH: Math.round(62 * Theme.scale)
-    readonly property real colW: (width - gap) / 2
+    readonly property int columns: width < 360 * Theme.scale ? 1 : 2
+    readonly property real colW: Math.max(0, (width - gap * (columns - 1)) / columns)
     readonly property var slots: {
         const out = [];
         let row = 0, col = 0;
         for (const t of shown) {
-            if (t.w === 2 && col === 1) {
+            const span = Math.min(t.w, columns);
+            if (col + span > columns) {
                 row++;
                 col = 0;
             }
-            out.push({ x: col * (colW + gap), y: row * (tileH + gap), w: t.w === 2 ? width : colW });
-            if (t.w === 2 || col === 1) {
+            out.push({ x: col * (colW + gap), y: row * (tileH + gap), w: span === columns ? width : colW });
+            if (col + span === columns) {
                 row++;
                 col = 0;
             } else {
-                col = 1;
+                col += span;
             }
         }
-        return { list: out, rows: col === 1 ? row + 1 : row };
+        return { list: out, rows: col > 0 ? row + 1 : row };
     }
     implicitHeight: slots.rows * (tileH + gap) - (slots.rows ? gap : 0) + (editing ? tools.height + Theme.sp3 : 0)
 
@@ -272,9 +274,19 @@ Item {
         signal clicked
         signal detail
         radius: height / 2
-        color: on ? Theme.alpha(Theme.accent, 0.3) : Theme.alpha(Theme.text, 0.06)
-        border.width: 1
-        border.color: on ? Theme.alpha(Theme.accent, 0.55) : Theme.alpha(Theme.text, 0.05)
+        color: on ? Theme.accentContainer : Theme.surfaceHigh
+        activeFocusOnTab: true
+        Accessible.role: Accessible.Button
+        Accessible.name: title + (subtitle ? ", " + subtitle : "")
+        Accessible.onPressAction: clicked()
+        Keys.onPressed: event => {
+            if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                if (!event.isAutoRepeat)
+                    pill.clicked();
+                event.accepted = true;
+            }
+        }
+        FocusRing {}
         Behavior on color { CAnim {} }
         // pressed: it gives a little
         scale: pillTap.pressed ? 0.97 : 1
@@ -288,9 +300,9 @@ Item {
         }
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 8
-            anchors.rightMargin: pill.hasDetail ? 4 : 14
-            spacing: 10
+            anchors.leftMargin: Theme.sp2
+            anchors.rightMargin: pill.hasDetail ? Theme.sp1 : Theme.sp3
+            spacing: Theme.sp2
             Rectangle {
                 Layout.preferredWidth: pill.height - 16
                 Layout.preferredHeight: pill.height - 16
@@ -308,7 +320,8 @@ Item {
             FIconButton {
                 visible: pill.hasDetail
                 icon: "chevron_right"
-                size: 32
+                accessibleName: pill.title + " · " + I18n.tr("Details")
+                size: Math.round(32 * Theme.scale)
                 iconSize: 18
                 onClicked: pill.detail()
             }

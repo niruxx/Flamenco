@@ -5,6 +5,33 @@ import qs.Commons
 Item {
     id: root
 
+    property string accessibleName: icon.replace(/_/g, " ")
+    activeFocusOnTab: true
+    Accessible.role: Accessible.Slider
+    Accessible.name: accessibleName
+    Accessible.description: valueText
+    Accessible.onIncreaseAction: adjust(1)
+    Accessible.onDecreaseAction: adjust(-1)
+
+    function adjust(direction) {
+        const step = stepSize > 0 ? stepSize : (to - from) / 20;
+        moved(Math.max(from, Math.min(to, value + direction * step)));
+    }
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Right || event.key === Qt.Key_Up)
+            adjust(1);
+        else if (event.key === Qt.Key_Left || event.key === Qt.Key_Down)
+            adjust(-1);
+        else if (event.key === Qt.Key_Home)
+            moved(from);
+        else if (event.key === Qt.Key_End)
+            moved(to);
+        else
+            return;
+        event.accepted = true;
+    }
+    FocusRing {}
+
     property real value: 0
     property real from: 0
     property real to: 1
@@ -17,7 +44,7 @@ Item {
     signal moved(real value)
     signal iconClicked
 
-    readonly property real frac: Math.max(0, Math.min(1, (value - from) / (to - from)))
+    readonly property real frac: Math.max(0, Math.min(1, to === from ? 0 : (value - from) / (to - from)))
     property real shown: frac
 
     implicitWidth: 220
@@ -40,7 +67,7 @@ Item {
         let v = from + f * (to - from);
         if (stepSize > 0)
             v = Math.round(v / stepSize) * stepSize;
-        shown = (v - from) / (to - from);
+        shown = to === from ? 0 : (v - from) / (to - from);
         moved(v);
     }
 

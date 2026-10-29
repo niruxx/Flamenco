@@ -54,6 +54,7 @@ LazyLoader {
             { id: "displays", icon: "monitor", label: I18n.tr("Displays"), comp: displaysC },
             { id: "sound", icon: "volume_up", label: I18n.tr("Sound"), comp: soundC },
             { id: "power", icon: "battery_charging_full", label: I18n.tr("Power"), comp: powerC },
+            { id: "effects", icon: "auto_awesome", label: I18n.tr("Effects"), comp: effectsC },
             { id: "appearance", icon: "palette", label: I18n.tr("Appearance"), comp: appearanceC },
             { id: "wallpaper", icon: "wallpaper", label: I18n.tr("Wallpaper"), comp: wallpaperC },
             { id: "notifications", icon: "notifications", label: I18n.tr("Notifications"), comp: notifC },
@@ -99,7 +100,7 @@ LazyLoader {
         // first (connections and hardware, then the look, the desktop…), About last
         readonly property var sections: [
             { tint: "#6fb6ff", ids: ["network", "bluetooth", "displays", "sound", "power"] },
-            { tint: "#a993ff", ids: ["appearance", "wallpaper", "notifications", "apps", "get"] },
+            { tint: "#a993ff", ids: ["appearance", "effects", "wallpaper", "notifications", "apps", "get"] },
             { tint: "#8fa6ff", ids: ["bar", "dock", "quicksettings", "launcher", "desktop", "overview", "edges", "clock"] },
             { tint: "#ff9d6e", ids: ["keyboard", "pointer", "night", "printers", "screenshots"] },
             { tint: "#5fc9c2", ids: ["windows", "workspaces"] },
@@ -109,7 +110,7 @@ LazyLoader {
         ]
         // one line under each page's name
         readonly property var descs: ({
-                appearance: "Theme, palette, dark mode", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", bluetooth: "Devices, pairing", region: "Language and formats", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session",
+                appearance: "Theme, palette, dark mode", effects: "Animations, timing, visualizer effects", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", bluetooth: "Devices, pairing", region: "Language and formats", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session",
                 bar: "Style, layout, widgets", dock: "Position, pinned apps, style", launcher: "Fuzzy search, fuzzel", quicksettings: "Tiles, sliders, layout",
                 desktop: "Clocks, photos, monitors", overview: "Workspaces at a glance", edges: "Hot corners and edges", clock: "Clock, weather, calendars",
                 notifications: "Popups, do not disturb, mako", wellbeing: "Screen time and app limits", sound: "Devices, sounds, app volumes", screenshots: "Capture, save, copy",
@@ -225,6 +226,7 @@ LazyLoader {
         Shortcut { sequences: [StandardKey.Back, "Alt+Left"]; onActivated: win.step(-1) }
         Shortcut { sequences: [StandardKey.Forward, "Alt+Right"]; onActivated: win.step(1) }
 
+        Component { id: effectsC; EffectsPage {} }
         Component { id: appearanceC; AppearancePage {} }
         Component { id: appsC; AppThemingPage {} }
         Component { id: getC; GetPage {} }
@@ -488,7 +490,7 @@ LazyLoader {
                                                 topRightRadius: first ? 18 : 6
                                                 bottomLeftRadius: last ? 18 : 6
                                                 bottomRightRadius: last ? 18 : 6
-                                                color: sel ? Theme.mix(Theme.accent, Theme.surfaceHigh, Theme.dark ? 0.45 : 0.25) : Theme.alpha(Theme.surfaceHigh, Theme.settingsOp)
+                                                color: sel ? Theme.accentContainer : Theme.alpha(Theme.surfaceHigh, Theme.settingsOp)
                                                 Behavior on color { CAnim {} }
                                                 RowLayout {
                                                     anchors.fill: parent
@@ -545,7 +547,8 @@ LazyLoader {
                     radius: 26
                     color: Theme.alpha(Theme.surface, Theme.settingsOp)
                     border.width: 1
-                    border.color: Theme.alpha(Theme.text, 0.04)
+                    border.color: Theme.materialGlass ? Theme.surfaceStroke : Theme.alpha(Theme.text, 0.04)
+                    Finish { strength: 0.25 }
 
                     Item {
                         anchors.fill: parent
@@ -558,7 +561,7 @@ LazyLoader {
                             sourceComponent: win.page.comp
                             property real enter: 1
                             opacity: enter
-                            transform: Translate { y: (1 - loader.enter) * 18 }
+                            transform: Translate { y: Theme.pageSlide ? (1 - loader.enter) * Theme.travel(Theme.sp4) : 0 }
                             onSourceComponentChanged: {
                                 enter = 0;
                                 enterAnim.restart();
@@ -568,7 +571,7 @@ LazyLoader {
                                 target: loader
                                 property: "enter"
                                 to: 1
-                                duration: Theme.durLong
+                                duration: Theme.pageDuration()
                                 easing.type: Easing.BezierSpline
                                 easing.bezierCurve: Theme.curves.emphasizedDecel
                             }

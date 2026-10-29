@@ -64,7 +64,7 @@ RowLayout {
         fill: 1
         color: root.status === "missing" ? Theme.error : root.status === "ok" ? Theme.success : Theme.textDim
         RotationAnimation on rotation {
-            running: root.busy
+            running: root.busy && Theme.spatialMotion()
             from: 0; to: 360; duration: 900; loops: Animation.Infinite
             onRunningChanged: if (!running) parent.rotation = 0
         }

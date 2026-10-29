@@ -37,7 +37,7 @@ Item {
     }
 
     Layout.fillWidth: true
-    implicitHeight: Math.max(60, lay.implicitHeight + 24)
+    implicitHeight: Math.max(Math.round(64 * Theme.scale), lay.implicitHeight + Theme.sp3 * 2)
 
     // Settings search: scroll here and flash when this is what was searched for
     readonly property bool found: Panels.settingsFind !== "" && (Panels.settingsFind === root.title || I18n.tr(Panels.settingsFind) === root.title)
@@ -75,8 +75,8 @@ Item {
         SequentialAnimation {
             id: flash
             loops: 2
-            NumberAnimation { target: hl; property: "opacity"; to: 0.22; duration: 280 }
-            NumberAnimation { target: hl; property: "opacity"; to: 0; duration: 420 }
+            NumberAnimation { target: hl; property: "opacity"; to: 0.22; duration: Theme.motionDuration("fade", "panels") }
+            NumberAnimation { target: hl; property: "opacity"; to: 0; duration: Theme.motionDuration("enter", "panels") }
         }
     }
 
@@ -85,29 +85,29 @@ Item {
     Rectangle {
         z: -1
         anchors.fill: parent
-        topLeftRadius: root.firstInList ? 20 : 6
-        topRightRadius: root.firstInList ? 20 : 6
-        bottomLeftRadius: root.lastInList ? 20 : 6
-        bottomRightRadius: root.lastInList ? 20 : 6
+        topLeftRadius: root.firstInList ? Theme.rLg : Theme.rXs
+        topRightRadius: root.firstInList ? Theme.rLg : Theme.rXs
+        bottomLeftRadius: root.lastInList ? Theme.rLg : Theme.rXs
+        bottomRightRadius: root.lastInList ? Theme.rLg : Theme.rXs
         color: Theme.alpha(Theme.surfaceHigh, Math.min(1, Theme.settingsOp + 0.06))
     }
 
     // controls too wide to leave the text room (big buttons, high scaling) go under it
-    readonly property real iconW: root.icon !== "" ? Theme.iconSize + 14 : 0
-    readonly property bool stacked: slot.childrenRect.width > 0 && root.width - 32 - iconW - slot.childrenRect.width - 14 < 240
+    readonly property real iconW: root.icon !== "" ? Theme.iconSize + Theme.sp4 : 0
+    readonly property bool stacked: slot.childrenRect.width > 0 && root.width - Theme.sp4 * 2 - iconW - slot.childrenRect.width - Theme.sp4 < 240 * Theme.scale
 
     ColumnLayout {
         id: lay
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        anchors.leftMargin: 16
-        anchors.rightMargin: 16
-        spacing: 10
+        anchors.leftMargin: Theme.sp4
+        anchors.rightMargin: Theme.sp4
+        spacing: Theme.sp3
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 14
+            spacing: Theme.sp4
 
             FIcon {
                 visible: root.icon !== ""

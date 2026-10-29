@@ -12,7 +12,8 @@ ColumnLayout {
     // the day clicked (events for it show under the grid); today by default
     property date selected: Time.now
     property int slideDir: 0
-    property int cellHeight: 34
+    readonly property real spacingScale: Math.max(1, Math.min(1.6, Settings.data.dashboard.panelSpacing ?? 1))
+    property int cellHeight: Math.round(38 * Theme.scale * spacingScale)
     readonly property date shown: {
         const n = Time.now;
         return new Date(n.getFullYear(), n.getMonth() + monthOffset, 1);
@@ -43,13 +44,13 @@ ColumnLayout {
         id: grid
         Layout.fillWidth: true
         columns: 7
-        rowSpacing: 2
-        columnSpacing: 2
+        rowSpacing: Math.round(Theme.sp1 * root.spacingScale)
+        columnSpacing: Math.round(Theme.sp1 * root.spacingScale)
 
         ParallelAnimation {
             id: gridAnim
-            NumberAnimation { target: grid; property: "opacity"; from: 0; to: 1; duration: Theme.durMed }
-            NumberAnimation { target: gridShift; property: "x"; from: root.slideDir * 40; to: 0; duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+            NumberAnimation { target: grid; property: "opacity"; from: 0; to: 1; duration: Theme.pageDuration("calendar") }
+            NumberAnimation { target: gridShift; property: "x"; from: Theme.pageSlide ? Theme.travel(root.slideDir * 24, "calendar") : 0; to: 0; duration: Theme.pageDuration("calendar"); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
         }
         transform: Translate { id: gridShift }
 

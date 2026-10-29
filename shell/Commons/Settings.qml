@@ -71,10 +71,18 @@ Singleton {
                 property real switcherOpacity: -1       // app switcher, overview, wallpaper switcher
                 property real settingsOpacity: 1.0      // the Settings window
                 property bool blur: false               // blur behind the shell's surfaces (Hyprland)
+                property real materialStrength: 1.0     // specular highlights and contour strength
+                property real glassFrost: 0.7           // blurred wallpaper behind glass surfaces
                 property string finish: "flat"          // surfaces: flat | gloss (Frutiger Aero glass) | chrome (Y2K metal)
                 property real animSpeed: 1.0          // 0 disables animations
                 // motion style for every animation: expressive (springy) | smooth (no overshoot) | snappy | minimal
                 property string motionStyle: "expressive"
+                property var panelEffects: ({})        // panel name → effect; empty inherits panelEffect
+                property var motionDurations: ({})     // role → milliseconds; unset roles use theme defaults
+                property real effectDistance: 1.0
+                property real springStrength: 0.65
+                property string pageEffect: "slide"    // slide | fade | none
+                property bool ambientMotion: true
                 // speed per area (1 = normal, 2 = twice as fast, 0 = no animation)
                 property var motionAreas: ({ panels: 1, notifications: 1, bar: 1, workspaces: 1, dock: 1, launcher: 1, lock: 1 })
                 property string panelEffect: "rise"     // how panels open: rise | fade | slide | zoom | none
@@ -232,6 +240,8 @@ Singleton {
 
             // Quick settings (the control center): where it opens and what's in it
             property JsonObject control: JsonObject {
+                property string placement: "bar"       // bar | center | top/bottom and their corners
+                property real panelSpacing: 1.0
                 property string align: "auto"         // auto (next to its bar button) | left | center | right
                 // grid (pill tiles in two columns, editable: press and hold) | cards (icon on top, big sliders) | classic
                 property string style: "grid"
@@ -643,6 +653,9 @@ Singleton {
 
             // Dashboard: the clock/calendar popout
             property JsonObject dashboard: JsonObject {
+                property int width: 620               // compact calendar width
+                property string placement: "bar"       // bar | center | top/bottom and their corners
+                property real panelSpacing: 1.0
                 property string style: "hub"          // hub (wide, a rail on the left, Home first) | tabs (compact)
                 property string defaultTab: "overview" // tabs layout: overview | media | wallpapers | weather
                 property bool showUser: true
@@ -652,9 +665,15 @@ Singleton {
             // Night light (gammastep): warmer, optionally dimmer colors, by hand or on a schedule
             // The audio visualizer (cava): the bar's, the desktop widget's, the dashboard's and the big band's
             property JsonObject visualizer: JsonObject {
+                property bool enabled: true
                 property string style: "bars"         // bars | mirror | wave | dots | radial | peaks
                 property string colors: "accent"      // accent | palette | rainbow | fire | mono
-                property string motion: "smooth"      // smooth | snappy | bouncy | gravity (fast up, slow down)
+                property string motion: "smooth"      // smooth | snappy | bouncy | gravity
+                property real gain: 1.0
+                property real response: 1.0
+                property real decay: 0.45
+                property real intensity: 0.65
+                property bool symmetric: false
                 property int bars: 24                 // how finely cava splits the sound (8–64)
                 property int fps: 60                  // 30 | 60
                 // the big one: a band across the desktop (under windows) while something plays

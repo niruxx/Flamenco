@@ -163,7 +163,7 @@ Variants {
         Item {
             id: pAnim
             property real v: shouldShow ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durLong; easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { motionRole: win.shouldShow ? "enter" : "exit"; area: "panels" } }
         }
         WlrLayershell.keyboardFocus: shouldShow ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
@@ -186,9 +186,14 @@ Variants {
                 } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
                     win.holdEnd();
                     win.sel = (win.sel + win.actions.length - 1) % win.actions.length;
-                } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab) {
+                } else if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
                     win.holdEnd();
-                    win.sel = (win.sel + 1) % win.actions.length;
+                    const step = event.key === Qt.Key_Up ? -actionGrid.columns : actionGrid.columns;
+                    win.sel = (win.sel + step + win.actions.length) % win.actions.length;
+                } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                    win.holdEnd();
+                    const backward = event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier));
+                    win.sel = (win.sel + (backward ? -1 : 1) + win.actions.length) % win.actions.length;
                 } else if (confirmKeys.includes(event.key)) {
                     win.trigger(win.sel);
                     win.holdStart(win.sel);
@@ -205,137 +210,178 @@ Variants {
             }
         }
 
-        ColumnLayout {
-            anchors.centerIn: parent
-            spacing: Theme.sp6
+        FScroll {
+            id: powerScroll
+            anchors.fill: parent
+            anchors.margins: Theme.edge
+            contentHeight: powerContent.implicitHeight + Theme.sp5 * 2
             opacity: win.p
 
-            FText {
-                Layout.alignment: Qt.AlignHCenter
-                text: win.pendingAction ? win.pendingAction.verb + " in " + win.remaining + "…" : I18n.tr("Goodbye, ") + Paths.user
-                font.pixelSize: Theme.fsXxl
-                font.weight: Font.Bold
-            }
+            ColumnLayout {
+                id: powerContent
+                width: Math.max(0, powerScroll.width - powerScroll.gutter)
+                y: Math.max(Theme.sp5, (powerScroll.height - implicitHeight) / 2)
+                spacing: Theme.sp6
 
-            FText {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: -Theme.sp5
-                text: win.pending ? I18n.tr("Let go to cancel") : win.hint
-                dim: true
-            }
+                FText {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    text: win.pendingAction ? win.pendingAction.verb + " in " + win.remaining + "…" : I18n.tr("Goodbye, ") + Paths.user
+                    font.pixelSize: Theme.fsXxl
+                    font.weight: Font.Bold
+                }
 
-            Row {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: Theme.sp4
+                FText {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    Layout.topMargin: -Theme.sp5
+                    text: win.pending ? I18n.tr("Let go to cancel") : win.hint
+                    dim: true
+                }
 
-                Repeater {
-                    id: rep
-                    model: win.actions
+                GridLayout {
+                    id: actionGrid
+                    Layout.alignment: Qt.AlignHCenter
+                    columns: Math.max(1, Math.min(win.actions.length, Math.floor((powerContent.width + Theme.sp4) / (128 * Theme.scale + Theme.sp4))))
+                    columnSpacing: Theme.sp4
+                    rowSpacing: Theme.sp4
 
-                    Rectangle {
-                        id: btn
-                        required property var modelData
-                        required property int index
-                        readonly property bool selected: win.sel === index
-                        readonly property bool danger: win.pending === modelData.id
-                        property real enter: 0
+                    Repeater {
+                        id: rep
+                        model: win.actions
 
-                        width: 128
-                        height: 140
-                        radius: selected ? Theme.rXl * 1.4 : Theme.rXl
-                        color: danger ? Theme.alpha(Theme.error, 0.25) : selected ? Theme.accent : Theme.panelBg
-                        border.width: 1
-                        border.color: Theme.alpha(Theme.border, 0.6)
-                        opacity: enter
-                        scale: (0.6 + 0.4 * enter) * (selected ? 1.06 : 1)
-                        transform: Translate { y: (1 - btn.enter) * 60 }
+                        Rectangle {
+                            id: btn
+                            required property var modelData
+                            required property int index
+                            readonly property bool selected: win.sel === index
+                            readonly property bool danger: win.pending === modelData.id
+                            property real enter: 0
 
-                        Behavior on color { CAnim {} }
-                        Behavior on radius { Anim { easing.bezierCurve: Theme.curves.spring } }
+                            Layout.preferredWidth: Math.min(128 * Theme.scale, powerContent.width)
+                            Layout.preferredHeight: Math.round(140 * Theme.scale)
+                            radius: selected ? Theme.rXl * 1.4 : Theme.rXl
+                            color: danger ? Theme.alpha(Theme.error, 0.25) : selected ? Theme.accent : Theme.panelBg
+                            border.width: 1
+                            border.color: Theme.alpha(Theme.border, 0.6)
+                            opacity: enter
+                            scale: Theme.spatialMotion("panels") ? (0.96 + 0.04 * enter) * (selected ? 1.03 : 1) : 1
+                            transform: Translate { y: Theme.spatialMotion("panels") ? (1 - btn.enter) * Theme.sp5 : 0 }
 
-                        // countdown: fills from the bottom, with a pulsing edge
-                        ClippingRectangle {
-                            anchors.fill: parent
-                            radius: btn.radius
-                            color: "transparent"
-                            visible: btn.danger
+                            Behavior on color { CAnim {} }
+                            Behavior on radius { Anim { easing.bezierCurve: Theme.curves.spring } }
 
-                            Rectangle {
-                                anchors.bottom: parent.bottom
-                                width: parent.width
-                                height: parent.height * win.charge
-                                color: Theme.error
+                            // countdown: fills from the bottom, with a pulsing edge
+                            ClippingRectangle {
+                                anchors.fill: parent
+                                radius: btn.radius
+                                color: "transparent"
+                                visible: btn.danger
 
                                 Rectangle {
-                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
                                     width: parent.width
-                                    height: 3
-                                    color: Theme.onAccent
-                                    SequentialAnimation on opacity {
-                                        running: btn.danger
-                                        loops: Animation.Infinite
-                                        NumberAnimation { to: 0.2; duration: 400 }
-                                        NumberAnimation { to: 0.8; duration: 400 }
+                                    height: parent.height * win.charge
+                                    color: Theme.error
+
+                                    Rectangle {
+                                        anchors.top: parent.top
+                                        width: parent.width
+                                        height: 3
+                                        color: Theme.onAccent
+                                        SequentialAnimation on opacity {
+                                            running: btn.danger
+                                            loops: Animation.Infinite
+                                            NumberAnimation { to: 0.2; duration: 400 }
+                                            NumberAnimation { to: 0.8; duration: 400 }
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        ColumnLayout {
-                            anchors.centerIn: parent
-                            spacing: Theme.sp3
-                            FIcon {
-                                Layout.alignment: Qt.AlignHCenter
-                                icon: btn.modelData.icon
-                                size: 44
-                                fill: btn.selected ? 1 : 0
-                                color: btn.selected || btn.danger ? Theme.onAccent : Theme.text
+                            Rectangle {
+                                visible: btn.danger
+                                anchors.centerIn: parent
+                                width: actionLabels.implicitWidth + Theme.sp4
+                                height: actionLabels.implicitHeight + Theme.sp3
+                                radius: Theme.rMd
+                                color: Theme.surfaceHigh
                             }
-                            FText {
-                                Layout.alignment: Qt.AlignHCenter
-                                text: btn.danger ? win.remaining + "s" : btn.modelData.label
-                                font.weight: Font.DemiBold
-                                color: btn.selected || btn.danger ? Theme.onAccent : Theme.text
-                            }
-                            // its number key
-                            FText {
-                                Layout.alignment: Qt.AlignHCenter
-                                visible: btn.index < 9
-                                text: String(btn.index + 1)
-                                mono: true
-                                font.pixelSize: Theme.fsXs
-                                opacity: 0.55
-                                color: btn.selected || btn.danger ? Theme.onAccent : Theme.textDim
-                            }
-                        }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onEntered: win.sel = btn.index
-                            onPressed: {
-                                win.sel = btn.index;
-                                win.holdStart(btn.index);
+                            ColumnLayout {
+                                id: actionLabels
+                                anchors.centerIn: parent
+                                spacing: Theme.sp3
+                                FIcon {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    icon: btn.modelData.icon
+                                    size: 44
+                                    fill: btn.selected ? 1 : 0
+                                    color: btn.danger ? Theme.text : btn.selected ? Theme.onAccent : Theme.text
+                                }
+                                FText {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: btn.danger ? win.remaining + "s" : btn.modelData.label
+                                    font.weight: Font.DemiBold
+                                    color: btn.danger ? Theme.text : btn.selected ? Theme.onAccent : Theme.text
+                                }
+                                // its number key
+                                FText {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    visible: btn.index < 9
+                                    text: String(btn.index + 1)
+                                    mono: true
+                                    font.pixelSize: Theme.fsXs
+                                    opacity: 0.55
+                                    color: btn.danger ? Theme.textDim : btn.selected ? Theme.onAccent : Theme.textDim
+                                }
                             }
-                            onReleased: win.holdEnd()
-                            onCanceled: win.holdEnd()
-                            onClicked: win.trigger(btn.index)
-                        }
 
-                        SequentialAnimation {
-                            id: entry
-                            PropertyAction { target: btn; property: "enter"; value: 0 }
-                            PauseAnimation { duration: Theme.dur(45) * btn.index }
-                            NumberAnimation { target: btn; property: "enter"; to: 1; duration: Theme.durLong; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.spring }
-                        }
-                        Connections {
-                            target: stagger
-                            function onTriggered() { entry.restart(); }
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onEntered: win.sel = btn.index
+                                onPressed: {
+                                    win.sel = btn.index;
+                                    win.holdStart(btn.index);
+                                }
+                                onReleased: win.holdEnd()
+                                onCanceled: win.holdEnd()
+                                onClicked: win.trigger(btn.index)
+                            }
+
+                            SequentialAnimation {
+                                id: entry
+                                PropertyAction { target: btn; property: "enter"; value: 0 }
+                                PauseAnimation { duration: Theme.spatialMotion("panels") ? Theme.durA("panels", 25) * btn.index : 0 }
+                                NumberAnimation { target: btn; property: "enter"; to: 1; duration: Theme.motionDuration("enter", "panels"); easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.curves.emphasizedDecel }
+                            }
+                            Connections {
+                                target: stagger
+                                function onTriggered() { entry.restart(); }
+                            }
                         }
                     }
                 }
             }
+
+        }
+
+        onSelChanged: {
+            if (!rep || !powerScroll)
+                return;
+            const button = rep.itemAt(sel);
+            if (!button)
+                return;
+            const top = button.mapToItem(powerScroll.contentItem, 0, 0).y;
+            const bottom = top + button.height;
+            const desired = top < powerScroll.contentY ? top - Theme.sp3
+                : bottom > powerScroll.contentY + powerScroll.height ? bottom - powerScroll.height + Theme.sp3
+                : powerScroll.contentY;
+            powerScroll.contentY = Math.max(0, Math.min(powerScroll.maxY, desired));
         }
 
         Timer { id: stagger; interval: 1 }

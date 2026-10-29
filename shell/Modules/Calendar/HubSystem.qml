@@ -11,7 +11,7 @@ GridLayout {
     id: root
 
     property bool live: false                  // showing right now: collect the detailed stats
-    columns: 3
+    columns: width < 840 * Theme.scale ? 1 : 3
     rowSpacing: Theme.sp3
     columnSpacing: Theme.sp3
 
@@ -251,7 +251,7 @@ GridLayout {
 
     // ── top processes ──
     Panel {
-        Layout.columnSpan: 2
+        Layout.columnSpan: Math.min(2, root.columns)
         Layout.preferredWidth: 2
         icon: "list"
         title: I18n.tr("Top processes")
@@ -265,16 +265,16 @@ GridLayout {
                     required property var modelData
                     width: parent.width
                     height: 20
-                    FText { width: 160; text: modelData.name; mono: true; font.pixelSize: Theme.fsSm; elide: Text.ElideRight }
+                    FText { width: Math.min(160, parent.width * 0.35); text: modelData.name; mono: true; font.pixelSize: Theme.fsSm; elide: Text.ElideRight }
                     Rectangle {
-                        x: 170
+                        x: Math.min(160, parent.width * 0.35) + 10
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - 170 - 130
+                        width: Math.max(0, parent.width - x - 130)
                         height: 5
                         radius: 3
                         color: Theme.alpha(Theme.text, 0.08)
                         Rectangle {
-                            width: Math.max(5, parent.width * Math.min(1, modelData.cpu / Math.max(1, ...SystemStats.processes.map(p => p.cpu))))
+                            width: Math.min(parent.width, Math.max(0, parent.width * Math.min(1, modelData.cpu / Math.max(1, ...SystemStats.processes.map(p => p.cpu)))))
                             height: parent.height
                             radius: 3
                             gradient: Gradient {

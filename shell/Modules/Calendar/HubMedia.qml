@@ -91,7 +91,7 @@ Rectangle {
                     to: 360
                     duration: 9000
                     loops: Animation.Infinite
-                    running: root.live
+                    running: root.live && Theme.ambientMotion && Theme.areaSpeed("panels") > 0
                     paused: running && !Media.playing
                 }
 
@@ -211,7 +211,7 @@ Rectangle {
                     to: Math.PI * 2
                     duration: 1600
                     loops: Animation.Infinite
-                    running: root.live && Media.playing
+                    running: root.live && Media.playing && Theme.ambientMotion && Theme.areaSpeed("panels") > 0
                 }
                 onPaint: {
                     const ctx = getContext("2d");

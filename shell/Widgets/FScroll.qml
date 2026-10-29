@@ -60,7 +60,7 @@ Flickable {
             color: bar.pressed ? Theme.accent : Theme.textDim
             opacity: track.active ? 0.9 : root.moving ? 0.6 : 0.35
 
-            Behavior on width { Anim { duration: Theme.durShort } }
+            Behavior on width { Anim { motionRole: "feedback" } }
             Behavior on opacity { Anim {} }
             Behavior on color { CAnim {} }
         }

@@ -59,7 +59,7 @@ Variants {
         Item {
             id: pAnim
             property real v: win.shown ? 1 : 0
-            Behavior on v { Anim { duration: Theme.durA("panels", 420); easing.bezierCurve: Theme.curves.emphasizedDecel } }
+            Behavior on v { Anim { motionRole: win.shown ? "enter" : "exit"; area: "notifications" } }
         }
 
         // the rest of the screen, a little dimmed; a click there closes it

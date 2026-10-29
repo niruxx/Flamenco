@@ -50,9 +50,9 @@ Variants {
             border.width: 1
             border.color: Theme.alpha(Theme.border, 0.6)
             opacity: win.t ? 1 : 0
-            scale: win.t ? 1 : 0.85
-            Behavior on opacity { Anim { id: fade; duration: Theme.durMed } }
-            Behavior on scale { Anim { easing.bezierCurve: Theme.curves.spring } }
+            scale: win.t || !Theme.spatialMotion("notifications") ? 1 : 0.96
+            Behavior on opacity { Anim { id: fade; motionRole: win.t ? "enter" : "exit"; area: "notifications" } }
+            Behavior on scale { Anim { motionRole: win.t ? "enter" : "exit"; area: "notifications" } }
             Behavior on width { Anim { easing.bezierCurve: Theme.curves.emphasizedDecel } }
 
             Finish {}
