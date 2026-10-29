@@ -17,7 +17,7 @@ Variants {
         exclusiveKeyboard: true
         cardWidth: Math.round(560 * Theme.scale)
         cardPadding: Theme.sp2
-        avoidBar: true
+        // Use the shared bar spacing and honor Appearance → Blend panels into bar.
 
         property string category: "all"
         readonly property var categories: [
