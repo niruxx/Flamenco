@@ -82,7 +82,7 @@ Singleton {
             return t.concat(args);
         if (name === "wezterm")
             return t.concat(["start", "--"], args);
-        if (name === "gnome-terminal" || name === "kgx")
+        if (name === "gnome-terminal" || name === "kgx" || name === "ptyxis")
             return t.concat(["--"], args);
         return t.concat(["-e"], args);
     }

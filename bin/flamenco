@@ -54,6 +54,9 @@
   flamenco flatpak list | info APP | set APP --json CHANGES | reset APP   per-app Flatpak permissions
   flamenco autostart list | set ID on|off | add APP_ID | add-command NAME CMD | remove ID | run
   flamenco defaults get | set CATEGORY APP_ID   default browser, file manager, terminal…
+  flamenco terminal get | set COMMAND…   the terminal (and the Mod+T / Mod+Return keys that open it)
+  flamenco plymouth status [--json] | set THEME | test THEME [SECONDS] | get STORE_ID [N] | install ARCHIVE | remove THEME
+                               the boot splash (Settings → Boot splash)
   flamenco about [--json]      system information
   flamenco list-themes [--json]  installed icon/cursor/GTK/Qt-style/Kvantum/SDDM themes
   flamenco doctor [--json]
@@ -1534,7 +1537,7 @@ def cmd_display(args: list[str]) -> int:
 
 # ─────────────────────────────── niri config ─────────────────────────────────
 
-TERMINALS = ["kitty", "foot", "alacritty", "ghostty", "wezterm", "konsole", "gnome-terminal", "xfce4-terminal", "xterm"]
+TERMINALS = ["kitty", "foot", "alacritty", "ghostty", "wezterm", "konsole", "kgx", "ptyxis", "gnome-terminal", "xfce4-terminal", "xterm"]
 
 DEFAULT_INPUT = """input {
     keyboard {
@@ -2203,7 +2206,7 @@ def cmd_launch(args: list[str]) -> int:
     if cp.get("Desktop Entry", "Terminal", fallback="false").lower() == "true":
         t = pick_terminal().split()
         name = Path(t[0]).name
-        argv = t + (argv if name in ("kitty", "foot") else ["start", "--", *argv] if name == "wezterm" else ["--", *argv] if name in ("gnome-terminal", "kgx") else ["-e", *argv])
+        argv = t + (argv if name in ("kitty", "foot") else ["start", "--", *argv] if name == "wezterm" else ["--", *argv] if name in ("gnome-terminal", "kgx", "ptyxis") else ["-e", *argv])
     subprocess.Popen(argv, start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return 0
 
@@ -5914,6 +5917,8 @@ GET_KINDS = {
     "wallpapers": {"name": "Wallpapers", "cat": "299"},
     "fonts": {"name": "Fonts", "cat": ""},
     "palettes": {"name": "Palettes", "cat": ""},
+    # searched here; installed by `flamenco plymouth get` (it goes into /usr/share, as root)
+    "plymouth": {"name": "Boot splashes (Plymouth)", "cat": "108"},
 }
 # shell color themes: DMS's theme registry, turned into Flamenco palettes
 THEME_REGISTRY = "https://github.com/duxlabs-dev/dux-plugin-registry"
@@ -6483,10 +6488,313 @@ def cmd_get(args: list[str]) -> int:
     if sub == "remove":
         print(json.dumps(get_remove(kind, args[2])))
         return 0
+    if kind == "plymouth":
+        die("boot splashes install as root: use `flamenco plymouth get ID` (or Settings → Boot splash)")
     n = int(args[3]) if len(args) > 3 and args[3].isdigit() else 0
     res = get_install_font(args[2]) if kind == "fonts" else get_install_palette(args[2]) if kind == "palettes" else get_install_ocs(kind, args[2], n)
     print(json.dumps(res))
     return 0
+
+
+# ─────────────────────────────── boot splash (Plymouth) ──────────────────────
+# Settings → Boot splash: the installed Plymouth themes with a picture of each,
+# switching (plymouth-set-default-theme -R, which rebuilds the initramfs), a short
+# test run, and themes from the KDE Store's "Plymouth Themes" (searched with
+# `flamenco get search plymouth`). Themes live in /usr/share/plymouth/themes, so
+# everything that changes them needs root: the shell runs these in a terminal.
+# Store downloads are unpacked as you, in the private staging folder, and only the
+# theme folders found there are copied in; get.json remembers them so Remove only
+# takes away what came from here.
+
+PLYMOUTH_THEMES = Path("/usr/share/plymouth/themes")
+PLYMOUTH_CONF = Path("/etc/plymouth/plymouthd.conf")
+PLYMOUTH_PICS = (".png", ".jpg", ".jpeg", ".webp", ".svg")
+
+
+def plymouth_read(f: Path) -> dict:
+    cp = configparser.RawConfigParser(strict=False, interpolation=None)
+    cp.optionxform = str
+    try:
+        cp.read(f, encoding="utf-8")
+    except (configparser.Error, UnicodeDecodeError, OSError):
+        return {}
+    return dict(cp.items("Plymouth Theme")) if cp.has_section("Plymouth Theme") else {}
+
+
+def plymouth_picture(d: Path) -> str:
+    """The best stand-in for a preview a theme folder has: a preview or screenshot,
+    else a background, else a logo, else its biggest picture. (Animated themes are
+    numbered frames: the middle one of the longest run is better than the first.)"""
+    pics = []
+    for root, dirs, files in os.walk(d):
+        if len(Path(root).relative_to(d).parts) > 2:
+            dirs[:] = []
+            continue
+        pics += [Path(root) / f for f in files if f.lower().endswith(PLYMOUTH_PICS)]
+    if not pics:
+        return ""
+    def rank(f: Path):
+        n = f.stem.lower()
+        for i, words in enumerate((("preview", "screenshot"), ("background", "wallpaper", "bg"), ("logo", "watermark", "splash"))):
+            if any(w in n for w in words):
+                return (0, i, -f.stat().st_size)
+        return (1, 0, -f.stat().st_size)
+    best = min(pics, key=rank)
+    if rank(best)[0] == 1:
+        # frames like progress-0001.png / throbber-12.png: take one from the middle
+        runs: dict[str, list[Path]] = {}
+        for f in pics:
+            m = re.fullmatch(r"(.*?)[-_]?\d+", f.stem)
+            if m:
+                runs.setdefault(str(f.parent / m.group(1)), []).append(f)
+        if runs:
+            run = sorted(max(runs.values(), key=len))
+            if len(run) > 3:
+                return str(run[len(run) // 2])
+    return str(best)
+
+
+def plymouth_current() -> str:
+    if shutil.which("plymouth-set-default-theme"):
+        cur = run_out(["plymouth-set-default-theme"]).strip()
+        if cur:
+            return cur
+    for f in (PLYMOUTH_CONF, Path("/usr/share/plymouth/plymouthd.defaults")):
+        try:
+            m = re.search(r"(?m)^\s*Theme\s*=\s*(\S+)", f.read_text())
+        except OSError:
+            continue
+        if m:
+            return m.group(1)
+    return ""
+
+
+def plymouth_themes() -> list[dict]:
+    if not PLYMOUTH_THEMES.is_dir():
+        return []
+    ours = {Path(pp).name: sid for sid, e in get_manifest().get("plymouth", {}).items() for pp in e.get("paths", [])}
+    out = []
+    for d in sorted(PLYMOUTH_THEMES.iterdir(), key=lambda x: x.name.lower()):
+        f = d / f"{d.name}.plymouth"
+        if not f.is_file():
+            f = next(iter(sorted(d.glob("*.plymouth"))), None) if d.is_dir() else None
+        if not f:
+            continue
+        info = plymouth_read(f)
+        out.append({"id": d.name, "name": info.get("Name") or d.name, "description": get_plain(info.get("Description", ""), 240),
+                    "module": info.get("ModuleName", ""), "picture": plymouth_picture(d), "path": str(d),
+                    "storeId": ours.get(d.name, "")})
+    return out
+
+
+def plymouth_status() -> dict:
+    hooks = ""
+    try:
+        m = re.search(r"(?m)^\s*HOOKS\s*=\s*\(([^)]*)\)", Path("/etc/mkinitcpio.conf").read_text())
+        hooks = m.group(1) if m else ""
+    except OSError:
+        pass
+    for f in sorted(Path("/etc/mkinitcpio.conf.d").glob("*.conf")) if Path("/etc/mkinitcpio.conf.d").is_dir() else []:
+        try:
+            m = re.search(r"(?m)^\s*HOOKS\s*=\s*\(([^)]*)\)", f.read_text())
+            hooks = m.group(1) if m else hooks
+        except OSError:
+            pass
+    try:
+        cmdline = Path("/proc/cmdline").read_text().split()
+    except OSError:
+        cmdline = []
+    dracut = bool(shutil.which("dracut")) and not shutil.which("mkinitcpio")
+    return {
+        "installed": bool(shutil.which("plymouthd") or shutil.which("plymouth-set-default-theme")),
+        "canSet": bool(shutil.which("plymouth-set-default-theme")),
+        "current": plymouth_current(),
+        "themes": plymouth_themes(),
+        "dir": str(PLYMOUTH_THEMES),
+        # the splash only shows when the initramfs has it and the kernel is asked for it
+        "initramfs": "dracut" if dracut else "mkinitcpio" if shutil.which("mkinitcpio") else "",
+        "hook": True if dracut else ("plymouth" in hooks.split() or "sd-plymouth" in hooks.split()) if hooks else None,
+        "splashArg": "splash" in cmdline,
+        "quietArg": "quiet" in cmdline,
+        "installHint": install_hint("plymouth"),
+    }
+
+
+def plymouth_check_name(name: str) -> Path:
+    if not re.fullmatch(r"[\w][\w.+-]{0,99}", name or ""):
+        die(f"not a theme name: {name!r}")
+    d = PLYMOUTH_THEMES / name
+    if not d.is_dir():
+        die(f"no Plymouth theme {name!r} in {PLYMOUTH_THEMES}")
+    return d
+
+
+def plymouth_set(name: str) -> int:
+    plymouth_check_name(name)
+    if not shutil.which("plymouth-set-default-theme"):
+        die(f"plymouth-set-default-theme isn't installed ({install_hint('plymouth')})")
+    print(f"Setting the boot splash to {name} and rebuilding the initramfs (this takes a little while)…")
+    if privileged(["plymouth-set-default-theme", "-R", name]) != 0:
+        die("couldn't set the boot splash")
+    print(f"plymouth: {name} shows from the next boot")
+    return 0
+
+
+def plymouth_test(name: str, seconds: int) -> int:
+    """Shows `name` for a few seconds: plymouthd on this screen, then quits. The default
+    theme is switched for the test (without rebuilding) and put back afterwards."""
+    plymouth_check_name(name)
+    if not shutil.which("plymouthd"):
+        die(f"plymouthd isn't installed ({install_hint('plymouth')})")
+    seconds = max(2, min(30, seconds))
+    script = (
+        'cur=$(plymouth-set-default-theme 2>/dev/null); '
+        'restore() { [ -n "$cur" ] && [ "$cur" != "$1" ] && plymouth-set-default-theme "$cur"; }; '
+        "trap 'plymouth --quit 2>/dev/null; restore \"$1\"' EXIT INT TERM; "
+        '[ "$cur" != "$1" ] && plymouth-set-default-theme "$1"; '
+        'plymouthd --tty=/dev/tty63 --mode=boot || exit 1; '
+        'plymouth --show-splash; '
+        'for i in $(seq 1 "$2"); do plymouth --update=test$i; sleep 1; done'
+    )
+    print(f"Showing {name} for {seconds} seconds. Your desktop comes back on its own.")
+    return privileged(["sh", "-c", script, "sh", name, str(seconds)])
+
+
+def plymouth_find(root: Path) -> list[Path]:
+    """Theme folders in what was unpacked: folders with a NAME.plymouth (any .plymouth will do)."""
+    found = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [x for x in dirnames if not x.startswith(".") and x != "__MACOSX"]
+        if any(f.endswith(".plymouth") for f in filenames):
+            found.append(Path(dirpath))
+            dirnames[:] = []
+    return found
+
+
+def plymouth_place(found: list[Path], sid: str, label: str, version: str = "") -> int:
+    """Copies the theme folders into /usr/share/plymouth/themes as root. A folder already
+    there is only replaced when it came from here."""
+    m = get_manifest()
+    owned = {Path(pp).name for e in m.get("plymouth", {}).values() for pp in e.get("paths", [])}
+    placed, skipped = [], []
+    for src in found:
+        plym = sorted(src.glob("*.plymouth"))
+        # the folder must carry the theme's name: its ImageDir/ScriptFile point at /usr/share/plymouth/themes/NAME
+        name = next((f.stem for f in plym if f.stem == src.name), plym[0].stem if plym else src.name)
+        if not re.fullmatch(r"[\w][\w.+-]{0,99}", name):
+            skipped.append(f"{src.name} (odd name)")
+            continue
+        dest = PLYMOUTH_THEMES / name
+        if dest.exists() and name not in owned:
+            skipped.append(f"{name} (already installed from elsewhere)")
+            continue
+        script = 'rm -rf -- "$2" && mkdir -p -- "$(dirname "$2")" && cp -r --no-preserve=mode,ownership -- "$1" "$2" && chmod -R u=rwX,go=rX -- "$2"'
+        if privileged(["sh", "-c", script, "sh", str(src), str(dest)]) != 0:
+            die(f"couldn't copy {name} into {PLYMOUTH_THEMES}")
+        placed.append(dest)
+    if not placed:
+        die("no theme installed: " + (", ".join(skipped) if skipped else "nothing to install"))
+    if sid:
+        m.setdefault("plymouth", {})[sid] = {"name": label, "names": [p.name for p in placed], "paths": [str(p) for p in placed], "version": version}
+        get_manifest_save(m)
+    for p in placed:
+        print(f"plymouth: installed {p.name} into {PLYMOUTH_THEMES}")
+    for sk in skipped:
+        print(f"plymouth: skipped {sk}")
+    print("Pick it in Settings → Boot splash to use it.")
+    return 0
+
+
+def plymouth_get(sid: str, n: int) -> int:
+    import hashlib
+    import tempfile
+    import urllib.parse
+    if not sid.isdigit():
+        die("not a KDE Store id")
+    item = (live_fetch_json(f"{GET_OCS}/{sid}?" + urllib.parse.urlencode({"format": "json"})).get("data") or [None])
+    item = item[0] if isinstance(item, list) else item
+    if not item:
+        die("not found in the KDE Store")
+    files = get_files(item)
+    if not files:
+        die("it has no files to download")
+    f = next((x for x in files if x["n"] == n), None) if n else get_pick("plymouth", files)
+    if not f:
+        die(f"it has no file {n}")
+    label = get_plain(item.get("name"), 80)
+    print(f"Downloading {label} ({f['name']})…")
+    with tempfile.TemporaryDirectory(dir=get_stage()) as tmp:
+        tmp = Path(tmp)
+        dl = tmp / "download"
+        name = get_download(f["url"], dl) or f["name"]
+        if f["md5"] and re.fullmatch(r"[0-9a-fA-F]{32}", f["md5"]):
+            if hashlib.md5(dl.read_bytes()).hexdigest().lower() != f["md5"].lower():
+                die("the download doesn't match the store's checksum: not installed")
+        get_unpack(dl, name, tmp / "files")
+        get_safe_links(tmp / "files")
+        found = plymouth_find(tmp / "files")
+        if not found:
+            die("no Plymouth theme (a folder with a .plymouth file) in that download")
+        return plymouth_place(found, sid, label, str(item.get("version") or ""))
+
+
+def plymouth_install_file(archive: Path) -> int:
+    import tempfile
+    if not archive.is_file():
+        die(f"no such file: {archive}")
+    with tempfile.TemporaryDirectory(dir=get_stage()) as tmp:
+        tmp = Path(tmp)
+        get_unpack(archive, archive.name, tmp / "files")
+        get_safe_links(tmp / "files")
+        found = plymouth_find(tmp / "files")
+        if not found:
+            die("no Plymouth theme (a folder with a .plymouth file) in that archive")
+        return plymouth_place(found, "file:" + archive.name, archive.name)
+
+
+def plymouth_remove(name: str) -> int:
+    d = plymouth_check_name(name)
+    m = get_manifest()
+    sid = next((k for k, e in m.get("plymouth", {}).items() if str(d) in e.get("paths", [])), None)
+    if sid is None:
+        die(f"{name} wasn't installed from Flamenco; remove it with your package manager")
+    if plymouth_current() == name:
+        die(f"{name} is the boot splash in use: pick another one first")
+    if privileged(["rm", "-rf", "--", str(d)]) != 0:
+        die(f"couldn't remove {d}")
+    e = m["plymouth"][sid]
+    e["paths"] = [pp for pp in e.get("paths", []) if pp != str(d)]
+    if not e["paths"]:
+        del m["plymouth"][sid]
+    get_manifest_save(m)
+    print(f"plymouth: removed {name}")
+    return 0
+
+
+def cmd_plymouth(args: list[str]) -> int:
+    sub = args[0] if args else "status"
+    if sub == "status":
+        st = plymouth_status()
+        if "--json" in args:
+            print(json.dumps(st))
+            return 0
+        if not st["installed"]:
+            print(f"Plymouth isn't installed ({st['installHint']})")
+        print(f"current: {st['current'] or '(none)'}")
+        for t in st["themes"]:
+            print(("* " if t["id"] == st["current"] else "  ") + t["id"] + (f"  ({t['name']})" if t["name"] != t["id"] else ""))
+        return 0
+    if sub == "set" and len(args) == 2:
+        return plymouth_set(args[1])
+    if sub == "test" and len(args) in (2, 3):
+        return plymouth_test(args[1], int(args[2]) if len(args) == 3 and args[2].isdigit() else 6)
+    if sub == "get" and len(args) in (2, 3):
+        return plymouth_get(args[1], int(args[2]) if len(args) == 3 and args[2].isdigit() else 0)
+    if sub == "install" and len(args) == 2:
+        return plymouth_install_file(Path(args[1]).expanduser())
+    if sub == "remove" and len(args) == 2:
+        return plymouth_remove(args[1])
+    die("usage: flamenco plymouth status [--json] | set THEME | test THEME [SECONDS] | get STORE_ID [N] | install ARCHIVE | remove THEME")
 
 
 # ─────────────────────────────── plugins ─────────────────────────────────────
@@ -10556,8 +10864,88 @@ def terminal_command(desktop_id: str) -> str:
         argv = shlex.split(e.get("Exec", ""))
     except ValueError:
         argv = []
+    argv = [a for a in argv if not re.fullmatch(r"%[fFuUdDnNickvm]", a) and not a.startswith("--file-forwarding")]
+    if argv and Path(argv[0]).name == "flatpak":
+        return shlex.join(argv)             # flatpak run [--command=…] APP_ID
     exe = Path(argv[0]).name if argv else desktop_id[:-8].split(".")[-1].lower()
     return exe
+
+
+def terminal_rebind(command: str) -> list[str]:
+    """Points the terminal keys (Mod+T / Mod+Return) of the compositor configs Flamenco
+    wrote at `command`. Only the configs that exist are touched; gives back what changed."""
+    import shlex
+    argv = shlex.split(command)
+    if not argv:
+        return []
+    done = []
+    if NIRI_CONFIG.is_file():
+        old = NIRI_CONFIG.read_text()
+        spawn = "spawn " + " ".join(kdl_quote(a) for a in argv) + ";"
+        new = re.sub(r'(hotkey-overlay-title="Terminal"\s*\{\s*)spawn\b[^;}]*;', lambda m: m.group(1) + spawn, old)
+        if new != old:
+            tmp = niri_tmp()
+            tmp.write_text(new)
+            if niri_validate(tmp):
+                niri_commit(tmp)
+                done.append(str(NIRI_CONFIG))
+            else:
+                tmp.unlink()
+                print(f"note: niri rejected the new terminal keys; {NIRI_CONFIG} was not changed", file=sys.stderr)
+    hypr = False
+    if HYPR_CONFIG.is_file():
+        old = HYPR_CONFIG.read_text()
+        new = re.sub(r"(?m)^(\s*\$terminal\s*=).*$", lambda m: m.group(1) + " " + command, old)
+        if new != old:
+            HYPR_CONFIG.write_text(new)
+            done.append(str(HYPR_CONFIG))
+            hypr = True
+    if HYPR_LUA.is_file():
+        old = HYPR_LUA.read_text()
+        new = re.sub(r'(?m)^(\s*local\s+terminal\s*=\s*)"(?:[^"\\]|\\.)*"', lambda m: m.group(1) + json.dumps(command), old)
+        if new != old:
+            HYPR_LUA.write_text(new)
+            done.append(str(HYPR_LUA))
+            hypr = True
+    if hypr:
+        hypr_reload()
+    return done
+
+
+def terminal_set(command: str, settings_too: bool = True) -> list[str]:
+    import shlex
+    try:
+        argv = shlex.split(command)
+    except ValueError as e:
+        die(f"can't read that command: {e}")
+    if not argv or not shutil.which(argv[0]):
+        die(f"{argv[0] if argv else 'nothing'!r} isn't installed (not on PATH)")
+    if settings_too:
+        settings = CONFIG_DIR / "settings.json"
+        try:
+            data = json.loads(settings.read_text())
+        except Exception:
+            data = None
+        if isinstance(data, dict):
+            data.setdefault("general", {})["terminal"] = command
+            settings.write_text(json.dumps(data, indent=4))
+    return terminal_rebind(command)
+
+
+def cmd_terminal(args: list[str]) -> int:
+    no_settings = "--no-settings" in args
+    args = [a for a in args if a != "--no-settings"]
+    sub = args[0] if args else "get"
+    if sub == "get":
+        print(pick_terminal())
+        return 0
+    if sub == "set" and len(args) >= 2:
+        cmd = " ".join(args[1:]).strip()
+        for f in terminal_set(cmd, not no_settings):
+            print(f"terminal keys (Mod+T / Mod+Return) now open {cmd}: {f}")
+        print(f"terminal: {cmd}")
+        return 0
+    die("usage: flamenco terminal get | set COMMAND… [--no-settings]   the terminal, and the keys that open it")
 
 
 def defaults_set(cid: str, app: str, settings_too: bool = True) -> None:
@@ -10566,6 +10954,8 @@ def defaults_set(cid: str, app: str, settings_too: bool = True) -> None:
         old = [x.strip() for x in lst.read_text().splitlines()] if lst.is_file() else []
         lst.parent.mkdir(parents=True, exist_ok=True)
         lst.write_text("\n".join([app] + [x for x in old if x and x != app]) + "\n")
+        for f in terminal_rebind(terminal_command(app)):
+            print(f"terminal keys (Mod+T / Mod+Return) updated in {f}")
         settings = CONFIG_DIR / "settings.json"
         if not settings_too:        # the running shell sets general.terminal itself
             return
@@ -11451,6 +11841,10 @@ def main(argv: list[str]) -> int:
         return cmd_autostart(rest)
     if cmd == "defaults":
         return cmd_defaults(rest)
+    if cmd == "terminal":
+        return cmd_terminal(rest)
+    if cmd == "plymouth":
+        return cmd_plymouth(rest)
     if cmd == "compositor":
         return cmd_compositor(rest)
     if cmd == "screenshot":

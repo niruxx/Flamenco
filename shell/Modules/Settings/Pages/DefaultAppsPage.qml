@@ -24,6 +24,17 @@ Page {
             Settings.data.general.terminal = c.command;
     }
 
+    // any terminal command (gnome-console is `kgx`, `konsole`, `foot -o …`); Mod+T follows it
+    function setTerminal(cmd) {
+        if (!cmd)
+            return;
+        pendingTerminal = cmd;
+        setter.command = [Paths.bin, "terminal", "set", cmd, "--no-settings"];
+        setter.running = true;
+    }
+    // saved once `flamenco terminal set` has checked it's installed
+    property string pendingTerminal: ""
+
     Process {
         id: getter
         command: [Paths.bin, "defaults", "get"]
@@ -44,7 +55,12 @@ Page {
         stderr: StdioCollector {
             onStreamFinished: if (text.trim()) page.status = text.trim().split("\n").pop()
         }
-        onExited: getter.running = true
+        onExited: code => {
+            if (code === 0 && page.pendingTerminal)
+                Settings.data.general.terminal = page.pendingTerminal;
+            page.pendingTerminal = "";
+            getter.running = true;
+        }
     }
 
     Group {
@@ -82,6 +98,33 @@ Page {
                         placeholder: I18n.tr("Not set")
                         onSelected: v => page.choose(row.modelData, v)
                     }
+                }
+            }
+        }
+    }
+
+    Group {
+        title: I18n.tr("Terminal")
+        SettingRow {
+            title: I18n.tr("Terminal command")
+            subtitle: I18n.tr("Any terminal, with options if you like: kgx (GNOME Console), konsole, ptyxis, foot… Super+T and Super+Return open it, and so do apps that need a terminal.")
+            icon: "terminal"
+            Row {
+                spacing: 8
+                FTextField {
+                    id: termField
+                    implicitWidth: 220
+                    icon: "terminal"
+                    placeholder: "kgx"
+                    text: Settings.data.general.terminal
+                    onAccepted: page.setTerminal(text.trim())
+                }
+                FButton {
+                    text: I18n.tr("Set")
+                    variant: "tonal"
+                    implicitHeight: 38
+                    disabled: setter.running || termField.text.trim() === "" || termField.text.trim() === Settings.data.general.terminal
+                    onClicked: page.setTerminal(termField.text.trim())
                 }
             }
         }

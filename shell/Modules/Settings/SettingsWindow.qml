@@ -82,6 +82,7 @@ LazyLoader {
             { id: "region", icon: "language", label: I18n.tr("Region & Language"), comp: regionC },
             { id: "wellbeing", icon: "self_improvement", label: I18n.tr("Digital wellbeing"), comp: wellbeingC },
             { id: "lock", icon: "lock", label: I18n.tr("Lock & Login"), comp: lockC },
+            { id: "boot", icon: "rocket", label: I18n.tr("Boot splash"), comp: bootC },
             { id: "defaults", icon: "open_in_new", label: I18n.tr("Default apps"), comp: defaultsC },
             { id: "autostart", icon: "rocket_launch", label: I18n.tr("Auto-start"), comp: autostartC },
             { id: "flatpak", icon: "inventory_2", label: I18n.tr("Flatpak permissions"), comp: flatpakC },
@@ -104,13 +105,13 @@ LazyLoader {
             { tint: "#8fa6ff", ids: ["bar", "dock", "quicksettings", "launcher", "desktop", "overview", "edges", "clock"] },
             { tint: "#ff9d6e", ids: ["keyboard", "pointer", "night", "printers", "screenshots"] },
             { tint: "#5fc9c2", ids: ["windows", "workspaces"] },
-            { tint: "#6fcf8f", ids: ["users", "accounts", "sharing", "datetime", "region", "wellbeing", "lock"] },
+            { tint: "#6fcf8f", ids: ["users", "accounts", "sharing", "datetime", "region", "wellbeing", "lock", "boot"] },
             { tint: "#e98fd0", ids: ["defaults", "autostart", "flatpak", "ai", "plugins", "thirdparty"] },
             { tint: "#b8bcc8", ids: ["firewall", "keyring", "system", "about"] }
         ]
         // one line under each page's name
         readonly property var descs: ({
-                appearance: "Theme, palette, dark mode", effects: "Animations, timing, visualizer effects", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", bluetooth: "Devices, pairing", region: "Language and formats", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session",
+                appearance: "Theme, palette, dark mode", effects: "Animations, timing, visualizer effects", wallpaper: "Pictures, live wallpapers, transitions", apps: "Qt and GTK apps, color scheme", bluetooth: "Devices, pairing", region: "Language and formats", get: "Icons, cursors, GTK themes, fonts online", lock: "Lock screen, login, session", boot: "Plymouth themes at startup",
                 bar: "Style, layout, widgets", dock: "Position, pinned apps, style", launcher: "Fuzzy search, fuzzel", quicksettings: "Tiles, sliders, layout",
                 desktop: "Clocks, photos, monitors", overview: "Workspaces at a glance", edges: "Hot corners and edges", clock: "Clock, weather, calendars",
                 notifications: "Popups, do not disturb, mako", wellbeing: "Screen time and app limits", sound: "Devices, sounds, app volumes", screenshots: "Capture, save, copy",
@@ -260,6 +261,7 @@ LazyLoader {
         Component { id: launcherC; LauncherPage {} }
         Component { id: overviewC; OverviewPage {} }
         Component { id: lockC; LockPage {} }
+        Component { id: bootC; BootSplashPage {} }
         Component { id: clockC; ClockPage {} }
         Component { id: aboutC; AboutPage {} }
         Component { id: windowsC; WindowsPage {} }
