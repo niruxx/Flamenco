@@ -6,66 +6,63 @@ import qs.Commons
 import qs.Services
 import qs.Widgets
 
-// Which xdg-desktop-portal backend handles screen sharing, screenshots and
-// file pickers (~/.config/xdg-desktop-portal/niri-portals.conf).
+// Screen sharing (GNOME's or wlr's portal) and the file picker, written to
+// ~/.config/xdg-desktop-portal/niri-portals.conf. Apply restarts the portals, so
+// the choice works right away: no logging out.
 Page {
     id: page
     title: I18n.tr("Screen sharing & files")
-    subtitle: I18n.tr("Apps share your screen and open file pickers through xdg-desktop-portal. Choose which backend handles each.")
+    subtitle: I18n.tr("Apps share your screen and open file pickers through xdg-desktop-portal. Pick how screens are shared and which file picker apps get.")
 
     property var st: ({ installed: [], current: {}, packages: {}, wlr: {} })
     property bool loaded: false
     property string status: ""
 
     // draft
-    property string screenCast: ""
-    property string screenshot: ""
+    property string screenCast: ""             // gnome | wlr
     property string fileChooser: ""
-    property string fallback: "gtk"
     property string wlrOutput: ""
     property string wlrChooser: "flamenco"   // flamenco (the "Share your screen" window) | slurp (click a screen)
     readonly property bool hypr: Niri.hyprland
-    // the capture backend that works here without GNOME: wlr on niri, Hyprland's own on Hyprland
-    readonly property string lightCapture: hypr ? "hyprland" : "wlr"
     property int maxFps: 0
     property bool forceLinear: false
     property bool gtkUsePortal: false
 
+    readonly property var sharers: [
+        { value: "gnome", label: I18n.tr("GNOME"), pkg: "xdg-desktop-portal-gnome", icon: "select_window",
+          note: I18n.tr("Whole screens and single windows, with GNOME's own picker. Pulls in some GNOME libraries.") },
+        { value: "wlr", label: I18n.tr("wlr"), pkg: "xdg-desktop-portal-wlr", icon: "feather",
+          note: I18n.tr("Whole screens, picked in Flamenco's \"Share your screen\" window. Very light.") }
+    ]
     readonly property var pickers: [
         { value: "gtk", label: I18n.tr("GTK"), pkg: "xdg-desktop-portal-gtk", note: I18n.tr("The standard GTK dialog. Light.") },
-        { value: "kde", label: I18n.tr("Qt (KDE)"), pkg: "xdg-desktop-portal-kde", note: I18n.tr("KDE's Qt dialog with Dolphin-style places. Only its file picker is used.") },
-        { value: "cosmic", label: I18n.tr("COSMIC"), pkg: "xdg-desktop-portal-cosmic", note: I18n.tr("COSMIC Files' dialog. Only its file picker is used.") },
-        { value: "gnome", label: I18n.tr("GNOME"), pkg: "xdg-desktop-portal-gnome", note: I18n.tr("The GNOME dialog (pulls in GNOME libraries).") }
+        { value: "kde", label: I18n.tr("Qt (KDE)"), pkg: "xdg-desktop-portal-kde", note: I18n.tr("KDE's Qt dialog with Dolphin-style places.") },
+        { value: "gnome", label: I18n.tr("GNOME"), pkg: "xdg-desktop-portal-gnome", note: I18n.tr("GNOME's dialog (pulls in GNOME libraries).") },
+        { value: "cosmic", label: I18n.tr("COSMIC"), pkg: "xdg-desktop-portal-cosmic", note: I18n.tr("COSMIC Files' dialog.") }
     ]
 
     readonly property var names: st.installed.map(p => p.name)
-    readonly property bool usesWlr: screenCast === "wlr" || screenshot === "wlr"
+    readonly property bool usesWlr: screenCast === "wlr"
+    readonly property var picker: pickers.find(p => p.value === fileChooser) ?? null
+    readonly property bool ready: !!screenCast && names.includes(screenCast) && (!fileChooser || names.includes(fileChooser))
 
     function load() {
         if (!getter.running)
             getter.running = true;
     }
 
-    function optionsFor(iface) {
-        const capture = iface === "ScreenCast" || iface === "Screenshot";
-        const label = p => {
-            if (!capture)
-                return p.name;
-            const mark = p.niri === "works" ? "✓ " : p.niri === "no" ? "✗ " : "";
-            return mark + p.name + (p.note ? ": " + p.note : "");
-        };
-        return [{ value: "", label: "niri's default" + (page.st.current[iface] ? " (" + page.st.current[iface] + ")" : "") }]
-            .concat(page.st.installed.filter(p => p.interfaces.includes(iface)).map(p => ({ value: p.name, label: label(p) })));
-    }
-
     function apply() {
-        const spec = { default: fallback, ScreenCast: screenCast, Screenshot: screenshot, FileChooser: fileChooser, wlrOutput: wlrOutput, wlrChooser: wlrChooser, maxFps: maxFps, forceLinear: forceLinear, gtkUsePortal: gtkUsePortal };
+        // other portals (dark mode, notifications…) go to GTK when it's there, else the file picker's
+        const fallback = names.includes("gtk") ? "gtk" : (fileChooser || "gtk");
+        const spec = { default: fallback, ScreenCast: screenCast, Screenshot: screenCast, FileChooser: fileChooser, wlrOutput: wlrOutput, wlrChooser: wlrChooser, maxFps: maxFps, forceLinear: forceLinear, gtkUsePortal: gtkUsePortal };
+        status = I18n.tr("Applying and restarting the portals…");
         applier.command = [Paths.bin, "portals", "apply", "--json", JSON.stringify(spec)];
         applier.running = true;
     }
 
     function install(pkgs) {
-        Quickshell.execDetached(Paths.termHold("sudo pacman -S --needed " + pkgs.join(" ")));
+        installer.command = Paths.termHold("sudo pacman -S --needed " + pkgs.join(" "));
+        installer.running = true;
     }
 
     Component.onCompleted: {
@@ -81,12 +78,9 @@ Page {
                 try {
                     const d = JSON.parse(text);
                     page.st = d;
-                    // only adopt values when we wrote the file (niri's shipped defaults show as "niri's default")
-                    const ours = (d.current.source || "").indexOf("/.config/") >= 0;
-                    page.screenCast = ours ? (d.current.ScreenCast ?? "") : "";
-                    page.screenshot = ours ? (d.current.Screenshot ?? "") : "";
-                    page.fileChooser = ours ? (d.current.FileChooser ?? "") : "";
-                    page.fallback = ours ? (d.current.default || "gtk") : "gtk";
+                    const cast = d.current.ScreenCast ?? "";
+                    page.screenCast = cast === "gnome" || cast === "wlr" ? cast : "";
+                    page.fileChooser = d.current.FileChooser ?? "";
                     page.wlrOutput = d.wlr.output_name ?? "";
                     page.wlrChooser = (d.wlr.chooser_type ?? "dmenu") === "simple" ? "slurp" : "flamenco";
                     page.maxFps = parseInt(d.wlr.max_fps ?? "0") || 0;
@@ -103,7 +97,10 @@ Page {
     Process {
         id: applier
         stdout: StdioCollector {
-            onStreamFinished: if (text.trim()) page.status = "Saved. Apps that were already open may need a restart."
+            onStreamFinished: {
+                const t = text.trim().split("\n").pop() || "";
+                page.status = t.indexOf("ready now") >= 0 ? I18n.tr("Done: you can share your screen now. Apps that were already open pick it up the next time they ask.") : t.replace(/^portals: /, "");
+            }
         }
         stderr: StdioCollector {
             onStreamFinished: if (text.trim()) page.status = text.trim().split("\n").pop().replace(/^flamenco: /, "")
@@ -111,214 +108,45 @@ Page {
         onExited: page.load()
     }
 
-    // ── file picker ──
+    // the terminal for installing: look again once it's closed
+    Process {
+        id: installer
+        onExited: page.load()
+    }
+
+    // ── screen sharing ──
     Group {
-        title: I18n.tr("File picker")
+        title: I18n.tr("Screen sharing")
 
         Repeater {
-            model: page.pickers
+            model: page.sharers
             SettingRow {
-                id: fp
+                id: sh
                 required property var modelData
                 readonly property bool installed: page.names.includes(modelData.value)
-                readonly property bool chosen: page.fileChooser === modelData.value
-                title: modelData.label + (chosen ? "  ✓ in use" : "")
-                subtitle: modelData.note + (installed ? "" : " Not installed (" + modelData.pkg + ").")
+                readonly property bool chosen: page.screenCast === modelData.value
+                readonly property bool inUse: (page.st.current.ScreenCast ?? "") === modelData.value
+                title: modelData.label + (inUse ? I18n.tr("  ✓ in use") : "")
+                subtitle: modelData.note + (installed ? "" : I18n.tr(" Not installed (") + modelData.pkg + ").")
+                    + (page.hypr && modelData.value === "gnome" ? I18n.tr(" Note: GNOME's portal can't capture on Hyprland.") : "")
                 icon: chosen ? "radio_button_checked" : "radio_button_unchecked"
                 Row {
                     spacing: 6
                     FButton {
-                        visible: !fp.installed
+                        visible: !sh.installed
                         text: I18n.tr("Install")
                         variant: "tonal"
-                        onClicked: page.install([fp.modelData.pkg])
+                        disabled: installer.running
+                        onClicked: page.install(sh.modelData.value === "wlr" ? [sh.modelData.pkg, "slurp"] : [sh.modelData.pkg])
                     }
                     FButton {
-                        visible: fp.installed
-                        text: fp.chosen ? I18n.tr("In use") : I18n.tr("Use")
-                        variant: fp.chosen ? "outlined" : "filled"
-                        disabled: fp.chosen || applier.running
-                        onClicked: {
-                            page.fileChooser = fp.modelData.value;
-                            page.apply();
-                        }
+                        visible: sh.installed
+                        text: sh.chosen ? I18n.tr("Selected") : I18n.tr("Select")
+                        variant: sh.chosen ? "outlined" : "tonal"
+                        disabled: sh.chosen
+                        onClicked: page.screenCast = sh.modelData.value
                     }
                 }
-            }
-        }
-
-        SettingRow {
-            title: I18n.tr("Use it in every GTK app")
-            subtitle: I18n.tr("Portal-aware apps (Flatpaks, Firefox, Chromium, Electron) always use the picker above. This also routes regular GTK apps through it (GTK_USE_PORTAL / GDK_DEBUG=portals in niri's environment; log in again to apply). Qt apps keep their own dialog so qt6ct theming keeps working.")
-            icon: "select_all"
-            FSwitch {
-                checked: page.gtkUsePortal
-                onToggled: c => {
-                    page.gtkUsePortal = c;
-                    page.apply();
-                }
-            }
-        }
-    }
-
-    // ── what's installed ──
-    Group {
-        title: I18n.tr("Screen sharing setups")
-        SettingRow {
-            title: I18n.tr("Plasma apps")
-            subtitle: I18n.tr("KDE's portal for file pickers and the rest (Dolphin-style, Qt), and ") + (page.hypr ? I18n.tr("Hyprland's own portal (with its Qt picker)") : "wlr with Flamenco's \"Share your screen\" window") + " for sharing. No GNOME, no Nautilus." + (page.hypr ? "" : " Whole screens; sharing one window needs the GNOME portal")
-            icon: "desktop_windows"
-            Row {
-                spacing: 6
-                FButton {
-                    visible: !page.names.includes("kde") || !page.names.includes(page.lightCapture)
-                    text: I18n.tr("Install")
-                    variant: "tonal"
-                    onClicked: page.install(["xdg-desktop-portal-kde", page.hypr ? "xdg-desktop-portal-hyprland" : "xdg-desktop-portal-wlr"])
-                }
-                FButton {
-                    text: I18n.tr("Use")
-                    disabled: !page.names.includes("kde") || !page.names.includes(page.lightCapture)
-                    onClicked: {
-                        page.screenCast = page.lightCapture;
-                        page.screenshot = page.lightCapture;
-                        page.fileChooser = "kde";
-                        page.fallback = "kde";
-                        page.wlrChooser = "flamenco";
-                        page.apply();
-                    }
-                }
-            }
-        }
-        SettingRow {
-            visible: !page.hypr
-            title: I18n.tr("Plasma apps + GNOME capture")
-            subtitle: I18n.tr("The most reliable on niri: the GNOME portal only captures the screen (niri's supported way, single windows too) and KDE's portal does file pickers and the rest, so Nautilus is never opened. Use this if the wlr picture freezes")
-            icon: "verified"
-            Row {
-                spacing: 6
-                FButton {
-                    visible: !page.names.includes("kde") || !page.names.includes("gnome")
-                    text: I18n.tr("Install")
-                    variant: "tonal"
-                    onClicked: page.install(["xdg-desktop-portal-kde", "xdg-desktop-portal-gnome"])
-                }
-                FButton {
-                    text: I18n.tr("Use")
-                    disabled: !page.names.includes("kde") || !page.names.includes("gnome")
-                    onClicked: {
-                        page.screenCast = "gnome";
-                        page.screenshot = "gnome";
-                        page.fileChooser = "kde";
-                        page.fallback = "kde";
-                        page.apply();
-                    }
-                }
-            }
-        }
-        SettingRow {
-            title: I18n.tr("Lightweight")
-            subtitle: "wlr for screen sharing and screenshots (whole screens), gtk for file pickers. No GNOME libraries."
-            icon: "feather"
-            Row {
-                spacing: 6
-                FButton {
-                    visible: !page.names.includes("wlr") || !page.names.includes("gtk")
-                    text: I18n.tr("Install")
-                    variant: "tonal"
-                    onClicked: page.install(["xdg-desktop-portal-wlr", "xdg-desktop-portal-gtk", "slurp"])
-                }
-                FButton {
-                    text: I18n.tr("Use")
-                    disabled: !page.names.includes("wlr")
-                    onClicked: {
-                        page.screenCast = "wlr";
-                        page.screenshot = "wlr";
-                        page.fileChooser = page.names.includes("gtk") ? "gtk" : "";
-                        page.fallback = "gtk";
-                        page.apply();
-                    }
-                }
-            }
-        }
-        SettingRow {
-            title: I18n.tr("Full")
-            subtitle: "gnome for screen sharing, including single windows. Pulls in GNOME libraries."
-            icon: "select_window"
-            Row {
-                spacing: 6
-                FButton {
-                    visible: !page.names.includes("gnome")
-                    text: I18n.tr("Install")
-                    variant: "tonal"
-                    onClicked: page.install(["xdg-desktop-portal-gnome", "xdg-desktop-portal-gtk"])
-                }
-                FButton {
-                    text: I18n.tr("Use")
-                    disabled: !page.names.includes("gnome")
-                    onClicked: {
-                        page.screenCast = "gnome";
-                        page.screenshot = "gnome";
-                        page.fileChooser = page.names.includes("gtk") ? "gtk" : "gnome";
-                        page.fallback = "gtk";
-                        page.apply();
-                    }
-                }
-            }
-        }
-        SettingRow {
-            visible: page.loaded && page.st.installed.length === 0
-            title: I18n.tr("No portal backends found")
-            subtitle: I18n.tr("Install one of the setups above")
-            icon: "warning"
-        }
-    }
-
-    // ── per feature ──
-    Group {
-        title: I18n.tr("Backends")
-        SettingRow {
-            title: I18n.tr("Screen sharing")
-            subtitle: I18n.tr("Video calls, OBS, browser screen sharing")
-            icon: "screen_share"
-            FDropdown {
-                implicitWidth: 340
-                options: page.optionsFor("ScreenCast")
-                current: page.screenCast
-                onSelected: v => page.screenCast = v
-            }
-        }
-        SettingRow {
-            title: I18n.tr("Screenshots")
-            subtitle: I18n.tr("Screenshots requested by apps")
-            icon: "screenshot_monitor"
-            FDropdown {
-                implicitWidth: 340
-                options: page.optionsFor("Screenshot")
-                current: page.screenshot
-                onSelected: v => page.screenshot = v
-            }
-        }
-        SettingRow {
-            title: I18n.tr("File chooser")
-            subtitle: I18n.tr("Open / save dialogs in sandboxed and portal-aware apps")
-            icon: "folder_open"
-            FDropdown {
-                implicitWidth: 340
-                options: page.optionsFor("FileChooser")
-                current: page.fileChooser
-                onSelected: v => page.fileChooser = v
-            }
-        }
-        SettingRow {
-            title: I18n.tr("Everything else")
-            subtitle: I18n.tr("Dark-mode preference, notifications and other portals")
-            icon: "apps"
-            FDropdown {
-                implicitWidth: 340
-                options: page.st.installed.filter(p => !["wlr"].includes(p.name)).map(p => ({ value: p.name, label: p.name }))
-                current: page.fallback
-                onSelected: v => page.fallback = v
             }
         }
     }
@@ -371,13 +199,57 @@ Page {
         }
     }
 
+
+    // ── file picker ──
+    Group {
+        title: I18n.tr("File picker")
+
+        SettingRow {
+            title: I18n.tr("File picker")
+            subtitle: page.picker ? page.picker.note + (page.names.includes(page.picker.value) ? "" : I18n.tr(" Not installed (") + page.picker.pkg + ").")
+                : I18n.tr("Open / save dialogs in Flatpaks, browsers and other portal-aware apps")
+            icon: "folder_open"
+            Row {
+                spacing: 6
+                FButton {
+                    visible: !!page.picker && !page.names.includes(page.picker.value)
+                    text: I18n.tr("Install")
+                    variant: "tonal"
+                    implicitHeight: 38
+                    disabled: installer.running
+                    onClicked: page.install([page.picker.pkg])
+                }
+                FDropdown {
+                    implicitWidth: 240
+                    options: page.pickers.map(p => ({ value: p.value, label: p.label + (page.names.includes(p.value) ? "" : I18n.tr(" (not installed)")) }))
+                    current: page.fileChooser
+                    placeholder: I18n.tr("Choose a file picker…")
+                    onSelected: v => page.fileChooser = v
+                }
+            }
+        }
+
+        SettingRow {
+            title: I18n.tr("Use it in every GTK app")
+            subtitle: I18n.tr("Portal-aware apps (Flatpaks, Firefox, Chromium, Electron) always use the picker above. This also routes regular GTK apps through it (GTK_USE_PORTAL / GDK_DEBUG=portals in niri's environment; log in again to apply). Qt apps keep their own dialog so qt6ct theming keeps working.")
+            icon: "select_all"
+            FSwitch {
+                checked: page.gtkUsePortal
+                onToggled: c => {
+                    page.gtkUsePortal = c;
+                    page.apply();
+                }
+            }
+        }
+    }
+
     RowLayout {
         Layout.fillWidth: true
         spacing: Theme.sp3
         FButton {
             text: I18n.tr("Apply")
             icon: "check"
-            disabled: applier.running || !page.loaded
+            disabled: applier.running || !page.loaded || !page.ready
             onClicked: page.apply()
         }
         FIconButton {
@@ -397,13 +269,5 @@ Page {
             dim: true
             wrapMode: Text.Wrap
         }
-    }
-
-    FText {
-        Layout.fillWidth: true
-        text: I18n.tr("Why not KDE's own screen sharing window? xdg-desktop-portal-kde doesn't capture the screen itself: it asks KWin (Plasma's compositor) through a protocol only KWin has, so on ") + (page.hypr ? I18n.tr("Hyprland") : "niri") + " it can't share anything. The same goes for cosmic. Their file pickers and other dialogs work fine here, which is what the Plasma apps setup uses."
-        dim: true
-        wrapMode: Text.Wrap
-        font.pixelSize: Theme.fsSm
     }
 }

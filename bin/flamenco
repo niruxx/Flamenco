@@ -7854,6 +7854,44 @@ def portals_diagnose() -> int:
     return 0
 
 
+PORTAL_UNITS = {"wlr": "xdg-desktop-portal-wlr.service", "gnome": "xdg-desktop-portal-gnome.service",
+                "gtk": "xdg-desktop-portal-gtk.service", "kde": "plasma-xdg-desktop-portal-kde.service",
+                "hyprland": "xdg-desktop-portal-hyprland.service", "cosmic": "xdg-desktop-portal-cosmic.service"}
+
+
+def portals_restart(conf: dict) -> bool:
+    """Makes a new portal choice take effect now, without logging out: the frontend only
+    reads portals.conf when it starts, and a capture backend left running keeps its
+    old sessions. So: stop the capture backends not chosen, restart the chosen ones and
+    the frontend, then wait until it answers on D-Bus."""
+    import time
+    if not shutil.which("systemctl"):
+        return False
+    sysd = lambda *a: subprocess.run(["systemctl", "--user", *a], capture_output=True, timeout=20)
+    # the session's display, so freshly started backends find the compositor
+    sysd("import-environment", "WAYLAND_DISPLAY", "XDG_CURRENT_DESKTOP", "NIRI_SOCKET", "HYPRLAND_INSTANCE_SIGNATURE")
+    wanted = {v for k, v in conf.items() if v}
+    capture = {"wlr", "gnome", "hyprland"}
+    sysd("stop", "xdg-desktop-portal.service")
+    for name in capture - wanted:
+        sysd("stop", PORTAL_UNITS[name])
+    for name in wanted:
+        if name in PORTAL_UNITS:
+            sysd("restart", PORTAL_UNITS[name])
+    sysd("start", "xdg-desktop-portal.service")
+    if not shutil.which("busctl"):
+        time.sleep(1)
+        return True
+    deadline = time.time() + 8
+    while time.time() < deadline:
+        r = subprocess.run(["busctl", "--user", "get-property", "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+                            "org.freedesktop.portal.ScreenCast", "version"], capture_output=True, timeout=5)
+        if r.returncode == 0:
+            return True
+        time.sleep(0.3)
+    return False
+
+
 def portals_choose() -> int:
     """xdg-desktop-portal-wlr's screen chooser (chooser_type=dmenu): the screens' names come in
     on stdin; print the chosen one (exit 1 to cancel). Flamenco's window asks, through the
@@ -7971,11 +8009,9 @@ def cmd_portals(args: list[str]) -> int:
                 "GDK_DEBUG": 'GDK_DEBUG "portals"' if on else None})
             write_niri_config(new, NIRI_CONFIG.read_text())
 
-        if shutil.which("systemctl"):
-            for unit in ("xdg-desktop-portal.service", "xdg-desktop-portal-wlr.service", "xdg-desktop-portal-gnome.service",
-                         "plasma-xdg-desktop-portal-kde.service", "xdg-desktop-portal-hyprland.service"):
-                subprocess.run(["systemctl", "--user", "try-restart", unit], capture_output=True)
-        print(f"portals: wrote {PORTAL_CONF}; restarted xdg-desktop-portal (apps opened before may need a restart)")
+        ready = portals_restart(read_portal_conf(PORTAL_CONF))
+        print(f"portals: wrote {PORTAL_CONF}; " + ("screen sharing and the file picker are ready now" if ready
+              else "restarted the portals, but xdg-desktop-portal didn't answer yet (try sharing in a moment, or Diagnose)"))
         return 0
     if sub == "choose":
         return portals_choose()
