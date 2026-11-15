@@ -1,4 +1,4 @@
-# flamenco-website
+# Flamenco website
 
 The website for [Flamenco Shell](https://github.com/niruxx/Flamenco) and
 [Flamenco Greeter](https://github.com/niruxx/flamenco-greeter): a guided tour, screenshots,
@@ -8,11 +8,13 @@ Plain HTML, CSS and JavaScript. No build step, no dependencies.
 
 ## Publish on GitHub Pages
 
-1. Push this repository to GitHub.
-2. **Settings → Pages → Build and deployment → Source: Deploy from a branch**, branch `main`, folder `/ (root)`.
-3. After a minute it's live at `https://<user>.github.io/flamenco-website/`.
+1. Push the `website` branch to `https://github.com/niruxx/Flamenco`.
+2. **Settings → Pages → Build and deployment → Source: Deploy from a branch**, branch `website`, folder `/ (root)`.
+3. After a minute it's live at `https://niruxx.github.io/Flamenco/`.
 
 `.nojekyll` tells Pages to serve the files as they are.
+
+The service lives on `main`; this independent `website` branch contains only the website and preserves its original Git history. Switch to `website` before editing the site. The old website repository can be archived after the new Pages URL has been verified.
 
 ## Preview locally
 
